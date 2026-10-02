@@ -2614,7 +2614,7 @@ function renderAdminUsersSettings(){
     const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.permAdminUser));
     const u=users[idx]; if(!u) return;
     const current=(u.permissions||[]).map(x=>labels[x]||x).join('، ');
-    const text=prompt('اكتب الصلاحيات مفصولة بفاصلة:\nتحضير الطلاب، التقارير والتصدير، تعديل بيانات الطلاب، استيراد البيانات، حذف الطلاب، متابعة مدرستي، تصوير الطلاب، بيانات المدرسة والمستخدمون',current);
+    const text=prompt('اكتب الصلاحيات مفصولة بفاصلة:\\nتحضير الطلاب، التقارير والتصدير، تعديل بيانات الطلاب، استيراد البيانات، حذف الطلاب، متابعة مدرستي، تصوير الطلاب، بيانات المدرسة والمستخدمون',current);
     if(text===null) return;
     const t=text.toLowerCase(), perms=[];
     if(t.includes('تحضير')) perms.push('attendance');
