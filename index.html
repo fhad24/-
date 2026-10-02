@@ -2151,7 +2151,8 @@ function ensureAdminSettings(){
     }));
     delete schoolPreview.dataset.pending;
     delete ministryPreview.dataset.pending;
-    applySchoolSettings(); toast('تم حفظ بيانات المدرسة');
+    applySchoolSettings();
+    alert('✅ تم حفظ بيانات المدرسة بنجاح');
   };
   document.getElementById('saveAdminAccount').onclick=()=>{
     const p=getAdminProfile();
