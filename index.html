@@ -2144,24 +2144,6 @@ function ensureAdminSettings(){
 
         <div id="adminUsersList" class="admin-users-list"></div>
 
-        <div class="admin-bulk-perms">
-          <h4>👥 تعديل صلاحيات كل المستخدمين دفعة واحدة</h4>
-          <div class="admin-bulk-perm-grid">
-            <label>تعديل بيانات الطلاب <input class="bulk-admin-perm" value="editStudents" type="checkbox"></label>
-            <label>استيراد البيانات <input class="bulk-admin-perm" value="import" type="checkbox"></label>
-            <label>حذف الطلاب <input class="bulk-admin-perm" value="deleteStudents" type="checkbox"></label>
-            <label>تحضير الطلاب <input class="bulk-admin-perm" value="attendance" type="checkbox" checked></label>
-            <label>التقارير والتصدير <input class="bulk-admin-perm" value="reports" type="checkbox"></label>
-            <label>بيانات المدرسة والمستخدمون <input class="bulk-admin-perm" value="settings" type="checkbox"></label>
-            <label>متابعة دخول منصة مدرستي <input class="bulk-admin-perm" value="madrasati" type="checkbox"></label>
-            <label>تصوير الطلاب لإضافة الصور <input class="bulk-admin-perm" value="photos" type="checkbox"></label>
-          </div>
-          <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
-            <button type="button" id="bulkToggleAllPerms">☑ تحديد الكل</button>
-          </div>
-          <button class="admin-settings-save" id="applyBulkUserPermissions" type="button">تعديل الصلاحيات للكل دفعة واحدة</button>
-        </div>
-
         <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
         <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
         <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
@@ -2189,6 +2171,7 @@ function ensureAdminSettings(){
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
         </div>
         <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
+        <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 تطبيق هذه الصلاحيات على كل المستخدمين</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -2286,27 +2269,16 @@ function ensureAdminSettings(){
   document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=updateNewPermToggleText);
   updateNewPermToggleText();
 
-  const updateBulkToggleText=()=>{
-    const boxes=[...document.querySelectorAll('.bulk-admin-perm')];
-    const allChecked=boxes.length && boxes.every(x=>x.checked);
-    const btn=document.getElementById('bulkToggleAllPerms');
-    if(btn) btn.textContent=allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
-  };
-  document.getElementById('bulkToggleAllPerms').onclick=()=>{
-    const boxes=[...document.querySelectorAll('.bulk-admin-perm')];
-    const allChecked=boxes.length && boxes.every(x=>x.checked);
-    boxes.forEach(x=>x.checked=!allChecked);
-    updateBulkToggleText();
   };
   document.querySelectorAll('.bulk-admin-perm').forEach(x=>x.onchange=updateBulkToggleText);
   updateBulkToggleText();
   document.getElementById('applyBulkUserPermissions').onclick=()=>{
-    const permissions=[...document.querySelectorAll('.bulk-admin-perm:checked')].map(x=>x.value);
+    const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
     const users=getAdminUsers();
     users.forEach(u=>u.permissions=[...permissions]);
     saveAdminUsers(users);
     renderAdminUsersSettings();
-    alert('✅ تم تعديل صلاحيات جميع المستخدمين');
+    alert('✅ تم تطبيق الصلاحيات المحددة على جميع المستخدمين');
   };
 
   document.getElementById('adminUserSearch').oninput=()=>renderAdminUsersSettings();
