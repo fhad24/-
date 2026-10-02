@@ -2146,10 +2146,6 @@ function ensureAdminSettings(){
 
         <div class="admin-bulk-perms">
           <h4>👥 تعديل صلاحيات كل المستخدمين دفعة واحدة</h4>
-          <div class="admin-perm-toolbar" style="justify-content:center">
-            <button type="button" id="bulkSelectAllPerms">☑ تحديد الكل</button>
-            <button type="button" id="bulkClearAllPerms">☐ إلغاء الكل</button>
-          </div>
           <div class="admin-bulk-perm-grid">
             <label>تعديل بيانات الطلاب <input class="bulk-admin-perm" value="editStudents" type="checkbox"></label>
             <label>استيراد البيانات <input class="bulk-admin-perm" value="import" type="checkbox"></label>
@@ -2159,6 +2155,9 @@ function ensureAdminSettings(){
             <label>بيانات المدرسة والمستخدمون <input class="bulk-admin-perm" value="settings" type="checkbox"></label>
             <label>متابعة دخول منصة مدرستي <input class="bulk-admin-perm" value="madrasati" type="checkbox"></label>
             <label>تصوير الطلاب لإضافة الصور <input class="bulk-admin-perm" value="photos" type="checkbox"></label>
+          </div>
+          <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
+            <button type="button" id="bulkToggleAllPerms">☑ تحديد الكل</button>
           </div>
           <button class="admin-settings-save" id="applyBulkUserPermissions" type="button">تعديل الصلاحيات للكل دفعة واحدة</button>
         </div>
@@ -2176,10 +2175,6 @@ function ensureAdminSettings(){
           <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
           <div class="admin-settings-field"><label>نوع المستخدم</label><select id="newAdminRole"><option>معلم</option><option>إداري</option><option>مدير</option><option>موظف</option></select></div>
         </div>
-        <div class="admin-perm-toolbar" style="margin-top:10px">
-          <button type="button" id="selectAllNewPerms">☑ تحديد كل الصلاحيات</button>
-          <button type="button" id="clearAllNewPerms">☐ إلغاء تحديد الكل</button>
-        </div>
         <div class="admin-permissions">
           <label class="admin-permission">تعديل بيانات الطلاب <input class="admin-new-perm" value="editStudents" type="checkbox" checked></label>
           <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
@@ -2189,6 +2184,9 @@ function ensureAdminSettings(){
           <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
+        </div>
+        <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
+          <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
         </div>
         <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
       </div>
@@ -2273,11 +2271,35 @@ function ensureAdminSettings(){
     renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
   };
 
-  document.getElementById('selectAllNewPerms').onclick=()=>document.querySelectorAll('.admin-new-perm').forEach(x=>x.checked=true);
-  document.getElementById('clearAllNewPerms').onclick=()=>document.querySelectorAll('.admin-new-perm').forEach(x=>x.checked=false);
+  const updateNewPermToggleText=()=>{
+    const boxes=[...document.querySelectorAll('.admin-new-perm')];
+    const allChecked=boxes.length && boxes.every(x=>x.checked);
+    const btn=document.getElementById('toggleAllNewPerms');
+    if(btn) btn.textContent=allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+  };
+  document.getElementById('toggleAllNewPerms').onclick=()=>{
+    const boxes=[...document.querySelectorAll('.admin-new-perm')];
+    const allChecked=boxes.length && boxes.every(x=>x.checked);
+    boxes.forEach(x=>x.checked=!allChecked);
+    updateNewPermToggleText();
+  };
+  document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=updateNewPermToggleText);
+  updateNewPermToggleText();
 
-  document.getElementById('bulkSelectAllPerms').onclick=()=>document.querySelectorAll('.bulk-admin-perm').forEach(x=>x.checked=true);
-  document.getElementById('bulkClearAllPerms').onclick=()=>document.querySelectorAll('.bulk-admin-perm').forEach(x=>x.checked=false);
+  const updateBulkToggleText=()=>{
+    const boxes=[...document.querySelectorAll('.bulk-admin-perm')];
+    const allChecked=boxes.length && boxes.every(x=>x.checked);
+    const btn=document.getElementById('bulkToggleAllPerms');
+    if(btn) btn.textContent=allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+  };
+  document.getElementById('bulkToggleAllPerms').onclick=()=>{
+    const boxes=[...document.querySelectorAll('.bulk-admin-perm')];
+    const allChecked=boxes.length && boxes.every(x=>x.checked);
+    boxes.forEach(x=>x.checked=!allChecked);
+    updateBulkToggleText();
+  };
+  document.querySelectorAll('.bulk-admin-perm').forEach(x=>x.onchange=updateBulkToggleText);
+  updateBulkToggleText();
   document.getElementById('applyBulkUserPermissions').onclick=()=>{
     const permissions=[...document.querySelectorAll('.bulk-admin-perm:checked')].map(x=>x.value);
     const users=getAdminUsers();
