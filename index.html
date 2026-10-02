@@ -1999,7 +1999,18 @@ function getSchoolSettings(){
 function getAdminProfile(){
   try{return {...{username:'1015401902',displayName:'المدير',password:'13111111'},...JSON.parse(localStorage.getItem('adminProfile')||'{}')}}catch(e){return {username:'1015401902',displayName:'المدير',password:'13111111'}}
 }
-function getAdminUsers(){try{return JSON.parse(localStorage.getItem('adminUsers')||'[]')}catch(e){return []}}
+function getAdminUsers(){
+  try{
+    const raw=localStorage.getItem('adminUsers');
+    if(raw!==null) return JSON.parse(raw||'[]');
+    const defaults=[
+      {username:'1096253859',name:'إبراهيم محمد علي عسيري',password:'',role:'معلم',permissions:['attendance']},
+      {username:'1090839539',name:'احمد عبدالرحيم هادي عسيري',password:'',role:'معلم',permissions:['attendance']}
+    ];
+    localStorage.setItem('adminUsers',JSON.stringify(defaults));
+    return defaults;
+  }catch(e){return []}
+}
 function saveAdminUsers(rows){localStorage.setItem('adminUsers',JSON.stringify(rows))}
 function applySchoolSettings(){
   const s=getSchoolSettings();
@@ -2103,7 +2114,22 @@ function ensureAdminSettings(){
       <div class="admin-settings-pane" data-settings-pane="users">
         <p class="admin-settings-desc">كل من لديه اسم مستخدم وكلمة مرور من هذه القائمة يستطيع الدخول إلى لوحة الإدارة بحسب صلاحياته.</p>
         <div id="adminUsersList" class="admin-users-list"></div>
-        <h3 style="text-align:center;font-size:22px">إضافة مستخدم جديد</h3>
+
+        <div style="margin:18px 0">
+          <select id="bulkUserPermission" style="height:62px;border-radius:14px;font-size:17px">
+            <option value="">👥 تعديل صلاحيات كل المستخدمين دفعة واحدة</option>
+            <option value="attendance">تحضير الطلاب فقط</option>
+            <option value="reports">التقارير والتصدير فقط</option>
+            <option value="editStudents">تعديل بيانات الطلاب فقط</option>
+            <option value="all">كل الصلاحيات</option>
+          </select>
+        </div>
+
+        <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+        <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
+        <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
+
+        <h3 style="text-align:center;font-size:22px;margin-top:28px">إضافة مستخدم جديد</h3>
         <div class="row">
           <div class="admin-settings-field"><label>اسم المستخدم</label><input id="newAdminUsername"></div>
           <div class="admin-settings-field"><label>الاسم</label><input id="newAdminName"></div>
@@ -2204,21 +2230,158 @@ function ensureAdminSettings(){
     document.getElementById('newAdminPassword').value='';
     renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
   };
+
+  document.getElementById('bulkUserPermission').onchange=e=>{
+    const value=e.target.value;
+    if(!value) return;
+    const users=getAdminUsers();
+    const allPerms=['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'];
+    const nextPerms=value==='all'?allPerms:[value];
+    users.forEach(u=>u.permissions=[...nextPerms]);
+    saveAdminUsers(users);
+    renderAdminUsersSettings();
+    alert('✅ تم تحديث صلاحيات جميع المستخدمين');
+    e.target.value='';
+  };
+
+  document.getElementById('importTeachersExcelBtn').onclick=()=>document.getElementById('teachersExcelInput').click();
+  document.getElementById('teachersExcelInput').onchange=async e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    const status=document.getElementById('teachersExcelStatus');
+    try{
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      const users=getAdminUsers();
+      let added=0,updated=0,skipped=0;
+
+      const pickValue=(row,names)=>{
+        const entries=Object.entries(row||{});
+        for(const name of names){
+          const n=String(name).trim().replace(/\s+/g,'').toLowerCase();
+          const found=entries.find(([k])=>String(k).trim().replace(/\s+/g,'').toLowerCase()===n);
+          if(found && String(found[1]??'').trim()!=='') return String(found[1]).trim();
+        }
+        return '';
+      };
+
+      for(const row of rows){
+        const username=normalizeCivilId(pickValue(row,['اسم المستخدم','رقم الهوية','الهوية','السجل المدني','رقم المعلم','رقم المستخدم']));
+        const name=pickValue(row,['الاسم','اسم المعلم','اسم المستخدم الكامل','اسم الموظف']);
+        const password=pickValue(row,['كلمة المرور','الرقم السري','Password']);
+        const role=pickValue(row,['نوع المستخدم','النوع','الدور'])||'معلم';
+        const permText=pickValue(row,['الصلاحيات','صلاحية','Permissions']);
+        if(!username||!name){skipped++;continue}
+
+        let permissions=['attendance'];
+        if(permText){
+          const t=permText.toLowerCase();
+          if(t.includes('كل')) permissions=['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'];
+          else{
+            permissions=[];
+            if(t.includes('تحضير')) permissions.push('attendance');
+            if(t.includes('تقرير')||t.includes('تصدير')) permissions.push('reports');
+            if(t.includes('تعديل')) permissions.push('editStudents');
+            if(t.includes('استيراد')||t.includes('excel')||t.includes('باركود')) permissions.push('import');
+            if(t.includes('حذف')) permissions.push('deleteStudents');
+            if(t.includes('مدرستي')) permissions.push('madrasati');
+            if(t.includes('صورة')||t.includes('تصوير')) permissions.push('photos');
+            if(t.includes('إعداد')||t.includes('مستخدم')) permissions.push('settings');
+            if(!permissions.length) permissions=['attendance'];
+          }
+        }
+
+        const idx=users.findIndex(u=>String(u.username)===username);
+        const rec={username,name,password,role,permissions};
+        if(idx>=0){users[idx]={...users[idx],...rec,password:password||users[idx].password||''};updated++}
+        else{users.push(rec);added++}
+      }
+      saveAdminUsers(users);
+      renderAdminUsersSettings();
+      status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله.`;
+    }catch(err){
+      console.error(err);
+      status.textContent='تعذر قراءة ملف Excel.';
+    }
+    e.target.value='';
+  };
+
   return ov;
 }
 function renderAdminUsersSettings(){
   const host=document.getElementById('adminUsersList'); if(!host) return;
   const p=getAdminProfile(), users=getAdminUsers();
-  const all=[{...p,name:p.displayName,role:'مدير',owner:true,permissions:['كل الصلاحيات']},...users];
-  host.innerHTML=all.map((u,i)=>`
+  const labels={
+    editStudents:'تعديل بيانات الطلاب',
+    import:'استيراد البيانات',
+    deleteStudents:'حذف الطلاب',
+    attendance:'تحضير الطلاب',
+    reports:'التقارير والتصدير',
+    settings:'بيانات المدرسة والمستخدمون',
+    madrasati:'متابعة دخول منصة مدرستي',
+    photos:'تصوير الطلاب لإضافة الصور'
+  };
+  const all=[{...p,name:p.displayName,role:'مدير',owner:true,permissions:['all']},...users];
+  host.innerHTML=all.map((u,i)=>{
+    const permLabel=u.owner?'كل الصلاحيات':(u.permissions||[]).map(x=>labels[x]||x).join('، ');
+    return `
     <div class="admin-user-card">
-      <div><b>${u.username}</b><span>${u.name||u.displayName||''} — ${u.role||'مستخدم'}</span><span>${u.owner?'كل الصلاحيات':(u.permissions||[]).join('، ')}</span></div>
-      <div class="admin-user-actions">
-        ${u.owner?'':`<button class="admin-user-btn danger" type="button" data-delete-admin-user="${i-1}">🗑 حذف</button>`}
+      <div>
+        <b>${u.username}</b>
+        <span>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</span>
+        <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
-    </div>`).join('');
+      <div class="admin-user-actions">
+        ${u.owner?'':`<button class="admin-user-btn" type="button" data-perm-admin-user="${i-1}">🔑 الصلاحيات</button>`}
+        ${u.owner
+          ? `<button class="admin-user-btn" type="button" data-edit-owner-user="1">✎ الاسم/كلمة المرور</button>`
+          : `<button class="admin-user-btn" type="button" data-edit-admin-user="${i-1}">✎ الاسم/كلمة المرور</button>
+             <button class="admin-user-btn danger" type="button" data-delete-admin-user="${i-1}">🗑 حذف</button>`}
+      </div>
+    </div>`;
+  }).join('');
+
   document.querySelectorAll('[data-delete-admin-user]').forEach(btn=>btn.onclick=()=>{
     const users=getAdminUsers(); users.splice(Number(btn.dataset.deleteAdminUser),1); saveAdminUsers(users); renderAdminUsersSettings(); toast('تم حذف المستخدم');
+  });
+
+  document.querySelectorAll('[data-edit-admin-user]').forEach(btn=>btn.onclick=()=>{
+    const idx=Number(btn.dataset.editAdminUser);
+    const users=getAdminUsers(), u=users[idx]; if(!u) return;
+    const name=prompt('الاسم',u.name||''); if(name===null) return;
+    const pass=prompt('كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)','');
+    u.name=name.trim()||u.name;
+    if(pass) u.password=pass;
+    saveAdminUsers(users); renderAdminUsersSettings(); alert('✅ تم حفظ بيانات المستخدم');
+  });
+
+  document.querySelectorAll('[data-edit-owner-user]').forEach(btn=>btn.onclick=()=>{
+    const p=getAdminProfile();
+    const name=prompt('الاسم المعروض',p.displayName||''); if(name===null) return;
+    const pass=prompt('كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)','');
+    localStorage.setItem('adminProfile',JSON.stringify({...p,displayName:name.trim()||p.displayName,password:pass||p.password}));
+    renderAdminUsersSettings(); alert('✅ تم حفظ بيانات الأدمن');
+  });
+
+  document.querySelectorAll('[data-perm-admin-user]').forEach(btn=>btn.onclick=()=>{
+    const idx=Number(btn.dataset.permAdminUser);
+    const users=getAdminUsers(), u=users[idx]; if(!u) return;
+    const current=(u.permissions||[]).map(x=>labels[x]||x).join('، ');
+    const text=prompt('اكتب الصلاحيات مفصولة بفاصلة:\nتحضير الطلاب، التقارير والتصدير، تعديل بيانات الطلاب، استيراد البيانات، حذف الطلاب، متابعة مدرستي، تصوير الطلاب، بيانات المدرسة والمستخدمون',current);
+    if(text===null) return;
+    const t=text.toLowerCase(), perms=[];
+    if(t.includes('تحضير')) perms.push('attendance');
+    if(t.includes('تقرير')||t.includes('تصدير')) perms.push('reports');
+    if(t.includes('تعديل')) perms.push('editStudents');
+    if(t.includes('استيراد')||t.includes('excel')||t.includes('باركود')) perms.push('import');
+    if(t.includes('حذف')) perms.push('deleteStudents');
+    if(t.includes('مدرستي')) perms.push('madrasati');
+    if(t.includes('تصوير')||t.includes('صورة')) perms.push('photos');
+    if(t.includes('إعداد')||t.includes('مستخدم')) perms.push('settings');
+    u.permissions=[...new Set(perms)];
+    saveAdminUsers(users); renderAdminUsersSettings(); alert('✅ تم حفظ الصلاحيات');
   });
 }
 function openAdminSettings(){
