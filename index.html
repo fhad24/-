@@ -4674,6 +4674,21 @@ function restoreLastAppLocation(){
   }
 }
 setTimeout(restoreLastAppLocation,0);
+let cloudPeriodicSyncTimer=setInterval(()=>{
+  if(localStorage.getItem('cloudAdminToken')){
+    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+  }
+},45000);
+window.addEventListener('focus',()=>{
+  if(localStorage.getItem('cloudAdminToken')){
+    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+  }
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && localStorage.getItem('cloudAdminToken')){
+    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+  }
+});
 </script>
 </body>
 </html>
