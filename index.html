@@ -1126,6 +1126,7 @@ const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.
 tabs.forEach(b=>b.onclick=()=>{
   tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
   pages.forEach(p=>p.classList.add('hidden')); $(b.dataset.page).classList.remove('hidden');
+  sessionStorage.setItem('activeMainPage',b.dataset.page);
 
   if(b.dataset.page==='admin'){
     if(typeof adminLoggedIn!=='undefined' && adminLoggedIn){
@@ -1863,7 +1864,7 @@ excelFileInput.addEventListener('change',()=>{
 });
 
 const adminExpectedTotal = 766;
-let adminLoggedIn = false;
+let adminLoggedIn = sessionStorage.getItem('adminLoggedIn')==='1';
 
 function setAdminMode(on){
   adminLoggedIn = on;
@@ -1881,6 +1882,8 @@ function setAdminMode(on){
     logoutBtn.onclick=()=>{
       document.getElementById('dashboard')?.classList.add('hidden');
       document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
+      sessionStorage.removeItem('adminLoggedIn');
+      sessionStorage.removeItem('adminSettingsOpen');
       setAdminMode(false);
       document.querySelector('.tab[data-page="register"]')?.click();
     };
@@ -1899,6 +1902,7 @@ $('adminLoginBtn').onclick=()=>{
   if((String(p.username)===user && String(p.password)===pass) || extra){
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
+    sessionStorage.setItem('adminLoggedIn','1');
     setAdminMode(true);
     renderAdmin();
   } else toast('اسم المستخدم أو كلمة المرور غير صحيحة');
@@ -1962,6 +1966,7 @@ if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 
 function showAdminView(view){
+  sessionStorage.setItem('activeAdminView',view);
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.toggle('hidden',view!=='data'));
   $('attendancePanel').classList.toggle('hidden',view!=='attendance');
   document.querySelectorAll('.admin-pill').forEach(b=>b.classList.remove('active'));
@@ -2119,7 +2124,7 @@ function ensureAdminSettings(){
       </div>
     </div>`;
   document.body.appendChild(ov);
-  document.getElementById('adminSettingsClose').onclick=()=>ov.classList.add('hidden');
+  document.getElementById('adminSettingsClose').onclick=()=>{ov.classList.add('hidden');sessionStorage.removeItem('adminSettingsOpen');};
   document.querySelectorAll('.admin-settings-tab').forEach(btn=>btn.onclick=()=>{
     document.querySelectorAll('.admin-settings-tab').forEach(x=>x.classList.toggle('active',x===btn));
     document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane===btn.dataset.settingsTab));
@@ -2237,6 +2242,7 @@ function openAdminSettings(){
   document.querySelectorAll('.admin-settings-tab').forEach((x,i)=>x.classList.toggle('active',i===0));
   document.querySelectorAll('.admin-settings-pane').forEach((x,i)=>x.classList.toggle('active',i===0));
   ov.classList.remove('hidden');
+  sessionStorage.setItem('adminSettingsOpen','1');
 }
 applySchoolSettings();
 
@@ -4204,6 +4210,25 @@ if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 
 // زر الإدارة تتم إدارته من معالج التبويبات الرئيسي أعلاه.
+function restoreLastAppLocation(){
+  const page=sessionStorage.getItem('activeMainPage')||'register';
+  const tab=document.querySelector('.tab[data-page="'+page+'"]');
+  if(tab) tab.click();
+
+  if(page==='admin' && sessionStorage.getItem('adminLoggedIn')==='1'){
+    adminLoggedIn=true;
+    $('adminLoginModal')?.classList.add('hidden');
+    $('dashboard')?.classList.remove('hidden');
+    setAdminMode(true);
+    const view=sessionStorage.getItem('activeAdminView')||'data';
+    showAdminView(view);
+    renderAdmin();
+    if(sessionStorage.getItem('adminSettingsOpen')==='1'){
+      setTimeout(()=>openAdminSettings(),0);
+    }
+  }
+}
+setTimeout(restoreLastAppLocation,0);
 </script>
 </body>
 </html>
