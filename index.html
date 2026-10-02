@@ -374,10 +374,10 @@
     .attendance-class-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px}
     .attendance-class-row select{height:40px}.attendance-class-row label{font-size:12px;white-space:nowrap}
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
-    .att-student-row{display:grid;grid-template-columns:1fr 58px 100px;gap:10px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
-    .att-student-photo-wrap{display:flex;align-items:center;justify-content:center}
-    .att-student-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid #d7e3df;background:#f5f8f7}
-    .att-student-photo.placeholder{display:flex;align-items:center;justify-content:center;color:#73867f;font-size:18px}
+    .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
+    .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
     .attendance-list-count{font-size:11px;color:#6d7f7a;margin-top:7px}
@@ -2320,14 +2320,14 @@ async function renderAttendanceStudentList(){
       <div class="att-student-main">
         <div class="att-name-line">
           <b>${s.name}</b>
-          <span class="att-inline-performance">
-            <span class="att-inline-late">⏰ ${perf.late}</span>
-            <span class="att-inline-absent">✕ ${perf.absent}</span>
-          </span>
         </div>
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
       <div class="att-student-photo-wrap">${photoHTML}</div>
+      <span class="att-inline-performance">
+        <span class="att-inline-late">⏰ ${perf.late}</span>
+        <span class="att-inline-absent">✕ ${perf.absent}</span>
+      </span>
       <span>${s.idno}</span>
     </div>`;
   }));
@@ -2702,10 +2702,10 @@ function exportStudentsWord(rows){
     .attendance-class-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px}
     .attendance-class-row select{height:40px}.attendance-class-row label{font-size:12px;white-space:nowrap}
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
-    .att-student-row{display:grid;grid-template-columns:1fr 58px 100px;gap:10px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
-    .att-student-photo-wrap{display:flex;align-items:center;justify-content:center}
-    .att-student-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid #d7e3df;background:#f5f8f7}
-    .att-student-photo.placeholder{display:flex;align-items:center;justify-content:center;color:#73867f;font-size:18px}
+    .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
+    .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
     .attendance-list-count{font-size:11px;color:#6d7f7a;margin-top:7px}
@@ -3067,10 +3067,10 @@ function printStudents(rows){
     .attendance-class-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px}
     .attendance-class-row select{height:40px}.attendance-class-row label{font-size:12px;white-space:nowrap}
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
-    .att-student-row{display:grid;grid-template-columns:1fr 58px 100px;gap:10px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
-    .att-student-photo-wrap{display:flex;align-items:center;justify-content:center}
-    .att-student-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid #d7e3df;background:#f5f8f7}
-    .att-student-photo.placeholder{display:flex;align-items:center;justify-content:center;color:#73867f;font-size:18px}
+    .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
+    .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
     .attendance-list-count{font-size:11px;color:#6d7f7a;margin-top:7px}
