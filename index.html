@@ -376,7 +376,7 @@
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
     .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
     .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
-    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;object-position:center;border:2px solid #c9ddd8;background:#f5f8f7;image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
     .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
@@ -1954,8 +1954,8 @@ async function renderAttendancePage(){
       try{
         const blob=await getStudentPhoto(`${s.idno}:face`);
         if(blob){
-          const url=URL.createObjectURL(blob);
-          photoHTML=`<img class="attendance-saved-avatar" src="${url}" data-ephemeral-url="1" alt="صورة الطالب">`;
+          const src=await makeSharpAttendanceThumb(blob,String(x?.idno||s?.idno||''));
+          photoHTML=`<img class="attendance-saved-avatar" src="${src}" alt="صورة الطالب">`;
         }
       }catch(e){}
 
@@ -2011,8 +2011,8 @@ async function renderAttendancePage(){
       try{
         const blob=await getStudentPhoto(`${x.idno}:face`);
         if(blob){
-          const url=URL.createObjectURL(blob);
-          photoHTML=`<img class="attendance-saved-avatar" src="${url}" data-ephemeral-url="1" alt="صورة الطالب">`;
+          const src=await makeSharpAttendanceThumb(blob,String(x?.idno||s?.idno||''));
+          photoHTML=`<img class="attendance-saved-avatar" src="${src}" alt="صورة الطالب">`;
         }
       }catch(e){}
 
@@ -2289,6 +2289,44 @@ function normalizeSearchText(value){
     .replace(/\s+/g,' ');
 }
 
+const attendanceThumbCache=new Map();
+async function makeSharpAttendanceThumb(blob,key=''){
+  if(key && attendanceThumbCache.has(key)) return attendanceThumbCache.get(key);
+  const target=144;
+  try{
+    let bitmap;
+    if('createImageBitmap' in window){
+      bitmap=await createImageBitmap(blob);
+    }
+    const canvas=document.createElement('canvas');
+    canvas.width=target; canvas.height=target;
+    const ctx=canvas.getContext('2d');
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.fillStyle='#f5f8f7';
+    ctx.fillRect(0,0,target,target);
+    if(bitmap){
+      const sw=bitmap.width, sh=bitmap.height;
+      const side=Math.min(sw,sh);
+      const sx=(sw-side)/2, sy=(sh-side)/2;
+      ctx.drawImage(bitmap,sx,sy,side,side,0,0,target,target);
+      if(bitmap.close) bitmap.close();
+    }else{
+      const url=URL.createObjectURL(blob);
+      const img=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});
+      const side=Math.min(img.naturalWidth||img.width,img.naturalHeight||img.height);
+      const sx=((img.naturalWidth||img.width)-side)/2, sy=((img.naturalHeight||img.height)-side)/2;
+      ctx.drawImage(img,sx,sy,side,side,0,0,target,target);
+      URL.revokeObjectURL(url);
+    }
+    const data=canvas.toDataURL('image/jpeg',0.98);
+    if(key) attendanceThumbCache.set(key,data);
+    return data;
+  }catch(e){
+    return URL.createObjectURL(blob);
+  }
+}
+
 async function renderAttendanceStudentList(){
   const rawQ=$('attendanceStudentSearch')?.value||'';
   const q=normalizeSearchText(rawQ);
@@ -2311,8 +2349,8 @@ async function renderAttendanceStudentList(){
     try{
       const blob=await getStudentPhoto(`${s.idno}:face`);
       if(blob){
-        const url=URL.createObjectURL(blob);
-        photoHTML=`<img class="att-student-photo" src="${url}" data-ephemeral-url="1" alt="صورة الطالب">`;
+        const src=await makeSharpAttendanceThumb(blob,String(s.idno));
+        photoHTML=`<img class="att-student-photo" src="${src}" alt="صورة الطالب">`;
       }
     }catch(e){}
     return `
@@ -2704,7 +2742,7 @@ function exportStudentsWord(rows){
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
     .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
     .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
-    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;object-position:center;border:2px solid #c9ddd8;background:#f5f8f7;image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
     .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
@@ -3069,7 +3107,7 @@ function printStudents(rows){
     .attendance-student-list{border:1px solid #d4e0dd;border-radius:8px;max-height:330px;overflow:auto;background:#fff}
     .att-student-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 92px 100px;gap:8px;padding:9px 10px;border-bottom:1px solid #ebf0ef;cursor:pointer;align-items:center;direction:rtl}
     .att-student-photo-wrap{display:flex!important;align-items:center!important;justify-content:center!important;width:64px;min-width:64px;min-height:48px;visibility:visible!important}
-    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7}
+    .att-student-photo{display:block!important;width:46px!important;height:46px!important;border-radius:50%;object-fit:cover;object-position:center;border:2px solid #c9ddd8;background:#f5f8f7;image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
     .att-student-photo.placeholder{display:flex!important;align-items:center;justify-content:center;color:#73867f;font-size:20px}
     .att-student-row:hover,.att-student-row.selected{background:#e9f7f3}
     .att-student-row b{font-size:13px}.att-student-row span{font-size:11px;color:#6b7d78}
