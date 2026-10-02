@@ -596,7 +596,7 @@
     <div class="titles">
       <small>الإدارة العامة للتعليم بمنطقة نجران</small>
       <h1>مدرسة شرحبيل بن حسنة الثانوية</h1>
-      <p>نظام إدارة بيانات الطلاب</p>
+      <p>نظام إدارة شؤون الطلاب</p>
       <div class="school-header-credits">
         <span id="headerDesigner"></span>
         <span id="headerManager"></span>
@@ -1180,6 +1180,158 @@ function toast(msg){
   const t=$('toast'); t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
+
+const CLOUD_API_URL='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
+let cloudSyncBusy=false;
+
+async function cloudApi(action,payload={},useToken=true){
+  const headers={'Content-Type':'application/json'};
+  const token=localStorage.getItem('cloudAdminToken')||'';
+  if(useToken && token) headers['x-app-token']=token;
+  const res=await fetch(CLOUD_API_URL,{method:'POST',headers,body:JSON.stringify({action,...payload})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+  return data;
+}
+
+function blobToDataURL(blob){
+  return new Promise((resolve,reject)=>{
+    if(!blob){resolve('');return}
+    const r=new FileReader(); r.onload=()=>resolve(String(r.result||'')); r.onerror=reject; r.readAsDataURL(blob);
+  });
+}
+function dataURLToBlob(dataUrl){
+  try{
+    const [meta,b64]=String(dataUrl||'').split(',');
+    if(!b64) return null;
+    const mime=(meta.match(/data:([^;]+)/)||[])[1]||'image/jpeg';
+    const bin=atob(b64); const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }catch(e){return null}
+}
+
+async function cloudPullToLocal(){
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token) return null;
+  const data=await cloudApi('pull_all');
+
+  const students=(data.students||[]).map(s=>({
+    name:s.name||'', idno:String(s.idno||''), phone:s.phone||'', grade:s.grade||'', classroom:s.classroom||'',
+    calendar:s.calendar||'', birth:s.birth||'', verification:s.verification||'مؤكد',
+    registered:s.registered!==false, hasFace:!!s.has_face, hasId:!!s.has_id,
+    cropStatus:s.crop_status||'', referenceNo:s.reference_no||'', registrationDate:s.registration_date||'',
+    faceImage:s.face_image||'', idImage:s.id_image||''
+  }));
+  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+
+  for(const s of students){
+    if(s.faceImage){
+      const b=dataURLToBlob(s.faceImage);
+      if(b) try{await saveStudentPhoto(`${s.idno}:face`,b,true)}catch(e){}
+    }
+    if(s.idImage){
+      const b=dataURLToBlob(s.idImage);
+      if(b) try{await saveStudentPhoto(`${s.idno}:id`,b,true)}catch(e){}
+    }
+  }
+
+  const attendance=(data.attendance||[]).map(x=>({
+    idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
+    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||''
+  }));
+  localStorage.setItem('attendanceLog',JSON.stringify(attendance));
+
+  if(data.settings){
+    const s=data.settings;
+    localStorage.setItem('schoolSettings',JSON.stringify({
+      authority:s.authority||'', school:s.school||'', designer:s.designer||'', manager:s.manager||'',
+      ministryLogo:s.ministry_logo||'', schoolLogo:s.school_logo||''
+    }));
+    applySchoolSettings();
+  }
+
+  const oldUsers=(()=>{try{return JSON.parse(localStorage.getItem('adminUsers')||'[]')}catch(e){return []}})();
+  const oldBy=new Map(oldUsers.map(u=>[String(u.username),u]));
+  const cloudUsers=(data.users||[]);
+  const owner=cloudUsers.find(u=>u.is_owner);
+  if(owner){
+    const p=getAdminProfile();
+    localStorage.setItem('adminProfile',JSON.stringify({
+      username:owner.username, displayName:owner.name||p.displayName||'المدير', password:p.password||''
+    }));
+  }
+  const extras=cloudUsers.filter(u=>!u.is_owner).map(u=>({
+    username:String(u.username||''), name:u.name||'', role:u.role||'معلم',
+    permissions:Array.isArray(u.permissions)?u.permissions:[],
+    password:oldBy.get(String(u.username||''))?.password||''
+  }));
+  localStorage.setItem('adminUsers',JSON.stringify(extras));
+  return data;
+}
+
+async function cloudPushLocalData(){
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token || cloudSyncBusy) return;
+  cloudSyncBusy=true;
+  try{
+    const base=getStudents();
+    const batchSize=18;
+    for(let i=0;i<base.length;i+=batchSize){
+      const batch=[];
+      for(const s0 of base.slice(i,i+batchSize)){
+        const s={...s0};
+        try{
+          const fb=await getStudentPhoto(`${s.idno}:face`);
+          if(fb) s.faceImage=await blobToDataURL(fb);
+          const ib=await getStudentPhoto(`${s.idno}:id`);
+          if(ib) s.idImage=await blobToDataURL(ib);
+        }catch(e){}
+        batch.push(s);
+      }
+      await cloudApi('sync_students',{students:batch});
+    }
+    await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
+    const p=getAdminProfile();
+    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true},...getAdminUsers()];
+    await cloudApi('sync_users',{users});
+    await cloudApi('save_settings',{settings:getSchoolSettings()});
+    localStorage.setItem('cloudInitialSyncDone','1');
+  }finally{
+    cloudSyncBusy=false;
+  }
+}
+
+async function cloudLoginAndSync(username,password){
+  await cloudApi('bootstrap_owner',{username,password,name:getAdminProfile().displayName||'المدير'},false).catch(()=>{});
+  const login=await cloudApi('login',{username,password},false);
+  localStorage.setItem('cloudAdminToken',login.token);
+  localStorage.setItem('cloudAdminUser',JSON.stringify(login.user||{}));
+
+  const remote=await cloudApi('pull_all');
+  const localCount=getStudents().length;
+  const remoteCount=(remote.students||[]).length;
+  if(remoteCount===0 && localCount>0){
+    await cloudPushLocalData();
+  }
+  await cloudPullToLocal();
+  if(typeof renderAdmin==='function') renderAdmin();
+  return login;
+}
+
+async function cloudAutoLoginFromSavedProfile(){
+  if(localStorage.getItem('cloudAdminToken')){
+    try{await cloudPullToLocal(); if(typeof renderAdmin==='function') renderAdmin(); return true}catch(e){
+      localStorage.removeItem('cloudAdminToken');
+    }
+  }
+  const p=getAdminProfile();
+  if(localStorage.getItem('adminLoggedIn')==='1' && p.username && p.password){
+    try{await cloudLoginAndSync(p.username,p.password); return true}catch(e){console.warn('cloud auto login',e)}
+  }
+  return false;
+}
+
 function normalizeCivilId(value){
   const arabic='٠١٢٣٤٥٦٧٨٩';
   const persian='۰۱۲۳۴۵۶۷۸۹';
@@ -1226,6 +1378,10 @@ function getStudents(){
 function saveStudents(s){
   const clean=dedupeStudents(s);
   localStorage.setItem('students',JSON.stringify(clean));
+  if(localStorage.getItem('cloudAdminToken')){
+    const light=clean.map(x=>({...x,faceImage:'',idImage:''}));
+    cloudApi('sync_students',{students:light}).catch(e=>console.warn('cloud students',e));
+  }
   return clean;
 }
 function fileToDataURL(file){
@@ -1440,7 +1596,7 @@ function openPhotoDB(){
     req.onerror=()=>reject(req.error);
   });
 }
-async function saveStudentPhoto(key,blob){
+async function saveStudentPhoto(key,blob,fromCloud=false){
   const db=await openPhotoDB();
   return new Promise((resolve,reject)=>{
     const tx=db.transaction(PHOTO_STORE,'readwrite');
@@ -1893,6 +2049,9 @@ function setAdminMode(on){
     logoutBtn.onclick=()=>{
       document.getElementById('dashboard')?.classList.add('hidden');
       document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
+      cloudApi('logout',{}).catch(()=>{});
+      localStorage.removeItem('cloudAdminToken');
+      localStorage.removeItem('cloudAdminUser');
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminSettingsOpen');
       localStorage.setItem('activeMainPage','register');
@@ -1907,18 +2066,30 @@ function setAdminMode(on){
   }
 }
 
-$('adminLoginBtn').onclick=()=>{
+$('adminLoginBtn').onclick=async()=>{
   const user=$('adminUser').value.trim(), pass=$('adminPass').value;
-  const p=getAdminProfile();
-  const extra=getAdminUsers().find(x=>String(x.username)===user && String(x.password)===pass);
-  if((String(p.username)===user && String(p.password)===pass) || extra){
-    $('adminLoginModal').classList.add('hidden');
-    $('dashboard').classList.remove('hidden');
+  const btn=$('adminLoginBtn'); const oldText=btn.textContent;
+  btn.disabled=true; btn.textContent='جاري الدخول...';
+  try{
+    await cloudLoginAndSync(user,pass);
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
+    $('adminLoginModal').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
     setAdminMode(true);
     renderAdmin();
-  } else toast('اسم المستخدم أو كلمة المرور غير صحيحة');
+  }catch(e){
+    // fallback to current local credentials only if cloud is temporarily unavailable
+    const p=getAdminProfile();
+    const extra=getAdminUsers().find(x=>String(x.username)===user && String(x.password)===pass);
+    if((String(p.username)===user && String(p.password)===pass) || extra){
+      localStorage.setItem('adminLoggedIn','1');
+      $('adminLoginModal').classList.add('hidden');
+      $('dashboard').classList.remove('hidden');
+      setAdminMode(true); renderAdmin();
+      toast('تم الدخول محليًا، وتعذر الاتصال بالسحابة مؤقتًا');
+    }else toast('اسم المستخدم أو كلمة المرور غير صحيحة');
+  }finally{btn.disabled=false;btn.textContent=oldText}
 };
 $('adminCancelBtn').onclick=()=>{
   document.querySelector('.tab[data-page="register"]').click();
@@ -2221,6 +2392,7 @@ function ensureAdminSettings(){
     delete schoolPreview.dataset.pending;
     delete ministryPreview.dataset.pending;
     applySchoolSettings();
+    cloudApi('save_settings',{settings:getSchoolSettings()}).catch(e=>console.warn('cloud settings',e));
     alert('✅ تم حفظ بيانات المدرسة بنجاح');
   };
   document.getElementById('saveAdminAccount').onclick=()=>{
@@ -2248,6 +2420,7 @@ function ensureAdminSettings(){
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
     users.push({username,name,password,role,permissions});
     saveAdminUsers(users);
+    cloudApi('save_user',{user:users[users.length-1]}).catch(e=>console.warn('cloud user',e));
     document.getElementById('newAdminUsername').value='';
     document.getElementById('newAdminName').value='';
     document.getElementById('newAdminPassword').value='';
@@ -2277,6 +2450,7 @@ function ensureAdminSettings(){
     const users=getAdminUsers();
     users.forEach(u=>u.permissions=[...permissions]);
     saveAdminUsers(users);
+    cloudApi('sync_users',{users}).catch(e=>console.warn('cloud bulk users',e));
     renderAdminUsersSettings();
     alert('✅ تم تطبيق الصلاحيات المحددة على جميع المستخدمين');
   };
@@ -2345,6 +2519,7 @@ function ensureAdminSettings(){
         else{users.push(rec);added++}
       }
       saveAdminUsers(users);
+      cloudApi('sync_users',{users}).catch(e=>console.warn('cloud teachers',e));
       renderAdminUsersSettings();
       status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله.`;
     }catch(err){
@@ -2409,7 +2584,10 @@ function renderAdminUsersSettings(){
     const users=getAdminUsers();
     const idx=users.findIndex(u=>String(u.username)===String(btn.dataset.deleteAdminUser));
     if(idx>=0) users.splice(idx,1);
-    saveAdminUsers(users); renderAdminUsersSettings(); toast('تم حذف المستخدم');
+    const deletedUsername=String(btn.dataset.deleteAdminUser||'');
+    saveAdminUsers(users);
+    cloudApi('delete_user',{username:deletedUsername}).catch(e=>console.warn('cloud delete user',e));
+    renderAdminUsersSettings(); toast('تم حذف المستخدم');
   });
 
   document.querySelectorAll('[data-edit-admin-user]').forEach(btn=>btn.onclick=()=>{
@@ -2480,11 +2658,27 @@ function openAdminSettings(){
   localStorage.setItem('adminSettingsOpen','1');
 }
 applySchoolSettings();
+setTimeout(async()=>{
+  try{
+    const r=await cloudApi('school_settings_public',{},false);
+    if(r.settings){
+      const s=r.settings;
+      localStorage.setItem('schoolSettings',JSON.stringify({
+        authority:s.authority||'',school:s.school||'',designer:s.designer||'',manager:s.manager||'',
+        ministryLogo:s.ministry_logo||'',schoolLogo:s.school_logo||''
+      }));
+      applySchoolSettings();
+    }
+  }catch(e){}
+},50);
 
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
-function saveAttendanceLog(rows){localStorage.setItem('attendanceLog',JSON.stringify(rows))}
+function saveAttendanceLog(rows){
+  localStorage.setItem('attendanceLog',JSON.stringify(rows));
+  if(localStorage.getItem('cloudAdminToken')) cloudApi('sync_attendance',{attendance:rows}).catch(e=>console.warn('cloud attendance',e));
+}
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
 async function renderAttendancePage(){
@@ -4454,6 +4648,7 @@ function restoreLastAppLocation(){
   if(localStorage.getItem('adminLoggedIn')==='1'){
     adminLoggedIn=true;
     setAdminMode(true);
+    setTimeout(()=>cloudAutoLoginFromSavedProfile().catch(()=>{}),100);
   }
 
   if(page==='admin'){
