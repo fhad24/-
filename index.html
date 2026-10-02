@@ -538,7 +538,31 @@
       .attendance-saved-time{font-size:11px!important}
     }
 
-</style>
+
+    .admin-settings-overlay{position:fixed;inset:0;z-index:1000;background:#fff;overflow:auto;padding:28px 22px 48px;direction:rtl}
+    .admin-settings-wrap{max-width:980px;margin:auto}
+    .admin-settings-head{position:relative;text-align:center}
+    .admin-settings-head h2{font-size:30px;margin:0 0 18px;color:#082d29}
+    .admin-settings-close{position:absolute;left:0;top:-8px;width:58px;height:58px;border:0;border-radius:50%;background:#fff;box-shadow:0 3px 14px #0002;font-size:34px;cursor:pointer;color:#173b34}
+    .admin-settings-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #cbdad7;background:#f4f7f6;border-radius:20px;overflow:hidden;margin-bottom:26px}
+    .admin-settings-tab{border:0;background:transparent;padding:18px 10px;font-family:inherit;font-size:18px;font-weight:800;color:#60736e;cursor:pointer}
+    .admin-settings-tab.active{background:var(--primary);color:#fff;border-radius:15px;margin:6px}
+    .admin-settings-pane{display:none}.admin-settings-pane.active{display:block}
+    .admin-settings-desc{text-align:center;color:#60736e;font-size:18px;line-height:1.9;margin:0 0 20px}
+    .admin-settings-field{margin:18px 0}.admin-settings-field label{font-size:18px;text-align:center;margin-bottom:9px}
+    .admin-settings-field input,.admin-settings-field select{height:76px;border-radius:15px;font-size:18px;background:#f4f7f6;padding:0 22px}
+    .admin-settings-save{width:100%;height:64px;border:0;border-radius:14px;background:var(--primary);color:#fff;font-family:inherit;font-size:20px;font-weight:800;cursor:pointer;margin-top:22px}
+    .admin-users-list{display:grid;gap:12px;margin:16px 0 26px}
+    .admin-user-card{border:1px solid #cbdad7;border-radius:18px;padding:18px;background:#fff;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+    .admin-user-card b{font-size:20px}.admin-user-card span{display:block;color:#60736e;font-size:16px;margin-top:5px}
+    .admin-user-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .admin-user-btn{border:1px solid #173b34;background:#fff;border-radius:13px;padding:11px 15px;font-family:inherit;font-size:15px;cursor:pointer}
+    .admin-user-btn.danger{border-color:#e33124;color:#c6281c}
+    .admin-permissions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .admin-permission{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f4f7f6;border:1px solid #d4e1de;border-radius:14px;padding:14px 16px;font-size:17px}
+    .admin-permission input{width:20px;height:20px}
+    @media(max-width:650px){.admin-settings-tabs{grid-template-columns:1fr}.admin-user-card{grid-template-columns:1fr}.admin-permissions{grid-template-columns:1fr}.admin-settings-head h2{font-size:24px}}
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
@@ -1818,11 +1842,33 @@ function setAdminMode(on){
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
   const adminTab = document.querySelector('.tab[data-page="admin"]');
-  adminTab.textContent = 'دخول الإدارة';
+  if(adminTab){
+    adminTab.textContent = on ? 'الإعدادات ⚙️' : 'دخول الإدارة';
+    adminTab.onclick = on ? (e=>{e.preventDefault();e.stopPropagation();openAdminSettings();}) : null;
+  }
+  let logoutBtn=document.getElementById('adminLogoutNav');
+  if(on && !logoutBtn){
+    logoutBtn=document.createElement('button');
+    logoutBtn.id='adminLogoutNav';
+    logoutBtn.type='button';
+    logoutBtn.textContent='تسجيل الخروج 🚪';
+    logoutBtn.onclick=()=>{
+      document.getElementById('dashboard')?.classList.add('hidden');
+      document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
+      setAdminMode(false);
+      document.querySelector('.tab[data-page="register"]')?.click();
+    };
+    document.querySelector('header nav')?.prepend(logoutBtn);
+  }else if(!on && logoutBtn){
+    logoutBtn.remove();
+  }
 }
 
 $('adminLoginBtn').onclick=()=>{
-  if($('adminUser').value.trim()==='1015401902' && $('adminPass').value==='13111111'){
+  const user=$('adminUser').value.trim(), pass=$('adminPass').value;
+  const p=getAdminProfile();
+  const extra=getAdminUsers().find(x=>String(x.username)===user && String(x.password)===pass);
+  if((String(p.username)===user && String(p.password)===pass) || extra){
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
@@ -1902,6 +1948,157 @@ if($('adminDataTab')) $('adminDataTab').onclick=()=>showAdminView('data');
 if($('adminAttendanceTab')) $('adminAttendanceTab').onclick=()=>showAdminView('attendance');
 if($('adminUnregisteredTab')) $('adminUnregisteredTab').onclick=()=>toast('سيتم عرض الطلاب غير المسجلين هنا');
 if($('adminReportsTab')) $('adminReportsTab').onclick=()=>toast('سيتم عرض التقارير هنا');
+
+
+function getSchoolSettings(){
+  try{return {...{authority:'الإدارة العامة للتعليم بمنطقة نجران',school:'مدرسة شرحبيل بن حسنة الثانوية',designer:''},...JSON.parse(localStorage.getItem('schoolSettings')||'{}')}}catch(e){return {authority:'الإدارة العامة للتعليم بمنطقة نجران',school:'مدرسة شرحبيل بن حسنة الثانوية',designer:''}}
+}
+function getAdminProfile(){
+  try{return {...{username:'1015401902',displayName:'المدير',password:'13111111'},...JSON.parse(localStorage.getItem('adminProfile')||'{}')}}catch(e){return {username:'1015401902',displayName:'المدير',password:'13111111'}}
+}
+function getAdminUsers(){try{return JSON.parse(localStorage.getItem('adminUsers')||'[]')}catch(e){return []}}
+function saveAdminUsers(rows){localStorage.setItem('adminUsers',JSON.stringify(rows))}
+function applySchoolSettings(){
+  const s=getSchoolSettings();
+  const small=document.querySelector('.titles small'); if(small) small.textContent=s.authority;
+  const title=document.querySelector('.titles h1'); if(title) title.textContent=s.school;
+}
+function ensureAdminSettings(){
+  let ov=document.getElementById('adminSettingsOverlay');
+  if(ov) return ov;
+  ov=document.createElement('div');
+  ov.id='adminSettingsOverlay';
+  ov.className='admin-settings-overlay hidden';
+  ov.innerHTML=`
+    <div class="admin-settings-wrap">
+      <div class="admin-settings-head">
+        <button id="adminSettingsClose" class="admin-settings-close" type="button">×</button>
+        <h2>الإعدادات والمستخدمون</h2>
+      </div>
+      <div class="admin-settings-tabs">
+        <button class="admin-settings-tab active" data-settings-tab="school" type="button">🏫 بيانات المدرسة</button>
+        <button class="admin-settings-tab" data-settings-tab="account" type="button">👤 حسابي</button>
+        <button class="admin-settings-tab" data-settings-tab="users" type="button">➕ المستخدمون</button>
+      </div>
+
+      <div class="admin-settings-pane active" data-settings-pane="school">
+        <p class="admin-settings-desc">تظهر هذه البيانات في رأس التطبيق وتذييله وفي الطباعة.</p>
+        <div class="admin-settings-field"><label>الإدارة العامة (تظهر فوق اسم المدرسة)</label><input id="settingsAuthority"></div>
+        <div class="admin-settings-field"><label>اسم المدرسة</label><input id="settingsSchool"></div>
+        <div class="admin-settings-field"><label>اسم مصمم النظام (وكيل شؤون الطلاب)</label><input id="settingsDesigner"></div>
+        <button class="admin-settings-save" id="saveSchoolSettings" type="button">حفظ بيانات المدرسة</button>
+      </div>
+
+      <div class="admin-settings-pane" data-settings-pane="account">
+        <p class="admin-settings-desc">تعديل بيانات دخولك أنت فقط.</p>
+        <div class="admin-settings-field"><label>اسم المستخدم</label><input id="settingsAdminUsername"></div>
+        <div class="admin-settings-field"><label>الاسم المعروض</label><input id="settingsAdminDisplayName"></div>
+        <div class="admin-settings-field"><label>كلمة مرور جديدة (اتركها فارغة لعدم التغيير)</label><input id="settingsAdminPassword" type="password"></div>
+        <div class="admin-settings-field"><label>تأكيد كلمة المرور</label><input id="settingsAdminPassword2" type="password"></div>
+        <button class="admin-settings-save" id="saveAdminAccount" type="button">حفظ حسابي</button>
+      </div>
+
+      <div class="admin-settings-pane" data-settings-pane="users">
+        <p class="admin-settings-desc">كل من لديه اسم مستخدم وكلمة مرور من هذه القائمة يستطيع الدخول إلى لوحة الإدارة بحسب صلاحياته.</p>
+        <div id="adminUsersList" class="admin-users-list"></div>
+        <h3 style="text-align:center;font-size:22px">إضافة مستخدم جديد</h3>
+        <div class="row">
+          <div class="admin-settings-field"><label>اسم المستخدم</label><input id="newAdminUsername"></div>
+          <div class="admin-settings-field"><label>الاسم</label><input id="newAdminName"></div>
+        </div>
+        <div class="row">
+          <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
+          <div class="admin-settings-field"><label>نوع المستخدم</label><select id="newAdminRole"><option>مدير</option><option>معلم</option><option>موظف</option></select></div>
+        </div>
+        <div class="admin-permissions">
+          <label class="admin-permission">تعديل بيانات الطلاب <input class="admin-new-perm" value="editStudents" type="checkbox" checked></label>
+          <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
+          <label class="admin-permission">حذف الطلاب <input class="admin-new-perm" value="deleteStudents" type="checkbox" checked></label>
+          <label class="admin-permission">تحضير الطلاب <input class="admin-new-perm" value="attendance" type="checkbox" checked></label>
+          <label class="admin-permission">التقارير والتصدير <input class="admin-new-perm" value="reports" type="checkbox" checked></label>
+          <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
+          <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
+          <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
+        </div>
+        <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('adminSettingsClose').onclick=()=>ov.classList.add('hidden');
+  document.querySelectorAll('.admin-settings-tab').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('.admin-settings-tab').forEach(x=>x.classList.toggle('active',x===btn));
+    document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane===btn.dataset.settingsTab));
+    if(btn.dataset.settingsTab==='users') renderAdminUsersSettings();
+  });
+  document.getElementById('saveSchoolSettings').onclick=()=>{
+    localStorage.setItem('schoolSettings',JSON.stringify({
+      authority:document.getElementById('settingsAuthority').value.trim(),
+      school:document.getElementById('settingsSchool').value.trim(),
+      designer:document.getElementById('settingsDesigner').value.trim()
+    }));
+    applySchoolSettings(); toast('تم حفظ بيانات المدرسة');
+  };
+  document.getElementById('saveAdminAccount').onclick=()=>{
+    const p=getAdminProfile();
+    const pass=document.getElementById('settingsAdminPassword').value;
+    const pass2=document.getElementById('settingsAdminPassword2').value;
+    if(pass && pass!==pass2){toast('تأكيد كلمة المرور غير مطابق');return}
+    localStorage.setItem('adminProfile',JSON.stringify({
+      username:document.getElementById('settingsAdminUsername').value.trim()||p.username,
+      displayName:document.getElementById('settingsAdminDisplayName').value.trim()||p.displayName,
+      password:pass||p.password
+    }));
+    document.getElementById('settingsAdminPassword').value='';
+    document.getElementById('settingsAdminPassword2').value='';
+    toast('تم حفظ بيانات حساب الأدمن');
+  };
+  document.getElementById('addAdminUser').onclick=()=>{
+    const username=document.getElementById('newAdminUsername').value.trim();
+    const name=document.getElementById('newAdminName').value.trim();
+    const password=document.getElementById('newAdminPassword').value;
+    const role=document.getElementById('newAdminRole').value;
+    if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
+    const users=getAdminUsers();
+    if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
+    const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+    users.push({username,name,password,role,permissions});
+    saveAdminUsers(users);
+    document.getElementById('newAdminUsername').value='';
+    document.getElementById('newAdminName').value='';
+    document.getElementById('newAdminPassword').value='';
+    renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
+  };
+  return ov;
+}
+function renderAdminUsersSettings(){
+  const host=document.getElementById('adminUsersList'); if(!host) return;
+  const p=getAdminProfile(), users=getAdminUsers();
+  const all=[{...p,name:p.displayName,role:'مدير',owner:true,permissions:['كل الصلاحيات']},...users];
+  host.innerHTML=all.map((u,i)=>`
+    <div class="admin-user-card">
+      <div><b>${u.username}</b><span>${u.name||u.displayName||''} — ${u.role||'مستخدم'}</span><span>${u.owner?'كل الصلاحيات':(u.permissions||[]).join('، ')}</span></div>
+      <div class="admin-user-actions">
+        ${u.owner?'':`<button class="admin-user-btn danger" type="button" data-delete-admin-user="${i-1}">🗑 حذف</button>`}
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('[data-delete-admin-user]').forEach(btn=>btn.onclick=()=>{
+    const users=getAdminUsers(); users.splice(Number(btn.dataset.deleteAdminUser),1); saveAdminUsers(users); renderAdminUsersSettings(); toast('تم حذف المستخدم');
+  });
+}
+function openAdminSettings(){
+  if(!adminLoggedIn) return;
+  const ov=ensureAdminSettings();
+  const s=getSchoolSettings(), p=getAdminProfile();
+  document.getElementById('settingsAuthority').value=s.authority||'';
+  document.getElementById('settingsSchool').value=s.school||'';
+  document.getElementById('settingsDesigner').value=s.designer||'';
+  document.getElementById('settingsAdminUsername').value=p.username||'';
+  document.getElementById('settingsAdminDisplayName').value=p.displayName||'';
+  document.querySelectorAll('.admin-settings-tab').forEach((x,i)=>x.classList.toggle('active',i===0));
+  document.querySelectorAll('.admin-settings-pane').forEach((x,i)=>x.classList.toggle('active',i===0));
+  ov.classList.remove('hidden');
+}
+applySchoolSettings();
 
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
@@ -3866,11 +4063,10 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 
-document.querySelector('.tab[data-page="admin"]').addEventListener('click', ()=>{
-  $('adminLoginModal').classList.add('hidden');
-  $('dashboard').classList.remove('hidden');
-  setAdminMode(true);
-  renderAdmin();
+document.querySelector('.tab[data-page="admin"]').addEventListener('click', (e)=>{
+  if(adminLoggedIn){ e.preventDefault(); e.stopPropagation(); openAdminSettings(); return; }
+  $('adminLoginModal').classList.remove('hidden');
+  $('dashboard').classList.add('hidden');
 });
 </script>
 </body>
