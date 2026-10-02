@@ -36,6 +36,8 @@
     .titles small{display:block;font-size:10px;opacity:.88;margin-bottom:4px}
     .titles h1{font-size:15px;margin:0 0 3px;font-weight:700}
     .titles p{margin:0;font-size:10px;opacity:.9}
+    .school-header-credits{margin-top:5px;font-size:9px;line-height:1.55;opacity:.92;text-align:center}
+    .school-header-credits span{display:block}
     nav{display:flex;justify-content:center;gap:7px;margin-top:12px;flex-wrap:wrap}
     nav button{
       border:0;background:#ffffff1f;color:white;border-radius:16px;padding:7px 13px;
@@ -584,6 +586,10 @@
       <small>الإدارة العامة للتعليم بمنطقة نجران</small>
       <h1>مدرسة شرحبيل بن حسنة الثانوية</h1>
       <p>نظام إدارة بيانات الطلاب</p>
+      <div class="school-header-credits">
+        <span id="headerDesigner"></span>
+        <span id="headerManager"></span>
+      </div>
     </div>
     <div class="logo">مدرستي<br>بيانات</div>
   </div>
@@ -1878,7 +1884,9 @@ function setAdminMode(on){
       setAdminMode(false);
       document.querySelector('.tab[data-page="register"]')?.click();
     };
-    document.querySelector('header nav')?.prepend(logoutBtn);
+    const adminTab=document.querySelector('.tab[data-page="admin"]');
+    if(adminTab) adminTab.insertAdjacentElement('afterend',logoutBtn);
+    else document.querySelector('header nav')?.appendChild(logoutBtn);
   }else if(!on && logoutBtn){
     logoutBtn.remove();
   }
@@ -1990,6 +1998,10 @@ function applySchoolSettings(){
   const s=getSchoolSettings();
   const small=document.querySelector('.titles small'); if(small) small.textContent=s.authority;
   const title=document.querySelector('.titles h1'); if(title) title.textContent=s.school;
+  const designer=document.getElementById('headerDesigner');
+  const manager=document.getElementById('headerManager');
+  if(designer) designer.textContent=s.designer ? `مصمم النظام: ${s.designer}` : '';
+  if(manager) manager.textContent=s.manager ? `مدير المدرسة: ${s.manager}` : '';
   const logos=document.querySelectorAll('header .logo');
   if(logos[0] && s.ministryLogo){
     logos[0].textContent='';
