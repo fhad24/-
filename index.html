@@ -2442,9 +2442,6 @@ function ensureAdminSettings(){
   document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=updateNewPermToggleText);
   updateNewPermToggleText();
 
-  };
-  document.querySelectorAll('.bulk-admin-perm').forEach(x=>x.onchange=updateBulkToggleText);
-  updateBulkToggleText();
   document.getElementById('applyBulkUserPermissions').onclick=()=>{
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
     const users=getAdminUsers();
