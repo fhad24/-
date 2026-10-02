@@ -1112,6 +1112,19 @@ const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.
 tabs.forEach(b=>b.onclick=()=>{
   tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
   pages.forEach(p=>p.classList.add('hidden')); $(b.dataset.page).classList.remove('hidden');
+
+  if(b.dataset.page==='admin'){
+    if(typeof adminLoggedIn!=='undefined' && adminLoggedIn){
+      $('adminLoginModal').classList.add('hidden');
+      $('dashboard').classList.remove('hidden');
+      if(typeof openAdminSettings==='function') openAdminSettings();
+    }else{
+      $('dashboard').classList.add('hidden');
+      $('adminLoginModal').classList.remove('hidden');
+    }
+    return;
+  }
+
   if(b.dataset.page==='edit' && typeof resetStudentEditLogin==='function') resetStudentEditLogin();
 });
 for(let i=1;i<=31;i++){ $('day').innerHTML += `<option value="${i}">${i}</option>`; $('editDay').innerHTML += `<option value="${i}">${i}</option>`; }
@@ -1844,7 +1857,6 @@ function setAdminMode(on){
   const adminTab = document.querySelector('.tab[data-page="admin"]');
   if(adminTab){
     adminTab.textContent = on ? 'الإعدادات ⚙️' : 'دخول الإدارة';
-    adminTab.onclick = on ? (e=>{e.preventDefault();e.stopPropagation();openAdminSettings();}) : null;
   }
   let logoutBtn=document.getElementById('adminLogoutNav');
   if(on && !logoutBtn){
@@ -4063,11 +4075,7 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 
-document.querySelector('.tab[data-page="admin"]').addEventListener('click', (e)=>{
-  if(adminLoggedIn){ e.preventDefault(); e.stopPropagation(); openAdminSettings(); return; }
-  $('adminLoginModal').classList.remove('hidden');
-  $('dashboard').classList.add('hidden');
-});
+// زر الإدارة تتم إدارته من معالج التبويبات الرئيسي أعلاه.
 </script>
 </body>
 </html>
