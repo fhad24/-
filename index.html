@@ -2847,124 +2847,7 @@ function exportStudentsWord(rows){
       .attendance-saved-time{font-size:11px!important}
     }
 
-</style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>الاسم</th><th>الهوية</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table><script>
-
-function ensureAdminToolModal(){
-  let m=document.getElementById('adminToolModal');
-  if(m) return m;
-  m=document.createElement('div');
-  m.id='adminToolModal';
-  m.style.cssText='position:fixed;inset:0;background:#0008;z-index:99999;display:none;align-items:center;justify-content:center;padding:18px';
-  m.innerHTML=`<div style="width:min(980px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;direction:rtl;box-shadow:0 20px 60px #0004">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
-      <h3 id="adminToolModalTitle" style="margin:0;font-size:18px"></h3>
-      <button type="button" id="adminToolModalClose" class="admin-outline-btn" style="padding:7px 14px">إغلاق ✕</button>
-    </div>
-    <div id="adminToolModalBody"></div>
-  </div>`;
-  document.body.appendChild(m);
-  document.getElementById('adminToolModalClose').onclick=()=>m.style.display='none';
-  m.onclick=e=>{if(e.target===m)m.style.display='none'};
-  return m;
-}
-function openAdminToolModal(title,body){
-  const m=ensureAdminToolModal();
-  document.getElementById('adminToolModalTitle').textContent=title;
-  document.getElementById('adminToolModalBody').innerHTML=body;
-  m.style.display='flex';
-}
-function escAdmin(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-
-const pdfToolsBtn=document.getElementById('pdfToolsBtn');
-const pdfToolsInput=document.getElementById('pdfToolsInput');
-if(pdfToolsBtn&&pdfToolsInput){
-  pdfToolsBtn.onclick=()=>pdfToolsInput.click();
-  pdfToolsInput.onchange=async e=>{
-    const file=e.target.files&&e.target.files[0];
-    if(!file)return;
-    openAdminToolModal('تحويل PDF إلى صور / Word',
-      `<div id="pdfToolStatus">جاري قراءة <b>${escAdmin(file.name)}</b>...</div>
-       <div id="pdfToolActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
-       <div id="pdfToolPages" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px"></div>`);
-    try{
-      if(!window.pdfjsLib)throw new Error('تعذر تحميل مكتبة PDF');
-      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      const bytes=new Uint8Array(await file.arrayBuffer());
-      const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
-      const images=[];
-      for(let i=1;i<=pdf.numPages;i++){
-        document.getElementById('pdfToolStatus').textContent=`جاري تحويل الصفحة ${i} من ${pdf.numPages}`;
-        const page=await pdf.getPage(i);
-        const viewport=page.getViewport({scale:1.4});
-        const canvas=document.createElement('canvas');
-        canvas.width=viewport.width; canvas.height=viewport.height;
-        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
-        images.push(canvas.toDataURL('image/jpeg',0.9));
-      }
-      document.getElementById('pdfToolStatus').innerHTML=`تم تحويل <b>${images.length}</b> صفحة.`;
-      document.getElementById('pdfToolActions').innerHTML=`
-        <button class="admin-outline-btn primary" id="downloadPdfImagesBtn" type="button">تحميل الصور</button>
-        <button class="admin-outline-btn" id="downloadPdfWordBtn" type="button">تحميل Word</button>`;
-      document.getElementById('pdfToolPages').innerHTML=images.map((src,i)=>`<div style="border:1px solid #d7e3df;border-radius:10px;padding:8px"><img src="${src}" style="width:100%"><div style="text-align:center;margin-top:6px">صفحة ${i+1}</div></div>`).join('');
-      document.getElementById('downloadPdfImagesBtn').onclick=()=>images.forEach((src,i)=>{const a=document.createElement('a');a.href=src;a.download=`page_${i+1}.jpg`;a.click()});
-      document.getElementById('downloadPdfWordBtn').onclick=()=>{
-        const body=images.map(src=>`<p style="page-break-after:always;text-align:center"><img src="${src}" style="max-width:100%"></p>`).join('');
-        const blob=new Blob(['\ufeff<html dir="rtl"><meta charset="utf-8"><body>'+body+'</body></html>'],{type:'application/msword'});
-        if(typeof downloadBlob==='function')downloadBlob(blob,(file.name.replace(/\.pdf$/i,'')||'converted')+'.doc');
-      };
-    }catch(err){
-      document.getElementById('pdfToolStatus').innerHTML=`<span style="color:#b42318">تعذر التحويل: ${escAdmin(err.message||err)}</span>`;
-    }
-    e.target.value='';
-  };
-}
-
-const barcodeBtn=document.getElementById('barcodeToolsBtn');
-if(barcodeBtn){
-  barcodeBtn.onclick=()=>{
-    const students=typeof getStudents==='function'?getStudents():[];
-    openAdminToolModal('الباركود — إضافة / عرض الأسماء',
-      `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <input id="barcodeSearch" placeholder="ابحث بالاسم أو السجل المدني" style="flex:1;min-width:240px">
-        <button type="button" class="admin-outline-btn primary" id="printBarcodesBtn">طباعة الباركود</button>
-      </div><div id="barcodeStudentsList"></div>`);
-    const render=()=>{
-      const q=String(document.getElementById('barcodeSearch').value||'').trim();
-      const rows=students.filter(s=>!q||String(s.name||'').includes(q)||String(s.idno||'').includes(q));
-      document.getElementById('barcodeStudentsList').innerHTML=rows.map((s,i)=>`<div style="display:grid;grid-template-columns:minmax(220px,1fr) 300px;gap:14px;align-items:center;border-bottom:1px solid #e4ece9;padding:12px 0"><div><b>${escAdmin(s.name||'')}</b><div>${escAdmin(s.idno||'')}</div></div><svg id="bc_${i}"></svg></div>`).join('')||'<div>لا توجد نتائج</div>';
-      rows.forEach((s,i)=>{try{JsBarcode(`#bc_${i}`,String(s.idno||''),{format:'CODE128',displayValue:true,height:42,fontSize:13,margin:4})}catch(e){}});
-    };
-    document.getElementById('barcodeSearch').oninput=render;
-    document.getElementById('printBarcodesBtn').onclick=()=>window.print();
-    render();
-  };
-}
-
-const madBtn=document.getElementById('madrasatiToolsBtn');
-if(madBtn){
-  madBtn.onclick=()=>{
-    const students=typeof getStudents==='function'?getStudents():[];
-    openAdminToolModal('متابعة دخول منصة مدرستي',
-      `<input id="madrasatiSearch" placeholder="ابحث بالاسم أو السجل المدني" style="margin-bottom:12px"><div id="madrasatiList"></div>`);
-    const render=()=>{
-      const q=String(document.getElementById('madrasatiSearch').value||'').trim();
-      const saved=JSON.parse(localStorage.getItem('madrasatiLoginStatus')||'{}');
-      const rows=students.filter(s=>!q||String(s.name||'').includes(q)||String(s.idno||'').includes(q));
-      document.getElementById('madrasatiList').innerHTML=rows.map(s=>`<label style="display:grid;grid-template-columns:34px 1fr 150px;gap:10px;align-items:center;border-bottom:1px solid #e4ece9;padding:10px 0;margin:0"><input type="checkbox" data-mid="${escAdmin(s.idno||'')}" ${saved[s.idno]?'checked':''} style="width:20px;height:20px"><span><b>${escAdmin(s.name||'')}</b><small style="display:block">${escAdmin(s.idno||'')}</small></span><span>${saved[s.idno]?'تم الدخول ✅':'لم يسجل الدخول'}</span></label>`).join('')||'<div>لا توجد نتائج</div>';
-      document.querySelectorAll('[data-mid]').forEach(ch=>ch.onchange=()=>{
-        const data=JSON.parse(localStorage.getItem('madrasatiLoginStatus')||'{}');
-        data[ch.dataset.mid]=ch.checked;
-        localStorage.setItem('madrasatiLoginStatus',JSON.stringify(data));
-        render();
-      });
-    };
-    document.getElementById('madrasatiSearch').oninput=render;
-    render();
-  };
-}
-
-</script>
-</body></html>`;
+</style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>الاسم</th><th>الهوية</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`;
   downloadBlob(new Blob(['\ufeff'+doc],{type:'application/msword'}),'بيانات_الطلاب.doc');
 }
 
@@ -2995,7 +2878,8 @@ function printStudents(rows){
     .student-picker-grid select,.student-name-select select{
       height:58px;border-radius:15px;font-size:17px;background:#f9fbfb
     }
-    .face-verify-box{      margin-top:18px;border:1px solid #d5e2df;border-radius:18px;padding:16px;background:#fbfdfd
+    .face-verify-box{
+      margin-top:18px;border:1px solid #d5e2df;border-radius:18px;padding:16px;background:#fbfdfd
     }
     .face-compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
     .face-panel{text-align:center}
@@ -3111,8 +2995,7 @@ function printStudents(rows){
       .student-pick-card{grid-template-columns:36px minmax(0,1fr) 104px;gap:7px;padding:7px 6px}
       .student-pick-photo,.student-pick-placeholder{width:34px;height:34px}
       .student-pick-name{font-size:12px}
-      .student-pick-id{font-size:11px}
-    }
+      .student-pick-id{font-size:11px}    }
 
 
     .attendance-panel{padding-top:4px}
@@ -3326,124 +3209,7 @@ function printStudents(rows){
       .attendance-saved-time{font-size:11px!important}
     }
 
-</style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table><script>
-
-function ensureAdminToolModal(){
-  let m=document.getElementById('adminToolModal');
-  if(m) return m;
-  m=document.createElement('div');
-  m.id='adminToolModal';
-  m.style.cssText='position:fixed;inset:0;background:#0008;z-index:99999;display:none;align-items:center;justify-content:center;padding:18px';
-  m.innerHTML=`<div style="width:min(980px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:18px;direction:rtl;box-shadow:0 20px 60px #0004">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
-      <h3 id="adminToolModalTitle" style="margin:0;font-size:18px"></h3>
-      <button type="button" id="adminToolModalClose" class="admin-outline-btn" style="padding:7px 14px">إغلاق ✕</button>
-    </div>
-    <div id="adminToolModalBody"></div>
-  </div>`;
-  document.body.appendChild(m);
-  document.getElementById('adminToolModalClose').onclick=()=>m.style.display='none';
-  m.onclick=e=>{if(e.target===m)m.style.display='none'};
-  return m;
-}
-function openAdminToolModal(title,body){
-  const m=ensureAdminToolModal();
-  document.getElementById('adminToolModalTitle').textContent=title;
-  document.getElementById('adminToolModalBody').innerHTML=body;
-  m.style.display='flex';
-}
-function escAdmin(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-
-const pdfToolsBtn=document.getElementById('pdfToolsBtn');
-const pdfToolsInput=document.getElementById('pdfToolsInput');
-if(pdfToolsBtn&&pdfToolsInput){
-  pdfToolsBtn.onclick=()=>pdfToolsInput.click();
-  pdfToolsInput.onchange=async e=>{
-    const file=e.target.files&&e.target.files[0];
-    if(!file)return;
-    openAdminToolModal('تحويل PDF إلى صور / Word',
-      `<div id="pdfToolStatus">جاري قراءة <b>${escAdmin(file.name)}</b>...</div>
-       <div id="pdfToolActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
-       <div id="pdfToolPages" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px"></div>`);
-    try{
-      if(!window.pdfjsLib)throw new Error('تعذر تحميل مكتبة PDF');
-      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      const bytes=new Uint8Array(await file.arrayBuffer());
-      const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
-      const images=[];
-      for(let i=1;i<=pdf.numPages;i++){
-        document.getElementById('pdfToolStatus').textContent=`جاري تحويل الصفحة ${i} من ${pdf.numPages}`;
-        const page=await pdf.getPage(i);
-        const viewport=page.getViewport({scale:1.4});
-        const canvas=document.createElement('canvas');
-        canvas.width=viewport.width; canvas.height=viewport.height;
-        await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
-        images.push(canvas.toDataURL('image/jpeg',0.9));
-      }
-      document.getElementById('pdfToolStatus').innerHTML=`تم تحويل <b>${images.length}</b> صفحة.`;
-      document.getElementById('pdfToolActions').innerHTML=`
-        <button class="admin-outline-btn primary" id="downloadPdfImagesBtn" type="button">تحميل الصور</button>
-        <button class="admin-outline-btn" id="downloadPdfWordBtn" type="button">تحميل Word</button>`;
-      document.getElementById('pdfToolPages').innerHTML=images.map((src,i)=>`<div style="border:1px solid #d7e3df;border-radius:10px;padding:8px"><img src="${src}" style="width:100%"><div style="text-align:center;margin-top:6px">صفحة ${i+1}</div></div>`).join('');
-      document.getElementById('downloadPdfImagesBtn').onclick=()=>images.forEach((src,i)=>{const a=document.createElement('a');a.href=src;a.download=`page_${i+1}.jpg`;a.click()});
-      document.getElementById('downloadPdfWordBtn').onclick=()=>{
-        const body=images.map(src=>`<p style="page-break-after:always;text-align:center"><img src="${src}" style="max-width:100%"></p>`).join('');
-        const blob=new Blob(['\ufeff<html dir="rtl"><meta charset="utf-8"><body>'+body+'</body></html>'],{type:'application/msword'});
-        if(typeof downloadBlob==='function')downloadBlob(blob,(file.name.replace(/\.pdf$/i,'')||'converted')+'.doc');
-      };
-    }catch(err){
-      document.getElementById('pdfToolStatus').innerHTML=`<span style="color:#b42318">تعذر التحويل: ${escAdmin(err.message||err)}</span>`;
-    }
-    e.target.value='';
-  };
-}
-
-const barcodeBtn=document.getElementById('barcodeToolsBtn');
-if(barcodeBtn){
-  barcodeBtn.onclick=()=>{
-    const students=typeof getStudents==='function'?getStudents():[];
-    openAdminToolModal('الباركود — إضافة / عرض الأسماء',
-      `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <input id="barcodeSearch" placeholder="ابحث بالاسم أو السجل المدني" style="flex:1;min-width:240px">
-        <button type="button" class="admin-outline-btn primary" id="printBarcodesBtn">طباعة الباركود</button>
-      </div><div id="barcodeStudentsList"></div>`);
-    const render=()=>{
-      const q=String(document.getElementById('barcodeSearch').value||'').trim();
-      const rows=students.filter(s=>!q||String(s.name||'').includes(q)||String(s.idno||'').includes(q));
-      document.getElementById('barcodeStudentsList').innerHTML=rows.map((s,i)=>`<div style="display:grid;grid-template-columns:minmax(220px,1fr) 300px;gap:14px;align-items:center;border-bottom:1px solid #e4ece9;padding:12px 0"><div><b>${escAdmin(s.name||'')}</b><div>${escAdmin(s.idno||'')}</div></div><svg id="bc_${i}"></svg></div>`).join('')||'<div>لا توجد نتائج</div>';
-      rows.forEach((s,i)=>{try{JsBarcode(`#bc_${i}`,String(s.idno||''),{format:'CODE128',displayValue:true,height:42,fontSize:13,margin:4})}catch(e){}});
-    };
-    document.getElementById('barcodeSearch').oninput=render;
-    document.getElementById('printBarcodesBtn').onclick=()=>window.print();
-    render();
-  };
-}
-
-const madBtn=document.getElementById('madrasatiToolsBtn');
-if(madBtn){
-  madBtn.onclick=()=>{
-    const students=typeof getStudents==='function'?getStudents():[];
-    openAdminToolModal('متابعة دخول منصة مدرستي',
-      `<input id="madrasatiSearch" placeholder="ابحث بالاسم أو السجل المدني" style="margin-bottom:12px"><div id="madrasatiList"></div>`);
-    const render=()=>{
-      const q=String(document.getElementById('madrasatiSearch').value||'').trim();
-      const saved=JSON.parse(localStorage.getItem('madrasatiLoginStatus')||'{}');
-      const rows=students.filter(s=>!q||String(s.name||'').includes(q)||String(s.idno||'').includes(q));
-      document.getElementById('madrasatiList').innerHTML=rows.map(s=>`<label style="display:grid;grid-template-columns:34px 1fr 150px;gap:10px;align-items:center;border-bottom:1px solid #e4ece9;padding:10px 0;margin:0"><input type="checkbox" data-mid="${escAdmin(s.idno||'')}" ${saved[s.idno]?'checked':''} style="width:20px;height:20px"><span><b>${escAdmin(s.name||'')}</b><small style="display:block">${escAdmin(s.idno||'')}</small></span><span>${saved[s.idno]?'تم الدخول ✅':'لم يسجل الدخول'}</span></label>`).join('')||'<div>لا توجد نتائج</div>';
-      document.querySelectorAll('[data-mid]').forEach(ch=>ch.onchange=()=>{
-        const data=JSON.parse(localStorage.getItem('madrasatiLoginStatus')||'{}');
-        data[ch.dataset.mid]=ch.checked;
-        localStorage.setItem('madrasatiLoginStatus',JSON.stringify(data));
-        render();
-      });
-    };
-    document.getElementById('madrasatiSearch').oninput=render;
-    render();
-  };
-}
-
-</script>
-</body></html>`);
+</style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
   setTimeout(()=>w.print(),300);
@@ -3995,6 +3761,7 @@ async function switchLiveCamera(){
     toast('تعذر تبديل الكاميرا');
   }
 }
+
 if($('scanStudentCameraBtn')) $('scanStudentCameraBtn').onclick=()=>startLiveCamera();
 if($('captureLiveStudentBtn')) $('captureLiveStudentBtn').onclick=captureLiveStudentPhoto;
 if($('switchCameraBtn')) $('switchCameraBtn').onclick=switchLiveCamera;
@@ -4047,6 +3814,7 @@ document.querySelector('.tab[data-page="admin"]').addEventListener('click', ()=>
 });
 </script>
 <script>
+
 
 function ensureAdminToolModal(){
   let m=document.getElementById('adminToolModal');
@@ -4161,6 +3929,7 @@ if(madBtn){
     render();
   };
 }
+
 
 </script>
 </body>
