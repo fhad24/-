@@ -2239,13 +2239,15 @@
         <div class="admin-actions-grid">
           <input id="excelFileInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
           <button class="admin-outline-btn primary" id="importExcelBtn" type="button">استيراد (كشف الطلاب / صور) 📥</button>
-          <button class="admin-outline-btn">تحويل PDF إلى صور / Word 📄</button>
+          <input id="madrasatiExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+          <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد من منصة مدرستي 📥</button>
           <button class="admin-outline-btn">الباركود (إضافة / عرض الأسماء) 🪪</button>
           <button class="admin-outline-btn">متابعة دخول منصة مدرستي 📶</button>
           <input id="studentPhotosExcelInput" class="hidden" type="file" accept=".xlsx">
           <button class="admin-outline-btn" id="importStudentPhotosBtn" type="button">استيراد صور الطلاب من Excel 📷</button>
         </div>
         <div id="excelImportStatus" class="hint" style="text-align:right;font-size:12px;margin-top:12px"></div>
+        <div id="madrasatiImportStatus" class="hint" style="text-align:right;font-size:12px;margin-top:8px"></div>
         <div id="studentPhotosImportStatus" class="hint" style="text-align:right;font-size:12px;margin-top:8px"></div>
       </div>
 
@@ -3533,6 +3535,145 @@ if($('importStudentPhotosBtn')) $('importStudentPhotosBtn').onclick=()=>studentP
 if(studentPhotosExcelInput) studentPhotosExcelInput.onchange=async e=>{
   const file=e.target.files?.[0];
   if(file) await importStudentPhotosExcel(file);
+  e.target.value='';
+};
+
+
+function normalizeMadrasatiClassroom(v){
+  let s=String(v??'').trim().replace(/\.0$/,'').replace(/\s+/g,' ');
+  if(!s) return '';
+  // إبقاء رقم/اسم الفصل فقط كما ورد في كشف مدرستي، بدون تغيير أي بيانات أخرى.
+  return s;
+}
+
+async function importMadrasatiPlacements(file){
+  const status=$('madrasatiImportStatus');
+  if(!file) return;
+  status.innerHTML='جاري مطابقة السجلات المدنية وتحديث الصفوف والفصول فقط...';
+
+  if(!window.XLSX){
+    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر تحميل قارئ Excel.</span>';
+    return;
+  }
+
+  try{
+    const buffer=await file.arrayBuffer();
+    const data=new Uint8Array(buffer);
+    let wb;
+
+    try{
+      wb=XLSX.read(data,{type:'array',cellDates:false});
+    }catch(parseErr){
+      throw new Error('READ_FAILED');
+    }
+
+    let bestSheet='';
+    let bestRows=[];
+    let bestScore=-1;
+
+    for(const sheetName of wb.SheetNames||[]){
+      const rows=rowsFromWorksheet(wb.Sheets[sheetName]);
+      if(!rows.length) continue;
+      const keys=Object.keys(rows[0]||{}).map(normalizeHeader);
+      const score=
+        (keys.some(k=>['رقم الهوية','السجل المدني','رقم السجل المدني','رقم الطالب','الهوية','رقم الهوية/الإقامة'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?3:0)+
+        (keys.some(k=>['الصف','الصف الدراسي','رقم الصف','المستوى'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?2:0)+
+        (keys.some(k=>['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?2:0);
+      if(score>bestScore){
+        bestScore=score;
+        bestSheet=sheetName;
+        bestRows=rows;
+      }
+    }
+
+    if(!bestRows.length || bestScore<5){
+      const text=new TextDecoder('utf-8').decode(data.slice(0,3000)).toLowerCase();
+      const framedHtml=text.includes('<html') && (text.includes('sheet001.htm') || text.includes('<frameset'));
+      status.innerHTML=framedHtml
+        ? '<span style="color:#b42318;font-weight:700">هذا الملف عبارة عن صفحة Excel مرتبطة بملف ورقة خارجي وليس كشف الطلاب نفسه.</span><br>نزّل كشف الطلاب الأصلي من منصة مدرستي بصيغة Excel ثم ارفعه هنا.'
+        : '<span style="color:#b42318;font-weight:700">لم أتعرف على أعمدة السجل المدني والصف والفصل في الملف.</span>';
+      return;
+    }
+
+    const students=getStudents();
+    const byId=new Map(students.map((s,i)=>[normalizeCivilId(s.idno),i]));
+    const changed=[];
+    let matched=0, updated=0, unchanged=0, notFound=0, skipped=0;
+
+    for(const row of bestRows){
+      const idno=normalizeCivilId(pick(row,[
+        'السجل المدني','رقم السجل المدني','رقم الهوية','الهوية','رقم الهوية/الإقامة',
+        'هوية الطالب','رقم الطالب','رقم المستخدم','national id','id'
+      ]));
+      if(!idno){ skipped++; continue; }
+
+      const idx=byId.get(idno);
+      if(idx===undefined){ notFound++; continue; }
+      matched++;
+
+      const gradeRaw=pick(row,['الصف الدراسي','الصف','رقم الصف','المستوى','grade']);
+      const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
+
+      const grade=gradeRaw!=='' ? normalizeGuidanceGrade(gradeRaw) : '';
+      const classroom=classRaw!=='' ? normalizeMadrasatiClassroom(classRaw) : '';
+
+      const old=students[idx];
+      const newGrade=grade || old.grade || '';
+      const newClass=classroom || old.classroom || '';
+
+      if(String(old.grade||'')===String(newGrade) && String(old.classroom||'')===String(newClass)){
+        unchanged++;
+        continue;
+      }
+
+      // مهم: نغيّر الصف والفصل فقط. الاسم والجوال والصور وباقي البيانات تبقى كما هي.
+      students[idx]={...old,grade:newGrade,classroom:newClass};
+      changed.push(students[idx]);
+      updated++;
+    }
+
+    // حفظ محلي مباشر حتى لا تمر العملية على أي كود قد يفرغ الصور.
+    localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+
+    // إذا كانت جلسة السحابة متاحة، نرسل الطلاب المتغيرين مع صورهم الحالية حتى لا تُمسح الصور.
+    if(localStorage.getItem('cloudAdminToken') && changed.length){
+      const cloudRows=[];
+      for(const s0 of changed){
+        const s={...s0};
+        try{
+          const fb=await getStudentPhoto(`${s.idno}:face`);
+          if(fb) s.faceImage=await blobToDataURL(fb);
+          const ib=await getStudentPhoto(`${s.idno}:id`);
+          if(ib) s.idImage=await blobToDataURL(ib);
+        }catch(e){}
+        cloudRows.push(s);
+      }
+      const batchSize=12;
+      for(let i=0;i<cloudRows.length;i+=batchSize){
+        await cloudApi('sync_students',{students:cloudRows.slice(i,i+batchSize)});
+      }
+    }
+
+    renderAdmin();
+    await hydrateAdminPhotos();
+
+    status.innerHTML=
+      '<span style="color:#0f7665;font-weight:700">تم استيراد ملف مدرستي بنجاح.</span>'+
+      '<br>تمت المطابقة بالسجل المدني، وتحديث <b>'+updated+'</b> طالبًا في الصف/الفصل فقط.'+
+      '<br>مطابقون بدون تغيير: '+unchanged+' — غير موجودين في قاعدة البرنامج: '+notFound+' — صفوف متجاهلة: '+skipped+'.'+
+      '<br><span style="color:#0f7665;font-weight:700">صور الطلاب وبياناتهم الأخرى لم يتم حذفها أو استبدالها.</span>';
+    toast('تم تحديث الصفوف والفصول من مدرستي بدون حذف الصور');
+  }catch(err){
+    console.error('Madrasati import',err);
+    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر قراءة ملف مدرستي. استخدم كشف Excel الأصلي من المنصة.</span>';
+  }
+}
+
+const madrasatiExcelInput=$('madrasatiExcelInput');
+if($('importMadrasatiBtn')) $('importMadrasatiBtn').onclick=()=>madrasatiExcelInput?.click();
+if(madrasatiExcelInput) madrasatiExcelInput.onchange=async e=>{
+  const file=e.target.files?.[0];
+  if(file) await importMadrasatiPlacements(file);
   e.target.value='';
 };
 
