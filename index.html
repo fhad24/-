@@ -94,6 +94,9 @@
     #register > .card:not(#landingLoginCard){display:none!important}
     #register > form.card{display:none!important}
     #mainPublicNav{display:none!important}
+    body:not(.admin-mode) header{display:none!important}
+    body:not(.admin-mode) #register{max-width:760px;margin:0 auto;padding-top:18px}
+    body:not(.admin-mode) #register .notice{margin-top:0}
     .landing-login-card{max-width:430px;margin:18px auto;padding:24px;border-radius:20px}
     .landing-login-card input{height:52px;border-radius:12px;font-size:15px;background:#eef4ff}
     .admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
@@ -3012,6 +3015,7 @@ function goToMainHome(){
   $('register')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','register');
   document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
+  document.body.classList.remove('admin-mode');
 }
 if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
 if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
@@ -9363,19 +9367,22 @@ if($('landingPass')) $('landingPass').addEventListener('keydown',e=>{
 
 // زر الإدارة تتم إدارته من معالج التبويبات الرئيسي أعلاه.
 function restoreLastAppLocation(){
-  const page=localStorage.getItem('activeMainPage')||'register';
+  const loggedIn=localStorage.getItem('adminLoggedIn')==='1';
+  const page=loggedIn ? (localStorage.getItem('activeMainPage')||'admin') : 'register';
+
+  if(!loggedIn) localStorage.setItem('activeMainPage','register');
 
   tabs.forEach(x=>x.classList.toggle('active',x.dataset.page===page));
   pages.forEach(p=>p.classList.toggle('hidden',p.id!==page));
 
-  if(localStorage.getItem('adminLoggedIn')==='1'){
+  if(loggedIn){
     adminLoggedIn=true;
     setAdminMode(true);
     setTimeout(()=>cloudAutoLoginFromSavedProfile().catch(()=>{}),100);
   }
 
   if(page==='admin'){
-    if(localStorage.getItem('adminLoggedIn')==='1'){
+    if(loggedIn){
       adminLoggedIn=true;
       $('adminLoginModal')?.classList.add('hidden');
       $('dashboard')?.classList.remove('hidden');
