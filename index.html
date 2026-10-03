@@ -4233,6 +4233,7 @@ async function cloudPullToLocal(){
     const s=data.settings;
     localStorage.setItem('schoolSettings',JSON.stringify({
       authority:s.authority||'', school:s.school||'', designer:s.designer||'', manager:s.manager||'',
+      tickerText:s.ticker_text||'',
       ministryLogo:s.ministry_logo||'', schoolLogo:s.school_logo||''
     }));
     applySchoolSettings();
@@ -6399,6 +6400,7 @@ function getSchoolSettings(){
     school:'مدرسة شرحبيل بن حسنة الثانوية',
     designer:'محمد الشامي السلامي',
     manager:'عبدالله عيظة البديدي',
+    tickerText:'تنبيه هام: يرجى التأكد من صحة البيانات والصور قبل الإرسال',
     schoolLogo:'',
     ministryLogo:''
   };
@@ -6438,6 +6440,8 @@ function applySchoolSettings(){
   const manager=document.getElementById('headerManager');
   if(designer) designer.textContent=s.designer ? `مصمم النظام: ${s.designer}` : '';
   if(manager) manager.textContent=s.manager ? `مدير المدرسة: ${s.manager}` : '';
+  const ticker=document.querySelector('.ticker span');
+  if(ticker) ticker.textContent=s.tickerText||'';
   const logos=document.querySelectorAll('header .logo');
   if(logos[0] && s.ministryLogo){
     logos[0].textContent='';
@@ -6493,6 +6497,12 @@ function ensureAdminSettings(){
         <div class="admin-settings-field">
           <label>اسم مدير المدرسة</label>
           <input id="settingsManager">
+        </div>
+
+        <div class="admin-settings-field">
+          <label>نص الشريط الإخباري</label>
+          <input id="settingsTickerText" placeholder="اكتب النص الذي يظهر في الشريط الإخباري">
+          <div class="hint" style="text-align:right;font-size:12px;margin-top:5px">سيظهر هذا النص في الشريط المتحرك أعلى واجهة الدخول.</div>
         </div>
 
         <div class="school-logo-grid">
@@ -6696,6 +6706,7 @@ function ensureAdminSettings(){
         school:document.getElementById('settingsSchool').value.trim(),
         designer:document.getElementById('settingsDesigner').value.trim(),
         manager:document.getElementById('settingsManager').value.trim(),
+        tickerText:document.getElementById('settingsTickerText')?.value.trim()||'',
         schoolLogo,
         ministryLogo
       };
@@ -7247,6 +7258,7 @@ function openAdminSettings(){
   document.getElementById('settingsSchool').value=s.school||'';
   document.getElementById('settingsDesigner').value=s.designer||'';
   document.getElementById('settingsManager').value=s.manager||'';
+  if(document.getElementById('settingsTickerText')) document.getElementById('settingsTickerText').value=s.tickerText||'';
 
   const schoolImg=document.getElementById('schoolLogoPreview');
   const schoolFallback=document.getElementById('schoolLogoFallback');
@@ -7278,6 +7290,7 @@ setTimeout(async()=>{
       const s=r.settings;
       localStorage.setItem('schoolSettings',JSON.stringify({
         authority:s.authority||'',school:s.school||'',designer:s.designer||'',manager:s.manager||'',
+        tickerText:s.ticker_text||'',
         ministryLogo:s.ministry_logo||'',schoolLogo:s.school_logo||''
       }));
       applySchoolSettings();
