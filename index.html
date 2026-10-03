@@ -3653,9 +3653,9 @@ async function loadDeputyReferrals(){
       host.innerHTML='<div class="hint">لا توجد لديك صلاحية الرد على تحويلات الطلاب.</div>';
       return;
     }
-    const rows=Array.isArray(data.rows)?data.rows:[];
+    const rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')!=='replied');
     if(!rows.length){
-      host.innerHTML='<div class="hint">لا توجد تحويلات مرسلة من المعلمين حتى الآن.</div>';
+      host.innerHTML='<div class="hint">لا توجد تحويلات بانتظار الرد حاليًا.</div>';
       return;
     }
 
@@ -3694,18 +3694,6 @@ async function loadDeputyReferrals(){
         </div>
       </div>`).join('');
 
-    const lastSavedId=localStorage.getItem('lastDeputyReferralId')||'';
-    if(lastSavedId){
-      setTimeout(()=>{
-        const sameCard=host.querySelector('[data-referral-id="'+lastSavedId+'"]');
-        if(sameCard){
-          sameCard.classList.add('returned-student');
-          sameCard.scrollIntoView({behavior:'smooth',block:'center'});
-          setTimeout(()=>sameCard.classList.remove('returned-student'),1800);
-        }
-      },50);
-    }
-
     host.querySelectorAll('.deputy-referral-save').forEach(btn=>btn.onclick=async()=>{
       const card=btn.closest('[data-referral-id]');
       const id=Number(card?.dataset.referralId||0);
@@ -3719,27 +3707,20 @@ async function loadDeputyReferrals(){
       const oldText=btn.textContent;
       btn.textContent='جاري الحفظ...';
       try{
-        const savedId=String(id);
         await cloudApi('reply_referral',{id,reply,deputyAction});
         toast('تم حفظ رد الوكيل وإرساله للمعلم');
-        localStorage.setItem('lastDeputyReferralId',savedId);
 
-        // لا نعيد تحميل القائمة بعد الحفظ حتى لا يختفي الطالب أو يتغير مكانه.
-        // نحدّث نفس بطاقة الطالب مباشرة ونبقيها أمام الوكيل.
-        const statusEl=card?.querySelector('.deputy-status');
-        if(statusEl){
-          statusEl.classList.remove('pending');
-          statusEl.classList.add('replied');
-          statusEl.textContent='تم الرد';
-        }
-        const actionSelect=card?.querySelector('.deputy-action-select');
-        if(actionSelect) actionSelect.value=deputyAction;
-        const replyBox=card?.querySelector('.deputy-reply-text');
-        if(replyBox) replyBox.value=reply;
+        // بعد الحفظ يختفي الطالب من قائمة ردود الوكلاء مباشرة.
         if(card){
-          card.classList.add('returned-student');
-          card.scrollIntoView({behavior:'smooth',block:'center'});
-          setTimeout(()=>card.classList.remove('returned-student'),2500);
+          card.style.transition='opacity .2s ease, transform .2s ease, max-height .25s ease, margin .25s ease, padding .25s ease';
+          card.style.opacity='0';
+          card.style.transform='translateY(-6px)';
+          setTimeout(()=>{
+            card.remove();
+            if(!host.querySelector('[data-referral-id]')){
+              host.innerHTML='<div class="hint">لا توجد تحويلات بانتظار الرد حاليًا.</div>';
+            }
+          },220);
         }
       }catch(e){
         alert('تعذر حفظ رد الوكيل: '+(e?.message||e));
