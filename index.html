@@ -1654,14 +1654,19 @@
         </div>
 
         <div class="card attendance-daily-card">
-          <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+          <div class="attendance-daily-head">
+            <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+            <div class="attendance-daily-meta">
+              <select id="attendanceBulkPeriod" class="attendance-bulk-period">
+                <option value="">الحصة</option>
+                <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
+                <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option><option value="7">الحصة السابعة</option>
+              </select>
+  
+            </div>
+          </div>
           <div class="attendance-bulk-tools">
             <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
-            <select id="attendanceBulkPeriod" class="attendance-bulk-period">
-              <option value="">الحصة</option>
-              <option value="1">الأولى</option><option value="2">الثانية</option><option value="3">الثالثة</option>
-              <option value="4">الرابعة</option><option value="5">الخامسة</option><option value="6">السادسة</option><option value="7">السابعة</option>
-            </select>
             <button type="button" id="attendanceBulkAbsent" class="absent">✕ تسجيل غياب للمحدد</button>
             <button type="button" id="attendanceDeleteSelected" class="danger">🗑 حذف المحدد</button>
             <button type="button" id="attendanceWhatsAppSelected" class="wa">🟢 واتساب للمحدد</button>
@@ -1879,6 +1884,11 @@
         <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
         <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option>
         <option value="7">الحصة السابعة</option>
+      </select>
+      <label for="attendanceSubjectSelect">📘 المادة</label>
+      <select id="attendanceSubjectSelect">
+        <option value="">بدون تحديد مادة</option>
+        <option>الكفايات اللغوية</option><option>القرآن الكريم وتفسيره</option><option>الرياضيات</option><option>الكيمياء</option><option>الأحياء</option><option>اللغة الإنجليزية</option><option>التفكير الناقد</option><option>التقنية الرقمية</option><option>التربية الصحية والبدنية</option><option>الفيزياء</option><option>التاريخ</option><option>التوحيد</option><option>الفنون</option><option>اللياقة</option><option>الثقافة الصحية</option><option>مواد متقدمة في البرمجة</option><option>هندسة البرمجيات</option><option>العلوم الطبية الحيوية</option><option>الأحياء المتقدمة</option><option>التشريح</option><option>الصحة العامة</option><option>مبادئ الإدارة</option><option>الاقتصاد</option><option>المحاسبة</option><option>التقنية الرقمية للأعمال</option><option>الفقه</option><option>التفسير</option><option>الحديث</option><option>الأصول</option>
       </select>
     </div>
 
@@ -4310,6 +4320,7 @@ if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
     return;
   }
   const period=$('attendanceBulkPeriod')?.value ? Number($('attendanceBulkPeriod').value) : null;
+  const subject=$('attendanceBulkSubject')?.value||'';
   const recorder=getCurrentAttendanceRecorder();
   const students=getStudents();
   const now=new Date();
@@ -4323,6 +4334,7 @@ if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
       date:todayKey(),
       time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
       period,
+      subject,
       idno:s.idno,name:s.name,grade:s.grade||'',classroom:s.classroom||'',
       status:'absent',
       faceMatch:'none',
@@ -4506,7 +4518,8 @@ function openAttendanceModal(mode){
   attendanceFaceCompareResult='none';
   $('attendanceStudentModal').classList.remove('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
-  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=$('attendanceBulkPeriod')?.value||'';
+  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=$('attendanceBulkSubject')?.value||'';
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -4554,6 +4567,7 @@ async function openAttendanceEdit(index){
     $('attendanceEditWeekday').value=allowedDays.includes(suggested)?suggested:'الأحد';
   }
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
+  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=String(row.subject||'');
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -4901,6 +4915,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
       period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
+      subject:$('attendanceSubjectSelect')?.value||'',
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
       teacherName:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name,
@@ -5980,6 +5995,47 @@ function printStudents(rows){
     @media(max-width:1050px){
       .attendance-saved-student{
         grid-template-columns:46px minmax(0,1fr)!important;
+      }
+    }
+
+    .attendance-daily-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+      direction:rtl;
+    }
+    .attendance-daily-head h3{
+      margin:0!important;
+      flex:1;
+    }
+    .attendance-daily-meta{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+    }
+    .attendance-daily-meta .attendance-bulk-period{
+      min-width:150px;
+      height:40px;
+      margin:0;
+    }
+    #attendanceBulkSubject{
+      min-width:220px;
+    }
+    @media(max-width:800px){
+      .attendance-daily-head{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .attendance-daily-meta{
+        width:100%;
+      }
+      .attendance-daily-meta .attendance-bulk-period{
+        flex:1;
+        min-width:0;
       }
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
