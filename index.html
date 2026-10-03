@@ -3833,13 +3833,21 @@ function configureUserDashboard(){
   const u=getCurrentLoggedAdminUser();
   const owner=isCurrentOwner();
 
+  const registerTab=document.querySelector('.tab[data-page="register"]');
+  const editTab=document.querySelector('.tab[data-page="edit"]');
+
   if(owner){
     portal.classList.add('hidden');
+    registerTab?.classList.remove('hidden');
+    editTab?.classList.remove('hidden');
     document.querySelector('.admin-toolbar')?.classList.remove('hidden');
     const view=localStorage.getItem('activeAdminView')||'data';
     showAdminView(view==='attendance'?'attendance':'data');
     return;
   }
+
+  registerTab?.classList.add('hidden');
+  editTab?.classList.add('hidden');
 
   hideAllUserFeatureViews();
   portal.classList.remove('hidden');
@@ -3920,6 +3928,8 @@ function setAdminMode(on){
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminSettingsOpen');
       localStorage.setItem('activeMainPage','register');
+      document.querySelector('.tab[data-page="register"]')?.classList.remove('hidden');
+      document.querySelector('.tab[data-page="edit"]')?.classList.remove('hidden');
       setAdminMode(false);
       document.querySelector('.tab[data-page="register"]')?.click();
     };
