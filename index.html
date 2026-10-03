@@ -4889,11 +4889,26 @@ if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
 };
 
 
+function enforceSingleAdminReferralButton(){
+  const keep=$('adminReferralTab');
+  document.querySelectorAll('button').forEach(btn=>{
+    if(btn===keep) return;
+    const label=String(btn.textContent||'').replace(/\s+/g,' ').trim();
+    if(label.includes('تحويل طالب لوكيل شؤون الطلاب')){
+      // داخل لوحة الإدارة نُبقي فقط زر التحويل الأساسي في شريط الأدمن.
+      if(document.body.classList.contains('admin-mode') || btn.id==='adminReferralPageBtn' || btn.id==='userReferralPageBtn' || btn.id==='headerReferralBtn'){
+        btn.remove();
+      }
+    }
+  });
+}
+
 function ensureAdminToolbarVisible(){
   if(isCurrentOwner()){
     const toolbar=document.querySelector('.admin-toolbar');
     toolbar?.classList.remove('hidden');
     if(toolbar) toolbar.style.display='block';
+    enforceSingleAdminReferralButton();
   }
 }
 function setAdminMode(on){
@@ -4901,6 +4916,7 @@ function setAdminMode(on){
   document.body.classList.toggle('admin-mode', on);
 
   if(on){
+    setTimeout(enforceSingleAdminReferralButton,0);
     try{
       const u=getCurrentLoggedAdminUser();
       const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
