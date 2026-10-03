@@ -2056,6 +2056,7 @@
       font-family:inherit;font-size:15px;cursor:pointer;text-align:right;color:#173b34
     }
     .referral-noor-trigger .trigger-main{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+    .referral-noor-trigger:disabled{background:#f1f4f3;color:#889894;cursor:not-allowed}
     .referral-noor-trigger .trigger-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .referral-noor-trigger .trigger-count{font-size:12px;color:#60736e;white-space:nowrap}
     .referral-noor-arrow{font-size:18px;color:#60736e}
@@ -2073,7 +2074,7 @@
     .referral-noor-search{height:38px!important;border-radius:6px!important;font-size:13px!important;padding:0 10px!important}
     .referral-noor-list{max-height:300px;overflow:auto}
     .referral-noor-row{
-      display:grid;grid-template-columns:22px 46px minmax(0,1fr);gap:9px;align-items:center;
+      display:grid;grid-template-columns:22px 46px minmax(0,1fr);gap:9px;align-items:center;direction:rtl;
       padding:8px 10px;border-bottom:1px solid #e8efed;background:#fff;cursor:pointer
     }
     .referral-noor-row:hover{background:#f5faf8}
@@ -2275,12 +2276,27 @@
       <div class="referral-code">نموذج رقم (٣١) — رمز النموذج: (و.ط.ع.ن - ٠٤ - ٠٣)</div>
 
       <div class="referral-grid">
-        <div class="referral-field referral-student-picker" id="referralStudentPicker">
+        <div class="referral-field">
+          <label>الصف</label>
+          <select id="referralGrade" required>
+            <option value="">اختر الصف</option>
+            <option>الأول الثانوي</option>
+            <option>الثاني الثانوي</option>
+            <option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div class="referral-field">
+          <label>الفصل</label>
+          <select id="referralClass" required>
+            <option value="">اختر الفصل</option>
+          </select>
+        </div>
+        <div class="referral-field referral-student-picker" id="referralStudentPicker" style="grid-column:1/-1">
           <label>اسم الطالب</label>
           <div class="referral-noor-select">
-            <button type="button" id="referralNoorTrigger" class="referral-noor-trigger">
+            <button type="button" id="referralNoorTrigger" class="referral-noor-trigger" disabled>
               <span class="trigger-main">
-                <span class="trigger-text" id="referralNoorTriggerText">اختر طالبًا أو مجموعة طلاب</span>
+                <span class="trigger-text" id="referralNoorTriggerText">اختر الفصل أولًا</span>
                 <span class="trigger-count" id="referralSelectedCount">(0)</span>
               </span>
               <span class="referral-noor-arrow">▾</span>
@@ -2296,22 +2312,7 @@
               <div id="referralNoorList" class="referral-noor-list"></div>
             </div>
           </div>
-          <div id="referralSelectedStudents" class="referral-selected-summary">لم يتم تحديد طلاب.</div>
-        </div>
-        <div class="referral-field">
-          <label>الصف</label>
-          <select id="referralGrade" required>
-            <option value="">اختر الصف</option>
-            <option>الأول الثانوي</option>
-            <option>الثاني الثانوي</option>
-            <option>الثالث الثانوي</option>
-          </select>
-        </div>
-        <div class="referral-field">
-          <label>الفصل</label>
-          <select id="referralClass" required>
-            <option value="">اختر الفصل</option>
-          </select>
+          <div id="referralSelectedStudents" class="referral-selected-summary">اختر الفصل ثم حدد طالبًا أو أكثر.</div>
         </div>
         <div class="referral-field">
           <label>المادة</label>
@@ -3027,6 +3028,7 @@ function getReferralFilteredStudents(query=''){
   const q=String(query||'').trim().toLowerCase();
   const grade=$('referralGrade')?.value||'';
   const classroom=$('referralClass')?.value||'';
+  if(!classroom) return [];
   return getStudents().filter(s=>{
     const matchesQuery=!q ||
       String(s.name||'').toLowerCase().includes(q) ||
@@ -3050,10 +3052,32 @@ function refreshReferralClasses(){
   sel.innerHTML='<option value="">اختر الفصل</option>'+classes.map(v=>`<option value="${v}">الفصل ${v}</option>`).join('');
   if(current && classes.includes(current)) sel.value=current;
 }
+function updateReferralStudentSelectorState(){
+  const classroom=$('referralClass')?.value||'';
+  const trigger=$('referralNoorTrigger');
+  const text=$('referralNoorTriggerText');
+  const menu=$('referralStudentResults');
+  if(trigger) trigger.disabled=!classroom;
+  if(!classroom){
+    menu?.classList.add('hidden');
+    if(text) text.textContent='اختر الفصل أولًا';
+    const list=$('referralNoorList');
+    if(list) list.innerHTML='';
+  }else if(referralSelectedIds.size===0 && text){
+    text.textContent='اختر طالبًا أو مجموعة طلاب';
+  }
+}
 async function renderReferralStudentResults(query=''){
   const menu=$('referralStudentResults');
   const host=$('referralNoorList');
   if(!menu || !host || typeof getStudents!=='function') return;
+  const classroom=$('referralClass')?.value||'';
+  if(!classroom){
+    host.innerHTML='';
+    updateReferralSelectAllState([]);
+    updateReferralStudentSelectorState();
+    return;
+  }
   clearReferralStudentPhotoUrls();
   const students=getReferralFilteredStudents(query).slice(0,120);
   if(!students.length){
@@ -3141,7 +3165,8 @@ function populateReferralTeachers(){
 function initReferralPage(){
   updateReferralDates();
   refreshReferralClasses();
-  populateReferralStudents();
+  updateReferralStudentSelectorState();
+  renderReferralSelectedStudents();
   populateReferralTeachers();
 }
 if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',e=>{
@@ -3182,6 +3207,7 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
 });
 if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
 if($('referralNoorTrigger')) $('referralNoorTrigger').onclick=()=>{
+  if(!$('referralClass')?.value) return;
   $('referralStudentResults')?.classList.toggle('hidden');
   if(!$('referralStudentResults')?.classList.contains('hidden')){
     renderReferralStudentResults($('referralStudentName')?.value||'');
@@ -3190,10 +3216,21 @@ if($('referralNoorTrigger')) $('referralNoorTrigger').onclick=()=>{
 };
 if($('referralStudentName')) $('referralStudentName').addEventListener('input',()=>renderReferralStudentResults($('referralStudentName').value));
 if($('referralGrade')) $('referralGrade').addEventListener('change',()=>{
+  referralSelectedIds.clear();
   refreshReferralClasses();
-  renderReferralStudentResults($('referralStudentName')?.value||'');
+  updateReferralStudentSelectorState();
+  renderReferralSelectedStudents();
 });
-if($('referralClass')) $('referralClass').addEventListener('change',()=>renderReferralStudentResults($('referralStudentName')?.value||''));
+if($('referralClass')) $('referralClass').addEventListener('change',async()=>{
+  referralSelectedIds.clear();
+  if($('referralStudentName')) $('referralStudentName').value='';
+  updateReferralStudentSelectorState();
+  await renderReferralSelectedStudents();
+  if($('referralClass').value){
+    $('referralStudentResults')?.classList.remove('hidden');
+    await renderReferralStudentResults('');
+  }
+});
 if($('referralSelectAllCheck')) $('referralSelectAllCheck').onchange=e=>setVisibleReferralStudentsSelection(!!e.target.checked);
 document.addEventListener('click',e=>{
   const picker=$('referralStudentPicker');
