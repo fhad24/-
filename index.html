@@ -2144,6 +2144,7 @@
     .deputy-referral-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .deputy-referral-list{display:grid;gap:12px}
     .deputy-referral-card{border:1px solid #d7e2df;border-radius:14px;padding:14px;background:#fff}
+    .deputy-referral-card.returned-student{outline:3px solid #0f766533;background:#f7fffc;scroll-margin-top:24px}
     .deputy-referral-top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .deputy-referral-student{font-size:17px;font-weight:900}
     .deputy-referral-meta{font-size:12px;color:#60736e;line-height:1.8;margin-top:4px}
@@ -3693,6 +3694,18 @@ async function loadDeputyReferrals(){
         </div>
       </div>`).join('');
 
+    const lastSavedId=localStorage.getItem('lastDeputyReferralId')||'';
+    if(lastSavedId){
+      setTimeout(()=>{
+        const sameCard=host.querySelector('[data-referral-id="'+lastSavedId+'"]');
+        if(sameCard){
+          sameCard.classList.add('returned-student');
+          sameCard.scrollIntoView({behavior:'smooth',block:'center'});
+          setTimeout(()=>sameCard.classList.remove('returned-student'),1800);
+        }
+      },50);
+    }
+
     host.querySelectorAll('.deputy-referral-save').forEach(btn=>btn.onclick=async()=>{
       const card=btn.closest('[data-referral-id]');
       const id=Number(card?.dataset.referralId||0);
@@ -3706,9 +3719,21 @@ async function loadDeputyReferrals(){
       const oldText=btn.textContent;
       btn.textContent='جاري الحفظ...';
       try{
+        const savedId=String(id);
         await cloudApi('reply_referral',{id,reply,deputyAction});
         toast('تم حفظ رد الوكيل وإرساله للمعلم');
+        localStorage.setItem('lastDeputyReferralId',savedId);
         await loadDeputyReferrals();
+        setTimeout(()=>{
+          const sameCard=host.querySelector('[data-referral-id="'+savedId+'"]');
+          if(sameCard){
+            sameCard.classList.add('returned-student');
+            sameCard.scrollIntoView({behavior:'smooth',block:'center'});
+            const replyBox=sameCard.querySelector('.deputy-reply-text');
+            if(replyBox) replyBox.focus({preventScroll:true});
+            setTimeout(()=>sameCard.classList.remove('returned-student'),2500);
+          }
+        },60);
       }catch(e){
         alert('تعذر حفظ رد الوكيل: '+(e?.message||e));
       }finally{
