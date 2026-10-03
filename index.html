@@ -4774,48 +4774,55 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
-  if(localStorage.getItem('adminLoggedIn')!=='1'){
-    alert('سجّل الدخول أولًا');
-    return;
-  }
-
+  // هذا الزر يظهر فقط بعد تسجيل الدخول، لذلك افتح لوحة الإدارة مباشرة
+  // بدون الاعتماد على حالة صفحة أو زر سابق.
   document.body.classList.add('admin-mode');
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+
   const adminPage=$('admin');
   const dashboard=$('dashboard');
   const loginModal=$('adminLoginModal');
 
-  adminPage?.classList.remove('hidden');
-  dashboard?.classList.remove('hidden');
-  loginModal?.classList.add('hidden');
+  if(adminPage) adminPage.classList.remove('hidden');
+  if(loginModal) loginModal.classList.add('hidden');
+  if(dashboard) dashboard.classList.remove('hidden');
 
+  localStorage.setItem('adminLoggedIn','1');
   localStorage.setItem('activeMainPage','admin');
 
   try{
-    const owner=isCurrentOwner();
-    if(owner){
-      $('userPermissionPortal')?.classList.add('hidden');
-      const toolbar=document.querySelector('.admin-toolbar');
-      toolbar?.classList.remove('hidden');
-      if(toolbar) toolbar.style.display='block';
-      document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.remove('hidden'));
-      $('attendancePanel')?.classList.add('hidden');
-      try{showAdminView(localStorage.getItem('activeAdminView')||'data')}catch(e){}
-    }else{
-      try{configureUserDashboard()}catch(e){}
-    }
-    try{renderAdmin()}catch(e){}
+    configureUserDashboard();
   }catch(e){
-    console.error('open admin dashboard',e);
-    const toolbar=document.querySelector('.admin-toolbar');
-    toolbar?.classList.remove('hidden');
-    if(toolbar) toolbar.style.display='block';
+    console.warn('configure dashboard',e);
   }
 
-  window.scrollTo({top:0,behavior:'smooth'});
+  try{
+    if(isCurrentOwner()){
+      $('userPermissionPortal')?.classList.add('hidden');
+      const toolbar=document.querySelector('.admin-toolbar');
+      if(toolbar){
+        toolbar.classList.remove('hidden');
+        toolbar.style.display='block';
+      }
+      try{showAdminView(localStorage.getItem('activeAdminView')||'data')}catch(e){}
+    }
+  }catch(e){
+    console.warn('owner dashboard',e);
+  }
+
+  try{renderAdmin()}catch(e){console.warn('render admin',e)}
+  try{ensureAdminToolbarVisible()}catch(e){}
+  window.scrollTo(0,0);
 }
 
 if($('headerAdminDashboardBtn')) $('headerAdminDashboardBtn').onclick=openAdminDashboardInternal;
+document.addEventListener('click',e=>{
+  const btn=e.target?.closest?.('#headerAdminDashboardBtn');
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openAdminDashboardInternal();
+},true);
 if($('headerEditBtn')) $('headerEditBtn').onclick=()=>openInternalPage('edit');
 if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('referral');
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
