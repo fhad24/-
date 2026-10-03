@@ -2015,6 +2015,40 @@
     }
     .referral-field input,.referral-field select{height:48px}
     .referral-field textarea{min-height:100px;resize:vertical}
+    .referral-student-picker{position:relative}
+    .referral-student-results{
+      position:absolute;z-index:80;top:100%;right:0;left:0;max-height:360px;overflow:auto;
+      background:#fff;border:1px solid #cbd9d6;border-radius:14px;box-shadow:0 12px 30px #0002;
+      margin-top:6px;padding:5px
+    }
+    .referral-student-results.hidden{display:none!important}
+    .referral-student-option{
+      width:100%;display:grid;grid-template-columns:54px minmax(0,1fr);gap:11px;align-items:center;
+      border:0;border-bottom:1px solid #e8efed;background:#fff;padding:9px 10px;text-align:right;
+      font-family:inherit;cursor:pointer;border-radius:10px;color:#173b34
+    }
+    .referral-student-option:last-child{border-bottom:0}
+    .referral-student-option:hover{background:#eef8f5}
+    .referral-student-photo{
+      width:50px;height:50px;border-radius:10px;object-fit:cover;border:1px solid #d5e1de;background:#eef4f2
+    }
+    .referral-student-photo-fallback{
+      width:50px;height:50px;border-radius:10px;display:grid;place-items:center;background:#eef4f2;
+      border:1px solid #d5e1de;font-size:22px
+    }
+    .referral-student-name{font-size:15px;font-weight:900;line-height:1.45}
+    .referral-student-id{font-size:13px;color:#60736e;margin-top:3px;direction:rtl}
+    .referral-student-selected{
+      display:none;align-items:center;gap:10px;margin-top:8px;background:#f2f8f6;border:1px solid #d4e1de;
+      border-radius:12px;padding:9px 10px
+    }
+    .referral-student-selected.show{display:flex}
+    .referral-student-selected img,.referral-student-selected .fallback{
+      width:46px;height:46px;border-radius:9px;object-fit:cover;border:1px solid #d5e1de;background:#fff
+    }
+    .referral-student-selected .fallback{display:grid;place-items:center;font-size:20px}
+    .referral-student-selected b{display:block;font-size:14px}
+    .referral-student-selected span{display:block;font-size:12px;color:#60736e;margin-top:3px}
     .referral-reasons{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
     .referral-reason{display:flex;align-items:center;gap:8px;border:1px solid #d8e2df;border-radius:12px;padding:12px;background:#f8fbfa;font-weight:700;font-size:14px}
     .referral-reason input{width:18px;height:18px;accent-color:var(--primary)}
@@ -2207,10 +2241,18 @@
       <div class="referral-code">نموذج رقم (٣١) — رمز النموذج: (و.ط.ع.ن - ٠٤ - ٠٣)</div>
 
       <div class="referral-grid">
-        <div class="referral-field">
+        <div class="referral-field referral-student-picker" id="referralStudentPicker">
           <label>اسم الطالب</label>
-          <input id="referralStudentName" list="referralStudentsList" required placeholder="اكتب أو اختر اسم الطالب">
-          <datalist id="referralStudentsList"></datalist>
+          <input id="referralStudentName" autocomplete="off" required placeholder="ابحث بالاسم أو السجل المدني">
+          <input id="referralStudentId" type="hidden">
+          <div id="referralStudentResults" class="referral-student-results hidden"></div>
+          <div id="referralStudentSelected" class="referral-student-selected">
+            <div id="referralSelectedPhotoWrap"><div class="fallback">👤</div></div>
+            <div>
+              <b id="referralSelectedName">—</b>
+              <span id="referralSelectedId">السجل المدني: —</span>
+            </div>
+          </div>
         </div>
         <div class="referral-field">
           <label>الصف</label>
@@ -2873,16 +2915,70 @@ function updateReferralHijriDate(){
     el.value=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   }catch(e){ el.value=''; }
 }
+let referralStudentPhotoUrls=[];
+function clearReferralStudentPhotoUrls(){
+  referralStudentPhotoUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(e){}});
+  referralStudentPhotoUrls=[];
+}
+async function getReferralStudentPhotoUrl(student){
+  try{
+    const blob=await getStudentPhoto(`${student.idno}:face`);
+    if(blob){
+      const url=URL.createObjectURL(blob);
+      referralStudentPhotoUrls.push(url);
+      return url;
+    }
+  }catch(e){}
+  if(student.faceImage) return student.faceImage;
+  return '';
+}
+async function renderReferralStudentResults(query=''){
+  const host=$('referralStudentResults');
+  if(!host || typeof getStudents!=='function') return;
+  clearReferralStudentPhotoUrls();
+  const q=String(query||'').trim().toLowerCase();
+  let students=getStudents();
+  if(q){
+    students=students.filter(s=>
+      String(s.name||'').toLowerCase().includes(q) ||
+      String(s.idno||'').includes(q)
+    );
+  }
+  students=students.slice(0,80);
+  if(!students.length){
+    host.innerHTML='<div class="hint" style="padding:16px">لا يوجد طالب مطابق.</div>';
+    host.classList.remove('hidden');
+    return;
+  }
+  const rows=await Promise.all(students.map(async s=>{
+    const photo=await getReferralStudentPhotoUrl(s);
+    const safeName=String(s.name||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const safeId=String(s.idno||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    return `<button type="button" class="referral-student-option" data-referral-id="${safeId}">
+      ${photo?`<img class="referral-student-photo" src="${photo}" alt="">`:'<div class="referral-student-photo-fallback">👤</div>'}
+      <div><div class="referral-student-name">${safeName}</div><div class="referral-student-id">السجل المدني: ${safeId}</div></div>
+    </button>`;
+  }));
+  host.innerHTML=rows.join('');
+  host.classList.remove('hidden');
+  host.querySelectorAll('[data-referral-id]').forEach(btn=>btn.onclick=()=>selectReferralStudent(btn.dataset.referralId));
+}
+async function selectReferralStudent(idno){
+  const s=getStudents().find(x=>String(x.idno||'')===String(idno||''));
+  if(!s) return;
+  $('referralStudentName').value=s.name||'';
+  $('referralStudentId').value=s.idno||'';
+  if($('referralGrade') && s.grade) $('referralGrade').value=s.grade;
+  $('referralStudentResults').classList.add('hidden');
+  $('referralSelectedName').textContent=s.name||'—';
+  $('referralSelectedId').textContent='السجل المدني: '+(s.idno||'—');
+  const wrap=$('referralSelectedPhotoWrap');
+  const photo=await getReferralStudentPhotoUrl(s);
+  wrap.innerHTML=photo?`<img src="${photo}" alt="صورة الطالب">`:'<div class="fallback">👤</div>';
+  $('referralStudentSelected').classList.add('show');
+}
 function populateReferralStudents(){
-  const list=$('referralStudentsList');
-  if(!list || typeof getStudents!=='function') return;
-  list.innerHTML='';
-  getStudents().forEach(s=>{
-    const o=document.createElement('option');
-    o.value=s.name||'';
-    o.dataset.idno=s.idno||'';
-    list.appendChild(o);
-  });
+  renderReferralStudentResults('');
 }
 function initReferralPage(){
   const d=$('referralDate');
@@ -2915,6 +3011,18 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
   toast('تم حفظ تحويل الطالب');
 });
 if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
+if($('referralStudentName')){
+  $('referralStudentName').addEventListener('focus',()=>renderReferralStudentResults($('referralStudentName').value));
+  $('referralStudentName').addEventListener('input',()=>{
+    $('referralStudentId').value='';
+    $('referralStudentSelected').classList.remove('show');
+    renderReferralStudentResults($('referralStudentName').value);
+  });
+}
+document.addEventListener('click',e=>{
+  const picker=$('referralStudentPicker');
+  if(picker && !picker.contains(e.target)) $('referralStudentResults')?.classList.add('hidden');
+});
 document.querySelector('.tab[data-page="referral"]')?.addEventListener('click',()=>setTimeout(initReferralPage,0));
 
 const CLOUD_API_URL='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
