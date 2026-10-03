@@ -2374,7 +2374,10 @@ function ensureAdminSettings(){
     localStorage.setItem('activeSettingsTab',btn.dataset.settingsTab||'school');
     document.querySelectorAll('.admin-settings-tab').forEach(x=>x.classList.toggle('active',x===btn));
     document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane===btn.dataset.settingsTab));
-    if(btn.dataset.settingsTab==='users') renderAdminUsersSettings();
+    if(btn.dataset.settingsTab==='users'){
+      renderAdminUsersSettings();
+      refreshAdminUsersFromCloud().then(()=>renderAdminUsersSettings());
+    }
   });
   const readLogoFile=async(input,img,fallback)=>{
     const file=input.files?.[0]; if(!file) return;
@@ -2599,9 +2602,10 @@ function ensureAdminSettings(){
         password:localByUser.get(String(u.username||''))?.password||''
       }));
       localStorage.setItem('adminUsers',JSON.stringify(finalUsers));
+      await refreshAdminUsersFromCloud();
       renderAdminUsersSettings();
 
-      alert(`✅ تم حفظ مجموعة الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم)`);
+      alert(`✅ تم حفظ مجموعة الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم) وتحديث العرض من السحابة`);
     }catch(e){
       console.error('bulk permissions cloud sync',e);
       alert('تعذر الحفظ السحابي للصلاحيات. سجّل الخروج ثم ادخل للإدارة مرة واحدة وأعد المحاولة.');
@@ -2688,6 +2692,27 @@ function ensureAdminSettings(){
 
   return ov;
 }
+async function refreshAdminUsersFromCloud(){
+  if(!localStorage.getItem('cloudAdminToken')) return false;
+  try{
+    const data=await cloudApi('pull_all');
+    const oldUsers=(()=>{try{return JSON.parse(localStorage.getItem('adminUsers')||'[]')}catch(e){return []}})();
+    const oldBy=new Map(oldUsers.map(u=>[String(u.username),u]));
+    const cloudUsers=(data.users||[]).filter(u=>!u.is_owner).map(u=>({
+      username:String(u.username||''),
+      name:u.name||'',
+      role:u.role||'معلم',
+      permissions:Array.isArray(u.permissions)?u.permissions:[],
+      password:oldBy.get(String(u.username||''))?.password||''
+    }));
+    localStorage.setItem('adminUsers',JSON.stringify(cloudUsers));
+    return true;
+  }catch(e){
+    console.warn('refresh users cloud',e);
+    return false;
+  }
+}
+
 function renderAdminUsersSettings(){
   const host=document.getElementById('adminUsersList'); if(!host) return;
   const p=getAdminProfile(), users=getAdminUsers();
@@ -2874,7 +2899,10 @@ function openAdminSettings(){
   const wantedSettingsTab=localStorage.getItem('activeSettingsTab')||'school';
   document.querySelectorAll('.admin-settings-tab').forEach(x=>x.classList.toggle('active',x.dataset.settingsTab===wantedSettingsTab));
   document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane===wantedSettingsTab));
-  if(wantedSettingsTab==='users') renderAdminUsersSettings();
+  if(wantedSettingsTab==='users'){
+    renderAdminUsersSettings();
+    refreshAdminUsersFromCloud().then(()=>renderAdminUsersSettings());
+  }
   ov.classList.remove('hidden');
   localStorage.setItem('adminSettingsOpen','1');
 }
