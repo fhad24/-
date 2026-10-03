@@ -1893,6 +1893,36 @@
         grid-template-columns:1fr!important;
       }
     }
+
+    .attendance-student-column-head{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 100px 92px 100px;
+      direction:rtl;
+      align-items:center;
+      margin:0;
+      border:1px solid #d4e0dd;
+      border-bottom:0;
+      border-radius:8px 8px 0 0;
+      background:#f8fbfa;
+      min-height:38px;
+    }
+    .attendance-student-column-head button{
+      grid-column:1;
+      justify-self:stretch;
+      height:38px;
+      border:0;
+      background:transparent;
+      color:#173b34;
+      font-family:inherit;
+      font-size:14px;
+      font-weight:900;
+      text-align:right;
+      padding:0 12px;
+      cursor:pointer;
+    }
+    .attendance-student-column-head + .attendance-student-list{
+      border-radius:0 0 8px 8px!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2376,6 +2406,9 @@
             <input type="checkbox" id="attendancePresentSelectAll">
             <span>تحديد الكل</span>
           </label>
+        </div>
+        <div class="attendance-student-column-head">
+          <button type="button" id="attendanceNameSortHeader">اسم الطالب ▼</button>
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -5402,6 +5435,9 @@ async function renderAttendanceStudentList(){
     return String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'})*attendanceStudentSortDir;
   });
 
+  if($('attendanceNameSortHeader')){
+    $('attendanceNameSortHeader').textContent='اسم الطالب '+(attendanceStudentSortKey==='name'?(attendanceStudentSortDir===-1?'▼':'▲'):'▼');
+  }
   document.querySelectorAll('.att-sort-btn').forEach(btn=>{
     const active=btn.dataset.attSort===attendanceStudentSortKey;
     btn.classList.toggle('active',active);
@@ -5495,6 +5531,13 @@ if($('attendanceStudentSearch')){
   ['input','keyup','search','change'].forEach(evt=>searchInput.addEventListener(evt,renderAttendanceStudentList));
   searchInput.addEventListener('paste',()=>setTimeout(renderAttendanceStudentList,0));
 }
+if($('attendanceNameSortHeader')) $('attendanceNameSortHeader').onclick=()=>{
+  if(attendanceStudentSortKey==='name') attendanceStudentSortDir*=-1;
+  else { attendanceStudentSortKey='name'; attendanceStudentSortDir=-1; }
+  $('attendanceNameSortHeader').textContent='اسم الطالب '+(attendanceStudentSortDir===-1?'▼':'▲');
+  renderAttendanceStudentList();
+};
+
 if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
 if($('attendanceHideRegistered')) $('attendanceHideRegistered').onchange=renderAttendanceStudentList;
 
