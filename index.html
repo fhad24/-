@@ -2528,33 +2528,85 @@ function ensureAdminSettings(){
     const btn=document.getElementById('applyBulkUserPermissions');
     const oldText=btn.textContent;
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+
     if(!permissions.length){
-      alert('حدد صلاحية واحدة على الأقل لإضافتها للجميع');
+      alert('حدد صلاحية واحدة على الأقل');
       return;
     }
 
     const users=getAdminUsers();
-    users.forEach(u=>{
-      const current=Array.isArray(u.permissions)?u.permissions:[];
-      u.permissions=[...new Set([...current,...permissions])];
-    });
+    users.forEach(u=>u.permissions=[...permissions]);
     saveAdminUsers(users);
     renderAdminUsersSettings();
 
     btn.disabled=true;
-    btn.textContent='جاري حفظ الصلاحيات للجميع...';
+    btn.textContent='جاري حفظ الصلاحيات لكل المستخدمين...';
+    cloudSyncBusy=true;
+
     try{
-      if(!localStorage.getItem('cloudAdminToken')){
+      let token=localStorage.getItem('cloudAdminToken')||'';
+
+      if(!token){
         const p=getAdminProfile();
-        const login=await cloudApi('login',{username:p.username,password:p.password},false);
-        if(login?.token) localStorage.setItem('cloudAdminToken',login.token);
+        const livePass=String($('adminPass')?.value||p.password||'');
+        const login=await cloudApi('login',{
+          username:String(p.username||''),
+          password:livePass
+        },false);
+        token=login?.token||'';
+        if(token) localStorage.setItem('cloudAdminToken',token);
       }
-      await cloudApi('sync_users',{users});
-      alert(`✅ تم حفظ الصلاحيات المحددة لجميع المستخدمين (${users.length} مستخدم) بدون حذف صلاحياتهم السابقة`);
+
+      if(!token) throw new Error('NO_CLOUD_SESSION');
+
+      let saved=0;
+      for(const u of users){
+        await cloudApi('save_user',{user:{
+          username:u.username,
+          name:u.name,
+          role:u.role,
+          permissions:[...permissions]
+        }});
+        saved++;
+      }
+
+      const fresh=await cloudApi('pull_all');
+      const cloudUsers=(fresh.users||[]).filter(u=>!u.is_owner);
+      const expected=[...permissions].sort().join('|');
+      const notSaved=cloudUsers.filter(u=>{
+        const got=(Array.isArray(u.permissions)?u.permissions:[]).slice().sort().join('|');
+        return got!==expected;
+      });
+
+      if(notSaved.length){
+        for(const u of notSaved){
+          await cloudApi('save_user',{user:{
+            username:u.username,
+            name:u.name,
+            role:u.role,
+            permissions:[...permissions]
+          }});
+        }
+      }
+
+      const localByUser=new Map(users.map(u=>[String(u.username),u]));
+      const verified=await cloudApi('pull_all');
+      const finalUsers=(verified.users||[]).filter(u=>!u.is_owner).map(u=>({
+        username:String(u.username||''),
+        name:u.name||'',
+        role:u.role||'معلم',
+        permissions:Array.isArray(u.permissions)?u.permissions:[],
+        password:localByUser.get(String(u.username||''))?.password||''
+      }));
+      localStorage.setItem('adminUsers',JSON.stringify(finalUsers));
+      renderAdminUsersSettings();
+
+      alert(`✅ تم حفظ مجموعة الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم)`);
     }catch(e){
       console.error('bulk permissions cloud sync',e);
-      alert('تم حفظ الصلاحيات على هذا الجهاز، لكن تعذرت مزامنتها مع بقية الأجهزة. أعد تسجيل الدخول للإدارة ثم جرّب مرة أخرى.');
+      alert('تعذر الحفظ السحابي للصلاحيات. سجّل الخروج ثم ادخل للإدارة مرة واحدة وأعد المحاولة.');
     }finally{
+      cloudSyncBusy=false;
       btn.disabled=false;
       btn.textContent=oldText;
     }
@@ -4862,17 +4914,17 @@ function restoreLastAppLocation(){
 }
 setTimeout(restoreLastAppLocation,0);
 let cloudPeriodicSyncTimer=setInterval(()=>{
-  if(localStorage.getItem('cloudAdminToken')){
+  if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
   }
 },45000);
 window.addEventListener('focus',()=>{
-  if(localStorage.getItem('cloudAdminToken')){
+  if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
   }
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && localStorage.getItem('cloudAdminToken')){
+  if(!cloudSyncBusy && document.visibilityState==='visible' && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
   }
 });
