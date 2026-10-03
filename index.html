@@ -2156,6 +2156,7 @@
     <div class="logo">مدرستي<br>بيانات</div>
   </div>
   <nav>
+    <button class="tab" id="mainHomeBtn" type="button">الصفحة الرئيسية 🏠</button>
     <button class="tab" data-page="referral" type="button">تحويل طالب لوكيل شؤون الطلاب</button>
     <button class="tab" data-page="admin" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('admin').classList.remove('hidden');document.getElementById('dashboard')?.classList.add('hidden');document.getElementById('adminLoginModal')?.classList.remove('hidden');localStorage.setItem('activeMainPage','admin')">دخول الإدارة</button>
   </nav>
@@ -2488,12 +2489,16 @@
           </div>
         </div>
         <div class="card user-permission-card">
-          <h3>الصلاحيات المتاحة لك</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">الصلاحيات المتاحة لك</h3>
+            <button type="button" class="btn btn-soft" id="userHomeBtn">الصفحة الرئيسية 🏠</button>
+          </div>
           <div id="userPermissionButtons" class="user-permission-buttons"></div>
         </div>
       </div>
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
+          <button class="admin-pill" id="adminHomeBtn">الصفحة الرئيسية 🏠</button>
           <button class="admin-pill active" id="adminDataTab">بيانات الطلاب 👥</button>
           <button class="admin-pill" id="adminUnregisteredTab">الطلاب غير المسجلين 👤</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
@@ -2990,6 +2995,18 @@
 <script>
 const $=id=>document.getElementById(id);
 const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.page');
+
+function goToMainHome(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('register')?.classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  $('mainHomeBtn')?.classList.add('active');
+  localStorage.setItem('activeMainPage','register');
+  document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
+}
+if($('mainHomeBtn')) $('mainHomeBtn').onclick=goToMainHome;
+if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
+if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
 tabs.forEach(b=>b.onclick=()=>{
   tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
   pages.forEach(p=>p.classList.add('hidden')); $(b.dataset.page).classList.remove('hidden');
@@ -4692,6 +4709,9 @@ function configureUserDashboard(){
     }
   });
 }
+
+if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
+if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
 
 function setAdminMode(on){
   adminLoggedIn = on;
