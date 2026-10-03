@@ -4846,7 +4846,7 @@ async function renderAttendancePage(){
           <div class="attendance-saved-time">${attendanceListView==='late'
             ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
             : attendanceListView==='present'
-              ? (x.period?('الحصة '+x.period):'—')
+              ? ((x.hijriDate||x.date||'—') + ' — ' + (x.period?('الحصة '+x.period):'بدون حصة'))
               : (x.time||'—')}</div>
           <div class="attendance-saved-actions">
             <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
@@ -4861,7 +4861,7 @@ async function renderAttendancePage(){
           <div>الطالب</div>
           <div>السجل المدني</div>
           <div>الصف / الفصل</div>
-          <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':attendanceListView==='present'?'الحصة':'وقت التسجيل'}</div>
+          <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':attendanceListView==='present'?'التاريخ / الحصة':'وقت التسجيل'}</div>
           <div style="text-align:center">إجراء</div>
         </div>
         ${rendered.join('')}
