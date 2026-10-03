@@ -2172,6 +2172,7 @@
   <nav id="mainPublicNav" class="hidden"></nav>
   <div id="loggedInHeaderNav" class="logged-in-header-nav">
     <button type="button" id="headerAdminDashboardBtn" onclick="openAdminDashboardInternal();return false">لوحة الإدارة 👥</button>
+    <button type="button" id="headerSchoolUsersBtn" onclick="openSchoolUsersSettings();return false">بيانات المدرسة والمستخدمون والصلاحيات ⚙️</button>
     <button type="button" id="headerEditBtn">تعديل بيانات الطالب ✏️</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
@@ -4818,6 +4819,43 @@ function openAdminDashboardInternal(){
 }
 
 if($('headerAdminDashboardBtn')) $('headerAdminDashboardBtn').onclick=openAdminDashboardInternal;
+
+function openSchoolUsersSettings(){
+  try{
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    const allowed=isCurrentOwner() || perms.has('settings');
+    if(!allowed){
+      alert('هذه الصفحة مخصصة للمدير أو لمن لديه صلاحية الإعدادات.');
+      return;
+    }
+
+    document.body.classList.add('admin-mode');
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    $('admin')?.classList.remove('hidden');
+    $('adminLoginModal')?.classList.add('hidden');
+    $('dashboard')?.classList.remove('hidden');
+    localStorage.setItem('adminLoggedIn','1');
+    localStorage.setItem('activeMainPage','admin');
+
+    try{configureUserDashboard()}catch(e){}
+    try{ensureAdminToolbarVisible()}catch(e){}
+    openAdminSettings();
+
+    setTimeout(()=>{
+      try{
+        localStorage.setItem('activeSettingsTab','users');
+        document.querySelectorAll('.admin-settings-tab').forEach(x=>x.classList.toggle('active',x.dataset.settingsTab==='users'));
+        document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane==='users'));
+        renderAdminUsersSettings();
+      }catch(e){}
+    },0);
+  }catch(e){
+    console.error('open school users settings',e);
+    alert('تعذر فتح بيانات المدرسة والمستخدمين.');
+  }
+}
+if($('headerSchoolUsersBtn')) $('headerSchoolUsersBtn').onclick=openSchoolUsersSettings;
 document.addEventListener('click',e=>{
   const btn=e.target?.closest?.('#headerAdminDashboardBtn');
   if(!btn) return;
@@ -4873,6 +4911,8 @@ function setAdminMode(on){
       if(deputyBtn) deputyBtn.style.display=(owner||perms.has('referralReview'))?'':'none';
       const settingsBtn=$('headerSettingsBtn');
       if(settingsBtn) settingsBtn.style.display=(owner||perms.has('settings'))?'':'none';
+      const schoolUsersBtn=$('headerSchoolUsersBtn');
+      if(schoolUsersBtn) schoolUsersBtn.style.display=(owner||perms.has('settings'))?'':'none';
     }catch(e){}
   }
   const adminTab = document.querySelector('.tab[data-page="admin"]');
@@ -5205,7 +5245,7 @@ if($('adminReferralTab')) $('adminReferralTab').onclick=()=>{
   initReferralPage();
 };
 if($('adminDeputyReferralsTab')) $('adminDeputyReferralsTab').onclick=()=>openDeputyReferralsPage();
-if($('adminSettingsBtn')) $('adminSettingsBtn').onclick=()=>openAdminSettings();
+if($('adminSettingsBtn')) $('adminSettingsBtn').onclick=openSchoolUsersSettings;
 
 function showAdminView(view){
   if(!isCurrentOwner()){
