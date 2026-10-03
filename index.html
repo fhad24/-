@@ -2103,6 +2103,26 @@
     .referral-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
     .referral-actions button{min-width:180px;height:52px;border-radius:12px;font-size:15px}
     .referral-note{font-size:12px;color:#6d7f7a;text-align:center;margin-top:10px}
+    .deputy-referral-page{max-width:1100px;margin:0 auto;direction:rtl}
+    .deputy-referral-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .deputy-referral-head h2{margin:0;color:#173b34}
+    .deputy-referral-list{display:grid;gap:12px}
+    .deputy-referral-card{background:#fff;border:1px solid #d6e1de;border-radius:16px;padding:16px}
+    .deputy-referral-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    .deputy-referral-student{font-size:17px;font-weight:900;color:#173b34}
+    .deputy-referral-meta{font-size:12px;color:#60736e;line-height:1.8;margin-top:4px}
+    .deputy-referral-problem{background:#f7faf9;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.7}
+    .deputy-referral-reply{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    .deputy-referral-reply textarea,.deputy-referral-reply select{width:100%;border:1px solid #cbd9d6;border-radius:10px;font-family:inherit;padding:10px;background:#fff}
+    .deputy-referral-reply textarea{min-height:80px;resize:vertical;grid-column:1/-1}
+    .deputy-referral-save{background:#0f7665;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-family:inherit;font-weight:800;cursor:pointer}
+    .deputy-status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}
+    .deputy-status.pending{background:#fff4d6;color:#8a5a00}
+    .deputy-status.replied{background:#e7f6f1;color:#0f7665}
+    .teacher-replies-box{margin-top:14px;border-top:1px solid #e0e8e5;padding-top:12px}
+    .teacher-replies-box h3{margin:0 0 8px;font-size:16px}
+    .teacher-reply-item{border:1px solid #d9e3e0;border-radius:10px;padding:10px;margin-top:7px;background:#fbfdfc;font-size:12px;line-height:1.7}
+    @media(max-width:720px){.deputy-referral-reply{grid-template-columns:1fr}}
     @media(max-width:720px){
       .referral-grid{grid-template-columns:1fr}
       .referral-reasons{grid-template-columns:1fr 1fr}
@@ -2411,13 +2431,36 @@
         <textarea id="referralActionTaken" placeholder="يُعبأ من قبل وكيل شؤون الطلاب"></textarea>
       </div>
 
+      <div class="teacher-replies-box">
+        <h3>متابعة رد وكيل شؤون الطلاب</h3>
+        <button type="button" class="btn btn-soft" id="refreshTeacherReferralReplies">تحديث الردود</button>
+        <div id="teacherReferralReplies" class="hint" style="margin-top:8px">سيظهر هنا رد الوكيل على التحويلات المرسلة منك.</div>
+      </div>
+
       <div class="referral-actions">
-        <button type="submit" class="btn btn-primary">حفظ التحويل</button>
+        <button type="submit" class="btn btn-primary">حفظ وإرسال التحويل للوكيل</button>
         <button type="button" class="btn btn-soft" id="printReferralBtn">طباعة النموذج</button>
         <button type="reset" class="btn btn-outline">مسح الحقول</button>
       </div>
       <div class="referral-note">يتم حفظ النموذج داخل النظام ويمكن طباعته مباشرة.</div>
     </form>
+  </div>
+</section>
+
+<section id="deputyReferrals" class="page hidden">
+  <div class="deputy-referral-page">
+    <div class="card" style="padding:20px">
+      <div class="deputy-referral-head">
+        <div>
+          <h2>رد وكيل شؤون الطلاب على تحويلات المعلمين</h2>
+          <div class="hint">مرتبطة بنموذج رقم (٣١) — رمز النموذج: (و.ط.ع.ن - ٠٤ - ٠٣)</div>
+        </div>
+        <button type="button" class="btn btn-soft" id="refreshDeputyReferrals">تحديث التحويلات</button>
+      </div>
+      <div id="deputyReferralList" class="deputy-referral-list">
+        <div class="hint">جاري تحميل التحويلات...</div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -2455,6 +2498,7 @@
           <button class="admin-pill" id="adminUnregisteredTab">الطلاب غير المسجلين 👤</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
+          <button class="admin-pill" id="adminDeputyReferralsTab">رد الوكيل على التحويلات 📬</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
@@ -3235,6 +3279,7 @@ function initReferralPage(){
   updateReferralStudentSelectorState();
   renderReferralSelectedStudents();
   populateReferralTeachers();
+  loadTeacherReferralReplies();
 }
 if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',e=>{
   e.preventDefault();
@@ -3272,7 +3317,24 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     classroom:studentClassKey(s.classroom)||base.classroom
   }));
   localStorage.setItem('studentReferrals',JSON.stringify(rows));
-  toast(`تم حفظ تحويل ${selectedStudents.length} طالب`);
+  const payload=selectedStudents.map(s=>({
+    ...base,
+    studentName:s.name||'',
+    studentCivilId:String(s.idno||''),
+    studentPhone:s.phone||'',
+    grade:s.grade||base.grade,
+    classroom:studentClassKey(s.classroom)||base.classroom,
+    alertLevel:String(referralAlertLevels.get(String(s.idno||''))||'1'),
+    previousAlerts:getPreviousReferralAlertsCount(String(s.idno||''))
+  }));
+  try{
+    await cloudApi('create_referrals',{rows:payload});
+    toast(`تم إرسال تحويل ${selectedStudents.length} طالب للوكيل`);
+    if(typeof loadTeacherReferralReplies==='function') loadTeacherReferralReplies();
+  }catch(err){
+    console.warn('cloud referrals',err);
+    toast('تم الحفظ محليًا وتعذر الإرسال السحابي');
+  }
 });
 if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
 if($('referralNoorTrigger')) $('referralNoorTrigger').onclick=()=>{
@@ -3308,6 +3370,90 @@ document.addEventListener('click',e=>{
   if(picker && !picker.contains(e.target)) $('referralStudentResults')?.classList.add('hidden');
 });
 document.querySelector('.tab[data-page="referral"]')?.addEventListener('click',()=>setTimeout(initReferralPage,0));
+
+async function loadTeacherReferralReplies(){
+  const host=$('teacherReferralReplies');
+  if(!host || !localStorage.getItem('cloudAdminToken')) return;
+  try{
+    const data=await cloudApi('list_referrals');
+    const rows=Array.isArray(data.rows)?data.rows:[];
+    if(!rows.length){host.innerHTML='<div class="hint">لا توجد تحويلات مرسلة حتى الآن.</div>';return;}
+    host.innerHTML=rows.map(r=>`
+      <div class="teacher-reply-item">
+        <b>${r.student_name||'—'}</b> — ${r.subject||'—'} — التنبيه ${r.alert_level||'1'}<br>
+        <span>الحالة: ${r.status==='replied'?'تم الرد':'بانتظار رد الوكيل'}</span>
+        ${r.deputy_reply?`<br><b>رد الوكيل:</b> ${r.deputy_reply}`:''}
+        ${r.deputy_action?`<br><b>الإجراء:</b> ${r.deputy_action}`:''}
+        ${r.deputy_name?`<br><span>الوكيل: ${r.deputy_name} — ${r.deputy_civil_id||''}</span>`:''}
+      </div>`).join('');
+  }catch(e){
+    host.innerHTML='<div class="hint">تعذر تحميل الردود الآن.</div>';
+  }
+}
+async function loadDeputyReferrals(){
+  const host=$('deputyReferralList');
+  if(!host) return;
+  host.innerHTML='<div class="hint">جاري تحميل التحويلات...</div>';
+  try{
+    const data=await cloudApi('list_referrals');
+    if(!data.canReview){host.innerHTML='<div class="hint">لا توجد لديك صلاحية الرد على تحويلات الطلاب.</div>';return;}
+    const rows=Array.isArray(data.rows)?data.rows:[];
+    if(!rows.length){host.innerHTML='<div class="hint">لا توجد تحويلات حتى الآن.</div>';return;}
+    host.innerHTML=rows.map(r=>`
+      <div class="deputy-referral-card" data-deputy-referral-id="${r.id}">
+        <div class="deputy-referral-top">
+          <div>
+            <div class="deputy-referral-student">${r.student_name||'—'}</div>
+            <div class="deputy-referral-meta">
+              السجل المدني: ${r.student_civil_id||'—'} — الصف: ${r.grade||'—'} — الفصل: ${r.classroom||'—'}<br>
+              المعلم: ${r.teacher_name||'—'} — سجله: ${r.teacher_civil_id||'—'}<br>
+              المادة: ${r.subject||'—'} — الحصة: ${r.period||'—'} — التنبيه: ${r.alert_level||'1'}<br>
+              التاريخ: ${r.date||'—'} — الهجري: ${r.hijri_date||'—'}
+            </div>
+          </div>
+          <span class="deputy-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':'بانتظار الرد'}</span>
+        </div>
+        <div class="deputy-referral-problem"><b>سبب التحويل:</b> ${Array.isArray(r.reasons)?r.reasons.join('، '):''} ${r.other_reason||''}<br><b>إيضاح المشكلة:</b> ${r.problem||'—'}</div>
+        <div class="deputy-referral-reply">
+          <select class="deputy-action-select">
+            <option value="">اختر الإجراء</option>
+            <option ${r.deputy_action==='تمت المعالجة'?'selected':''}>تمت المعالجة</option>
+            <option ${r.deputy_action==='استدعاء الطالب'?'selected':''}>استدعاء الطالب</option>
+            <option ${r.deputy_action==='التواصل مع ولي الأمر'?'selected':''}>التواصل مع ولي الأمر</option>
+            <option ${r.deputy_action==='إحالة للموجه الطلابي'?'selected':''}>إحالة للموجه الطلابي</option>
+            <option ${r.deputy_action==='متابعة الحالة'?'selected':''}>متابعة الحالة</option>
+          </select>
+          <div></div>
+          <textarea class="deputy-reply-text" placeholder="اكتب رد الوكيل للمعلم...">${r.deputy_reply||''}</textarea>
+          <button type="button" class="deputy-referral-save">حفظ وإرسال الرد للمعلم</button>
+        </div>
+      </div>`).join('');
+    host.querySelectorAll('.deputy-referral-save').forEach(btn=>btn.onclick=async()=>{
+      const card=btn.closest('[data-deputy-referral-id]');
+      const id=Number(card?.dataset.deputyReferralId||0);
+      const reply=card.querySelector('.deputy-reply-text')?.value||'';
+      const deputyAction=card.querySelector('.deputy-action-select')?.value||'';
+      if(!reply.trim() && !deputyAction){alert('اكتب الرد أو اختر الإجراء');return;}
+      btn.disabled=true;
+      try{
+        await cloudApi('reply_referral',{id,reply,deputyAction});
+        toast('تم إرسال رد الوكيل للمعلم');
+        await loadDeputyReferrals();
+      }catch(e){alert('تعذر حفظ الرد: '+(e?.message||e))}
+      finally{btn.disabled=false;}
+    });
+  }catch(e){
+    host.innerHTML='<div class="hint">تعذر تحميل التحويلات.</div>';
+  }
+}
+function openDeputyReferralsPage(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('deputyReferrals')?.classList.remove('hidden');
+  localStorage.setItem('activeMainPage','deputyReferrals');
+  loadDeputyReferrals();
+}
+if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyReferrals;
+if($('refreshTeacherReferralReplies')) $('refreshTeacherReferralReplies').onclick=loadTeacherReferralReplies;
 
 const CLOUD_API_URL='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
 let cloudSyncBusy=false;
@@ -3423,7 +3569,7 @@ async function cloudPushLocalData(){
     }
     await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
     const p=getAdminProfile();
-    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true},...getAdminUsers()];
+    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true},...getAdminUsers()];
     await cloudApi('sync_users',{users});
     await cloudApi('save_settings',{settings:getSchoolSettings()});
     localStorage.setItem('cloudInitialSyncDone','1');
@@ -4379,7 +4525,7 @@ function getCurrentLoggedAdminUser(){
     civil_id:p.username||'',
     name:p.displayName||'المدير',
     role:'مدير',
-    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],
+    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],
     is_owner:true
   };
 }
@@ -4434,6 +4580,7 @@ function configureUserDashboard(){
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['photos','تصوير الطلاب 📷','photos'],
+    ['referralReview','رد الوكيل على التحويلات 📬','referralReview'],
     ['settings','الإعدادات ⚙️','settings']
   ];
   const host=$('userPermissionButtons');
@@ -4454,6 +4601,10 @@ function configureUserDashboard(){
     }
     if(action==='addStudent'){
       if(typeof openAddStudentModal==='function') openAddStudentModal();
+      return;
+    }
+    if(action==='referralReview'){
+      openDeputyReferralsPage();
       return;
     }
     if(action==='settings'){
@@ -4529,7 +4680,7 @@ $('adminLoginBtn').onclick=async()=>{
   if(user==='1015401902' && pass==='13111111'){
     localStorage.setItem('currentLocalAdminUser',JSON.stringify({
       username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
-      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true
     }));
     localStorage.removeItem('cloudAdminUser');
     localStorage.setItem('adminLoggedIn','1');
@@ -4587,7 +4738,7 @@ $('adminLoginBtn').onclick=async()=>{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
         name:String(p.displayName||'المدير'),role:'مدير',
-        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true
       }));
       localStorage.removeItem('cloudAdminUser');
     }
@@ -4810,6 +4961,7 @@ if($('adminReferralTab')) $('adminReferralTab').onclick=()=>{
   localStorage.setItem('activeMainPage','referral');
   initReferralPage();
 };
+if($('adminDeputyReferralsTab')) $('adminDeputyReferralsTab').onclick=()=>openDeputyReferralsPage();
 
 function showAdminView(view){
   if(!isCurrentOwner()){
@@ -5142,6 +5294,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
+          <label class="admin-permission">رد وكيل شؤون الطلاب على التحويلات <input class="admin-new-perm" value="referralReview" type="checkbox"></label>
         </div>
         <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
@@ -5472,7 +5625,7 @@ function ensureAdminSettings(){
         let permissions=['attendance'];
         if(permText){
           const t=permText.toLowerCase();
-          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'];
+          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'];
           else{
             permissions=[];
             if(t.includes('تحضير')) permissions.push('attendance');
@@ -5558,7 +5711,8 @@ function renderAdminUsersSettings(){
     reports:'التقارير والتصدير',
     settings:'بيانات المدرسة والمستخدمون',
     madrasati:'متابعة دخول منصة مدرستي',
-    photos:'تصوير الطلاب لإضافة الصور'
+    photos:'تصوير الطلاب لإضافة الصور',
+    referralReview:'رد وكيل شؤون الطلاب على التحويلات'
   };
   const all=[{...p,name:p.displayName,role:'مدير',owner:true,permissions:['all']},...filtered];
   host.innerHTML=all.map((u,i)=>{
@@ -5633,7 +5787,8 @@ function openUserPermissionEditor(username){
     ['reports','التقارير والتصدير'],
     ['settings','بيانات المدرسة والمستخدمون'],
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
-    ['photos','تصوير الطلاب لإضافة الصور']
+    ['photos','تصوير الطلاب لإضافة الصور'],
+    ['referralReview','رد وكيل شؤون الطلاب على التحويلات']
   ];
   modal.innerHTML=`
     <div class="user-perm-card">
