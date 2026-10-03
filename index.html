@@ -5314,6 +5314,7 @@ function configureUserDashboard(){
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['photos','تصوير الطلاب 📷','photos'],
+    ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
     ['settings','الإعدادات ⚙️','settings']
   ];
@@ -5335,6 +5336,10 @@ function configureUserDashboard(){
     }
     if(action==='addStudent'){
       if(typeof openAddStudentModal==='function') openAddStudentModal();
+      return;
+    }
+    if(action==='followupSheets'){
+      openInternalPage('followup');
       return;
     }
     if(action==='referralReview'){
@@ -5585,8 +5590,16 @@ function openInternalPage(pageId){
   if(pageId==='referral' && typeof initReferralPage==='function'){
     setTimeout(initReferralPage,0);
   }
-  if(pageId==='followup' && typeof initStudentFollowupPage==='function'){
-    setTimeout(initStudentFollowupPage,0);
+  if(pageId==='followup'){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('followupSheets')){
+      $('followup')?.classList.add('hidden');
+      alert('لا توجد لديك صلاحية كشوف متابعة الطلاب.');
+      openAdminDashboardInternal();
+      return;
+    }
+    if(typeof initStudentFollowupPage==='function') setTimeout(initStudentFollowupPage,0);
   }
 }
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
@@ -5686,7 +5699,15 @@ if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
   if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
 };
-if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>openInternalPage('followup');
+if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
+  const u=getCurrentLoggedAdminUser();
+  const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+  if(!isCurrentOwner() && !perms.has('followupSheets')){
+    alert('لا توجد لديك صلاحية كشوف متابعة الطلاب.');
+    return;
+  }
+  openInternalPage('followup');
+};
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
     openAdminDashboardInternal();
@@ -5745,6 +5766,8 @@ function setAdminMode(on){
       const owner=isCurrentOwner();
       const deputyBtn=$('headerDeputyRepliesBtn');
       if(deputyBtn) deputyBtn.style.display=(owner||perms.has('referralReview'))?'':'none';
+      const followupBtn=$('headerFollowupBtn');
+      if(followupBtn) followupBtn.style.display=(owner||perms.has('followupSheets'))?'':'none';
       const settingsBtn=$('headerSettingsBtn');
       if(settingsBtn) settingsBtn.style.display=(owner||perms.has('settings'))?'':'none';
       const schoolUsersBtn=$('headerSchoolUsersBtn');
@@ -6545,6 +6568,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
+          <label class="admin-permission">كشوف متابعة الطلاب <input class="admin-new-perm" value="followupSheets" type="checkbox"></label>
           <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
         </div>
         <div id="newReferralGradePermissions" style="margin-top:12px;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
@@ -7002,6 +7026,7 @@ function renderAdminUsersSettings(){
     settings:'بيانات المدرسة والمستخدمون',
     madrasati:'متابعة دخول منصة مدرستي',
     photos:'تصوير الطلاب لإضافة الصور',
+    followupSheets:'كشوف متابعة الطلاب',
     referralReview:'ردود الوكلاء',
     'referralGrade:first':'ردود الوكلاء: الأول الثانوي',
     'referralGrade:second':'ردود الوكلاء: الثاني الثانوي',
@@ -7081,6 +7106,7 @@ function openUserPermissionEditor(username){
     ['settings','بيانات المدرسة والمستخدمون'],
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
     ['photos','تصوير الطلاب لإضافة الصور'],
+    ['followupSheets','كشوف متابعة الطلاب'],
     ['referralReview','رد وكيل شؤون الطلاب على التحويلات']
   ];
   modal.innerHTML=`
