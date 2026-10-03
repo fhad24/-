@@ -1923,6 +1923,57 @@
     .attendance-student-column-head + .attendance-student-list{
       border-radius:0 0 8px 8px!important;
     }
+
+    /* محاذاة رؤوس الأعمدة مع البيانات: اسم | صف | صورة | سجل */
+    .attendance-student-list-toolbar,
+    .att-student-row{
+      grid-template-columns:minmax(220px,1.6fr) 145px 105px 125px auto!important;
+      direction:rtl!important;
+      gap:8px!important;
+      align-items:center!important;
+    }
+    .attendance-student-list-toolbar{
+      display:grid!important;
+      margin:6px 0 0!important;
+    }
+    .att-student-row{
+      display:grid!important;
+    }
+    .attendance-student-list-toolbar .att-sort-btn[data-att-sort="name"]{grid-column:1!important}
+    .attendance-student-list-toolbar .att-sort-btn[data-att-sort="class"]{grid-column:2!important}
+    .attendance-student-list-toolbar .att-sort-btn[data-att-sort="photo"]{grid-column:3!important}
+    .attendance-student-list-toolbar .att-sort-btn[data-att-sort="idno"]{grid-column:4!important}
+    .attendance-student-list-toolbar .att-select-all-wrap{grid-column:5!important}
+
+    .att-student-main{grid-column:1!important;min-width:0!important}
+    .att-student-class-cell{
+      grid-column:2!important;
+      text-align:center!important;
+      font-size:12px!important;
+      color:#60736e!important;
+      font-weight:700!important;
+    }
+    .att-student-photo-wrap{
+      grid-column:3!important;
+      justify-self:center!important;
+    }
+    .att-student-id-cell{
+      grid-column:4!important;
+      text-align:center!important;
+      font-size:12px!important;
+      color:#60736e!important;
+      font-weight:700!important;
+      direction:ltr!important;
+    }
+    .att-inline-performance{
+      margin-top:4px!important;
+    }
+    @media(max-width:800px){
+      .attendance-student-list-toolbar,
+      .att-student-row{
+        grid-template-columns:minmax(180px,1.5fr) 120px 92px 110px auto!important;
+      }
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2399,16 +2450,13 @@
         </div>
         <div class="attendance-student-list-toolbar">
           <button type="button" class="att-sort-btn" data-att-sort="name">اسم الطالب</button>
-          <button type="button" class="att-sort-btn" data-att-sort="idno">السجل</button>
           <button type="button" class="att-sort-btn" data-att-sort="class">الصف</button>
           <button type="button" class="att-sort-btn" data-att-sort="photo">الصورة</button>
+          <button type="button" class="att-sort-btn" data-att-sort="idno">السجل</button>
           <label id="attendancePresentSelectAllWrap" class="att-select-all-wrap hidden">
             <input type="checkbox" id="attendancePresentSelectAll">
             <span>تحديد الكل</span>
           </label>
-        </div>
-        <div class="attendance-student-column-head">
-          <button type="button" id="attendanceNameSortHeader">اسم الطالب ▼</button>
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -5435,110 +5483,7 @@ async function renderAttendanceStudentList(){
     return String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'})*attendanceStudentSortDir;
   });
 
-  if($('attendanceNameSortHeader')){
-    $('attendanceNameSortHeader').textContent='اسم الطالب '+(attendanceStudentSortKey==='name'?(attendanceStudentSortDir===-1?'▼':'▲'):'▼');
-  }
-  document.querySelectorAll('.att-sort-btn').forEach(btn=>{
-    const active=btn.dataset.attSort===attendanceStudentSortKey;
-    btn.classList.toggle('active',active);
-    btn.textContent=(btn.dataset.attSort==='name'?'اسم الطالب':btn.dataset.attSort==='idno'?'السجل':btn.dataset.attSort==='class'?'الصف':'الصورة')+(active?(attendanceStudentSortDir===1?' ▲':' ▼'):'');
-  });
-  const selectAllWrap=$('attendancePresentSelectAllWrap');
-  if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
-
-  const rendered=await Promise.all(list.map(async s=>{
-    const perf=getStudentAttendancePerformance(s.idno);
-    let photoHTML='<div class="att-student-photo placeholder">👤</div>';
-    try{
-      const blob=await getStudentPhoto(`${s.idno}:face`);
-      if(blob){
-        const src=await makeSharpAttendanceThumb(blob,String(s.idno));
-        photoHTML=`<img class="att-student-photo" src="${src}" alt="صورة الطالب">`;
-      }
-    }catch(e){}
-    return `
-    <div class="att-student-row ${attendanceMode==='present'?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
-      <div class="att-student-main">
-        <div class="att-name-line">
-          <b>${s.name}</b>
-        </div>
-        <span>${s.grade||''} / ${s.classroom||''}</span>
-      </div>
-      <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
-        ${photoHTML}
-        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
-      </div>
-      <span class="att-inline-performance">
-        <span class="att-inline-late">⏰ ${perf.late}</span>
-        <span class="att-inline-absent">✕ ${perf.absent}</span>
-      </span>
-      <span>${s.idno}</span>
-    </div>`;
-  }));
-
-  $('attendanceStudentList').innerHTML=rendered.join('') || '<div class="hint" style="padding:14px">لا توجد أسماء مطابقة</div>';
-  $('attendanceListCount').textContent=q
-    ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
-    : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
-
-  if($('attendancePresentSelectAll')){
-    const visibleIds=list.map(s=>String(s.idno));
-    $('attendancePresentSelectAll').checked=attendanceMode==='present' && visibleIds.length>0 && visibleIds.every(id=>attendancePresentSelectedIds.has(id));
-    $('attendancePresentSelectAll').indeterminate=attendanceMode==='present' && visibleIds.some(id=>attendancePresentSelectedIds.has(id)) && !visibleIds.every(id=>attendancePresentSelectedIds.has(id));
-  }
-
-  document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
-    box.onclick=(e)=>e.stopPropagation();
-    box.onchange=(e)=>{
-      e.stopPropagation();
-      const id=String(box.dataset.selectId||'');
-      if(box.checked) attendancePresentSelectedIds.add(id);
-      else attendancePresentSelectedIds.delete(id);
-    };
-  });
-
-  document.querySelectorAll('.att-student-row[data-id]').forEach(row=>{
-    row.onclick=(e)=>{
-      if(e.target.closest('.att-student-select-check')) return;
-      attendanceSelectedId=row.dataset.id;
-      renderAttendanceStudentList();
-      const s=getStudents().find(x=>String(x.idno)===String(attendanceSelectedId));
-      showAttendanceSelectedStudent(s);
-    };
-  });
-
-  document.querySelectorAll('img[data-ephemeral-url]').forEach(img=>{
-    img.onload=()=>setTimeout(()=>URL.revokeObjectURL(img.src),4000);
-  });
-}
-
-
-document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
-  btn.onclick=()=>{
-    attendanceListView=btn.dataset.attView||'late';
-    renderAttendancePage();
-  };
-});
-
-if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
-if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>openAttendanceModal('present');
-if($('closeAttendanceModal')) $('closeAttendanceModal').onclick=closeAttendanceModal;
-if($('cancelAttendanceStudentBtn')) $('cancelAttendanceStudentBtn').onclick=closeAttendanceModal;
-if($('attendanceLateTab')) $('attendanceLateTab').onclick=()=>setAttendanceMode('late');
-if($('attendancePresentTab')) $('attendancePresentTab').onclick=()=>setAttendanceMode('present');
-if($('attendanceStudentSearch')){
-  const searchInput=$('attendanceStudentSearch');
-  ['input','keyup','search','change'].forEach(evt=>searchInput.addEventListener(evt,renderAttendanceStudentList));
-  searchInput.addEventListener('paste',()=>setTimeout(renderAttendanceStudentList,0));
-}
-if($('attendanceNameSortHeader')) $('attendanceNameSortHeader').onclick=()=>{
-  if(attendanceStudentSortKey==='name') attendanceStudentSortDir*=-1;
-  else { attendanceStudentSortKey='name'; attendanceStudentSortDir=-1; }
-  $('attendanceNameSortHeader').textContent='اسم الطالب '+(attendanceStudentSortDir===-1?'▼':'▲');
-  renderAttendanceStudentList();
-};
-
-if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
+  if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
 if($('attendanceHideRegistered')) $('attendanceHideRegistered').onchange=renderAttendanceStudentList;
 
 document.querySelectorAll('.att-sort-btn').forEach(btn=>{
