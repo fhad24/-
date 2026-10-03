@@ -3663,6 +3663,15 @@ async function importMadrasatiPlacements(file){
       '<br>مطابقون بدون تغيير: '+unchanged+' — غير موجودين في قاعدة البرنامج: '+notFound+' — صفوف متجاهلة: '+skipped+'.'+
       '<br><span style="color:#0f7665;font-weight:700">صور الطلاب وبياناتهم الأخرى لم يتم حذفها أو استبدالها.</span>';
     toast('تم تحديث الصفوف والفصول من مدرستي بدون حذف الصور');
+    alert(
+      '✅ تم الانتهاء من استيراد ملف مدرستي بنجاح\n\n'+
+      'تمت المطابقة بالسجل المدني.\n'+
+      'تم تحديث الصف/الفصل لـ '+updated+' طالب.\n'+
+      'بدون تغيير: '+unchanged+'.\n'+
+      'غير موجودين في قاعدة البرنامج: '+notFound+'.\n'+
+      'صفوف متجاهلة: '+skipped+'.\n\n'+
+      'صور الطلاب وباقي البيانات لم يتم حذفها.'
+    );
   }catch(err){
     console.error('Madrasati import',err);
     status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر قراءة ملف مدرستي. استخدم كشف Excel الأصلي من المنصة.</span>';
