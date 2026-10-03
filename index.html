@@ -2251,6 +2251,7 @@
             <div>
               <b id="referralSelectedName">—</b>
               <span id="referralSelectedId">السجل المدني: —</span>
+              <span id="referralSelectedPhone">رقم الجوال: —</span>
             </div>
           </div>
         </div>
@@ -2983,9 +2984,14 @@ async function renderReferralStudentResults(query=''){
     const photo=await getReferralStudentPhotoUrl(s);
     const safeName=String(s.name||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const safeId=String(s.idno||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const safePhone=String(s.phone||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     return `<button type="button" class="referral-student-option" data-referral-id="${safeId}">
       ${photo?`<img class="referral-student-photo" src="${photo}" alt="">`:'<div class="referral-student-photo-fallback">👤</div>'}
-      <div><div class="referral-student-name">${safeName}</div><div class="referral-student-id">السجل المدني: ${safeId}</div></div>
+      <div>
+        <div class="referral-student-name">${safeName}</div>
+        <div class="referral-student-id">السجل المدني: ${safeId}</div>
+        <div class="referral-student-id">رقم الجوال: ${safePhone||'—'}</div>
+      </div>
     </button>`;
   }));
   host.innerHTML=rows.join('');
@@ -3001,6 +3007,7 @@ async function selectReferralStudent(idno){
   $('referralStudentResults').classList.add('hidden');
   $('referralSelectedName').textContent=s.name||'—';
   $('referralSelectedId').textContent='السجل المدني: '+(s.idno||'—');
+  $('referralSelectedPhone').textContent='رقم الجوال: '+(s.phone||'—');
   const wrap=$('referralSelectedPhotoWrap');
   const photo=await getReferralStudentPhotoUrl(s);
   wrap.innerHTML=photo?`<img src="${photo}" alt="صورة الطالب">`:'<div class="fallback">👤</div>';
@@ -3039,6 +3046,8 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
   const rec={
     id:'R'+Date.now(),
     studentName:$('referralStudentName').value.trim(),
+    studentCivilId:$('referralStudentId').value,
+    studentPhone:(getStudents().find(x=>String(x.idno||'')===String($('referralStudentId').value||''))?.phone||''),
     grade:$('referralGrade').value,
     subject:$('referralSubject').value,
     period:$('referralPeriod').value,
