@@ -6701,12 +6701,13 @@ function ensureAdminSettings(){
         try{ministryLogo=await removeLogoBackground(ministryLogo)}catch(e){}
       }
 
+      const tickerText=String(document.getElementById('settingsTickerText')?.value||'').trim();
       const next={
         authority:document.getElementById('settingsAuthority').value.trim(),
         school:document.getElementById('settingsSchool').value.trim(),
         designer:document.getElementById('settingsDesigner').value.trim(),
         manager:document.getElementById('settingsManager').value.trim(),
-        tickerText:document.getElementById('settingsTickerText')?.value.trim()||'',
+        tickerText,
         schoolLogo,
         ministryLogo
       };
@@ -6733,9 +6734,22 @@ function ensureAdminSettings(){
         },false);
       }
 
+      // حفظ مستقل للشريط الإخباري لضمان عدم رجوعه للنص القديم.
+      await cloudApi('save_ticker',{tickerText},false);
+
+      // تحقق من النص المحفوظ وأعد عرضه فورًا.
+      const verifyTicker=await cloudApi('school_settings_public',{},false);
+      if(verifyTicker?.settings){
+        const confirmed=String(verifyTicker.settings.ticker_text??tickerText);
+        const latest={...getSchoolSettings(),tickerText:confirmed};
+        localStorage.setItem('schoolSettings',JSON.stringify(latest));
+        applySchoolSettings();
+        if(document.getElementById('settingsTickerText')) document.getElementById('settingsTickerText').value=confirmed;
+      }
+
       delete schoolPreview.dataset.pending;
       delete ministryPreview.dataset.pending;
-      alert('✅ تم حفظ بيانات المدرسة والشعارات بنجاح');
+      alert('✅ تم حفظ بيانات المدرسة والشريط الإخباري بنجاح');
     }catch(e){
       console.error(e);
       alert('تعذر حفظ الشعار. تم الاحتفاظ به على هذا الجهاز فقط، وحاول مرة أخرى بعد تحديث الصفحة.');
@@ -7269,6 +7283,15 @@ function openAdminSettings(){
   const ministryFallback=document.getElementById('ministryLogoFallback');
   if(s.ministryLogo){ministryImg.src=s.ministryLogo;ministryImg.classList.remove('hidden');ministryFallback.classList.add('hidden')}
   else{ministryImg.removeAttribute('src');ministryImg.classList.add('hidden');ministryFallback.classList.remove('hidden')}
+
+  const tickerInput=document.getElementById('settingsTickerText');
+  if(tickerInput && !tickerInput.dataset.previewBound){
+    tickerInput.dataset.previewBound='1';
+    tickerInput.addEventListener('input',()=>{
+      const ticker=document.querySelector('.ticker span');
+      if(ticker) ticker.textContent=tickerInput.value||'';
+    });
+  }
 
   document.getElementById('settingsAdminUsername').value=p.username||'';
   document.getElementById('settingsAdminDisplayName').value=p.displayName||'';
