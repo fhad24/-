@@ -4063,6 +4063,7 @@ async function renderAttendancePage(){
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
+            <label class="attendance-row-check attendance-row-check-by-photo" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
             ${photoHTML}
             <div class="attendance-saved-name">${s.name||''}</div>
           </div>
@@ -4070,7 +4071,6 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
           <div class="attendance-saved-time">—</div>
           <div class="attendance-saved-actions">
-            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
             <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
           </div>
         </div>`;
@@ -4121,6 +4121,7 @@ async function renderAttendancePage(){
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
+            <label class="attendance-row-check attendance-row-check-by-photo" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
             ${photoHTML}
             <div>
               <div class="attendance-saved-name">${x.name||''}</div>
@@ -4132,7 +4133,6 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
-            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
             <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
@@ -4548,7 +4548,11 @@ async function openAttendanceEdit(index){
   $('attendanceEditTimeWrap')?.classList.remove('hidden');
   setAttendanceTimeControls(row.time);
   fillAttendanceHijriControls(String(row.date||todayKey()),row.hijriDate||'');
-  if($('attendanceEditWeekday')) $('attendanceEditWeekday').value=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
+  if($('attendanceEditWeekday')){
+    const allowedDays=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+    const suggested=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
+    $('attendanceEditWeekday').value=allowedDays.includes(suggested)?suggested:'الأحد';
+  }
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
@@ -5938,6 +5942,33 @@ function printStudents(rows){
       margin:14px 0 0!important;
       box-sizing:border-box!important;
       clear:both!important;
+    }
+
+    /* Requested final tweaks only */
+    #attendanceEditTimeWrap .time-spinner-wrap{
+      direction:ltr!important;
+    }
+    .attendance-saved-student{
+      grid-template-columns:22px 56px minmax(0,1fr)!important;
+      direction:rtl!important;
+      align-items:center!important;
+    }
+    .attendance-row-check-by-photo{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      margin:0!important;
+    }
+    .attendance-row-check-by-photo input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+    }
+    @media(max-width:1050px){
+      .attendance-saved-student{
+        grid-template-columns:22px 46px minmax(0,1fr)!important;
+      }
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
