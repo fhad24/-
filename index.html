@@ -2049,6 +2049,17 @@
     .referral-student-selected .fallback{display:grid;place-items:center;font-size:20px}
     .referral-student-selected b{display:block;font-size:14px}
     .referral-student-selected span{display:block;font-size:12px;color:#60736e;margin-top:3px}
+    .referral-selected-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+    .referral-selected-toolbar b{font-size:14px;color:#173b34}
+    .referral-select-all-btn{border:1px solid #0f7665;background:#eef8f5;color:#0f7665;border-radius:10px;padding:8px 12px;font-family:inherit;font-weight:800;cursor:pointer}
+    .referral-selected-list{display:grid;gap:8px;margin-top:8px}
+    .referral-selected-card{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center;background:#f2f8f6;border:1px solid #d4e1de;border-radius:12px;padding:8px 10px}
+    .referral-selected-card img,.referral-selected-card .fallback{width:44px;height:44px;border-radius:9px;object-fit:cover;border:1px solid #d5e1de;background:#fff}
+    .referral-selected-card .fallback{display:grid;place-items:center;font-size:19px}
+    .referral-selected-card b{display:block;font-size:13px}
+    .referral-selected-card span{display:block;font-size:11px;color:#60736e;margin-top:2px}
+    .referral-remove-student{border:0;background:#fff1ef;color:#b42318;border-radius:9px;padding:7px 9px;font-family:inherit;font-weight:800;cursor:pointer}
+    .referral-student-option.selected{background:#e3f3ef;box-shadow:inset -4px 0 0 #0f7665}
     .referral-reasons{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
     .referral-reason{display:flex;align-items:center;gap:8px;border:1px solid #d8e2df;border-radius:12px;padding:12px;background:#f8fbfa;font-weight:700;font-size:14px}
     .referral-reason input{width:18px;height:18px;accent-color:var(--primary)}
@@ -2243,17 +2254,13 @@
       <div class="referral-grid">
         <div class="referral-field referral-student-picker" id="referralStudentPicker">
           <label>اسم الطالب</label>
-          <input id="referralStudentName" autocomplete="off" required placeholder="ابحث بالاسم أو السجل المدني">
-          <input id="referralStudentId" type="hidden">
+          <input id="referralStudentName" autocomplete="off" placeholder="ابحث بالاسم أو السجل المدني">
           <div id="referralStudentResults" class="referral-student-results hidden"></div>
-          <div id="referralStudentSelected" class="referral-student-selected">
-            <div id="referralSelectedPhotoWrap"><div class="fallback">👤</div></div>
-            <div>
-              <b id="referralSelectedName">—</b>
-              <span id="referralSelectedId">السجل المدني: —</span>
-              <span id="referralSelectedPhone">رقم الجوال: —</span>
-            </div>
+          <div class="referral-selected-toolbar">
+            <b>الطلاب المحددون: <span id="referralSelectedCount">0</span></b>
+            <button type="button" class="referral-select-all-btn" id="referralSelectAllVisible">☑ تحديد جميع الظاهر</button>
           </div>
+          <div id="referralSelectedStudents" class="referral-selected-list"></div>
         </div>
         <div class="referral-field">
           <label>الصف</label>
@@ -2262,6 +2269,12 @@
             <option>الأول الثانوي</option>
             <option>الثاني الثانوي</option>
             <option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div class="referral-field">
+          <label>الفصل</label>
+          <select id="referralClass" required>
+            <option value="">اختر الفصل</option>
           </select>
         </div>
         <div class="referral-field">
@@ -2956,6 +2969,8 @@ function updateReferralDates(){
   }
 }
 let referralStudentPhotoUrls=[];
+let referralSelectedIds=new Set();
+
 function clearReferralStudentPhotoUrls(){
   referralStudentPhotoUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(e){}});
   referralStudentPhotoUrls=[];
@@ -2972,19 +2987,38 @@ async function getReferralStudentPhotoUrl(student){
   if(student.faceImage) return student.faceImage;
   return '';
 }
+function getReferralFilteredStudents(query=''){
+  const q=String(query||'').trim().toLowerCase();
+  const grade=$('referralGrade')?.value||'';
+  const classroom=$('referralClass')?.value||'';
+  return getStudents().filter(s=>{
+    const matchesQuery=!q ||
+      String(s.name||'').toLowerCase().includes(q) ||
+      String(s.idno||'').includes(q) ||
+      String(s.phone||'').includes(q);
+    const matchesGrade=!grade || String(s.grade||'')===String(grade);
+    const matchesClass=!classroom || studentClassKey(s.classroom)===String(classroom);
+    return matchesQuery && matchesGrade && matchesClass;
+  });
+}
+function refreshReferralClasses(){
+  const sel=$('referralClass');
+  if(!sel) return;
+  const grade=$('referralGrade')?.value||'';
+  const current=sel.value;
+  const classes=[...new Set(getStudents()
+    .filter(s=>!grade || String(s.grade||'')===String(grade))
+    .map(s=>studentClassKey(s.classroom))
+    .filter(Boolean)
+  )].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  sel.innerHTML='<option value="">اختر الفصل</option>'+classes.map(v=>`<option value="${v}">الفصل ${v}</option>`).join('');
+  if(current && classes.includes(current)) sel.value=current;
+}
 async function renderReferralStudentResults(query=''){
   const host=$('referralStudentResults');
   if(!host || typeof getStudents!=='function') return;
   clearReferralStudentPhotoUrls();
-  const q=String(query||'').trim().toLowerCase();
-  let students=getStudents();
-  if(q){
-    students=students.filter(s=>
-      String(s.name||'').toLowerCase().includes(q) ||
-      String(s.idno||'').includes(q)
-    );
-  }
-  students=students.slice(0,80);
+  const students=getReferralFilteredStudents(query).slice(0,100);
   if(!students.length){
     host.innerHTML='<div class="hint" style="padding:16px">لا يوجد طالب مطابق.</div>';
     host.classList.remove('hidden');
@@ -2995,10 +3029,11 @@ async function renderReferralStudentResults(query=''){
     const safeName=String(s.name||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const safeId=String(s.idno||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const safePhone=String(s.phone||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    return `<button type="button" class="referral-student-option" data-referral-id="${safeId}">
+    const selected=referralSelectedIds.has(String(s.idno||''));
+    return `<button type="button" class="referral-student-option ${selected?'selected':''}" data-referral-id="${safeId}">
       ${photo?`<img class="referral-student-photo" src="${photo}" alt="">`:'<div class="referral-student-photo-fallback">👤</div>'}
       <div>
-        <div class="referral-student-name">${safeName}</div>
+        <div class="referral-student-name">${selected?'✓ ':''}${safeName}</div>
         <div class="referral-student-id">السجل المدني: ${safeId}</div>
         <div class="referral-student-id">رقم الجوال: ${safePhone||'—'}</div>
       </div>
@@ -3006,25 +3041,56 @@ async function renderReferralStudentResults(query=''){
   }));
   host.innerHTML=rows.join('');
   host.classList.remove('hidden');
-  host.querySelectorAll('[data-referral-id]').forEach(btn=>btn.onclick=()=>selectReferralStudent(btn.dataset.referralId));
+  host.querySelectorAll('[data-referral-id]').forEach(btn=>btn.onclick=()=>toggleReferralStudent(btn.dataset.referralId));
 }
-async function selectReferralStudent(idno){
-  const s=getStudents().find(x=>String(x.idno||'')===String(idno||''));
-  if(!s) return;
-  $('referralStudentName').value=s.name||'';
-  $('referralStudentId').value=s.idno||'';
-  if($('referralGrade') && s.grade) $('referralGrade').value=s.grade;
-  $('referralStudentResults').classList.add('hidden');
-  $('referralSelectedName').textContent=s.name||'—';
-  $('referralSelectedId').textContent='السجل المدني: '+(s.idno||'—');
-  $('referralSelectedPhone').textContent='رقم الجوال: '+(s.phone||'—');
-  const wrap=$('referralSelectedPhotoWrap');
-  const photo=await getReferralStudentPhotoUrl(s);
-  wrap.innerHTML=photo?`<img src="${photo}" alt="صورة الطالب">`:'<div class="fallback">👤</div>';
-  $('referralStudentSelected').classList.add('show');
+async function renderReferralSelectedStudents(){
+  const host=$('referralSelectedStudents');
+  const count=$('referralSelectedCount');
+  if(!host || !count) return;
+  const students=getStudents().filter(s=>referralSelectedIds.has(String(s.idno||'')));
+  count.textContent=String(students.length);
+  if(!students.length){
+    host.innerHTML='<div class="hint" style="padding:8px">لم يتم تحديد طلاب بعد.</div>';
+    return;
+  }
+  host.innerHTML=(await Promise.all(students.map(async s=>{
+    const photo=await getReferralStudentPhotoUrl(s);
+    const safeId=String(s.idno||'');
+    return `<div class="referral-selected-card">
+      ${photo?`<img src="${photo}" alt="">`:'<div class="fallback">👤</div>'}
+      <div><b>${s.name||'—'}</b><span>السجل المدني: ${safeId}</span><span>رقم الجوال: ${s.phone||'—'}</span><span>${s.grade||'—'} — الفصل ${studentClassKey(s.classroom)||'—'}</span></div>
+      <button type="button" class="referral-remove-student" data-remove-referral-id="${safeId}">حذف</button>
+    </div>`;
+  }))).join('');
+  host.querySelectorAll('[data-remove-referral-id]').forEach(btn=>btn.onclick=async()=>{
+    referralSelectedIds.delete(String(btn.dataset.removeReferralId||''));
+    await renderReferralSelectedStudents();
+    await renderReferralStudentResults($('referralStudentName')?.value||'');
+  });
+}
+async function toggleReferralStudent(idno){
+  const id=String(idno||'');
+  if(referralSelectedIds.has(id)) referralSelectedIds.delete(id);
+  else referralSelectedIds.add(id);
+  await renderReferralSelectedStudents();
+  await renderReferralStudentResults($('referralStudentName')?.value||'');
+}
+async function selectAllVisibleReferralStudents(){
+  const visible=getReferralFilteredStudents($('referralStudentName')?.value||'');
+  if(!visible.length) return;
+  const allSelected=visible.every(s=>referralSelectedIds.has(String(s.idno||'')));
+  visible.forEach(s=>{
+    const id=String(s.idno||'');
+    if(allSelected) referralSelectedIds.delete(id);
+    else referralSelectedIds.add(id);
+  });
+  await renderReferralSelectedStudents();
+  await renderReferralStudentResults($('referralStudentName')?.value||'');
 }
 function populateReferralStudents(){
+  refreshReferralClasses();
   renderReferralStudentResults('');
+  renderReferralSelectedStudents();
 }
 function populateReferralTeachers(){
   const sel=$('referralTeacher');
@@ -3045,44 +3111,58 @@ function populateReferralTeachers(){
 }
 function initReferralPage(){
   updateReferralDates();
+  refreshReferralClasses();
   populateReferralStudents();
   populateReferralTeachers();
 }
 if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',e=>{
   e.preventDefault();
+  const selectedStudents=getStudents().filter(s=>referralSelectedIds.has(String(s.idno||'')));
+  if(!selectedStudents.length){
+    alert('حدد طالبًا واحدًا على الأقل');
+    return;
+  }
   const reasons=[...document.querySelectorAll('input[name="referralReason"]:checked')].map(x=>x.value);
-  const rec={
-    id:'R'+Date.now(),
-    studentName:$('referralStudentName').value.trim(),
-    studentCivilId:$('referralStudentId').value,
-    studentPhone:(getStudents().find(x=>String(x.idno||'')===String($('referralStudentId').value||''))?.phone||''),
+  const teacherOption=$('referralTeacher').selectedOptions[0];
+  const base={
     grade:$('referralGrade').value,
+    classroom:$('referralClass').value,
     subject:$('referralSubject').value,
     period:$('referralPeriod').value,
     reasons,
     otherReason:$('referralOtherReason').value.trim(),
     problem:$('referralProblem').value.trim(),
     teacherCivilId:$('referralTeacher').value,
-    teacher:($('referralTeacher').selectedOptions[0]?.dataset.name||$('referralTeacher').selectedOptions[0]?.textContent||'').trim(),
+    teacher:(teacherOption?.dataset.name||teacherOption?.textContent||'').trim(),
     date:$('referralDate').value,
     hijriDate:$('referralHijriDate').value,
     actionTaken:$('referralActionTaken').value.trim(),
     createdAt:new Date().toISOString()
   };
   const rows=(()=>{try{return JSON.parse(localStorage.getItem('studentReferrals')||'[]')}catch(e){return []}})();
-  rows.unshift(rec);
+  selectedStudents.forEach((s,idx)=>rows.unshift({
+    ...base,
+    id:'R'+Date.now()+'-'+idx,
+    studentName:s.name||'',
+    studentCivilId:String(s.idno||''),
+    studentPhone:s.phone||'',
+    grade:s.grade||base.grade,
+    classroom:studentClassKey(s.classroom)||base.classroom
+  }));
   localStorage.setItem('studentReferrals',JSON.stringify(rows));
-  toast('تم حفظ تحويل الطالب');
+  toast(`تم حفظ تحويل ${selectedStudents.length} طالب`);
 });
 if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
 if($('referralStudentName')){
   $('referralStudentName').addEventListener('focus',()=>renderReferralStudentResults($('referralStudentName').value));
-  $('referralStudentName').addEventListener('input',()=>{
-    $('referralStudentId').value='';
-    $('referralStudentSelected').classList.remove('show');
-    renderReferralStudentResults($('referralStudentName').value);
-  });
+  $('referralStudentName').addEventListener('input',()=>renderReferralStudentResults($('referralStudentName').value));
 }
+if($('referralGrade')) $('referralGrade').addEventListener('change',()=>{
+  refreshReferralClasses();
+  renderReferralStudentResults($('referralStudentName')?.value||'');
+});
+if($('referralClass')) $('referralClass').addEventListener('change',()=>renderReferralStudentResults($('referralStudentName')?.value||''));
+if($('referralSelectAllVisible')) $('referralSelectAllVisible').onclick=selectAllVisibleReferralStudents;
 document.addEventListener('click',e=>{
   const picker=$('referralStudentPicker');
   if(picker && !picker.contains(e.target)) $('referralStudentResults')?.classList.add('hidden');
