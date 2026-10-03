@@ -3742,10 +3742,29 @@ async function loadDeputyReferrals(){
   }
 }
 
-function openDeputyReferralsPage(){
+async function openDeputyReferralsPage(){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('deputyReferrals')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','deputyReferrals');
+
+  if(!localStorage.getItem('cloudAdminToken')){
+    try{
+      const u=getCurrentLoggedAdminUser();
+      const username=String(u?.username||u?.civil_id||'').trim();
+      const localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username);
+      const password=String(localUser?.password||localUser?.civilId||localUser?.username||'').trim();
+      if(username && password){
+        const login=await cloudApi('login',{username,password},false);
+        if(login?.token){
+          localStorage.setItem('cloudAdminToken',login.token);
+          if(login.user) localStorage.setItem('cloudAdminUser',JSON.stringify(login.user));
+        }
+      }
+    }catch(e){
+      console.warn('deputy cloud relogin',e);
+    }
+  }
+
   loadDeputyReferrals();
 }
 if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyReferrals;
@@ -5240,6 +5259,18 @@ $('adminLoginBtn').onclick=async()=>{
         is_owner:false
       }));
       localStorage.removeItem('cloudAdminUser');
+      localStorage.removeItem('cloudAdminToken');
+      try{
+        const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
+        if(cloudLogin?.token){
+          localStorage.setItem('cloudAdminToken',cloudLogin.token);
+          if(cloudLogin.user){
+            localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
+          }
+        }
+      }catch(cloudErr){
+        console.warn('user cloud session login',cloudErr);
+      }
     }else{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
@@ -6065,7 +6096,7 @@ function ensureAdminSettings(){
     const username=document.getElementById('newAdminUsername').value.trim();
     const name=document.getElementById('newAdminName').value.trim();
     const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||username;
-    const password=document.getElementById('newAdminPassword').value;
+    const password=document.getElementById('newAdminPassword').value || civilId || username;
     const role=document.getElementById('newAdminRole').value;
     if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
     const users=getAdminUsers();
@@ -6130,7 +6161,12 @@ function ensureAdminSettings(){
     }
 
     const users=getAdminUsers();
-    users.forEach(u=>u.permissions=[...permissions]);
+    users.forEach(u=>{
+      u.permissions=[...permissions];
+      if(!String(u.password||'').trim()){
+        u.password=String(u.civilId||u.username||'').trim();
+      }
+    });
     saveAdminUsers(users);
     renderAdminUsersSettings();
 
@@ -6159,6 +6195,7 @@ function ensureAdminSettings(){
         civilId:u.civilId||u.username,
         name:u.name,
         role:u.role,
+        password:String(u.password||u.civilId||u.username||''),
         permissions:[...permissions]
       }));
 
@@ -6175,6 +6212,7 @@ function ensureAdminSettings(){
           username:u.username,
           name:u.name,
           role:u.role,
+          password:String(users.find(x=>String(x.username)===String(u.username||''))?.password||u.civil_id||u.username||''),
           permissions:[...permissions]
         }))});
         verified=await cloudApi('pull_all');
@@ -6264,7 +6302,7 @@ function ensureAdminSettings(){
 
         const idx=users.findIndex(u=>String(u.username)===username);
         const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||username;
-        const rec={username,civilId,name,password,role,permissions};
+        const rec={username,civilId,name,password:password||civilId||username,role,permissions};
         if(idx>=0){users[idx]={...users[idx],...rec,password:password||users[idx].password||''};updated++}
         else{users.push(rec);added++}
       }
@@ -6486,6 +6524,9 @@ function openUserPermissionEditor(username){
       const gradePerms=[...modal.querySelectorAll('.user-referral-grade-check:checked')].map(x=>x.value);
       if(!gradePerms.length){alert('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');return}
       u.permissions.push(...gradePerms);
+    }
+    if(!String(u.password||'').trim()){
+      u.password=String(u.civilId||u.username||'').trim();
     }
     users[idx]=u;
     saveAdminUsers(users);
