@@ -6054,7 +6054,9 @@ function ensureAdminSettings(){
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
     if(permissions.includes('referralReview')){
-      document.querySelectorAll('.admin-new-referral-grade:checked').forEach(x=>permissions.push(x.value));
+      const gradePerms=[...document.querySelectorAll('.admin-new-referral-grade:checked')].map(x=>x.value);
+      if(!gradePerms.length){toast('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');return}
+      permissions.push(...gradePerms);
     }
     users.push({username,civilId,name,password,role,permissions});
     saveAdminUsers(users);
@@ -6095,6 +6097,14 @@ function ensureAdminSettings(){
     const btn=document.getElementById('applyBulkUserPermissions');
     const oldText=btn.textContent;
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+    if(permissions.includes('referralReview')){
+      const gradePerms=[...document.querySelectorAll('.admin-new-referral-grade:checked')].map(x=>x.value);
+      if(!gradePerms.length){
+        alert('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');
+        return;
+      }
+      permissions.push(...gradePerms);
+    }
 
     if(!permissions.length){
       alert('حدد صلاحية واحدة على الأقل');
@@ -6416,7 +6426,7 @@ function openUserPermissionEditor(username){
           <label>الثاني الثانوي <input class="user-referral-grade-check" value="referralGrade:second" type="checkbox" ${current.has('referralGrade:second')?'checked':''}></label>
           <label>الثالث الثانوي <input class="user-referral-grade-check" value="referralGrade:third" type="checkbox" ${current.has('referralGrade:third')?'checked':''}></label>
         </div>
-        <div class="hint" style="font-size:12px;margin-top:6px">إذا لم تحدد صفًا فستظهر جميع الصفوف لهذا المستخدم.</div>
+        <div class="hint" style="font-size:12px;margin-top:6px">يجب تحديد صف واحد على الأقل عند تفعيل صلاحية ردود الوكلاء.</div>
       </div>
       <div class="user-perm-actions">
         <button type="button" class="user-perm-toggle" id="userPermToggleAll">☑ تحديد الكل</button>
@@ -6455,7 +6465,9 @@ function openUserPermissionEditor(username){
     u.role=document.getElementById('userPermRole').value;
     u.permissions=checks().filter(x=>x.checked).map(x=>x.value);
     if(u.permissions.includes('referralReview')){
-      modal.querySelectorAll('.user-referral-grade-check:checked').forEach(x=>u.permissions.push(x.value));
+      const gradePerms=[...modal.querySelectorAll('.user-referral-grade-check:checked')].map(x=>x.value);
+      if(!gradePerms.length){alert('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');return}
+      u.permissions.push(...gradePerms);
     }
     users[idx]=u;
     saveAdminUsers(users);
