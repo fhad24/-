@@ -4844,7 +4844,7 @@ async function renderAttendancePage(){
           <div class="attendance-saved-id">${x.idno||'—'}</div>
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${attendanceListView==='late'
-            ? (x.hijriDate||x.date||'—')
+            ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
             : attendanceListView==='present'
               ? (x.period?('الحصة '+x.period):'—')
               : (x.time||'—')}</div>
@@ -4861,7 +4861,7 @@ async function renderAttendancePage(){
           <div>الطالب</div>
           <div>السجل المدني</div>
           <div>الصف / الفصل</div>
-          <div style="text-align:center">${attendanceListView==='late'?'التاريخ':attendanceListView==='present'?'الحصة':'وقت التسجيل'}</div>
+          <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':attendanceListView==='present'?'الحصة':'وقت التسجيل'}</div>
           <div style="text-align:center">إجراء</div>
         </div>
         ${rendered.join('')}
