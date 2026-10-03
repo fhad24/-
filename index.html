@@ -1978,7 +1978,7 @@
         </div>
 
 
-    <div class="attendance-session-controls">
+    <div class="attendance-session-controls hidden">
       <div class="attendance-session-field">
         <label for="attendancePeriodSelect">🕐 الحصة</label>
         <select id="attendancePeriodSelect">
@@ -4042,7 +4042,10 @@ function saveAttendanceLog(rows){
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
 async function renderAttendancePage(){
-  if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
+  if($('attendanceSelectAllRows')){
+    $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
+    $('attendanceSelectAllRows').style.display=attendanceListView==='late'?'none':'';
+  }
   if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').classList.toggle('hidden', !['late','absent'].includes(attendanceListView));
   if($('attendanceWhatsAppSelected')){
     $('attendanceWhatsAppSelected').style.display=(attendanceListView==='late'||attendanceListView==='absent')?'':'none';
@@ -4156,16 +4159,25 @@ async function renderAttendancePage(){
         }
       }catch(e){}
 
+      const isPresentRow=attendanceListView==='present';
+      const isAbsentRow=attendanceListView==='absent';
+      const presentCheck=isPresentRow
+        ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`
+        : '';
+      const absentCheck=isAbsentRow
+        ? `<label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
+        : '';
       return `
         <div class="attendance-saved-row">
-          <div class="attendance-saved-student">
+          <div class="attendance-saved-student ${isPresentRow?'with-name-check':''}">
+            ${presentCheck}
             <div class="attendance-photo-select-wrap">
               ${photoHTML}
-              <label class="attendance-row-check attendance-photo-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
             </div>
             <div>
               <div class="attendance-saved-name">${x.name||''}</div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
+              ${x.subject?`<span class="attendance-period-chip">📘 ${x.subject}</span>`:''}
               ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
             </div>
           </div>
@@ -4173,6 +4185,7 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
+            ${absentCheck}
             <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
@@ -4324,7 +4337,7 @@ function openAttendanceWhatsAppForRows(rows){
 }
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
-  const boxes=[...document.querySelectorAll('.attendance-wa-select,.attendance-pending-select')];
+  const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-wa-select,.attendance-pending-select')];
   if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
   const allChecked=boxes.every(x=>x.checked);
   boxes.forEach(x=>x.checked=!allChecked);
@@ -4632,6 +4645,8 @@ function setAttendanceMode(mode){
   }
   $('attendanceLateTab').classList.toggle('active',late);
   $('attendancePresentTab').classList.toggle('active',present);
+  const sessionControls=document.querySelector('.attendance-session-controls');
+  if(sessionControls) sessionControls.classList.toggle('hidden',!present);
 }
 
 function fillAttendanceClasses(){
@@ -6199,6 +6214,51 @@ function printStudents(rows){
       .attendance-saved-student{grid-template-columns:46px minmax(0,1fr)!important}
       .attendance-photo-select-wrap{width:46px!important;height:46px!important}
       .attendance-photo-check{right:-24px!important}
+    }
+
+    /* التحضير فقط: الحصة والمادة */
+    .attendance-session-controls.hidden{display:none!important}
+
+    /* تحديد التحضير: يمين الاسم/الصورة داخل نفس صف الطالب */
+    .attendance-saved-student.with-name-check{
+      display:grid!important;
+      grid-template-columns:22px 56px minmax(0,1fr)!important;
+      gap:10px!important;
+      direction:rtl!important;
+      align-items:center!important;
+      overflow:visible!important;
+    }
+    .attendance-name-check{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .attendance-name-check input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+    }
+    .attendance-saved-student:not(.with-name-check){
+      grid-template-columns:56px minmax(0,1fr)!important;
+    }
+    .attendance-photo-select-wrap{
+      position:static!important;
+      width:56px!important;
+      height:56px!important;
+      overflow:visible!important;
+    }
+    .attendance-photo-check{display:none!important}
+    @media(max-width:1050px){
+      .attendance-saved-student.with-name-check{
+        grid-template-columns:22px 46px minmax(0,1fr)!important;
+      }
+      .attendance-saved-student:not(.with-name-check){
+        grid-template-columns:46px minmax(0,1fr)!important;
+      }
+      .attendance-photo-select-wrap{width:46px!important;height:46px!important}
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
