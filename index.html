@@ -2435,6 +2435,94 @@
       .landing-login-card #landingLoginBtn{height:58px!important;font-size:19px!important}
     }
 
+
+    /* بيانات المدرسة داخل بطاقة الدخول - ضمان الظهور */
+    #landingLoginCard .login-brand-inside{
+      display:block!important;
+      width:100%!important;
+      margin:0 auto 24px!important;
+      padding:0 0 22px!important;
+      border-bottom:1px solid #d9e7e3!important;
+      text-align:center!important;
+      visibility:visible!important;
+      opacity:1!important
+    }
+    #landingLoginCard .login-brand-logos{
+      display:flex!important;
+      justify-content:center!important;
+      align-items:center!important;
+      gap:22px!important;
+      margin-bottom:14px!important
+    }
+    #landingLoginCard .login-brand-logo-box{
+      width:128px!important;
+      height:112px!important;
+      border:1px solid #d5e4df!important;
+      border-radius:20px!important;
+      background:#fff!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      padding:10px!important;
+      box-shadow:0 3px 12px #00000008!important
+    }
+    #landingLoginCard .login-brand-logo-box img{
+      display:block;
+      max-width:100%!important;
+      max-height:90px!important;
+      object-fit:contain!important
+    }
+    #landingLoginCard .login-brand-logo-fallback{
+      color:#0f7665!important;
+      font-size:14px!important;
+      font-weight:900!important;
+      line-height:1.6!important
+    }
+    #landingLoginCard .login-brand-school{
+      font-size:26px!important;
+      font-weight:900!important;
+      color:#143c35!important;
+      line-height:1.5!important;
+      margin:4px 0 4px!important
+    }
+    #landingLoginCard .login-brand-authority{
+      display:inline-block!important;
+      margin:7px auto 12px!important;
+      padding:7px 16px!important;
+      border-radius:999px!important;
+      background:#e3f4ef!important;
+      color:#17443c!important;
+      font-size:14px!important;
+      font-weight:800!important
+    }
+    #landingLoginCard .login-brand-credits{
+      display:grid!important;
+      grid-template-columns:1fr 1fr!important;
+      gap:10px!important;
+      margin-top:4px!important
+    }
+    #landingLoginCard .login-brand-credits>div{
+      border:1px solid #d8e6e2!important;
+      border-radius:14px!important;
+      background:#f8fbfa!important;
+      padding:10px 12px!important;
+      color:#47615b!important;
+      font-size:12px!important;
+      line-height:1.7!important
+    }
+    #landingLoginCard .login-brand-credits b{
+      display:block!important;
+      color:#153f37!important;
+      font-size:14px!important
+    }
+    @media(max-width:700px){
+      #landingLoginCard .login-brand-logo-box{width:94px!important;height:86px!important;border-radius:15px!important}
+      #landingLoginCard .login-brand-logo-box img{max-height:66px!important}
+      #landingLoginCard .login-brand-school{font-size:20px!important}
+      #landingLoginCard .login-brand-authority{font-size:11px!important}
+      #landingLoginCard .login-brand-credits{grid-template-columns:1fr!important}
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2476,31 +2564,25 @@
     <div class="ticker"><span>تنبيه هام: يرجى التأكد من صحة البيانات والصور قبل الإرسال</span></div>
   </div>
 
-  <div class="login-hero" id="loginHero">
-    <div class="login-hero-inner">
-      <div class="login-hero-brand-row">
-        <div class="login-hero-logo-card">
+  <div class="card landing-login-card" id="landingLoginCard">
+    <div class="login-brand-inside" id="loginHero">
+      <div class="login-brand-logos">
+        <div class="login-brand-logo-box">
           <img id="loginMinistryLogo" class="hidden" alt="شعار وزارة التعليم">
-          <div id="loginMinistryFallback" class="login-hero-logo-fallback">وزارة التعليم<br>تعليم نجران</div>
+          <div id="loginMinistryFallback" class="login-brand-logo-fallback">وزارة التعليم<br>تعليم نجران</div>
         </div>
-        <div class="login-hero-logo-card">
+        <div class="login-brand-logo-box">
           <img id="loginSchoolLogo" class="hidden" alt="شعار المدرسة">
-          <div id="loginSchoolFallback" class="login-hero-logo-fallback">شعار المدرسة</div>
-        </div>
-        <div class="login-hero-logo-card">
-          <div class="login-hero-logo-fallback">نظام إدارة<br>شؤون الطلاب</div>
+          <div id="loginSchoolFallback" class="login-brand-logo-fallback">شعار المدرسة</div>
         </div>
       </div>
-      <div id="loginHeroSchool" class="login-hero-school">مدرسة شرحبيل بن حسنة الثانوية</div>
-      <div id="loginHeroAuthority" class="login-hero-authority">الإدارة العامة للتعليم بمنطقة نجران</div>
-      <div class="login-hero-credits">
-        <div class="login-credit">تصميم وكيل شؤون الطلاب<b id="loginHeroDesigner">محمد الشامي السلامي</b></div>
-        <div class="login-credit">مدير المدرسة<b id="loginHeroManager">عبدالله عيظة البديدي</b></div>
+      <div id="loginHeroSchool" class="login-brand-school">مدرسة شرحبيل بن حسنة الثانوية</div>
+      <div id="loginHeroAuthority" class="login-brand-authority">الإدارة العامة للتعليم بمنطقة نجران</div>
+      <div class="login-brand-credits">
+        <div>تصميم وكيل شؤون الطلاب <b id="loginHeroDesigner">محمد الشامي السلامي</b></div>
+        <div>مدير المدرسة <b id="loginHeroManager">عبدالله عيظة البديدي</b></div>
       </div>
     </div>
-  </div>
-
-  <div class="card landing-login-card" id="landingLoginCard">
     <div class="login-system-badge">🔒</div>
     <h2 style="text-align:center;font-size:22px;margin-bottom:8px">دخول النظام</h2>
     <div class="hint" style="font-size:13px;margin-bottom:16px">أدخل اسم المستخدم وكلمة المرور</div>
