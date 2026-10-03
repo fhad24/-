@@ -655,24 +655,28 @@
     .wa-compose-actions button.primary{background:#0f7665;color:#fff}
     .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
   
-    .attendance-edit-grid{display:grid;grid-template-columns:1fr 1.55fr 1.15fr!important;gap:14px;align-items:end;direction:rtl}
-    .attendance-edit-grid>div{min-width:0}
-    .attendance-edit-grid label{display:block;margin-bottom:7px;font-size:14px;font-weight:800;color:#29463f}
-    .attendance-day-select{width:100%;height:58px;border:1px solid var(--line);border-radius:14px;background:#fff;font-family:inherit;font-size:20px;font-weight:800;padding:0 14px;text-align:right}
-    .hijri-date-controls{display:grid;grid-template-columns:86px minmax(120px,1fr) 118px;gap:8px}
-    .hijri-date-controls select{width:100%;height:58px;border:1px solid var(--line);border-radius:14px;background:#fff;font-family:inherit;font-size:18px;font-weight:700;text-align:center;padding:0 8px}
-    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;direction:ltr}
-    .time-spinner{display:grid;grid-template-rows:auto 40px 58px 40px;gap:5px;align-items:stretch;min-width:84px}
-    .time-spinner-label{text-align:center;font-size:13px;font-weight:800;color:#60736e;margin-bottom:1px}
-    .time-spinner button{width:100%;height:40px;border:1px solid #c9dbd6;background:#fff;border-radius:10px;font-size:26px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
-    .time-spinner input{width:100%;height:58px;border:2px solid #b8d3cc;border-radius:12px;text-align:center;font-size:30px;font-weight:900;color:#102f29;background:#fff;-moz-appearance:textfield;padding:0}
+    .attendance-edit-grid{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(430px,1.7fr)!important;gap:26px;align-items:center;direction:ltr}
+    .attendance-time-section{padding-inline-end:24px;border-inline-end:1px solid #d7e3e0;direction:rtl}
+    .attendance-date-section{direction:rtl}
+    .attendance-date-row{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(330px,1.55fr);gap:16px;align-items:end}
+    .attendance-edit-grid label{display:block;margin-bottom:8px;font-size:15px;font-weight:800;color:#29463f}
+    .attendance-day-select{width:100%;height:62px;border:1px solid var(--line);border-radius:16px;background:#fff;font-family:inherit;font-size:21px;font-weight:800;padding:0 16px;text-align:right}
+    .hijri-date-controls{display:grid;grid-template-columns:92px minmax(150px,1fr) 126px;gap:10px}
+    .hijri-date-controls select{width:100%;height:62px;border:1px solid var(--line);border-radius:16px;background:#fff;font-family:inherit;font-size:19px;font-weight:700;text-align:center;padding:0 10px}
+    .time-section-title{text-align:center;font-size:18px;font-weight:900;color:#29463f;margin-bottom:10px}
+    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;direction:ltr;max-width:320px;margin:auto}
+    .time-spinner{display:grid;grid-template-rows:auto 42px 72px 42px;gap:5px;align-items:stretch;min-width:96px}
+    .time-spinner-label{text-align:center;font-size:15px;font-weight:800;color:#60736e;margin-bottom:1px}
+    .time-spinner button{width:100%;height:42px;border:1px solid #c9dbd6;background:#fff;border-radius:12px;font-size:28px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
+    .time-spinner input{width:100%;height:72px;border:2px solid #b8d3cc;border-radius:14px;text-align:center;font-size:34px;font-weight:900;color:#102f29;background:#fff;-moz-appearance:textfield;padding:0}
     .time-spinner input::-webkit-outer-spin-button,.time-spinner input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-    .time-colon{font-size:34px;font-weight:900;color:#173b34;align-self:center;padding-top:28px}
-    @media(max-width:760px){
-      .attendance-edit-grid{grid-template-columns:1fr!important}
-      .hijri-date-controls{grid-template-columns:86px minmax(120px,1fr) 110px}
-      .attendance-day-select{height:54px}
-      .time-spinner-wrap{max-width:320px;margin:auto}
+    .time-colon{font-size:38px;font-weight:900;color:#173b34;align-self:center;padding-top:32px}
+    @media(max-width:900px){
+      .attendance-edit-grid{grid-template-columns:1fr!important;gap:18px}
+      .attendance-time-section{padding-inline-end:0;border-inline-end:0;border-bottom:1px solid #d7e3e0;padding-bottom:18px}
+      .attendance-date-row{grid-template-columns:1fr}
+      .hijri-date-controls{grid-template-columns:92px minmax(140px,1fr) 118px}
+      .time-spinner-wrap{max-width:330px}
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1206,39 +1210,43 @@
           <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
           <input id="attendanceEditDate" type="hidden">
           <div class="attendance-edit-grid">
-            <div>
-              <label>📆 اليوم</label>
-              <select id="attendanceEditWeekday" class="attendance-day-select">
-                <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
-              </select>
-            </div>
-            <div>
-              <label>📅 التاريخ الهجري</label>
-              <div class="hijri-date-controls">
-                <select id="attendanceHijriDay"></select>
-                <select id="attendanceHijriMonth">
-                  <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
-                  <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
-                  <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
-                </select>
-                <select id="attendanceHijriYear"></select>
-              </div>
-            </div>
-            <div>
-              <label>🕒 الوقت</label>
+            <div class="attendance-time-section">
+              <div class="time-section-title">🕒 الوقت</div>
               <div class="time-spinner-wrap">
+                <div class="time-spinner">
+                  <div class="time-spinner-label">الدقائق</div>
+                  <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
+                  <input id="attendanceEditMinute" type="number" inputmode="numeric" min="0" max="59" value="0">
+                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
+                </div>
+                <div class="time-colon">:</div>
                 <div class="time-spinner">
                   <div class="time-spinner-label">الساعات</div>
                   <button type="button" data-time-spin="hour" data-dir="1" aria-label="زيادة الساعة">+</button>
                   <input id="attendanceEditHour" type="number" inputmode="numeric" min="0" max="23" value="7">
                   <button type="button" data-time-spin="hour" data-dir="-1" aria-label="تقليل الساعة">−</button>
                 </div>
-                <div class="time-colon">:</div>
-                <div class="time-spinner">
-                  <div class="time-spinner-label">الدقائق</div>
-                  <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
-                  <input id="attendanceEditMinute" type="number" inputmode="numeric" min="0" max="59" value="0">
-                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
+              </div>
+            </div>
+            <div class="attendance-date-section">
+              <div class="attendance-date-row">
+                <div>
+                  <label>📆 اليوم</label>
+                  <select id="attendanceEditWeekday" class="attendance-day-select">
+                    <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+                  </select>
+                </div>
+                <div>
+                  <label>📅 التاريخ الهجري</label>
+                  <div class="hijri-date-controls">
+                    <select id="attendanceHijriDay"></select>
+                    <select id="attendanceHijriMonth">
+                      <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
+                      <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
+                      <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
+                    </select>
+                    <select id="attendanceHijriYear"></select>
+                  </div>
                 </div>
               </div>
             </div>
