@@ -3823,9 +3823,37 @@ async function openDeputyReferralsPage(){
     console.warn('deputy cloud relogin',e);
   }
 
-  loadDeputyReferrals();
+  await loadDeputyReferrals();
+
+  // تحديث تلقائي بعد فتح الصفحة للتأكد من وصول الإحالات دون الحاجة للزر.
+  clearTimeout(window.__deputyInitialRefreshTimer);
+  window.__deputyInitialRefreshTimer=setTimeout(()=>{
+    const page=$('deputyReferrals');
+    if(page && !page.classList.contains('hidden')) loadDeputyReferrals();
+  },1200);
 }
 if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyReferrals;
+
+// تحديث تلقائي دوري طالما صفحة ردود الوكلاء مفتوحة.
+if(window.__deputyAutoRefreshTimer) clearInterval(window.__deputyAutoRefreshTimer);
+window.__deputyAutoRefreshTimer=setInterval(()=>{
+  const page=$('deputyReferrals');
+  if(page && !page.classList.contains('hidden') && document.visibilityState==='visible'){
+    loadDeputyReferrals();
+  }
+},10000);
+
+window.addEventListener('focus',()=>{
+  const page=$('deputyReferrals');
+  if(page && !page.classList.contains('hidden')) loadDeputyReferrals();
+});
+
+document.addEventListener('visibilitychange',()=>{
+  const page=$('deputyReferrals');
+  if(document.visibilityState==='visible' && page && !page.classList.contains('hidden')){
+    loadDeputyReferrals();
+  }
+});
 if($('refreshTeacherReferralReplies')) $('refreshTeacherReferralReplies').onclick=loadTeacherReferralReplies;
 
 const CLOUD_API_URL='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
