@@ -4415,6 +4415,7 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
 let attendanceMode='late';
 let attendanceListView='late';
 let attendanceSelectedId='';
+let attendancePresentSelectedIds=new Set();
 let attendanceGradeFilter='';
 let attendanceNewPhotoBlob=null;
 let attendanceFaceVerified=false;
@@ -4555,6 +4556,7 @@ function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
   attendanceMode=mode;
   attendanceSelectedId='';
+  attendancePresentSelectedIds.clear();
   attendanceNewPhotoBlob=null;
   attendanceFaceVerified=false;
   attendanceFaceCompareResult='none';
@@ -4624,6 +4626,7 @@ async function openAttendanceEdit(index){
 function closeAttendanceModal(){
   $('attendanceStudentModal').classList.add('hidden');
   attendanceSelectedId='';
+  attendancePresentSelectedIds.clear();
   attendanceEditingIndex=-1;
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -4862,7 +4865,10 @@ async function renderAttendanceStudentList(){
         </div>
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
-      <div class="att-student-photo-wrap">${photoHTML}</div>
+      <div class="att-student-photo-wrap">
+        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
+        ${photoHTML}
+      </div>
       <span class="att-inline-performance">
         <span class="att-inline-late">⏰ ${perf.late}</span>
         <span class="att-inline-absent">✕ ${perf.absent}</span>
@@ -4876,8 +4882,19 @@ async function renderAttendanceStudentList(){
     ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
     : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
 
+  document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
+    box.onclick=(e)=>e.stopPropagation();
+    box.onchange=(e)=>{
+      e.stopPropagation();
+      const id=String(box.dataset.selectId||'');
+      if(box.checked) attendancePresentSelectedIds.add(id);
+      else attendancePresentSelectedIds.delete(id);
+    };
+  });
+
   document.querySelectorAll('.att-student-row[data-id]').forEach(row=>{
-    row.onclick=()=>{
+    row.onclick=(e)=>{
+      if(e.target.closest('.att-student-select-check')) return;
       attendanceSelectedId=row.dataset.id;
       renderAttendanceStudentList();
       const s=getStudents().find(x=>String(x.idno)===String(attendanceSelectedId));
@@ -4939,9 +4956,12 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
   ev.stopPropagation();
   const btn=$('saveAttendanceStudentBtn');
   try{
-    if(!attendanceSelectedId){toast('اختر اسم الطالب أولاً');return}
-    const s=getStudents().find(x=>String(x.idno)===String(attendanceSelectedId));
-    if(!s){toast('تعذر العثور على الطالب');return}
+    const selectedGroup=(attendanceMode==='present' && attendancePresentSelectedIds.size)
+      ? [...attendancePresentSelectedIds]
+      : [];
+    if(!attendanceSelectedId && !selectedGroup.length){toast('اختر اسم الطالب أو حدد مجموعة طلاب أولاً');return}
+    const s=attendanceSelectedId ? getStudents().find(x=>String(x.idno)===String(attendanceSelectedId)) : null;
+    if(attendanceSelectedId && !s){toast('تعذر العثور على الطالب');return}
 
     btn.disabled=true;
     btn.textContent='جاري الحفظ...';
@@ -4977,6 +4997,22 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     let rows=getAttendanceLog();
     if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length){
       rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
+    }else if(selectedGroup.length){
+      const students=getStudents();
+      selectedGroup.forEach(id=>{
+        const student=students.find(x=>String(x.idno)===String(id));
+        if(!student) return;
+        rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
+        rows.push({
+          ...record,
+          idno:student.idno,
+          name:student.name,
+          grade:student.grade||'',
+          classroom:student.classroom||'',
+          status:'present',
+          faceMatch:'none'
+        });
+      });
     }else{
       rows=rows.filter(x=>!(
         x.date===todayKey() && String(x.idno)===String(attendanceSelectedId)
@@ -4991,7 +5027,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     if(attendanceEditingIndex>=0){
       toast('تم حفظ تعديل الحالة والوقت بنجاح');
     }else{
-      toast(attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح');
+      toast(selectedGroup.length ? ('تم حفظ حضور '+selectedGroup.length+' طلاب بنجاح') : (attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح'));
     }
   }catch(err){
     console.error('attendance save failed',err);
@@ -6259,6 +6295,32 @@ function printStudents(rows){
         grid-template-columns:46px minmax(0,1fr)!important;
       }
       .attendance-photo-select-wrap{width:46px!important;height:46px!important}
+    }
+
+    /* التحضير: علامة التحديد يمين صورة الطالب داخل قائمة الأسماء */
+    .att-student-photo-wrap{
+      position:relative!important;
+      overflow:visible!important;
+    }
+    .att-student-select-check{
+      position:absolute!important;
+      right:-28px!important;
+      top:50%!important;
+      transform:translateY(-50%)!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      z-index:6!important;
+      margin:0!important;
+      padding:0!important;
+      cursor:pointer!important;
+    }
+    .att-student-select-check input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
