@@ -2456,6 +2456,7 @@
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
+          <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
       </div>
 
@@ -4832,6 +4833,138 @@ if($('adminDataTab')) $('adminDataTab').onclick=()=>showAdminView('data');
 if($('adminAttendanceTab')) $('adminAttendanceTab').onclick=()=>showAdminView('attendance');
 if($('adminUnregisteredTab')) $('adminUnregisteredTab').onclick=()=>toast('سيتم عرض الطلاب غير المسجلين هنا');
 if($('adminReportsTab')) $('adminReportsTab').onclick=()=>toast('سيتم عرض التقارير هنا');
+
+async function createAdminBackupZip(){
+  const btn=$('adminBackupZipBtn');
+  if(!isCurrentOwner()){
+    alert('هذه الميزة متاحة للمدير فقط.');
+    return;
+  }
+  if(!window.JSZip){
+    alert('تعذر تشغيل أداة ZIP.');
+    return;
+  }
+  const oldText=btn?.textContent||'نسخة احتياطية ZIP 💾';
+  if(btn){btn.disabled=true;btn.textContent='جاري تجهيز النسخة...';}
+  try{
+    // اجلب آخر نسخة سحابية أولاً حتى تحتوي النسخة على أحدث بيانات وصور متاحة.
+    if(localStorage.getItem('cloudAdminToken')){
+      try{await cloudPullToLocal();}catch(e){console.warn('backup cloud pull',e)}
+    }
+
+    const zip=new JSZip();
+    const stamp=new Date();
+    const iso=stamp.toISOString();
+    const datePart=iso.slice(0,10);
+    const students=getStudents();
+    const attendance=getAttendanceLog();
+    let referrals=[];
+    try{referrals=JSON.parse(localStorage.getItem('studentReferrals')||'[]')}catch(e){referrals=[]}
+    let users=[];
+    try{users=getAdminUsers().map(u=>({...u,password:undefined}))}catch(e){users=[]}
+    const profile=getAdminProfile();
+    const safeProfile={username:profile.username,displayName:profile.displayName};
+
+    const manifest={
+      backupVersion:1,
+      createdAt:iso,
+      site:location.origin,
+      school:getSchoolSettings().school||'',
+      counts:{
+        students:students.length,
+        attendance:attendance.length,
+        referrals:referrals.length,
+        users:users.length
+      },
+      note:'لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول حفاظًا على الأمان.'
+    };
+
+    zip.file('backup_manifest.json',JSON.stringify(manifest,null,2));
+    zip.file('data/students.json',JSON.stringify(students,null,2));
+    zip.file('data/attendance.json',JSON.stringify(attendance,null,2));
+    zip.file('data/student_referrals.json',JSON.stringify(referrals,null,2));
+    zip.file('data/users.json',JSON.stringify(users,null,2));
+    zip.file('data/admin_profile.json',JSON.stringify(safeProfile,null,2));
+    zip.file('data/school_settings.json',JSON.stringify(getSchoolSettings(),null,2));
+
+    // الصور المخزنة للطلاب
+    let faceCount=0,idCount=0;
+    for(const s of students){
+      const id=String(s.idno||'');
+      if(!id) continue;
+      try{
+        const face=await getStudentPhoto(id+':face');
+        if(face){
+          const ext=(face.type||'').includes('png')?'png':(face.type||'').includes('webp')?'webp':'jpg';
+          zip.file(`photos/faces/${id}.${ext}`,face);
+          faceCount++;
+        }
+      }catch(e){}
+      try{
+        const idPhoto=await getStudentPhoto(id+':id');
+        if(idPhoto){
+          const ext=(idPhoto.type||'').includes('png')?'png':(idPhoto.type||'').includes('webp')?'webp':'jpg';
+          zip.file(`photos/ids/${id}.${ext}`,idPhoto);
+          idCount++;
+        }
+      }catch(e){}
+    }
+
+    // صور الطلاب المعلقة للمراجعة - إن وجدت
+    if(localStorage.getItem('cloudAdminToken')){
+      try{
+        const pending=await cloudApi('list_pending_photos');
+        const rows=Array.isArray(pending?.rows)?pending.rows:[];
+        const safeRows=rows.map(x=>({...x,image_data:undefined}));
+        zip.file('data/pending_photos.json',JSON.stringify(safeRows,null,2));
+        for(const row of rows){
+          const blob=dataURLToBlob(row.image_data||'');
+          if(blob){
+            const ext=(blob.type||'').includes('png')?'png':(blob.type||'').includes('webp')?'webp':'jpg';
+            zip.file(`photos/pending/${row.id||row.idno}.${ext}`,blob);
+          }
+        }
+      }catch(e){console.warn('backup pending photos',e)}
+    }
+
+    // نسخة من ملفات الموقع المنشورة
+    try{
+      const res=await fetch(location.pathname+'?backup='+Date.now(),{cache:'no-store'});
+      if(res.ok) zip.file('site/index.html',await res.text());
+    }catch(e){console.warn('backup site html',e)}
+
+    zip.file('README_RESTORE.txt',
+`نسخة احتياطية لنظام شؤون الطلاب
+تاريخ الإنشاء: ${iso}
+عدد الطلاب: ${students.length}
+عدد سجلات الحضور: ${attendance.length}
+عدد التحويلات/التنبيهات: ${referrals.length}
+صور الوجوه: ${faceCount}
+صور الهوية: ${idCount}
+
+تحتوي مجلدات data على البيانات بصيغة JSON ومجلد photos على الصور.
+لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول.
+احتفظ بهذا الملف في مكان آمن لأنه يحتوي على بيانات طلاب وصورهم.
+`);
+
+    const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const a=document.createElement('a');
+    const url=URL.createObjectURL(blob);
+    a.href=url;
+    a.download=`shurahbil-backup-${datePart}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    toast('تم إنشاء وتنزيل النسخة الاحتياطية');
+  }catch(e){
+    console.error('backup zip',e);
+    alert('تعذر إنشاء النسخة الاحتياطية: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+}
+if($('adminBackupZipBtn')) $('adminBackupZipBtn').onclick=createAdminBackupZip;
 
 
 function getSchoolSettings(){
