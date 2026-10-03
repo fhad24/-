@@ -1974,6 +1974,34 @@
         grid-template-columns:minmax(180px,1.5fr) 120px 92px 110px auto!important;
       }
     }
+
+    .user-permission-portal{max-width:980px;margin:0 auto 18px}
+    .user-welcome-card{
+      display:flex;align-items:center;gap:16px;padding:22px 24px;border-radius:20px;
+      background:#fff;direction:rtl
+    }
+    .user-welcome-icon{
+      width:58px;height:58px;border-radius:16px;background:#e7f4f0;color:#0f7665;
+      display:grid;place-items:center;font-size:30px;flex:0 0 auto
+    }
+    .user-welcome-card h2{margin:0 0 7px;font-size:24px;color:#173b34}
+    .user-welcome-card div div{font-size:16px;color:#60736e;font-weight:700}
+    .user-permission-card{padding:22px 24px;border-radius:20px}
+    .user-permission-card h3{margin:0 0 16px;font-size:20px;text-align:center}
+    .user-permission-buttons{
+      display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px
+    }
+    .user-permission-btn{
+      min-height:64px;border:1px solid #bfd2cd;border-radius:16px;background:#fff;
+      color:#173b34;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;
+      padding:12px 14px
+    }
+    .user-permission-btn:hover{background:#eef8f5;border-color:#0f7665}
+    .user-permission-btn.primary{background:#0f7665;color:#fff;border-color:#0f7665}
+    @media(max-width:720px){
+      .user-permission-buttons{grid-template-columns:1fr}
+      .user-welcome-card h2{font-size:20px}
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2154,6 +2182,19 @@
   </div>
   <div id="dashboard" class="hidden">
     <div class="admin-shell">
+      <div id="userPermissionPortal" class="user-permission-portal hidden">
+        <div class="card user-welcome-card">
+          <div class="user-welcome-icon">👋</div>
+          <div>
+            <h2 id="userWelcomeName">أهلًا</h2>
+            <div id="userWelcomeCivil">السجل المدني: —</div>
+          </div>
+        </div>
+        <div class="card user-permission-card">
+          <h3>الصلاحيات المتاحة لك</h3>
+          <div id="userPermissionButtons" class="user-permission-buttons"></div>
+        </div>
+      </div>
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
           <button class="admin-pill active" id="adminDataTab">بيانات الطلاب 👥</button>
@@ -2658,7 +2699,11 @@ tabs.forEach(b=>b.onclick=()=>{
     if(typeof adminLoggedIn!=='undefined' && adminLoggedIn){
       $('adminLoginModal').classList.add('hidden');
       $('dashboard').classList.remove('hidden');
-      if(typeof openAdminSettings==='function') openAdminSettings();
+      if(typeof configureUserDashboard==='function'){
+        configureUserDashboard();
+      }else if(typeof openAdminSettings==='function'){
+        openAdminSettings();
+      }
     }else{
       $('dashboard').classList.add('hidden');
       $('adminLoginModal').classList.remove('hidden');
@@ -2824,6 +2869,7 @@ async function cloudLoginAndSync(username,password){
   const login=await cloudApi('login',{username,password},false);
   localStorage.setItem('cloudAdminToken',login.token);
   localStorage.setItem('cloudAdminUser',JSON.stringify(login.user||{}));
+  localStorage.removeItem('currentLocalAdminUser');
 
   const remote=await cloudApi('pull_all');
   const localCount=getStudents().length;
@@ -3749,6 +3795,108 @@ excelFileInput.addEventListener('change',()=>{
 const adminExpectedTotal = 766;
 let adminLoggedIn = localStorage.getItem('adminLoggedIn')==='1';
 
+
+function getCurrentLoggedAdminUser(){
+  try{
+    const cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
+    if(cloud && cloud.username) return cloud;
+  }catch(e){}
+  try{
+    const local=JSON.parse(localStorage.getItem('currentLocalAdminUser')||'null');
+    if(local && local.username) return local;
+  }catch(e){}
+  const p=getAdminProfile();
+  return {
+    username:p.username||'',
+    civil_id:p.username||'',
+    name:p.displayName||'المدير',
+    role:'مدير',
+    permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],
+    is_owner:true
+  };
+}
+
+function isCurrentOwner(){
+  const u=getCurrentLoggedAdminUser();
+  return !!u.is_owner || String(u.role||'')==='مدير' && String(u.username||'')===String(getAdminProfile().username||'');
+}
+
+function hideAllUserFeatureViews(){
+  document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
+  $('attendancePanel')?.classList.add('hidden');
+  document.querySelector('.admin-toolbar')?.classList.add('hidden');
+}
+
+function configureUserDashboard(){
+  const portal=$('userPermissionPortal');
+  if(!portal) return;
+  const u=getCurrentLoggedAdminUser();
+  const owner=isCurrentOwner();
+
+  if(owner){
+    portal.classList.add('hidden');
+    document.querySelector('.admin-toolbar')?.classList.remove('hidden');
+    const view=localStorage.getItem('activeAdminView')||'data';
+    showAdminView(view==='attendance'?'attendance':'data');
+    return;
+  }
+
+  hideAllUserFeatureViews();
+  portal.classList.remove('hidden');
+
+  const name=String(u.name||u.displayName||u.username||'المستخدم');
+  const civil=String(u.civil_id||u.civilId||u.username||'—');
+  $('userWelcomeName').textContent='أهلًا '+name;
+  $('userWelcomeCivil').textContent='السجل المدني: '+civil;
+
+  const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+  const defs=[
+    ['attendance','تحضير الطلاب 🕘','attendance'],
+    ['reports','التقارير 📊','reports'],
+    ['editStudents','تعديل بيانات الطلاب ✏️','data'],
+    ['import','استيراد البيانات 📥','import'],
+    ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
+    ['photos','تصوير الطلاب 📷','photos'],
+    ['settings','الإعدادات ⚙️','settings']
+  ];
+  const host=$('userPermissionButtons');
+  host.innerHTML=defs.filter(x=>perms.has(x[0])).map((x,i)=>
+    `<button type="button" class="user-permission-btn ${i===0?'primary':''}" data-user-action="${x[2]}">${x[1]}</button>`
+  ).join('') || '<div class="hint" style="grid-column:1/-1;padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
+
+  host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
+    const action=btn.dataset.userAction;
+    if(action==='attendance'){
+      $('attendancePanel')?.classList.remove('hidden');
+      renderAttendancePage();
+      return;
+    }
+    if(action==='data'){
+      document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.remove('hidden'));
+      return;
+    }
+    if(action==='settings'){
+      if(typeof openAdminSettings==='function') openAdminSettings();
+      return;
+    }
+    if(action==='photos'){
+      if(typeof openAddStudentModal==='function') openAddStudentModal();
+      return;
+    }
+    if(action==='madrasati'){
+      $('madrasatiExcelInput')?.click();
+      return;
+    }
+    if(action==='import'){
+      $('studentPhotosExcelInput')?.click();
+      return;
+    }
+    if(action==='reports'){
+      toast('التقارير');
+    }
+  });
+}
+
 function setAdminMode(on){
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
@@ -3768,6 +3916,7 @@ function setAdminMode(on){
       cloudApi('logout',{}).catch(()=>{});
       localStorage.removeItem('cloudAdminToken');
       localStorage.removeItem('cloudAdminUser');
+      localStorage.removeItem('currentLocalAdminUser');
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminSettingsOpen');
       localStorage.setItem('activeMainPage','register');
@@ -3790,12 +3939,18 @@ $('adminLoginBtn').onclick=async()=>{
 
   // فحص مباشر لحساب المدير الأساسي قبل أي اتصال أو قراءة إعدادات.
   if(user==='1015401902' && pass==='13111111'){
+    localStorage.setItem('currentLocalAdminUser',JSON.stringify({
+      username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
+      permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+    }));
+    localStorage.removeItem('cloudAdminUser');
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     try{setAdminMode(true)}catch(e){}
     try{renderAdmin()}catch(e){console.error('renderAdmin direct login',e)}
+    try{configureUserDashboard()}catch(e){}
     btn.disabled=false;
     btn.textContent=oldText;
     return;
@@ -3808,6 +3963,7 @@ $('adminLoginBtn').onclick=async()=>{
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
     try{renderAdmin()}catch(e){console.error('renderAdmin after login',e)}
+    try{configureUserDashboard()}catch(e){}
   };
 
   const hashText=async(s)=>{
@@ -3829,6 +3985,24 @@ $('adminLoginBtn').onclick=async()=>{
   }
 
   if(localOk){
+    if(extra){
+      localStorage.setItem('currentLocalAdminUser',JSON.stringify({
+        username:String(extra.username||user),
+        civil_id:String(extra.civilId||extra.username||user),
+        name:String(extra.name||extra.username||user),
+        role:String(extra.role||'مستخدم'),
+        permissions:Array.isArray(extra.permissions)?extra.permissions:[],
+        is_owner:false
+      }));
+      localStorage.removeItem('cloudAdminUser');
+    }else{
+      localStorage.setItem('currentLocalAdminUser',JSON.stringify({
+        username:String(p.username||user),civil_id:String(p.username||user),
+        name:String(p.displayName||'المدير'),role:'مدير',
+        permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+      }));
+      localStorage.removeItem('cloudAdminUser');
+    }
     openDashboard();
     btn.disabled=false;
     btn.textContent=oldText;
@@ -4043,6 +4217,12 @@ if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 
 function showAdminView(view){
+  if(!isCurrentOwner()){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+    if(view==='attendance' && !perms.has('attendance')) return;
+    if(view==='data' && !perms.has('editStudents')) return;
+  }
   localStorage.setItem('activeAdminView',view);
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.toggle('hidden',view!=='data'));
   $('attendancePanel').classList.toggle('hidden',view!=='attendance');
