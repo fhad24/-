@@ -2401,9 +2401,9 @@
     <h2 style="text-align:center;font-size:22px;margin-bottom:8px">دخول النظام</h2>
     <div class="hint" style="font-size:13px;margin-bottom:16px">أدخل اسم المستخدم وكلمة المرور</div>
     <label>اسم المستخدم</label>
-    <input id="landingUser" inputmode="numeric" autocomplete="username">
+    <input id="landingUser" inputmode="numeric" autocomplete="off" name="login_user_blank" value="">
     <label style="margin-top:12px">كلمة المرور</label>
-    <input id="landingPass" type="password" inputmode="numeric" autocomplete="current-password">
+    <input id="landingPass" type="password" inputmode="numeric" autocomplete="new-password" name="login_pass_blank" value="">
     <button type="button" class="btn btn-primary" id="landingLoginBtn" style="width:100%;height:52px;margin-top:18px;font-size:16px">دخول</button>
   </div>
 
@@ -2855,8 +2855,8 @@
     <div id="adminLogin" class="modal-card">
       <h2>دخول الإدارة</h2>
       <div class="sub">أدخل اسم المستخدم وكلمة المرور الخاصين بك.</div>
-      <label>اسم المستخدم</label><input id="adminUser" inputmode="numeric" autocomplete="username">
-      <label>كلمة المرور</label><input id="adminPass" type="password" inputmode="numeric" autocomplete="current-password">
+      <label>اسم المستخدم</label><input id="adminUser" inputmode="numeric" autocomplete="off" name="admin_user_blank" value="">
+      <label>كلمة المرور</label><input id="adminPass" type="password" inputmode="numeric" autocomplete="new-password" name="admin_pass_blank" value="">
       <div class="modal-actions">
         <button class="btn btn-primary" id="adminLoginBtn" type="button">دخول</button>
         <button class="btn btn-outline" id="adminCancelBtn" type="button">إلغاء</button>
@@ -5704,6 +5704,7 @@ if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
   localStorage.removeItem('adminLoggedIn');
   localStorage.removeItem('adminSettingsOpen');
   localStorage.setItem('activeMainPage','register');
+  clearLoginFields();
   setAdminMode(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('register')?.classList.remove('hidden');
@@ -10554,6 +10555,23 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
+
+function clearLoginFields(){
+  try{
+    if($('landingUser')) $('landingUser').value='';
+    if($('landingPass')) $('landingPass').value='';
+    if($('adminUser')) $('adminUser').value='';
+    if($('adminPass')) $('adminPass').value='';
+  }catch(e){}
+}
+window.addEventListener('pageshow',()=>setTimeout(clearLoginFields,50));
+window.addEventListener('load',()=>setTimeout(clearLoginFields,80));
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && localStorage.getItem('adminLoggedIn')!=='1'){
+    setTimeout(clearLoginFields,50);
+  }
+});
+
 if($('landingLoginBtn')) $('landingLoginBtn').onclick=()=>{
   const user=String($('landingUser')?.value||'').trim();
   const pass=String($('landingPass')?.value||'').trim();
@@ -10563,6 +10581,8 @@ if($('landingLoginBtn')) $('landingLoginBtn').onclick=()=>{
   }
   if($('adminUser')) $('adminUser').value=user;
   if($('adminPass')) $('adminPass').value=pass;
+  if($('landingUser')) $('landingUser').value='';
+  if($('landingPass')) $('landingPass').value='';
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('admin')?.classList.remove('hidden');
   $('dashboard')?.classList.add('hidden');
