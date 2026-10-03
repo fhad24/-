@@ -2132,7 +2132,14 @@
     .referral-history-status.replied{background:#e7f6f1;color:#0f7665}
     .referral-history-empty{padding:22px;text-align:center;color:#6d7f7a}
     .teacher-replies-box h3{font-size:17px;color:#173b34}
-    .teacher-reply-item{border:1px solid #d7e2df;border-radius:10px;padding:10px;margin-top:8px;background:#fbfdfc;font-size:12px;line-height:1.8}
+    .teacher-replies-table-wrap{margin-top:10px;overflow:auto;border:1px solid #d7e2df;border-radius:12px}
+    .teacher-replies-table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
+    .teacher-replies-table th,.teacher-replies-table td{padding:10px 9px;border-bottom:1px solid #e5ecea;text-align:right;font-size:12px;vertical-align:top}
+    .teacher-replies-table th{background:#f3f8f7;color:#173b34;font-weight:900;white-space:nowrap}
+    .teacher-replies-table tr:last-child td{border-bottom:0}
+    .teacher-replies-status{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:900;white-space:nowrap}
+    .teacher-replies-status.pending{background:#fff4d6;color:#8a5a00}
+    .teacher-replies-status.replied{background:#e7f6f1;color:#0f7665}
     .deputy-referral-page{max-width:1100px;margin:0 auto;direction:rtl}
     .deputy-referral-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .deputy-referral-list{display:grid;gap:12px}
@@ -2479,7 +2486,26 @@
           <h3 style="margin:0">ردود وكيل شؤون الطلاب</h3>
           <button type="button" class="btn btn-soft" id="refreshTeacherReferralReplies">تحديث الردود</button>
         </div>
-        <div id="teacherReferralReplies" class="hint" style="text-align:right;margin-top:10px">سيظهر هنا رد الوكيل على التحويلات المرسلة منك.</div>
+        <div id="teacherReferralReplies" class="teacher-replies-table-wrap">
+          <table class="teacher-replies-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم الطالب</th>
+                <th>المادة</th>
+                <th>التنبيه</th>
+                <th>الحالة</th>
+                <th>ما تم حيال الطالب</th>
+                <th>رد الوكيل</th>
+                <th>الوكيل</th>
+                <th>السجل المدني</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="9" class="referral-history-empty">سيظهر هنا رد الوكيل على التحويلات المرسلة منك.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="referral-actions">
@@ -3551,26 +3577,48 @@ async function loadTeacherReferralReplies(){
   if(!host) return;
   const token=localStorage.getItem('cloudAdminToken');
   if(!token){
-    host.innerHTML='<div class="hint" style="text-align:right">سجّل الدخول بحساب المعلم لعرض ردود الوكيل.</div>';
+    host.innerHTML='<table class="teacher-replies-table"><tbody><tr><td colspan="9" class="referral-history-empty">سجّل الدخول بحساب المعلم لعرض ردود الوكيل.</td></tr></tbody></table>';
     return;
   }
   try{
     const data=await cloudApi('list_referrals');
     const rows=Array.isArray(data.rows)?data.rows:[];
     if(!rows.length){
-      host.innerHTML='<div class="hint" style="text-align:right">لا توجد تحويلات مرسلة حتى الآن.</div>';
+      host.innerHTML='<table class="teacher-replies-table"><tbody><tr><td colspan="9" class="referral-history-empty">لا توجد تحويلات مرسلة حتى الآن.</td></tr></tbody></table>';
       if($('referralActionTaken')) $('referralActionTaken').value='';
       if($('referralDeputyStatus')) $('referralDeputyStatus').textContent='لا يوجد رد من الوكيل حتى الآن.';
       return;
     }
-    host.innerHTML=rows.map(r=>`
-      <div class="teacher-reply-item">
-        <b>${r.student_name||'—'}</b> — ${r.subject||'—'} — التنبيه ${r.alert_level||'1'}<br>
-        الحالة: <b>${r.status==='replied'?'تم الرد':'بانتظار رد الوكيل'}</b>
-        ${r.deputy_action?`<br><b>ما تم حيال الطالب:</b> ${r.deputy_action}`:''}
-        ${r.deputy_reply?`<br><b>رد الوكيل:</b> ${r.deputy_reply}`:''}
-        ${r.deputy_name?`<br>الوكيل: ${r.deputy_name}${r.deputy_civil_id?' — السجل المدني: '+r.deputy_civil_id:''}`:''}
-      </div>`).join('');
+    host.innerHTML=`
+      <table class="teacher-replies-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الطالب</th>
+            <th>المادة</th>
+            <th>التنبيه</th>
+            <th>الحالة</th>
+            <th>ما تم حيال الطالب</th>
+            <th>رد الوكيل</th>
+            <th>الوكيل</th>
+            <th>السجل المدني</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i)=>`
+            <tr>
+              <td>${i+1}</td>
+              <td><b>${r.student_name||'—'}</b></td>
+              <td>${r.subject||'—'}</td>
+              <td>التنبيه ${r.alert_level||'1'}</td>
+              <td><span class="teacher-replies-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':'بانتظار رد الوكيل'}</span></td>
+              <td>${r.deputy_action||'—'}</td>
+              <td>${r.deputy_reply||'—'}</td>
+              <td>${r.deputy_name||'—'}</td>
+              <td>${r.deputy_civil_id||'—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
 
     let latest=null;
     const selected=[...referralSelectedIds];
@@ -3590,7 +3638,7 @@ async function loadTeacherReferralReplies(){
       if($('referralDeputyStatus')) $('referralDeputyStatus').textContent='بانتظار رد وكيل شؤون الطلاب.';
     }
   }catch(e){
-    host.innerHTML='<div class="hint" style="text-align:right">تعذر تحميل ردود الوكيل الآن.</div>';
+    host.innerHTML='<table class="teacher-replies-table"><tbody><tr><td colspan="9" class="referral-history-empty">تعذر تحميل ردود الوكيل الآن.</td></tr></tbody></table>';
   }
 }
 
