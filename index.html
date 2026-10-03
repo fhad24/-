@@ -3027,6 +3027,19 @@
 const $=id=>document.getElementById(id);
 const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.page');
 
+function removeObsoleteNavButtons(){
+  document.querySelectorAll('button').forEach(btn=>{
+    const t=String(btn.textContent||'').replace(/\s+/g,' ').trim();
+    if(t.includes('الصفحة الرئيسية') || t.includes('تسجيل جديد')){
+      btn.remove();
+    }
+  });
+}
+removeObsoleteNavButtons();
+setTimeout(removeObsoleteNavButtons,0);
+setTimeout(removeObsoleteNavButtons,500);
+
+
 function goToMainHome(){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('register')?.classList.remove('hidden');
