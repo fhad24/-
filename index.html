@@ -3539,33 +3539,30 @@ if(studentPhotosExcelInput) studentPhotosExcelInput.onchange=async e=>{
 };
 
 
-function normalizeMadrasatiClassroom(v,grade=''){
-  let s=String(v??'').trim().replace(/\.0$/,'').replace(/\s+/g,' ');
-  if(!s) return '';
+function normalizeMadrasatiText(v){
+  return String(v??'').trim().replace(/\.0$/,'').replace(/\s+/g,' ');
+}
 
+function normalizeDigitsText(v){
   const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
-  s=s.replace(/[٠-٩]/g,d=>String(ar.indexOf(d))).replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
+  return String(v??'')
+    .replace(/[٠-٩]/g,d=>String(ar.indexOf(d)))
+    .replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
+}
 
-  const gradeNames=[
-    String(grade||'').trim(),
-    'الأول الثانوي','الاول الثانوي','أول ثانوي','اول ثانوي',
-    'الثاني الثانوي','ثاني ثانوي',
-    'الثالث الثانوي','ثالث ثانوي'
-  ].filter(Boolean);
+function studentGradeKey(v){
+  const s=normalizeDigitsText(v).trim().replace(/[أإآ]/g,'ا');
+  if(s.includes('الاول') || s.includes('اول ثانوي') || s==='1') return 'الأول الثانوي';
+  if(s.includes('الثاني') || s.includes('ثاني ثانوي') || s==='2') return 'الثاني الثانوي';
+  if(s.includes('الثالث') || s.includes('ثالث ثانوي') || s==='3') return 'الثالث الثانوي';
+  return String(v??'').trim();
+}
 
-  for(const g of gradeNames){
-    s=s.split(g).join(' ');
-  }
-
-  s=s
-    .replace(/الصف|الفصل|الشعبة|فصل|شعبة|class|section/gi,' ')
-    .replace(/[\/:：|\-–—]+/g,' ')
-    .replace(/\s+/g,' ')
-    .trim();
-
+function studentClassKey(v){
+  const s=normalizeDigitsText(v).trim();
+  if(!s) return '';
   const nums=s.match(/\d+/g);
   if(nums && nums.length) return String(Number(nums[nums.length-1]));
-
   return s;
 }
 
@@ -3637,8 +3634,8 @@ async function importMadrasatiPlacements(file){
       const gradeRaw=pick(row,['الصف الدراسي','الصف','رقم الصف','المستوى','grade']);
       const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
 
-      const grade=gradeRaw!=='' ? normalizeGuidanceGrade(gradeRaw) : '';
-      const classroom=classRaw!=='' ? normalizeMadrasatiClassroom(classRaw,grade) : '';
+      const grade=gradeRaw!=='' ? normalizeMadrasatiText(gradeRaw) : '';
+      const classroom=classRaw!=='' ? normalizeMadrasatiText(classRaw) : '';
 
       const old=students[idx];
       const newGrade=grade || old.grade || '';
@@ -5495,9 +5492,9 @@ function setAttendanceMode(mode){
 }
 
 function fillAttendanceClasses(){
-  const students=getStudents().filter(s=>!attendanceGradeFilter||s.grade===attendanceGradeFilter);
-  const classes=[...new Set(students.map(s=>String(s.classroom||'')).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
-  $('attendanceClassFilter').innerHTML='<option value="">كل الفصول</option>'+classes.map(c=>`<option>${c}</option>`).join('');
+  const students=getStudents().filter(s=>!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter);
+  const classes=[...new Set(students.map(s=>studentClassKey(s.classroom)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+  $('attendanceClassFilter').innerHTML='<option value="">كل الفصول</option>'+classes.map(k=>`<option value="${k}">الفصل ${k}</option>`).join('');
 }
 
 
@@ -5683,8 +5680,8 @@ async function renderAttendanceStudentList(){
       normalizeSearchText(s.name).includes(q) ||
       normalizeSearchText(s.idno).includes(q) ||
       normalizeSearchText(s.phone).includes(q);
-    return (!attendanceGradeFilter||s.grade===attendanceGradeFilter) &&
-      (!cls||String(s.classroom||'')===cls) &&
+    return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
+      (!cls||studentClassKey(s.classroom)===cls) &&
       matchesSearch;
   });
   if($('attendanceHideRegistered')?.checked) list=list.filter(s=>!todayIds.has(String(s.idno)));
@@ -5809,8 +5806,8 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
       normalizeSearchText(s.name).includes(q) ||
       normalizeSearchText(s.idno).includes(q) ||
       normalizeSearchText(s.phone).includes(q);
-    return (!attendanceGradeFilter||s.grade===attendanceGradeFilter) &&
-      (!cls||String(s.classroom||'')===cls) &&
+    return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
+      (!cls||studentClassKey(s.classroom)===cls) &&
       matchesSearch;
   });
   const checked=$('attendancePresentSelectAll').checked;
@@ -7480,7 +7477,7 @@ async function compareStudentFaces(oldBlob,newBlob,cacheKey=''){
 }
 
 function getStudentClassesForGrade(grade){
-  const values=[...new Set(getStudents().filter(s=>!grade || s.grade===grade).map(s=>String(s.classroom||'').trim()).filter(Boolean))];
+  const values=[...new Set(getStudents().filter(s=>!grade || studentGradeKey(s.grade)===grade).map(s=>studentClassKey(s.classroom)).filter(Boolean))];
   return values.sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
 }
 
@@ -7488,7 +7485,7 @@ function refreshAddStudentClasses(){
   const grade=$('addStudentGrade').value;
   const sel=$('addStudentClass');
   sel.innerHTML='<option value="">الكل</option>';
-  getStudentClassesForGrade(grade).forEach(v=>sel.innerHTML+=`<option>${v}</option>`);
+  getStudentClassesForGrade(grade).forEach(v=>sel.innerHTML+=`<option value="${v}">الفصل ${v}</option>`);
   refreshAddStudentNames();
 }
 
@@ -7595,8 +7592,8 @@ function refreshAddStudentNames(){
     const name=normalizeStudentSearch(s.name||'');
     const id=normalizeStudentSearch(s.idno||'');
     const phone=normalizeStudentSearch(s.phone||'');
-    return (!grade||s.grade===grade) &&
-      (!classroom||String(s.classroom||'')===classroom) &&
+    return (!grade||studentGradeKey(s.grade)===grade) &&
+      (!classroom||studentClassKey(s.classroom)===classroom) &&
       (!q || name.includes(q) || id.includes(q) || phone.includes(q));
   });
 
@@ -7675,8 +7672,8 @@ async function findBestStudentMatch(newBlob){
   const grade=$('addStudentGrade')?.value||'';
   const classroom=$('addStudentClass')?.value||'';
   const filtered=students.filter(s=>
-    (!grade || s.grade===grade) &&
-    (!classroom || String(s.classroom||'')===String(classroom))
+    (!grade || studentGradeKey(s.grade)===grade) &&
+    (!classroom || studentClassKey(s.classroom)===String(classroom))
   );
   if(filtered.length) students=filtered;
 
@@ -7796,9 +7793,9 @@ async function processNewStudentFace(file){
     $('matchedStudentId').textContent=student.idno||'—';
     $('matchedStudentInfo').classList.add('show');
 
-    $('addStudentGrade').value=student.grade||'';
+    $('addStudentGrade').value=studentGradeKey(student.grade)||'';
     refreshAddStudentClasses();
-    $('addStudentClass').value=String(student.classroom||'');
+    $('addStudentClass').value=studentClassKey(student.classroom);
     refreshAddStudentNames();
     $('addStudentName').value=String(student.idno);
     $('studentSelectTriggerText').textContent=student.name||'بدون اسم';
@@ -7830,7 +7827,7 @@ function openAddStudentModal(){
   $('addStudentGrade').value='';
   if($('addStudentSearch')) $('addStudentSearch').value='';
   $('addStudentClass').innerHTML='<option value="">الكل</option>';
-  getStudentClassesForGrade('').forEach(v=>$('addStudentClass').innerHTML+=`<option>${v}</option>`);
+  getStudentClassesForGrade('').forEach(v=>$('addStudentClass').innerHTML+=`<option value="${v}">الفصل ${v}</option>`);
   $('addStudentName').innerHTML='<option value="">اختر الطالب</option>';
   dedupeStudents(getStudents()).forEach(s=>$('addStudentName').innerHTML+=`<option value="${s.idno}">${s.name} — ${s.idno}</option>`);
   $('addStudentName').disabled=false;
