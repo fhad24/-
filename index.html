@@ -2577,7 +2577,7 @@ function ensureAdminSettings(){
     renderAdminUsersSettings();
 
     btn.disabled=true;
-    btn.textContent='جاري حفظ الصلاحيات لكل المستخدمين...';
+    btn.textContent='جاري حفظ الصلاحيات...';
     cloudSyncBusy=true;
 
     try{
@@ -2596,38 +2596,32 @@ function ensureAdminSettings(){
 
       if(!token) throw new Error('NO_CLOUD_SESSION');
 
-      let saved=0;
-      for(const u of users){
-        await cloudApi('save_user',{user:{
+      const payloadUsers=users.map(u=>({
+        username:u.username,
+        name:u.name,
+        role:u.role,
+        permissions:[...permissions]
+      }));
+
+      await cloudApi('sync_users',{users:payloadUsers});
+
+      let verified=await cloudApi('pull_all');
+      const expected=[...permissions].sort().join('|');
+      let mismatched=(verified.users||[])
+        .filter(u=>!u.is_owner)
+        .filter(u=>(Array.isArray(u.permissions)?u.permissions:[]).slice().sort().join('|')!==expected);
+
+      if(mismatched.length){
+        await cloudApi('sync_users',{users:mismatched.map(u=>({
           username:u.username,
           name:u.name,
           role:u.role,
           permissions:[...permissions]
-        }});
-        saved++;
-      }
-
-      const fresh=await cloudApi('pull_all');
-      const cloudUsers=(fresh.users||[]).filter(u=>!u.is_owner);
-      const expected=[...permissions].sort().join('|');
-      const notSaved=cloudUsers.filter(u=>{
-        const got=(Array.isArray(u.permissions)?u.permissions:[]).slice().sort().join('|');
-        return got!==expected;
-      });
-
-      if(notSaved.length){
-        for(const u of notSaved){
-          await cloudApi('save_user',{user:{
-            username:u.username,
-            name:u.name,
-            role:u.role,
-            permissions:[...permissions]
-          }});
-        }
+        }))});
+        verified=await cloudApi('pull_all');
       }
 
       const localByUser=new Map(users.map(u=>[String(u.username),u]));
-      const verified=await cloudApi('pull_all');
       const finalUsers=(verified.users||[]).filter(u=>!u.is_owner).map(u=>({
         username:String(u.username||''),
         name:u.name||'',
@@ -2635,11 +2629,11 @@ function ensureAdminSettings(){
         permissions:Array.isArray(u.permissions)?u.permissions:[],
         password:localByUser.get(String(u.username||''))?.password||''
       }));
+
       localStorage.setItem('adminUsers',JSON.stringify(finalUsers));
-      await refreshAdminUsersFromCloud();
       renderAdminUsersSettings();
 
-      alert(`✅ تم حفظ مجموعة الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم) وتحديث العرض من السحابة`);
+      alert(`✅ تم حفظ الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم)`);
     }catch(e){
       console.error('bulk permissions cloud sync',e);
       alert('تعذر الحفظ السحابي للصلاحيات. سجّل الخروج ثم ادخل للإدارة مرة واحدة وأعد المحاولة.');
