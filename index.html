@@ -2343,9 +2343,9 @@
       <div class="referral-grid" style="margin-top:18px">
         <div class="referral-field">
           <label>اسم المعلم</label>
-          <select id="referralTeacher" required>
-            <option value="">اختر المعلم</option>
-          </select>
+          <input id="referralTeacherName" type="text" readonly>
+          <input id="referralTeacher" type="hidden">
+          <div class="hint" id="referralTeacherCivil" style="text-align:right;font-size:12px;margin-top:6px">السجل المدني: —</div>
         </div>
         <div class="referral-field">
           <label>التاريخ</label>
@@ -3093,21 +3093,16 @@ function populateReferralStudents(){
   renderReferralSelectedStudents();
 }
 function populateReferralTeachers(){
-  const sel=$('referralTeacher');
-  if(!sel || typeof getAdminUsers!=='function') return;
-  const current=sel.value;
-  const users=getAdminUsers();
-  sel.innerHTML='<option value="">اختر المعلم</option>';
-  users.forEach(u=>{
-    const opt=document.createElement('option');
-    opt.value=String(u.username||u.civilId||'');
-    const civil=String(u.civilId||u.username||'');
-    opt.textContent=`${u.name||'بدون اسم'} — ${civil}`;
-    opt.dataset.name=u.name||'';
-    opt.dataset.civilId=civil;
-    sel.appendChild(opt);
-  });
-  if(current && [...sel.options].some(o=>o.value===current)) sel.value=current;
+  const hidden=$('referralTeacher');
+  const nameInput=$('referralTeacherName');
+  const civilLabel=$('referralTeacherCivil');
+  if(!hidden || !nameInput || !civilLabel) return;
+  const u=typeof getCurrentLoggedAdminUser==='function' ? getCurrentLoggedAdminUser() : null;
+  const name=String(u?.name||u?.displayName||u?.username||'المستخدم');
+  const civil=String(u?.civil_id||u?.civilId||u?.username||'');
+  hidden.value=civil;
+  nameInput.value=name;
+  civilLabel.textContent='السجل المدني: '+(civil||'—');
 }
 function initReferralPage(){
   updateReferralDates();
@@ -3123,7 +3118,6 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     return;
   }
   const reasons=[...document.querySelectorAll('input[name="referralReason"]:checked')].map(x=>x.value);
-  const teacherOption=$('referralTeacher').selectedOptions[0];
   const base={
     grade:$('referralGrade').value,
     classroom:$('referralClass').value,
@@ -3133,7 +3127,7 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     otherReason:$('referralOtherReason').value.trim(),
     problem:$('referralProblem').value.trim(),
     teacherCivilId:$('referralTeacher').value,
-    teacher:(teacherOption?.dataset.name||teacherOption?.textContent||'').trim(),
+    teacher:$('referralTeacherName').value.trim(),
     date:$('referralDate').value,
     hijriDate:$('referralHijriDate').value,
     actionTaken:$('referralActionTaken').value.trim(),
