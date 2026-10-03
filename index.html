@@ -5199,10 +5199,18 @@ $('adminLoginBtn').onclick=async()=>{
   };
 
   const p=getAdminProfile();
-  const extra=getAdminUsers().find(x=>
-    String(x.username||'').trim()===user &&
-    String(x.password||'').trim()===pass
+  const extraCandidate=getAdminUsers().find(x=>String(x.username||'').trim()===user);
+  const extraPasswordOk=!!extraCandidate && (
+    String(extraCandidate.password||'').trim()===pass ||
+    (
+      !String(extraCandidate.password||'').trim() &&
+      (
+        pass===String(extraCandidate.username||'').trim() ||
+        pass===String(extraCandidate.civilId||extraCandidate.username||'').trim()
+      )
+    )
   );
+  const extra=extraPasswordOk ? extraCandidate : null;
 
   let localOk=(String(p.username||'').trim()===user && String(p.password||'').trim()===pass) || !!extra;
 
@@ -5213,6 +5221,16 @@ $('adminLoginBtn').onclick=async()=>{
 
   if(localOk){
     if(extra){
+      if(!String(extra.password||'').trim()){
+        try{
+          const localUsers=getAdminUsers();
+          const localIdx=localUsers.findIndex(x=>String(x.username||'').trim()===user);
+          if(localIdx>=0){
+            localUsers[localIdx].password=String(localUsers[localIdx].civilId||localUsers[localIdx].username||user);
+            saveAdminUsers(localUsers);
+          }
+        }catch(e){}
+      }
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(extra.username||user),
         civil_id:String(extra.civilId||extra.username||user),
