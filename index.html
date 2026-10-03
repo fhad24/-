@@ -4889,6 +4889,8 @@ async function createAdminBackupZip(){
 
     // الصور المخزنة للطلاب
     let faceCount=0,idCount=0;
+    const offlineFaceFiles={};
+    const offlineIdFiles={};
     for(const s of students){
       const id=String(s.idno||'');
       if(!id) continue;
@@ -4897,6 +4899,7 @@ async function createAdminBackupZip(){
         if(face){
           const ext=(face.type||'').includes('png')?'png':(face.type||'').includes('webp')?'webp':'jpg';
           zip.file(`photos/faces/${id}.${ext}`,face);
+          offlineFaceFiles[id]=`../photos/faces/${id}.${ext}`;
           faceCount++;
         }
       }catch(e){}
@@ -4905,6 +4908,7 @@ async function createAdminBackupZip(){
         if(idPhoto){
           const ext=(idPhoto.type||'').includes('png')?'png':(idPhoto.type||'').includes('webp')?'webp':'jpg';
           zip.file(`photos/ids/${id}.${ext}`,idPhoto);
+          offlineIdFiles[id]=`../photos/ids/${id}.${ext}`;
           idCount++;
         }
       }catch(e){}
@@ -4933,6 +4937,60 @@ async function createAdminBackupZip(){
       if(res.ok) zip.file('site/index.html',await res.text());
     }catch(e){console.warn('backup site html',e)}
 
+    // صفحة عرض مستقلة تعمل من المتصفح بدون إنترنت.
+    const offlinePayload={
+      createdAt:iso,
+      school:getSchoolSettings(),
+      students,
+      attendance,
+      referrals,
+      users,
+      faceFiles:offlineFaceFiles,
+      idFiles:offlineIdFiles
+    };
+    const offlineJson=JSON.stringify(offlinePayload).replace(/</g,'\\u003c');
+    const offlineHtml='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
+      '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+      '<title>النسخة الاحتياطية - عرض بدون اتصال</title>'+
+      '<style>'+
+      'body{font-family:Arial,Tahoma,sans-serif;background:#f4f7f6;color:#173b34;margin:0;padding:18px}'+
+      '.wrap{max-width:1200px;margin:auto}.head{background:#0f7665;color:#fff;padding:18px;border-radius:16px;margin-bottom:14px}'+
+      '.head h1{margin:0 0 6px;font-size:24px}.muted{opacity:.8;font-size:13px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}'+
+      '.tabs button{border:1px solid #b9c9c4;background:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}'+
+      '.tabs button.active{background:#0f7665;color:#fff;border-color:#0f7665}.card{background:#fff;border:1px solid #d7e1de;border-radius:14px;padding:14px;margin-bottom:12px}'+
+      '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#fff;border:1px solid #d7e1de;border-radius:12px;padding:12px}.stat b{font-size:24px}'+
+      'input{width:100%;box-sizing:border-box;height:44px;border:1px solid #c8d6d2;border-radius:10px;padding:0 12px;font-size:15px;margin:8px 0 12px}'+
+      'table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid #e5ecea;padding:9px;text-align:right;font-size:13px;vertical-align:middle}th{background:#eef5f3;position:sticky;top:0}'+
+      '.photo{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid #d7e1de;background:#eef3f1}.tablewrap{overflow:auto;max-height:70vh}'+
+      '.hidden{display:none}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef5f3;font-size:11px}.noimg{width:44px;height:44px;display:grid;place-items:center;background:#eef3f1;border-radius:8px}'+
+      '@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}th,td{font-size:11px;padding:7px}}'+
+      '</style></head><body><div class="wrap">'+
+      '<div class="head"><h1 id="schoolName">نسخة احتياطية</h1><div class="muted" id="createdAt"></div></div>'+
+      '<div class="stats" id="stats"></div>'+
+      '<div class="tabs">'+
+      '<button class="active" data-tab="students">الطلاب</button><button data-tab="attendance">الحضور</button><button data-tab="referrals">التحويلات</button><button data-tab="users">المستخدمون</button>'+
+      '</div>'+
+      '<div class="card"><input id="search" placeholder="بحث بالاسم أو السجل المدني أو الجوال"></div>'+
+      '<div id="students" class="tabpane"><div class="card tablewrap"><table><thead><tr><th>الصورة</th><th>الاسم</th><th>السجل المدني</th><th>الجوال</th><th>الصف</th><th>الفصل</th></tr></thead><tbody id="studentsBody"></tbody></table></div></div>'+
+      '<div id="attendance" class="tabpane hidden"><div class="card tablewrap"><table><thead><tr><th>الطالب</th><th>السجل</th><th>الحالة</th><th>التاريخ</th><th>الوقت</th><th>الحصة</th><th>المعلم</th></tr></thead><tbody id="attendanceBody"></tbody></table></div></div>'+
+      '<div id="referrals" class="tabpane hidden"><div class="card tablewrap"><table><thead><tr><th>الطالب</th><th>السجل</th><th>المادة</th><th>الحصة</th><th>التنبيه</th><th>المعلم</th><th>الحالة</th></tr></thead><tbody id="referralsBody"></tbody></table></div></div>'+
+      '<div id="users" class="tabpane hidden"><div class="card tablewrap"><table><thead><tr><th>الاسم</th><th>المستخدم/السجل</th><th>النوع</th><th>الصلاحيات</th></tr></thead><tbody id="usersBody"></tbody></table></div></div>'+
+      '</div><script>const DATA='+offlineJson+';'+
+      'const esc=s=>String(s??"").replace(/[&<>"\x27]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\x27":"&#39;"}[m]));'+
+      'document.getElementById("schoolName").textContent=(DATA.school&&DATA.school.school)||"نسخة احتياطية";'+
+      'document.getElementById("createdAt").textContent="تاريخ إنشاء النسخة: "+new Date(DATA.createdAt).toLocaleString("ar-SA");'+
+      'document.getElementById("stats").innerHTML=[["الطلاب",DATA.students.length],["سجلات الحضور",DATA.attendance.length],["التحويلات",DATA.referrals.length],["المستخدمون",DATA.users.length]].map(x=>"<div class=stat><div>"+x[0]+"</div><b>"+x[1]+"</b></div>").join("");'+
+      'function render(q=""){q=q.trim().toLowerCase();'+
+      'const sf=s=>(!q||[s.name,s.idno,s.phone,s.grade,s.classroom].some(v=>String(v||"").toLowerCase().includes(q)));'+
+      'document.getElementById("studentsBody").innerHTML=DATA.students.filter(sf).map(s=>{const p=DATA.faceFiles[String(s.idno||"")];return "<tr><td>"+(p?"<img class=photo src=\""+esc(p)+"\">":"<div class=noimg>👤</div>")+"</td><td>"+esc(s.name)+"</td><td>"+esc(s.idno)+"</td><td>"+esc(s.phone)+"</td><td>"+esc(s.grade)+"</td><td>"+esc(s.classroom)+"</td></tr>"}).join("");'+
+      'document.getElementById("attendanceBody").innerHTML=DATA.attendance.filter(x=>!q||[x.student_name,x.name,x.idno,x.status,x.teacher_name].some(v=>String(v||"").toLowerCase().includes(q))).map(x=>"<tr><td>"+esc(x.student_name||x.name)+"</td><td>"+esc(x.idno)+"</td><td><span class=badge>"+esc(x.status)+"</span></td><td>"+esc(x.date)+"</td><td>"+esc(x.time)+"</td><td>"+esc(x.period)+"</td><td>"+esc(x.teacher_name)+"</td></tr>").join("");'+
+      'document.getElementById("referralsBody").innerHTML=DATA.referrals.filter(x=>!q||[x.studentName,x.student_name,x.studentCivilId,x.student_civil_id,x.teacher,x.teacher_name].some(v=>String(v||"").toLowerCase().includes(q))).map(x=>"<tr><td>"+esc(x.studentName||x.student_name)+"</td><td>"+esc(x.studentCivilId||x.student_civil_id)+"</td><td>"+esc(x.subject)+"</td><td>"+esc(x.period)+"</td><td>"+esc(x.alertLevel||x.alert_level)+"</td><td>"+esc(x.teacher||x.teacher_name)+"</td><td>"+esc(x.status||"محفوظ")+"</td></tr>").join("");'+
+      'document.getElementById("usersBody").innerHTML=DATA.users.filter(x=>!q||[x.name,x.username,x.civilId,x.civil_id,x.role].some(v=>String(v||"").toLowerCase().includes(q))).map(x=>"<tr><td>"+esc(x.name)+"</td><td>"+esc(x.civilId||x.civil_id||x.username)+"</td><td>"+esc(x.role)+"</td><td>"+esc((x.permissions||[]).join("، "))+"</td></tr>").join("");}'+
+      'render();document.getElementById("search").addEventListener("input",e=>render(e.target.value));'+
+      'document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".tabpane").forEach(x=>x.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden")});'+
+      '</script></body></html>';
+    zip.file('offline/index.html',offlineHtml);
+
     zip.file('README_RESTORE.txt',
 `نسخة احتياطية لنظام شؤون الطلاب
 تاريخ الإنشاء: ${iso}
@@ -4943,6 +5001,7 @@ async function createAdminBackupZip(){
 صور الهوية: ${idCount}
 
 تحتوي مجلدات data على البيانات بصيغة JSON ومجلد photos على الصور.
+لفتح النسخة بدون اتصال بالإنترنت: فك ضغط الملف ثم افتح offline/index.html في Chrome أو Edge.
 لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول.
 احتفظ بهذا الملف في مكان آمن لأنه يحتوي على بيانات طلاب وصورهم.
 `);
