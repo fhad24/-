@@ -1654,17 +1654,7 @@
         </div>
 
         <div class="card attendance-daily-card">
-          <div class="attendance-daily-head">
-            <h3 id="attendanceDayTitle">التأخر اليومي</h3>
-            <div class="attendance-daily-meta">
-              <select id="attendanceBulkPeriod" class="attendance-bulk-period">
-                <option value="">الحصة</option>
-                <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
-                <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option><option value="7">الحصة السابعة</option>
-              </select>
-  
-            </div>
-          </div>
+          <h3 id="attendanceDayTitle">التأخر اليومي</h3>
           <div class="attendance-bulk-tools">
             <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
             <button type="button" id="attendanceBulkAbsent" class="absent">✕ تسجيل غياب للمحدد</button>
@@ -1877,21 +1867,6 @@
       <button type="button" id="attendancePresentTab" class="present">✓ حاضر</button>
     </div>
 
-    <div class="attendance-period-row">
-      <label for="attendancePeriodSelect">🕐 الحصة</label>
-      <select id="attendancePeriodSelect">
-        <option value="">بدون تحديد حصة</option>
-        <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
-        <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option>
-        <option value="7">الحصة السابعة</option>
-      </select>
-      <label for="attendanceSubjectSelect">📘 المادة</label>
-      <select id="attendanceSubjectSelect">
-        <option value="">بدون تحديد مادة</option>
-        <option>الكفايات اللغوية</option><option>القرآن الكريم وتفسيره</option><option>الرياضيات</option><option>الكيمياء</option><option>الأحياء</option><option>اللغة الإنجليزية</option><option>التفكير الناقد</option><option>التقنية الرقمية</option><option>التربية الصحية والبدنية</option><option>الفيزياء</option><option>التاريخ</option><option>التوحيد</option><option>الفنون</option><option>اللياقة</option><option>الثقافة الصحية</option><option>مواد متقدمة في البرمجة</option><option>هندسة البرمجيات</option><option>العلوم الطبية الحيوية</option><option>الأحياء المتقدمة</option><option>التشريح</option><option>الصحة العامة</option><option>مبادئ الإدارة</option><option>الاقتصاد</option><option>المحاسبة</option><option>التقنية الرقمية للأعمال</option><option>الفقه</option><option>التفسير</option><option>الحديث</option><option>الأصول</option>
-      </select>
-    </div>
-
     <label class="attendance-check"><input type="checkbox" id="attendanceAutoSave"> حفظ تلقائي بدون تأكيد أسرع، لكن دون مراجعة سجل الطالب قبل الحفظ</label>
 
     <div class="attendance-modal-grid">
@@ -2002,6 +1977,57 @@
           <div class="hint attendance-edit-hint">اليوم أولاً، ثم التاريخ الهجري، ثم الوقت. استخدم + و− لزيادة أو تقليل الساعات والدقائق.</div>
         </div>
 
+
+    <div class="attendance-session-controls">
+      <div class="attendance-session-field">
+        <label for="attendancePeriodSelect">🕐 الحصة</label>
+        <select id="attendancePeriodSelect">
+          <option value="">اختر الحصة</option>
+          <option value="1">الحصة الأولى</option>
+          <option value="2">الحصة الثانية</option>
+          <option value="3">الحصة الثالثة</option>
+          <option value="4">الحصة الرابعة</option>
+          <option value="5">الحصة الخامسة</option>
+          <option value="6">الحصة السادسة</option>
+          <option value="7">الحصة السابعة</option>
+        </select>
+      </div>
+      <div class="attendance-session-field attendance-session-subject">
+        <label for="attendanceSubjectSelect">📘 المادة</label>
+        <select id="attendanceSubjectSelect">
+          <option value="">اختر المادة</option>
+          <option value="الكفايات اللغوية">الكفايات اللغوية</option>
+          <option value="القرآن الكريم وتفسيره">القرآن الكريم وتفسيره</option>
+          <option value="الرياضيات">الرياضيات</option>
+          <option value="الكيمياء">الكيمياء</option>
+          <option value="الأحياء">الأحياء</option>
+          <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+          <option value="التفكير الناقد">التفكير الناقد</option>
+          <option value="التقنية الرقمية">التقنية الرقمية</option>
+          <option value="التربية الصحية والبدنية">التربية الصحية والبدنية</option>
+          <option value="الفيزياء">الفيزياء</option>
+          <option value="التاريخ">التاريخ</option>
+          <option value="التوحيد">التوحيد</option>
+          <option value="الفنون">الفنون</option>
+          <option value="اللياقة">اللياقة</option>
+          <option value="الثقافة الصحية">الثقافة الصحية</option>
+          <option value="مواد متقدمة في البرمجة">مواد متقدمة في البرمجة</option>
+          <option value="هندسة البرمجيات">هندسة البرمجيات</option>
+          <option value="العلوم الطبية الحيوية">العلوم الطبية الحيوية</option>
+          <option value="الأحياء المتقدمة">الأحياء المتقدمة</option>
+          <option value="التشريح">التشريح</option>
+          <option value="الصحة العامة">الصحة العامة</option>
+          <option value="مبادئ الإدارة">مبادئ الإدارة</option>
+          <option value="الاقتصاد">الاقتصاد</option>
+          <option value="المحاسبة">المحاسبة</option>
+          <option value="التقنية الرقمية للأعمال">التقنية الرقمية للأعمال</option>
+          <option value="الفقه">الفقه</option>
+          <option value="التفسير">التفسير</option>
+          <option value="الحديث">الحديث</option>
+          <option value="الأصول">الأصول</option>
+        </select>
+      </div>
+    </div>
 
     <div class="attendance-modal-footer">
       <button type="button" class="btn btn-primary" id="saveAttendanceStudentBtn">حفظ</button>
@@ -4324,7 +4350,6 @@ if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
     return;
   }
   const period=$('attendanceBulkPeriod')?.value ? Number($('attendanceBulkPeriod').value) : null;
-  const subject=$('attendanceBulkSubject')?.value||'';
   const recorder=getCurrentAttendanceRecorder();
   const students=getStudents();
   const now=new Date();
@@ -4338,7 +4363,7 @@ if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
       date:todayKey(),
       time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
       period,
-      subject,
+      subject:'',
       idno:s.idno,name:s.name,grade:s.grade||'',classroom:s.classroom||'',
       status:'absent',
       faceMatch:'none',
@@ -4522,8 +4547,9 @@ function openAttendanceModal(mode){
   attendanceFaceCompareResult='none';
   $('attendanceStudentModal').classList.remove('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
-  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=$('attendanceBulkPeriod')?.value||'';
-  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=$('attendanceBulkSubject')?.value||'';
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
+  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
+  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -6089,6 +6115,90 @@ function printStudents(rows){
       .attendance-photo-check{
         right:-22px!important;
       }
+    }
+
+    /* الحصة والمادة في المساحة الفارغة أسفل نافذة التحضير */
+    .attendance-session-controls{
+      display:grid!important;
+      grid-template-columns:180px minmax(300px,1fr)!important;
+      gap:12px!important;
+      align-items:end!important;
+      width:100%!important;
+      margin:14px 0 10px!important;
+      padding:12px 14px!important;
+      border:1px solid #dce7e4!important;
+      border-radius:14px!important;
+      background:#f8fbfa!important;
+      box-sizing:border-box!important;
+      direction:rtl!important;
+    }
+    .attendance-session-field label{
+      display:block!important;
+      margin:0 0 6px!important;
+      font-size:13px!important;
+      font-weight:900!important;
+      color:#29463f!important;
+      text-align:right!important;
+    }
+    .attendance-session-field select{
+      width:100%!important;
+      height:44px!important;
+      margin:0!important;
+      border:1px solid #c9dbd6!important;
+      border-radius:11px!important;
+      background:#fff!important;
+      font-family:inherit!important;
+      font-size:14px!important;
+      font-weight:800!important;
+      color:#173b34!important;
+      padding:0 10px!important;
+      box-sizing:border-box!important;
+    }
+    @media(max-width:700px){
+      .attendance-session-controls{grid-template-columns:1fr!important}
+    }
+
+    /* علامة التحديد يمين صورة الطالب فقط، بدون تحريك الاسم */
+    .attendance-saved-row,
+    .attendance-saved-student{
+      overflow:visible!important;
+    }
+    .attendance-saved-student{
+      position:relative!important;
+      grid-template-columns:56px minmax(0,1fr)!important;
+      direction:rtl!important;
+      align-items:center!important;
+    }
+    .attendance-photo-select-wrap{
+      width:56px!important;
+      height:56px!important;
+      position:relative!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      overflow:visible!important;
+    }
+    .attendance-photo-check{
+      position:absolute!important;
+      right:-26px!important;
+      left:auto!important;
+      top:50%!important;
+      transform:translateY(-50%)!important;
+      z-index:10!important;
+      margin:0!important;
+      padding:0!important;
+      display:flex!important;
+    }
+    .attendance-photo-check input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+    }
+    @media(max-width:1050px){
+      .attendance-saved-student{grid-template-columns:46px minmax(0,1fr)!important}
+      .attendance-photo-select-wrap{width:46px!important;height:46px!important}
+      .attendance-photo-check{right:-24px!important}
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
