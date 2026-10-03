@@ -2305,6 +2305,9 @@
   </div>
 </div>
           <button class="admin-outline-btn" id="confirmAllBtn">تأكيد الكل ✔️</button>
+          <button class="admin-outline-btn" id="studentCounselorFollowBtn" type="button">متابعة الموجه الطلابي 👤</button>
+          <button class="admin-outline-btn" id="activityLeaderFollowBtn" type="button">متابعة رائد النشاط ⭐</button>
+          <button class="admin-outline-btn" id="teachersFollowBtn" type="button">متابعة المعلمين 👨‍🏫</button>
           <button class="delete-all-btn" id="deleteAllStudentsBtn" style="margin:0;white-space:nowrap">حذف جميع بيانات الطلاب 🗑️</button>
         </div>
 
@@ -7376,6 +7379,10 @@ if($('confirmAllBtn')) $('confirmAllBtn').onclick=()=>{
   renderAdmin();
   toast('تم تأكيد جميع الطلاب');
 };
+
+if($('studentCounselorFollowBtn')) $('studentCounselorFollowBtn').onclick=()=>toast('متابعة الموجه الطلابي');
+if($('activityLeaderFollowBtn')) $('activityLeaderFollowBtn').onclick=()=>toast('متابعة رائد النشاط');
+if($('teachersFollowBtn')) $('teachersFollowBtn').onclick=()=>toast('متابعة المعلمين');
 
 if($('deleteAllStudentsBtn')) $('deleteAllStudentsBtn').onclick=async ()=>{
   const s=getStudents();
