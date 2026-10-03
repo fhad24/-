@@ -2156,8 +2156,6 @@
     <div class="logo">مدرستي<br>بيانات</div>
   </div>
   <nav>
-    <button class="tab active" data-page="register" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('register').classList.remove('hidden');localStorage.setItem('activeMainPage','register')">تسجيل جديد</button>
-    <button class="tab" data-page="edit" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('edit').classList.remove('hidden');document.getElementById('studentEditLogin')?.classList.remove('hidden');document.getElementById('studentEditForm')?.classList.add('hidden');localStorage.setItem('activeMainPage','edit')">تعديل بيانات الطالب</button>
     <button class="tab" data-page="referral" type="button">تحويل طالب لوكيل شؤون الطلاب</button>
     <button class="tab" data-page="admin" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('admin').classList.remove('hidden');document.getElementById('dashboard')?.classList.add('hidden');document.getElementById('adminLoginModal')?.classList.remove('hidden');localStorage.setItem('activeMainPage','admin')">دخول الإدارة</button>
   </nav>
