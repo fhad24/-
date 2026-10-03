@@ -2051,7 +2051,8 @@
     .referral-student-selected span{display:block;font-size:12px;color:#60736e;margin-top:3px}
     .referral-selected-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
     .referral-selected-toolbar b{font-size:14px;color:#173b34}
-    .referral-select-all-btn{border:1px solid #0f7665;background:#eef8f5;color:#0f7665;border-radius:10px;padding:8px 12px;font-family:inherit;font-weight:800;cursor:pointer}
+    .referral-group-check{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:#173b34;cursor:pointer;white-space:nowrap}
+    .referral-group-check input{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;margin:0!important;accent-color:#0f7665}
     .referral-selected-list{display:grid;gap:8px;margin-top:8px}
     .referral-selected-card{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center;background:#f2f8f6;border:1px solid #d4e1de;border-radius:12px;padding:8px 10px}
     .referral-selected-card img,.referral-selected-card .fallback{width:44px;height:44px;border-radius:9px;object-fit:cover;border:1px solid #d5e1de;background:#fff}
@@ -2258,7 +2259,10 @@
           <div id="referralStudentResults" class="referral-student-results hidden"></div>
           <div class="referral-selected-toolbar">
             <b>الطلاب المحددون: <span id="referralSelectedCount">0</span></b>
-            <button type="button" class="referral-select-all-btn" id="referralSelectAllVisible">☑ تحديد جميع الظاهر</button>
+            <label class="referral-group-check" title="تحديد مجموعة من الطلاب">
+              <input type="checkbox" id="referralSelectGroupCheck">
+              <span>تحديد مجموعة</span>
+            </label>
           </div>
           <div id="referralSelectedStudents" class="referral-selected-list"></div>
         </div>
@@ -3075,14 +3079,13 @@ async function toggleReferralStudent(idno){
   await renderReferralSelectedStudents();
   await renderReferralStudentResults($('referralStudentName')?.value||'');
 }
-async function selectAllVisibleReferralStudents(){
+async function setVisibleReferralStudentsSelection(checked){
   const visible=getReferralFilteredStudents($('referralStudentName')?.value||'');
   if(!visible.length) return;
-  const allSelected=visible.every(s=>referralSelectedIds.has(String(s.idno||'')));
   visible.forEach(s=>{
     const id=String(s.idno||'');
-    if(allSelected) referralSelectedIds.delete(id);
-    else referralSelectedIds.add(id);
+    if(checked) referralSelectedIds.add(id);
+    else referralSelectedIds.delete(id);
   });
   await renderReferralSelectedStudents();
   await renderReferralStudentResults($('referralStudentName')?.value||'');
@@ -3156,7 +3159,7 @@ if($('referralGrade')) $('referralGrade').addEventListener('change',()=>{
   renderReferralStudentResults($('referralStudentName')?.value||'');
 });
 if($('referralClass')) $('referralClass').addEventListener('change',()=>renderReferralStudentResults($('referralStudentName')?.value||''));
-if($('referralSelectAllVisible')) $('referralSelectAllVisible').onclick=selectAllVisibleReferralStudents;
+if($('referralSelectGroupCheck')) $('referralSelectGroupCheck').onchange=e=>setVisibleReferralStudentsSelection(!!e.target.checked);
 document.addEventListener('click',e=>{
   const picker=$('referralStudentPicker');
   if(picker && !picker.contains(e.target)) $('referralStudentResults')?.classList.add('hidden');
