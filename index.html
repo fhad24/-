@@ -2731,7 +2731,7 @@ async function cloudPullToLocal(){
   const data=await cloudApi('pull_all');
 
   const students=(data.students||[]).map(s=>({
-    name:s.name||'', idno:String(s.idno||''), phone:s.phone||'', grade:s.grade||'', classroom:s.classroom||'',
+    name:s.name||'', idno:String(s.idno||''), phone:s.phone||'', grade:s.grade||'', classroom:studentClassKey(s.classroom)||s.classroom||'',
     calendar:s.calendar||'', birth:s.birth||'', verification:s.verification||'مؤكد',
     registered:s.registered!==false, hasFace:!!s.has_face, hasId:!!s.has_id,
     cropStatus:s.crop_status||'', referenceNo:s.reference_no||'', registrationDate:s.registration_date||'',
@@ -2886,8 +2886,12 @@ function dedupeStudents(list){
 function getStudents(){
   let raw=[];
   try{ raw=JSON.parse(localStorage.getItem('students')||'[]'); }catch(e){ raw=[]; }
-  const clean=dedupeStudents(raw);
-  if(clean.length!==raw.length) localStorage.setItem('students',JSON.stringify(clean));
+  const clean=dedupeStudents(raw).map(s=>{
+    const fixedClass=studentClassKey(s.classroom);
+    return fixedClass && fixedClass!==String(s.classroom||'') ? {...s,classroom:fixedClass} : s;
+  });
+  const changed=clean.length!==raw.length || clean.some((s,i)=>String(s.classroom||'')!==String(raw[i]?.classroom||''));
+  if(changed) localStorage.setItem('students',JSON.stringify(clean));
   return clean;
 }
 
@@ -3663,11 +3667,12 @@ async function importMadrasatiPlacements(file){
       const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
 
       const grade=gradeRaw!=='' ? normalizeMadrasatiText(gradeRaw) : '';
-      const classroom=classRaw!=='' ? normalizeMadrasatiText(classRaw) : '';
+      const classroomRaw=classRaw!=='' ? normalizeMadrasatiText(classRaw) : '';
+      const classroom=classroomRaw ? studentClassKey(classroomRaw) : '';
 
       const old=students[idx];
       const newGrade=grade || old.grade || '';
-      const newClass=classroom || old.classroom || '';
+      const newClass=classroom || studentClassKey(old.classroom) || old.classroom || '';
 
       if(String(old.grade||'')===String(newGrade) && String(old.classroom||'')===String(newClass)){
         unchanged++;
@@ -5993,7 +5998,7 @@ function exportStudentsExcel(rows){
       'رقم الهوية/الإقامة':x.idno||'',
       'الجوال':x.phone||'',
       'الصف':x.grade||'',
-      'الفصل':x.classroom||'',
+      'الفصل':studentClassKey(x.classroom)||x.classroom||'',
       'التحقق':x.verification||'',
       'الرقم المرجعي':x.referenceNo||'',
       'تاريخ التسجيل':x.registrationDate||x.birth||'',
@@ -6008,7 +6013,7 @@ function exportStudentsExcel(rows){
     const headers=['م','اسم الطالب','رقم الهوية/الإقامة','الجوال','الصف','الفصل','التحقق'];
     const lines=[headers.map(csvEscape).join(',')];
     rows.forEach((x,i)=>lines.push([
-      i+1,x.name,x.idno,x.phone,x.grade,x.classroom,x.verification
+      i+1,x.name,x.idno,x.phone,x.grade,studentClassKey(x.classroom)||x.classroom,x.verification
     ].map(csvEscape).join(',')));
     downloadBlob(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}),'بيانات_الطلاب.csv');
   }
@@ -6016,7 +6021,7 @@ function exportStudentsExcel(rows){
 
 function exportStudentsWord(rows){
   if(!rows.length){ toast('لا توجد بيانات للتصدير'); return; }
-  const trs=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.name||''}</td><td>${x.idno||''}</td><td>${x.phone||''}</td><td>${x.grade||''}</td><td>${x.classroom||''}</td><td>${x.verification||''}</td></tr>`).join('');
+  const trs=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.name||''}</td><td>${x.idno||''}</td><td>${x.phone||''}</td><td>${x.grade||''}</td><td>${studentClassKey(x.classroom)||x.classroom||''}</td><td>${x.verification||''}</td></tr>`).join('');
   const doc=`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>body{font-family:Tahoma,Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:8px;text-align:center}h2{text-align:center}
     .admin-bulk-actions{align-items:center}
     .print-all-check{display:inline-flex;align-items:center;gap:6px;margin:0;padding:0 6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -6385,7 +6390,7 @@ function printStudents(rows){
   if(!rows.length){ toast('لا توجد بيانات للطباعة'); return; }
   const w=window.open('','_blank');
   if(!w){ toast('اسمح بالنوافذ المنبثقة للطباعة'); return; }
-  const trs=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.name||''}</td><td>${x.idno||''}</td><td>${x.phone||''}</td><td>${x.grade||''}</td><td>${x.classroom||''}</td><td>${x.verification||''}</td></tr>`).join('');
+  const trs=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.name||''}</td><td>${x.idno||''}</td><td>${x.phone||''}</td><td>${x.grade||''}</td><td>${studentClassKey(x.classroom)||x.classroom||''}</td><td>${x.verification||''}</td></tr>`).join('');
   w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>طباعة الطلاب</title><style>body{font-family:Tahoma,Arial;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #777;padding:7px;text-align:center}@media print{button{display:none}}
     .admin-bulk-actions{align-items:center}
     .print-all-check{display:inline-flex;align-items:center;gap:6px;margin:0;padding:0 6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
