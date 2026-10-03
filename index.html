@@ -2522,6 +2522,37 @@
       #landingLoginCard .login-brand-credits{grid-template-columns:1fr!important}
     }
 
+
+    .bulk-permission-users-box{
+      margin-top:16px;padding:14px;border:1px solid #cfe0dc;border-radius:16px;background:#f8fbfa
+    }
+    .bulk-permission-users-head{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px
+    }
+    .bulk-permission-users-head b{display:block;font-size:15px;color:#173b34;margin-bottom:4px}
+    .bulk-permission-users-head span{display:block;font-size:11px;color:#637a74;line-height:1.6}
+    .bulk-permission-users-head button{
+      border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:10px;padding:9px 12px;
+      font-family:inherit;font-weight:800;cursor:pointer
+    }
+    .bulk-permission-users-list{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:260px;overflow:auto;padding:2px
+    }
+    .bulk-permission-user{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #dae6e3;
+      border-radius:11px;background:#fff;padding:10px 12px;font-size:12px;color:#173b34;cursor:pointer
+    }
+    .bulk-permission-user .meta{min-width:0;text-align:right}
+    .bulk-permission-user .meta b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bulk-permission-user .meta span{display:block;color:#71827e;font-size:10px;margin-top:3px;direction:ltr;text-align:right}
+    .bulk-permission-user input{width:18px;height:18px;flex:0 0 18px}
+    .bulk-permission-users-count{font-size:11px;color:#0f7665;font-weight:800;margin-top:10px;text-align:center}
+    @media(max-width:700px){
+      .bulk-permission-users-list{grid-template-columns:1fr}
+      .bulk-permission-users-head{align-items:stretch}
+      .bulk-permission-users-head button{width:100%}
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -6837,8 +6868,21 @@ function ensureAdminSettings(){
         <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
         </div>
+
+        <div id="bulkPermissionUsersBox" class="bulk-permission-users-box">
+          <div class="bulk-permission-users-head">
+            <div>
+              <b>تحديد المستخدمين لتطبيق الصلاحيات</b>
+              <span>حدد مستخدمًا واحدًا أو مجموعة مستخدمين، ثم طبّق الصلاحيات المحددة أعلاه عليهم فقط.</span>
+            </div>
+            <button type="button" id="toggleAllBulkPermissionUsers">☑ تحديد كل المستخدمين</button>
+          </div>
+          <div id="bulkPermissionUsersList" class="bulk-permission-users-list"></div>
+          <div id="bulkPermissionUsersCount" class="bulk-permission-users-count">تم تحديد 0 مستخدم</div>
+        </div>
+
         <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
-        <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 إضافة هذه الصلاحيات لكل المستخدمين</button>
+        <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 تطبيق الصلاحيات على المستخدمين المحددين</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -7077,6 +7121,7 @@ function ensureAdminSettings(){
     const btn=document.getElementById('applyBulkUserPermissions');
     const oldText=btn.textContent;
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+
     if(permissions.includes('referralReview')){
       const gradePerms=[...document.querySelectorAll('.admin-new-referral-grade:checked')].map(x=>x.value);
       if(!gradePerms.length){
@@ -7091,15 +7136,34 @@ function ensureAdminSettings(){
       return;
     }
 
+    const selectedUsernames=[...document.querySelectorAll('#bulkPermissionUsersList .bulk-user-perm-check:checked')]
+      .map(x=>String(x.value||''))
+      .filter(Boolean);
+
+    if(!selectedUsernames.length){
+      alert('حدد مستخدمًا واحدًا على الأقل لتطبيق الصلاحيات عليه');
+      return;
+    }
+
+    const selectedSet=new Set(selectedUsernames);
     const users=getAdminUsers();
+
     users.forEach(u=>{
+      if(!selectedSet.has(String(u.username||''))) return;
       u.permissions=[...permissions];
       if(!String(u.password||'').trim()){
         u.password=String(u.civilId||u.username||'').trim();
       }
     });
+
     saveAdminUsers(users);
     renderAdminUsersSettings();
+
+    // أعد تحديد نفس المستخدمين بعد تحديث القائمة.
+    document.querySelectorAll('#bulkPermissionUsersList .bulk-user-perm-check').forEach(x=>{
+      x.checked=selectedSet.has(String(x.value||''));
+    });
+    document.querySelector('#bulkPermissionUsersList .bulk-user-perm-check')?.dispatchEvent(new Event('change'));
 
     btn.disabled=true;
     btn.textContent='جاري حفظ الصلاحيات...';
@@ -7121,7 +7185,8 @@ function ensureAdminSettings(){
 
       if(!token) throw new Error('NO_CLOUD_SESSION');
 
-      const payloadUsers=users.map(u=>({
+      const selectedUsers=users.filter(u=>selectedSet.has(String(u.username||'')));
+      const payloadUsers=selectedUsers.map(u=>({
         username:u.username,
         civilId:u.civilId||u.username,
         name:u.name,
@@ -7135,12 +7200,13 @@ function ensureAdminSettings(){
       let verified=await cloudApi('pull_all');
       const expected=[...permissions].sort().join('|');
       let mismatched=(verified.users||[])
-        .filter(u=>!u.is_owner)
+        .filter(u=>!u.is_owner && selectedSet.has(String(u.username||'')))
         .filter(u=>(Array.isArray(u.permissions)?u.permissions:[]).slice().sort().join('|')!==expected);
 
       if(mismatched.length){
         await cloudApi('sync_users',{users:mismatched.map(u=>({
           username:u.username,
+          civilId:u.civil_id||u.username,
           name:u.name,
           role:u.role,
           password:String(users.find(x=>String(x.username)===String(u.username||''))?.password||u.civil_id||u.username||''),
@@ -7152,6 +7218,7 @@ function ensureAdminSettings(){
       const localByUser=new Map(users.map(u=>[String(u.username),u]));
       const finalUsers=(verified.users||[]).filter(u=>!u.is_owner).map(u=>({
         username:String(u.username||''),
+        civilId:String(u.civil_id||u.username||''),
         name:u.name||'',
         role:u.role||'معلم',
         permissions:Array.isArray(u.permissions)?u.permissions:[],
@@ -7161,7 +7228,12 @@ function ensureAdminSettings(){
       localStorage.setItem('adminUsers',JSON.stringify(finalUsers));
       renderAdminUsersSettings();
 
-      alert(`✅ تم حفظ الصلاحيات لجميع المستخدمين (${finalUsers.length} مستخدم)`);
+      document.querySelectorAll('#bulkPermissionUsersList .bulk-user-perm-check').forEach(x=>{
+        x.checked=selectedSet.has(String(x.value||''));
+      });
+      document.querySelector('#bulkPermissionUsersList .bulk-user-perm-check')?.dispatchEvent(new Event('change'));
+
+      alert(`✅ تم تطبيق الصلاحيات على ${selectedUsernames.length} مستخدم فقط`);
     }catch(e){
       console.error('bulk permissions cloud sync',e);
       alert('تعذر الحفظ السحابي للصلاحيات. سجّل الخروج ثم ادخل للإدارة مرة واحدة وأعد المحاولة.');
@@ -7272,6 +7344,65 @@ async function refreshAdminUsersFromCloud(){
   }
 }
 
+function renderBulkPermissionUsers(){
+  const host=document.getElementById('bulkPermissionUsersList');
+  const count=document.getElementById('bulkPermissionUsersCount');
+  const toggle=document.getElementById('toggleAllBulkPermissionUsers');
+  if(!host) return;
+
+  const previous=new Set(
+    [...host.querySelectorAll('.bulk-user-perm-check:checked')]
+      .map(x=>String(x.value||''))
+      .filter(Boolean)
+  );
+
+  const users=getAdminUsers()
+    .slice()
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+
+  if(!users.length){
+    host.innerHTML='<div class="hint" style="grid-column:1/-1;padding:14px">لا يوجد مستخدمون حاليًا.</div>';
+    if(count) count.textContent='تم تحديد 0 مستخدم';
+    if(toggle) toggle.disabled=true;
+    return;
+  }
+
+  host.innerHTML=users.map(u=>{
+    const username=String(u.username||'');
+    const civil=String(u.civilId||u.username||'');
+    const checked=previous.has(username)?'checked':'';
+    return `<label class="bulk-permission-user">
+      <div class="meta">
+        <b>${u.name||username}</b>
+        <span>${civil}</span>
+      </div>
+      <input class="bulk-user-perm-check" type="checkbox" value="${username}" ${checked}>
+    </label>`;
+  }).join('');
+
+  const update=()=>{
+    const boxes=[...host.querySelectorAll('.bulk-user-perm-check')];
+    const selected=boxes.filter(x=>x.checked);
+    if(count) count.textContent=`تم تحديد ${selected.length} من ${boxes.length} مستخدم`;
+    if(toggle){
+      const allChecked=boxes.length>0 && boxes.every(x=>x.checked);
+      toggle.disabled=false;
+      toggle.textContent=allChecked?'☐ إلغاء تحديد كل المستخدمين':'☑ تحديد كل المستخدمين';
+    }
+  };
+
+  host.querySelectorAll('.bulk-user-perm-check').forEach(x=>x.onchange=update);
+  if(toggle){
+    toggle.onclick=()=>{
+      const boxes=[...host.querySelectorAll('.bulk-user-perm-check')];
+      const allChecked=boxes.length>0 && boxes.every(x=>x.checked);
+      boxes.forEach(x=>x.checked=!allChecked);
+      update();
+    };
+  }
+  update();
+}
+
 function renderAdminUsersSettings(){
   const host=document.getElementById('adminUsersList'); if(!host) return;
   const p=getAdminProfile(), users=getAdminUsers();
@@ -7361,6 +7492,7 @@ function renderAdminUsersSettings(){
   document.querySelectorAll('[data-perm-admin-user]').forEach(btn=>btn.onclick=()=>{
     openUserPermissionEditor(String(btn.dataset.permAdminUser||''));
   });
+  renderBulkPermissionUsers();
 }
 function openUserPermissionEditor(username){
   const users=getAdminUsers();
