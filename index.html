@@ -3558,13 +3558,21 @@ function studentGradeKey(v){
   return String(v??'').trim();
 }
 
+function classroomNumberToLetter(n){
+  const letters=['أ','ب','ج','د','هـ','و','ز','ح','ط','ي','ك','ل','م','ن','س','ع','ف','ص','ق','ر','ش','ت','ث','خ','ذ','ض','ظ','غ'];
+  const num=Number(n);
+  return Number.isFinite(num) && num>=1 ? (letters[num-1] || String(num)) : '';
+}
+
 function studentClassKey(v){
   let s=normalizeDigitsText(v).trim().replace(/\s+/g,' ');
   if(!s) return '';
 
-  // إذا كان الفصل رقماً نأخذ الرقم الأخير من الاسم المستورد.
+  // أي رقم فصل يتحول آلياً إلى حرف: 1=أ، 2=ب، 3=ج، 4=د...
   const nums=s.match(/\d+/g);
-  if(nums && nums.length) return String(Number(nums[nums.length-1]));
+  if(nums && nums.length){
+    return classroomNumberToLetter(Number(nums[nums.length-1]));
+  }
 
   // تنظيف صيغ مدرستي مثل: "ال أ" أو "الفصل أ" أو "الأول الثانوي : أ".
   s=s
@@ -3575,11 +3583,9 @@ function studentClassKey(v){
     .replace(/\s+/g,' ')
     .trim();
 
-  // صيغ مثل "ال ج" أو "ال أ" تصبح الحرف نفسه.
   const letter=s.match(/(?:^|\s)([أإآابتثجحخدذرزسشصضطظعغفقكلمنهوي])(?:\s|$)/);
   if(letter) return letter[1].replace(/[إآ]/,'أ');
 
-  // وإذا بقيت كلمة قصيرة نعرضها كما هي بعد التنظيف.
   return s;
 }
 
