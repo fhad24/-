@@ -1408,6 +1408,11 @@
         grid-template-columns:1fr 1.4fr 1fr!important;
       }
     }
+
+    /* REAL PAGE CSS: checkbox immediately right of name in preparation picker */
+    .att-name-line{display:flex!important;direction:rtl!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;flex-wrap:nowrap!important}
+    .att-student-select-check{display:inline-flex!important;position:static!important;transform:none!important;align-items:center!important;justify-content:center!important;width:20px!important;height:20px!important;min-width:20px!important;margin:0!important;padding:0!important;opacity:1!important;visibility:visible!important}
+    .att-student-select-check input{display:block!important;-webkit-appearance:checkbox!important;appearance:auto!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0!important;opacity:1!important;visibility:visible!important;accent-color:#0f7665!important}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4862,9 +4867,9 @@ async function renderAttendanceStudentList(){
     return `
     <div class="att-student-row ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
       <div class="att-student-main">
-        <div class="att-name-line">
-          ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
-          <b>${s.name}</b>
+        <div class="att-name-line" style="display:flex!important;direction:rtl!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;flex-wrap:nowrap!important">
+          ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;position:static!important;transform:none!important;width:20px!important;height:20px!important;min-width:20px!important;margin:0!important;padding:0!important;order:0!important"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''} style="display:block!important;appearance:auto!important;-webkit-appearance:checkbox!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0!important;opacity:1!important;visibility:visible!important;accent-color:#0f7665!important"></label>`:''}
+          <b style="order:1!important">${s.name}</b>
         </div>
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
