@@ -1490,6 +1490,43 @@
     .attendance-class-row{
       grid-template-columns:1fr!important;
     }
+
+    /* الحضور فقط: التحديد يمين صورة الطالب */
+    .att-student-photo-wrap{
+      position:relative!important;
+      overflow:visible!important;
+    }
+    .att-student-photo-wrap .att-student-select-check{
+      position:absolute!important;
+      right:-26px!important;
+      left:auto!important;
+      top:50%!important;
+      transform:translateY(-50%)!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      padding:0!important;
+      z-index:8!important;
+      opacity:1!important;
+      visibility:visible!important;
+    }
+    .att-student-photo-wrap .att-student-select-check input{
+      display:block!important;
+      width:18px!important;
+      height:18px!important;
+      min-width:18px!important;
+      min-height:18px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4943,13 +4980,15 @@ async function renderAttendanceStudentList(){
     return `
     <div class="att-student-row ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
       <div class="att-student-main">
-        <div class="att-name-line" style="display:flex!important;direction:rtl!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;flex-wrap:nowrap!important">
-          ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب" style="display:inline-flex!important;align-items:center!important;justify-content:center!important;position:static!important;transform:none!important;width:20px!important;height:20px!important;min-width:20px!important;margin:0!important;padding:0!important;order:0!important"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''} style="display:block!important;appearance:auto!important;-webkit-appearance:checkbox!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0!important;opacity:1!important;visibility:visible!important;accent-color:#0f7665!important"></label>`:''}
-          <b style="order:1!important">${s.name}</b>
+        <div class="att-name-line">
+          <b>${s.name}</b>
         </div>
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
-      <div class="att-student-photo-wrap">${photoHTML}</div>
+      <div class="att-student-photo-wrap">
+        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
+        ${photoHTML}
+      </div>
       <span class="att-inline-performance">
         <span class="att-inline-late">⏰ ${perf.late}</span>
         <span class="att-inline-absent">✕ ${perf.absent}</span>
