@@ -1936,6 +1936,16 @@
           اختر الطالب، ثم التقط صورة جديدة. ستتم المقارنة تلقائياً.
         </div>
 
+        <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
+        <div class="attendance-camera-buttons">
+          <button type="button" class="dark" id="attendanceCaptureBtn">📷 التقاط صورة</button>
+          <button type="button" id="attendanceDeviceCameraBtn">📱 كاميرا الجهاز</button>
+          <button type="button" id="attendanceUploadPhotoBtn">🖼 رفع صورة</button>
+        </div>
+        <input id="attendancePhotoInput" class="hidden" type="file" accept="image/*">
+      </div>
+    </div>
+
         <div id="attendanceEditTimeWrap" class="hidden">
           <div class="attendance-edit-title">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
           <input id="attendanceEditDate" type="hidden">
@@ -1982,15 +1992,6 @@
           <div class="hint attendance-edit-hint">اليوم أولاً، ثم التاريخ الهجري، ثم الوقت. استخدم + و− لزيادة أو تقليل الساعات والدقائق.</div>
         </div>
 
-        <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
-        <div class="attendance-camera-buttons">
-          <button type="button" class="dark" id="attendanceCaptureBtn">📷 التقاط صورة</button>
-          <button type="button" id="attendanceDeviceCameraBtn">📱 كاميرا الجهاز</button>
-          <button type="button" id="attendanceUploadPhotoBtn">🖼 رفع صورة</button>
-        </div>
-        <input id="attendancePhotoInput" class="hidden" type="file" accept="image/*">
-      </div>
-    </div>
 
     <div class="attendance-modal-footer">
       <button type="button" class="btn btn-primary" id="saveAttendanceStudentBtn">حفظ</button>
@@ -5925,6 +5926,18 @@ function printStudents(rows){
       #attendanceEditTimeWrap .hijri-date-controls{
         grid-template-columns:1fr 1.4fr 1fr!important;
       }
+    }
+
+    /* Full-width date/time editor below both modal columns */
+    .attendance-modal-card{
+      width:min(1180px,97vw)!important;
+    }
+    #attendanceEditTimeWrap{
+      width:100%!important;
+      max-width:none!important;
+      margin:14px 0 0!important;
+      box-sizing:border-box!important;
+      clear:both!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
