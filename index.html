@@ -2524,21 +2524,40 @@ function ensureAdminSettings(){
   document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=updateNewPermToggleText);
   updateNewPermToggleText();
 
-  document.getElementById('applyBulkUserPermissions').onclick=()=>{
+  document.getElementById('applyBulkUserPermissions').onclick=async()=>{
+    const btn=document.getElementById('applyBulkUserPermissions');
+    const oldText=btn.textContent;
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
     if(!permissions.length){
       alert('حدد صلاحية واحدة على الأقل لإضافتها للجميع');
       return;
     }
+
     const users=getAdminUsers();
     users.forEach(u=>{
       const current=Array.isArray(u.permissions)?u.permissions:[];
       u.permissions=[...new Set([...current,...permissions])];
     });
     saveAdminUsers(users);
-    cloudApi('sync_users',{users}).catch(e=>console.warn('cloud bulk users',e));
     renderAdminUsersSettings();
-    alert('✅ تمت إضافة الصلاحيات المحددة لجميع المستخدمين بدون حذف صلاحياتهم السابقة');
+
+    btn.disabled=true;
+    btn.textContent='جاري حفظ الصلاحيات للجميع...';
+    try{
+      if(!localStorage.getItem('cloudAdminToken')){
+        const p=getAdminProfile();
+        const login=await cloudApi('login',{username:p.username,password:p.password},false);
+        if(login?.token) localStorage.setItem('cloudAdminToken',login.token);
+      }
+      await cloudApi('sync_users',{users});
+      alert(`✅ تم حفظ الصلاحيات المحددة لجميع المستخدمين (${users.length} مستخدم) بدون حذف صلاحياتهم السابقة`);
+    }catch(e){
+      console.error('bulk permissions cloud sync',e);
+      alert('تم حفظ الصلاحيات على هذا الجهاز، لكن تعذرت مزامنتها مع بقية الأجهزة. أعد تسجيل الدخول للإدارة ثم جرّب مرة أخرى.');
+    }finally{
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
   };
 
   document.getElementById('adminUserSearch').oninput=()=>renderAdminUsersSettings();
