@@ -1224,6 +1224,190 @@
       #attendanceEditTimeWrap .attendance-day-select{width:100%!important}
       #attendanceEditTimeWrap .hijri-date-controls{grid-template-columns:1fr 1fr!important}
     }
+
+    /* FINAL: stretch across available space, smaller controls, month visible */
+    #attendanceEditTimeWrap{
+      width:100%!important;
+      max-width:none!important;
+      margin:12px 0!important;
+      padding:14px 16px!important;
+      border:1px solid #d6e4e0!important;
+      border-radius:18px!important;
+      background:linear-gradient(180deg,#fbfdfc 0%,#f4faf8 100%)!important;
+      box-sizing:border-box!important;
+      overflow:hidden!important;
+    }
+    #attendanceEditTimeWrap .attendance-edit-title{
+      font-size:20px!important;
+      line-height:1.2!important;
+      font-weight:900!important;
+      color:#123c34!important;
+      text-align:center!important;
+      justify-content:center!important;
+      margin:0 0 10px!important;
+    }
+    #attendanceEditTimeWrap .attendance-edit-grid{
+      display:grid!important;
+      grid-template-columns:minmax(150px,.8fr) minmax(360px,2fr) minmax(135px,.75fr)!important;
+      justify-content:stretch!important;
+      gap:12px!important;
+      align-items:start!important;
+      direction:rtl!important;
+      width:100%!important;
+    }
+    #attendanceEditTimeWrap .attendance-edit-section{
+      min-width:0!important;
+      padding:0!important;
+      border:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      box-sizing:border-box!important;
+    }
+    #attendanceEditTimeWrap .attendance-day-section,
+    #attendanceEditTimeWrap .attendance-date-section{
+      padding-top:26px!important;
+    }
+    #attendanceEditTimeWrap .attendance-time-section{
+      padding:0 12px 0 0!important;
+      border-right:1px solid #d5e2de!important;
+      direction:rtl!important;
+    }
+    #attendanceEditTimeWrap .attendance-section-title{
+      text-align:center!important;
+      font-size:15px!important;
+      font-weight:900!important;
+      color:#29463f!important;
+      margin:0 0 7px!important;
+      line-height:1.2!important;
+    }
+    #attendanceEditTimeWrap .attendance-day-select{
+      width:100%!important;
+      height:44px!important;
+      border:1px solid #c9dbd6!important;
+      border-radius:11px!important;
+      background:#fff!important;
+      font-family:inherit!important;
+      font-size:16px!important;
+      font-weight:800!important;
+      color:#173b34!important;
+      text-align:right!important;
+      padding:0 10px!important;
+      box-sizing:border-box!important;
+    }
+    #attendanceEditTimeWrap .hijri-date-controls{
+      display:grid!important;
+      grid-template-columns:minmax(74px,.7fr) minmax(135px,1.35fr) minmax(88px,.85fr)!important;
+      justify-content:stretch!important;
+      gap:8px!important;
+      direction:rtl!important;
+      width:100%!important;
+    }
+    #attendanceEditTimeWrap #attendanceHijriMonth{
+      display:block!important;
+    }
+    #attendanceEditTimeWrap .hijri-date-controls select{
+      width:100%!important;
+      min-width:0!important;
+      height:44px!important;
+      border:1px solid #c9dbd6!important;
+      border-radius:11px!important;
+      background:#fff!important;
+      font-family:inherit!important;
+      font-size:15px!important;
+      font-weight:800!important;
+      color:#173b34!important;
+      text-align:center!important;
+      padding:0 4px!important;
+      box-sizing:border-box!important;
+    }
+    #attendanceEditTimeWrap .time-spinner-wrap{
+      display:grid!important;
+      grid-template-columns:48px 12px 48px!important;
+      gap:5px!important;
+      align-items:center!important;
+      justify-content:center!important;
+      direction:rtl!important;
+      max-width:118px!important;
+      margin:0 auto!important;
+    }
+    #attendanceEditTimeWrap .time-spinner{
+      display:grid!important;
+      grid-template-rows:auto 22px 36px 22px!important;
+      gap:0!important;
+      min-width:0!important;
+    }
+    #attendanceEditTimeWrap .time-spinner-label{
+      text-align:center!important;
+      font-size:10px!important;
+      font-weight:900!important;
+      color:#60736e!important;
+      margin:0 0 2px!important;
+      line-height:1.1!important;
+    }
+    #attendanceEditTimeWrap .time-spinner button{
+      width:48px!important;
+      height:22px!important;
+      border:1px solid #c9dbd6!important;
+      background:#fff!important;
+      border-radius:7px 7px 0 0!important;
+      font-size:17px!important;
+      font-weight:900!important;
+      color:#173b34!important;
+      line-height:1!important;
+      padding:0!important;
+      cursor:pointer!important;
+    }
+    #attendanceEditTimeWrap .time-spinner button:last-child{
+      border-radius:0 0 7px 7px!important;
+    }
+    #attendanceEditTimeWrap .time-spinner input{
+      width:48px!important;
+      min-width:0!important;
+      height:36px!important;
+      border:1px solid #c9dbd6!important;
+      border-top:0!important;
+      border-bottom:0!important;
+      border-radius:0!important;
+      background:#fff!important;
+      color:#102f29!important;
+      text-align:center!important;
+      font-size:19px!important;
+      font-weight:900!important;
+      padding:0!important;
+      box-sizing:border-box!important;
+      letter-spacing:0!important;
+    }
+    #attendanceEditTimeWrap .time-colon{
+      font-size:18px!important;
+      font-weight:900!important;
+      color:#173b34!important;
+      text-align:center!important;
+      padding-top:15px!important;
+      align-self:center!important;
+    }
+    #attendanceEditTimeWrap .attendance-edit-hint{
+      margin-top:10px!important;
+      font-size:11px!important;
+      color:#6c7f79!important;
+      text-align:right!important;
+    }
+    @media(max-width:820px){
+      #attendanceEditTimeWrap{padding:12px!important}
+      #attendanceEditTimeWrap .attendance-edit-grid{
+        grid-template-columns:1fr!important;
+        gap:10px!important;
+      }
+      #attendanceEditTimeWrap .attendance-day-section,
+      #attendanceEditTimeWrap .attendance-date-section{padding-top:0!important}
+      #attendanceEditTimeWrap .attendance-time-section{
+        border-right:0!important;
+        border-top:1px solid #d5e2de!important;
+        padding:10px 0 0!important;
+      }
+      #attendanceEditTimeWrap .hijri-date-controls{
+        grid-template-columns:1fr 1.4fr 1fr!important;
+      }
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
