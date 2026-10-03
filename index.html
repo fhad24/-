@@ -2859,7 +2859,7 @@ async function cloudPushLocalData(){
     }
     await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
     const p=getAdminProfile();
-    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true},...getAdminUsers()];
+    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true},...getAdminUsers()];
     await cloudApi('sync_users',{users});
     await cloudApi('save_settings',{settings:getSchoolSettings()});
     localStorage.setItem('cloudInitialSyncDone','1');
@@ -3815,7 +3815,7 @@ function getCurrentLoggedAdminUser(){
     civil_id:p.username||'',
     name:p.displayName||'المدير',
     role:'مدير',
-    permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],
+    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],
     is_owner:true
   };
 }
@@ -3866,6 +3866,7 @@ function configureUserDashboard(){
     ['attendance','تحضير الطلاب 🕘','attendance'],
     ['reports','التقارير 📊','reports'],
     ['editStudents','تعديل بيانات الطلاب ✏️','data'],
+    ['addStudent','إضافة طالب ➕','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['photos','تصوير الطلاب 📷','photos'],
@@ -3885,6 +3886,10 @@ function configureUserDashboard(){
     }
     if(action==='data'){
       document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.remove('hidden'));
+      return;
+    }
+    if(action==='addStudent'){
+      if(typeof openAddStudentModal==='function') openAddStudentModal();
       return;
     }
     if(action==='settings'){
@@ -3960,7 +3965,7 @@ $('adminLoginBtn').onclick=async()=>{
   if(user==='1015401902' && pass==='13111111'){
     localStorage.setItem('currentLocalAdminUser',JSON.stringify({
       username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
-      permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
     }));
     localStorage.removeItem('cloudAdminUser');
     localStorage.setItem('adminLoggedIn','1');
@@ -4018,7 +4023,7 @@ $('adminLoginBtn').onclick=async()=>{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
         name:String(p.displayName||'المدير'),role:'مدير',
-        permissions:['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
+        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'],is_owner:true
       }));
       localStorage.removeItem('cloudAdminUser');
     }
@@ -4426,6 +4431,7 @@ function ensureAdminSettings(){
         </div>
         <div class="admin-permissions">
           <label class="admin-permission">تعديل بيانات الطلاب <input class="admin-new-perm" value="editStudents" type="checkbox" checked></label>
+          <label class="admin-permission">إضافة طالب <input class="admin-new-perm" value="addStudent" type="checkbox" checked></label>
           <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
           <label class="admin-permission">حذف الطلاب <input class="admin-new-perm" value="deleteStudents" type="checkbox" checked></label>
           <label class="admin-permission">تحضير الطلاب <input class="admin-new-perm" value="attendance" type="checkbox" checked></label>
@@ -4763,12 +4769,13 @@ function ensureAdminSettings(){
         let permissions=['attendance'];
         if(permText){
           const t=permText.toLowerCase();
-          if(t.includes('كل')) permissions=['editStudents','import','deleteStudents','attendance','reports','settings','madrasati','photos'];
+          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos'];
           else{
             permissions=[];
             if(t.includes('تحضير')) permissions.push('attendance');
             if(t.includes('تقرير')||t.includes('تصدير')) permissions.push('reports');
             if(t.includes('تعديل')) permissions.push('editStudents');
+            if(t.includes('إضافة طالب')||t.includes('اضافة طالب')) permissions.push('addStudent');
             if(t.includes('استيراد')||t.includes('excel')||t.includes('باركود')) permissions.push('import');
             if(t.includes('حذف')) permissions.push('deleteStudents');
             if(t.includes('مدرستي')) permissions.push('madrasati');
@@ -4841,6 +4848,7 @@ function renderAdminUsersSettings(){
   ) : users;
   const labels={
     editStudents:'تعديل بيانات الطلاب',
+    addStudent:'إضافة طالب',
     import:'استيراد البيانات',
     deleteStudents:'حذف الطلاب',
     attendance:'تحضير الطلاب',
@@ -4915,6 +4923,7 @@ function openUserPermissionEditor(username){
   const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const permItems=[
     ['editStudents','تعديل بيانات الطلاب'],
+    ['addStudent','إضافة طالب'],
     ['import','استيراد البيانات (Excel/صور/باركود)'],
     ['deleteStudents','حذف الطلاب'],
     ['attendance','تحضير الطلاب'],
