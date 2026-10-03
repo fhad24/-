@@ -3754,32 +3754,48 @@ async function openDeputyReferralsPage(){
   $('deputyReferrals')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','deputyReferrals');
 
-  if(!localStorage.getItem('cloudAdminToken')){
-    try{
-      const u=getCurrentLoggedAdminUser();
-      const username=String(u?.username||u?.civil_id||'').trim();
-      const localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username);
-      const password=String(localUser?.password||localUser?.civilId||localUser?.username||'').trim();
+  try{
+    const current=getCurrentLoggedAdminUser();
+    const username=String(current?.username||current?.civil_id||'').trim();
+
+    let localUser=null;
+    if(!isCurrentOwner()){
+      localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username)||null;
+    }
+
+    const storedCloud=(()=>{try{return JSON.parse(localStorage.getItem('cloudAdminUser')||'null')}catch(e){return null}})();
+    const cloudMatches=storedCloud && String(storedCloud.username||'').trim()===username;
+
+    if(!localStorage.getItem('cloudAdminToken') || !cloudMatches){
+      localStorage.removeItem('cloudAdminToken');
+      localStorage.removeItem('cloudAdminUser');
+
+      const p=getAdminProfile();
+      const password=isCurrentOwner()
+        ? String(p.password||'').trim()
+        : String(localUser?.password||localUser?.civilId||localUser?.username||'').trim();
+
       if(username && password){
         const login=await cloudApi('login',{username,password},false);
         if(login?.token){
           localStorage.setItem('cloudAdminToken',login.token);
-          if(login.user){
-            localStorage.setItem('cloudAdminUser',JSON.stringify({
-              ...login.user,
-              username:String(localUser?.username||username),
-              civil_id:String(localUser?.civilId||localUser?.username||username),
-              name:String(localUser?.name||login.user.name||username),
-              role:String(localUser?.role||login.user.role||'مستخدم'),
-              permissions:Array.isArray(localUser?.permissions)?localUser.permissions:(login.user.permissions||[]),
-              is_owner:false
-            }));
-          }
+          const mergedUser=isCurrentOwner()
+            ? login.user
+            : {
+                ...login.user,
+                username:String(localUser?.username||username),
+                civil_id:String(localUser?.civilId||localUser?.username||username),
+                name:String(localUser?.name||login.user?.name||username),
+                role:String(localUser?.role||login.user?.role||'مستخدم'),
+                permissions:Array.isArray(localUser?.permissions)?localUser.permissions:(login.user?.permissions||[]),
+                is_owner:false
+              };
+          if(mergedUser) localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
         }
       }
-    }catch(e){
-      console.warn('deputy cloud relogin',e);
     }
+  }catch(e){
+    console.warn('deputy cloud relogin',e);
   }
 
   loadDeputyReferrals();
@@ -3794,7 +3810,14 @@ async function cloudApi(action,payload={},useToken=true){
   const headers={'Content-Type':'application/json'};
   const token=localStorage.getItem('cloudAdminToken')||'';
   if(useToken && token) headers['x-app-token']=token;
-  const res=await fetch(CLOUD_API_URL,{method:'POST',headers,body:JSON.stringify({action,...payload})});
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  let res;
+  try{
+    res=await fetch(CLOUD_API_URL,{method:'POST',headers,body:JSON.stringify({action,...payload}),signal:controller.signal});
+  }finally{
+    clearTimeout(timer);
+  }
   const data=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
   return data;
@@ -5304,6 +5327,16 @@ $('adminLoginBtn').onclick=async()=>{
         permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true
       }));
       localStorage.removeItem('cloudAdminUser');
+      localStorage.removeItem('cloudAdminToken');
+      try{
+        const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
+        if(cloudLogin?.token){
+          localStorage.setItem('cloudAdminToken',cloudLogin.token);
+          if(cloudLogin.user) localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
+        }
+      }catch(cloudErr){
+        console.warn('owner cloud session login',cloudErr);
+      }
     }
     openDashboard();
     btn.disabled=false;
