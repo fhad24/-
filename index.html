@@ -2336,7 +2336,7 @@
         </div>
         <div class="referral-field">
           <label>التاريخ</label>
-          <input id="referralDate" type="date" required>
+          <input id="referralDate" type="text" readonly required placeholder="يُحسب تلقائيًا">
         </div>
         <div class="referral-field">
           <label>التاريخ الهجري</label>
@@ -2938,12 +2938,22 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-function updateReferralHijriDate(){
-  const el=$('referralHijriDate');
-  if(!el) return;
-  try{
-    el.value=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  }catch(e){ el.value=''; }
+function updateReferralDates(){
+  const now=new Date();
+  const greg=$('referralDate');
+  const hijri=$('referralHijriDate');
+  if(greg){
+    try{
+      greg.value=new Intl.DateTimeFormat('ar-SA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+    }catch(e){
+      greg.value=now.toISOString().slice(0,10);
+    }
+  }
+  if(hijri){
+    try{
+      hijri.value=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+    }catch(e){ hijri.value=''; }
+  }
 }
 let referralStudentPhotoUrls=[];
 function clearReferralStudentPhotoUrls(){
@@ -3034,9 +3044,7 @@ function populateReferralTeachers(){
   if(current && [...sel.options].some(o=>o.value===current)) sel.value=current;
 }
 function initReferralPage(){
-  const d=$('referralDate');
-  if(d && !d.value) d.value=new Date().toISOString().slice(0,10);
-  updateReferralHijriDate();
+  updateReferralDates();
   populateReferralStudents();
   populateReferralTeachers();
 }
