@@ -1441,6 +1441,51 @@
       order:1!important;
       margin:0!important;
     }
+
+    .attendance-saved-name-line{
+      display:flex!important;
+      direction:rtl!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      gap:8px!important;
+      width:max-content!important;
+      max-width:100%!important;
+      margin-left:auto!important;
+      margin-right:0!important;
+      flex-wrap:nowrap!important;
+    }
+    .attendance-saved-name-line .attendance-name-check{
+      display:inline-flex!important;
+      position:static!important;
+      order:0!important;
+      width:18px!important;
+      min-width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      padding:0!important;
+      align-items:center!important;
+      justify-content:center!important;
+      visibility:visible!important;
+      opacity:1!important;
+    }
+    .attendance-saved-name-line .attendance-name-check input{
+      display:block!important;
+      width:18px!important;
+      min-width:18px!important;
+      height:18px!important;
+      min-height:18px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+    }
+    .attendance-saved-name-line .attendance-saved-name{
+      order:1!important;
+      margin:0!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4077,7 +4122,7 @@ function todayKey(){return new Date().toISOString().slice(0,10)}
 async function renderAttendancePage(){
   if($('attendanceSelectAllRows')){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
-    $('attendanceSelectAllRows').style.display=attendanceListView==='late'?'none':'';
+    $('attendanceSelectAllRows').style.display='';
   }
   if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').classList.toggle('hidden', !['late','absent'].includes(attendanceListView));
   if($('attendanceWhatsAppSelected')){
@@ -4193,13 +4238,13 @@ async function renderAttendancePage(){
       }catch(e){}
 
       const isPresentRow=attendanceListView==='present';
+      const isLateRow=attendanceListView==='late';
       const isAbsentRow=attendanceListView==='absent';
-      const presentCheck=isPresentRow
+      const nameCheck=isPresentRow
         ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`
-        : '';
-      const absentCheck=isAbsentRow
-        ? `<label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
-        : '';
+        : (isLateRow||isAbsentRow)
+          ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
+          : '';
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
@@ -4208,7 +4253,7 @@ async function renderAttendancePage(){
             </div>
             <div>
               <div class="attendance-saved-name-line">
-                ${presentCheck}
+                ${nameCheck}
                 <div class="attendance-saved-name">${x.name||''}</div>
               </div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
@@ -4220,7 +4265,6 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
-            ${absentCheck}
             <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
