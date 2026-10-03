@@ -4073,14 +4073,16 @@ async function renderAttendancePage(){
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
-            ${photoHTML}
+            <div class="attendance-photo-select-wrap">
+              ${photoHTML}
+              <label class="attendance-row-check attendance-photo-check" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
+            </div>
             <div class="attendance-saved-name">${s.name||''}</div>
           </div>
           <div class="attendance-saved-id">${s.idno||'—'}</div>
           <div class="attendance-saved-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
           <div class="attendance-saved-time">—</div>
           <div class="attendance-saved-actions">
-            <label class="attendance-row-check attendance-row-check-by-photo" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
             <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
           </div>
         </div>`;
@@ -4131,7 +4133,10 @@ async function renderAttendancePage(){
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
-            ${photoHTML}
+            <div class="attendance-photo-select-wrap">
+              ${photoHTML}
+              <label class="attendance-row-check attendance-photo-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
+            </div>
             <div>
               <div class="attendance-saved-name">${x.name||''}</div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
@@ -4142,7 +4147,6 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
-            <label class="attendance-row-check attendance-row-check-by-photo" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
             <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
@@ -6036,6 +6040,54 @@ function printStudents(rows){
       .attendance-daily-meta .attendance-bulk-period{
         flex:1;
         min-width:0;
+      }
+    }
+
+    /* Checkbox to the right of photo WITHOUT moving student name */
+    .attendance-saved-student{
+      grid-template-columns:56px minmax(0,1fr)!important;
+      direction:rtl!important;
+      align-items:center!important;
+    }
+    .attendance-photo-select-wrap{
+      width:56px!important;
+      height:56px!important;
+      position:relative!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      flex:0 0 56px!important;
+      overflow:visible!important;
+    }
+    .attendance-photo-select-wrap .attendance-saved-avatar{
+      margin:0!important;
+    }
+    .attendance-photo-check{
+      position:absolute!important;
+      right:-24px!important;
+      top:50%!important;
+      transform:translateY(-50%)!important;
+      z-index:3!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .attendance-photo-check input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+    }
+    @media(max-width:1050px){
+      .attendance-saved-student{
+        grid-template-columns:46px minmax(0,1fr)!important;
+      }
+      .attendance-photo-select-wrap{
+        width:46px!important;
+        height:46px!important;
+        flex-basis:46px!important;
+      }
+      .attendance-photo-check{
+        right:-22px!important;
       }
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
