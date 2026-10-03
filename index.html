@@ -96,6 +96,11 @@
     body.admin-mode #landingLoginCard{display:none!important}
     #mainPublicNav{display:none!important}
     body:not(.admin-mode) header{display:none!important}
+    .logged-in-header-nav{display:none;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:10px 14px 14px;background:#0f6f60}
+    body.admin-mode .logged-in-header-nav{display:flex}
+    .logged-in-header-nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:14px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+    .logged-in-header-nav button:hover{background:#fff;color:#0f6f60}
+    @media(max-width:700px){.logged-in-header-nav{flex-direction:column}.logged-in-header-nav button{width:100%}}
     body:not(.admin-mode) #register{max-width:760px;margin:0 auto;padding-top:18px}
     body:not(.admin-mode) #register .notice{margin-top:0}
     .landing-login-card{max-width:430px;margin:18px auto;padding:24px;border-radius:20px}
@@ -2165,6 +2170,14 @@
     <div class="logo">مدرستي<br>بيانات</div>
   </div>
   <nav id="mainPublicNav" class="hidden"></nav>
+  <div id="loggedInHeaderNav" class="logged-in-header-nav">
+    <button type="button" id="headerAdminDashboardBtn">لوحة الإدارة 👥</button>
+    <button type="button" id="headerRegisterBtn">تسجيل جديد ➕</button>
+    <button type="button" id="headerEditBtn">تعديل بيانات الطالب ✏️</button>
+    <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
+    <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
+    <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
+  </div>
 </header>
 
 <main>
@@ -4758,6 +4771,38 @@ if($('userRegisterPageBtn')) $('userRegisterPageBtn').onclick=()=>openInternalPa
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
+function openAdminDashboardInternal(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('admin')?.classList.remove('hidden');
+  $('adminLoginModal')?.classList.add('hidden');
+  $('dashboard')?.classList.remove('hidden');
+  localStorage.setItem('activeMainPage','admin');
+  try{configureUserDashboard()}catch(e){}
+  try{ensureAdminToolbarVisible()}catch(e){}
+  try{renderAdmin()}catch(e){}
+}
+
+if($('headerAdminDashboardBtn')) $('headerAdminDashboardBtn').onclick=openAdminDashboardInternal;
+if($('headerRegisterBtn')) $('headerRegisterBtn').onclick=()=>openInternalPage('register');
+if($('headerEditBtn')) $('headerEditBtn').onclick=()=>openInternalPage('edit');
+if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('referral');
+if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
+  if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
+};
+
+if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
+  try{cloudApi('logout',{}).catch(()=>{})}catch(e){}
+  localStorage.removeItem('cloudAdminToken');
+  localStorage.removeItem('cloudAdminUser');
+  localStorage.removeItem('currentLocalAdminUser');
+  localStorage.removeItem('adminLoggedIn');
+  localStorage.removeItem('adminSettingsOpen');
+  localStorage.setItem('activeMainPage','register');
+  setAdminMode(false);
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('register')?.classList.remove('hidden');
+};
+
 
 function ensureAdminToolbarVisible(){
   if(isCurrentOwner()){
@@ -4769,6 +4814,16 @@ function ensureAdminToolbarVisible(){
 function setAdminMode(on){
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
+
+  if(on){
+    try{
+      const u=getCurrentLoggedAdminUser();
+      const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+      const owner=isCurrentOwner();
+      const deputyBtn=$('headerDeputyRepliesBtn');
+      if(deputyBtn) deputyBtn.style.display=(owner||perms.has('referralReview'))?'':'none';
+    }catch(e){}
+  }
   const adminTab = document.querySelector('.tab[data-page="admin"]');
   if(adminTab){
     adminTab.textContent = on ? 'الإعدادات ⚙️' : 'دخول الإدارة';
