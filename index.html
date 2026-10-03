@@ -2238,7 +2238,6 @@
         </div>
         <div class="admin-actions-grid">
           <input id="excelFileInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
-          <button class="admin-outline-btn primary" id="importExcelBtn" type="button">استيراد (كشف الطلاب / صور) 📥</button>
           <input id="madrasatiExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
           <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد من منصة مدرستي 📥</button>
           <button class="admin-outline-btn">الباركود (إضافة / عرض الأسماء) 🪪</button>
@@ -2306,7 +2305,6 @@
   </div>
 </div>
           <button class="admin-outline-btn" id="confirmAllBtn">تأكيد الكل ✔️</button>
-          <button class="admin-outline-btn" id="linkSelectedBtn">ربط المحدد / غير المسجلين 🔗</button>
           <button class="delete-all-btn" id="deleteAllStudentsBtn" style="margin:0;white-space:nowrap">حذف جميع بيانات الطلاب 🗑️</button>
         </div>
 
@@ -3740,8 +3738,6 @@ if(madrasatiExcelInput) madrasatiExcelInput.onchange=async e=>{
 };
 
 const excelFileInput=$('excelFileInput');
-if($('importExcelBtn')) $('importExcelBtn').onclick=()=>excelFileInput.click();
-if($('importExcelBtn2')) $('importExcelBtn2').onclick=()=>excelFileInput.click();
 excelFileInput.addEventListener('change',()=>{
   importExcelFile(excelFileInput.files[0]);
   excelFileInput.value='';
@@ -7379,15 +7375,6 @@ if($('confirmAllBtn')) $('confirmAllBtn').onclick=()=>{
   saveStudents(updated);
   renderAdmin();
   toast('تم تأكيد جميع الطلاب');
-};
-
-if($('linkSelectedBtn')) $('linkSelectedBtn').onclick=()=>{
-  const ids=getSelectedStudentIds();
-  if(!ids.length){ toast('حدد طالبًا واحدًا على الأقل'); return; }
-  const s=getStudents().map(x=>ids.includes(String(x.idno))?{...x,linked:true}:x);
-  saveStudents(s);
-  renderAdmin();
-  toast(`تم ربط ${ids.length} طالب`);
 };
 
 if($('deleteAllStudentsBtn')) $('deleteAllStudentsBtn').onclick=async ()=>{
