@@ -700,7 +700,157 @@
       .time-spinner-wrap{grid-template-columns:minmax(88px,1fr) 18px minmax(88px,1fr)}
       .time-spinner input{font-size:30px}
     }
-  </style>
+  
+    /* Attendance date/time layout — day, date, then time */
+    #attendanceEditTimeWrap{
+      margin:14px 0!important;
+      padding:18px!important;
+      border:1px solid #d8e6e2!important;
+      border-radius:20px!important;
+      background:#f8fbfa!important;
+      overflow:visible!important;
+    }
+    .attendance-edit-title{
+      font-size:22px;
+      font-weight:900;
+      color:#173b34;
+      text-align:right;
+      margin-bottom:16px;
+    }
+    #attendanceEditTimeWrap .attendance-edit-grid{
+      display:grid!important;
+      grid-template-columns:minmax(180px,.8fr) minmax(360px,1.6fr) minmax(280px,1.15fr)!important;
+      gap:16px!important;
+      align-items:stretch!important;
+      direction:rtl!important;
+    }
+    #attendanceEditTimeWrap .attendance-edit-section{
+      min-width:0;
+      padding:16px;
+      border:1px solid #dce9e5;
+      border-radius:18px;
+      background:#fff;
+      box-sizing:border-box;
+    }
+    #attendanceEditTimeWrap .attendance-section-title{
+      text-align:center;
+      font-size:19px;
+      font-weight:900;
+      color:#29463f;
+      margin-bottom:14px;
+    }
+    #attendanceEditTimeWrap .attendance-day-select{
+      width:100%;
+      height:58px;
+      border:1px solid #c9dbd6;
+      border-radius:14px;
+      background:#fff;
+      font-family:inherit;
+      font-size:20px;
+      font-weight:800;
+      color:#173b34;
+      padding:0 14px;
+      box-sizing:border-box;
+    }
+    #attendanceEditTimeWrap .hijri-date-controls{
+      display:grid!important;
+      grid-template-columns:minmax(72px,.7fr) minmax(150px,1.4fr) minmax(100px,.9fr)!important;
+      gap:10px!important;
+      direction:rtl!important;
+    }
+    #attendanceEditTimeWrap .hijri-date-controls select{
+      width:100%;
+      min-width:0;
+      height:58px;
+      border:1px solid #c9dbd6;
+      border-radius:14px;
+      background:#fff;
+      font-family:inherit;
+      font-size:18px;
+      font-weight:800;
+      color:#173b34;
+      text-align:center;
+      box-sizing:border-box;
+      padding:0 8px;
+    }
+    #attendanceEditTimeWrap .time-spinner-wrap{
+      display:grid!important;
+      grid-template-columns:minmax(95px,1fr) 18px minmax(95px,1fr)!important;
+      gap:8px!important;
+      align-items:center!important;
+      direction:rtl!important;
+      max-width:300px!important;
+      margin:0 auto!important;
+    }
+    #attendanceEditTimeWrap .time-spinner{
+      display:grid!important;
+      grid-template-rows:auto 44px 62px 44px!important;
+      gap:6px!important;
+      min-width:0!important;
+    }
+    #attendanceEditTimeWrap .time-spinner-label{
+      text-align:center;
+      font-size:15px;
+      font-weight:900;
+      color:#60736e;
+    }
+    #attendanceEditTimeWrap .time-spinner button{
+      width:100%;
+      height:44px;
+      border:1px solid #c9dbd6;
+      border-radius:12px;
+      background:#fff;
+      color:#173b34;
+      font-size:28px;
+      font-weight:900;
+      line-height:1;
+      cursor:pointer;
+    }
+    #attendanceEditTimeWrap .time-spinner input{
+      width:100%;
+      min-width:0;
+      height:62px;
+      border:2px solid #b8d3cc;
+      border-radius:14px;
+      background:#fff;
+      color:#102f29;
+      text-align:center;
+      font-size:32px;
+      font-weight:900;
+      padding:0;
+      box-sizing:border-box;
+      letter-spacing:1px;
+    }
+    #attendanceEditTimeWrap .time-colon{
+      font-size:30px;
+      font-weight:900;
+      color:#173b34;
+      text-align:center;
+      padding-top:34px;
+    }
+    #attendanceEditTimeWrap .attendance-edit-hint{
+      margin-top:10px!important;
+      font-size:12px!important;
+      text-align:right;
+    }
+    @media(max-width:1050px){
+      #attendanceEditTimeWrap .attendance-edit-grid{
+        grid-template-columns:1fr!important;
+      }
+      #attendanceEditTimeWrap .attendance-edit-section{
+        width:100%;
+      }
+      #attendanceEditTimeWrap .hijri-date-controls{
+        grid-template-columns:minmax(72px,.7fr) minmax(150px,1.4fr) minmax(100px,.9fr)!important;
+      }
+    }
+    @media(max-width:520px){
+      #attendanceEditTimeWrap{padding:12px!important}
+      #attendanceEditTimeWrap .attendance-edit-section{padding:12px}
+      #attendanceEditTimeWrap .hijri-date-controls{grid-template-columns:1fr!important}
+      #attendanceEditTimeWrap .time-spinner-wrap{max-width:280px!important}
+    }
+</style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
@@ -1228,52 +1378,50 @@
           اختر الطالب، ثم التقط صورة جديدة. ستتم المقارنة تلقائياً.
         </div>
 
-        <div id="attendanceEditTimeWrap" class="hidden" style="margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fbfa">
-          <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
+        <div id="attendanceEditTimeWrap" class="hidden">
+          <div class="attendance-edit-title">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
           <input id="attendanceEditDate" type="hidden">
           <div class="attendance-edit-grid">
-            <div class="attendance-time-section">
-              <div class="time-section-title">🕒 الوقت</div>
+            <div class="attendance-edit-section attendance-day-section">
+              <div class="attendance-section-title">📆 اليوم</div>
+              <select id="attendanceEditWeekday" class="attendance-day-select">
+                <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+              </select>
+            </div>
+
+            <div class="attendance-edit-section attendance-date-section">
+              <div class="attendance-section-title">📅 التاريخ الهجري</div>
+              <div class="hijri-date-controls">
+                <select id="attendanceHijriDay"></select>
+                <select id="attendanceHijriMonth">
+                  <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
+                  <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
+                  <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
+                </select>
+                <select id="attendanceHijriYear"></select>
+              </div>
+            </div>
+
+            <div class="attendance-edit-section attendance-time-section">
+              <div class="attendance-section-title">🕒 الوقت</div>
               <div class="time-spinner-wrap">
-                <div class="time-spinner">
-                  <div class="time-spinner-label">الدقائق</div>
-                  <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
-                  <input id="attendanceEditMinute" type="text" inputmode="numeric" maxlength="2" value="00">
-                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
-                </div>
-                <div class="time-colon">:</div>
                 <div class="time-spinner">
                   <div class="time-spinner-label">الساعات</div>
                   <button type="button" data-time-spin="hour" data-dir="1" aria-label="زيادة الساعة">+</button>
                   <input id="attendanceEditHour" type="text" inputmode="numeric" maxlength="2" value="07">
                   <button type="button" data-time-spin="hour" data-dir="-1" aria-label="تقليل الساعة">−</button>
                 </div>
-              </div>
-            </div>
-            <div class="attendance-date-section">
-              <div class="attendance-date-row">
-                <div>
-                  <label>📆 اليوم</label>
-                  <select id="attendanceEditWeekday" class="attendance-day-select">
-                    <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
-                  </select>
-                </div>
-                <div>
-                  <label>📅 التاريخ الهجري</label>
-                  <div class="hijri-date-controls">
-                    <select id="attendanceHijriDay"></select>
-                    <select id="attendanceHijriMonth">
-                      <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
-                      <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
-                      <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
-                    </select>
-                    <select id="attendanceHijriYear"></select>
-                  </div>
+                <div class="time-colon">:</div>
+                <div class="time-spinner">
+                  <div class="time-spinner-label">الدقائق</div>
+                  <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
+                  <input id="attendanceEditMinute" type="text" inputmode="numeric" maxlength="2" value="00">
+                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
                 </div>
               </div>
             </div>
           </div>
-          <div class="hint" style="margin-top:8px;font-size:12px">اليوم أولاً، ثم التاريخ الهجري. استخدم + و− لزيادة أو تقليل الساعات والدقائق.</div>
+          <div class="hint attendance-edit-hint">اليوم أولاً، ثم التاريخ الهجري، ثم الوقت. استخدم + و− لزيادة أو تقليل الساعات والدقائق.</div>
         </div>
 
         <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
