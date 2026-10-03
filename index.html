@@ -4446,6 +4446,7 @@ function printStudents(rows){
 
 async function clearAllStudentPhotos(){
   faceDescriptorCache.clear();
+  try{localStorage.removeItem(FACE_DESCRIPTOR_STORAGE_KEY)}catch(e){}
   try{
     const db=await openPhotoDB();
     await new Promise((resolve,reject)=>{
@@ -4520,6 +4521,25 @@ let addStudentNewFaceBlob=null;
 let addStudentFaceVerified=false;
 const faceDescriptorCache=new Map();
 let faceModelsLoadingPromise=null;
+const FACE_DESCRIPTOR_STORAGE_KEY='studentFaceDescriptorsV1';
+
+function loadPersistedFaceDescriptors(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(FACE_DESCRIPTOR_STORAGE_KEY)||'{}');
+    Object.entries(raw).forEach(([k,v])=>{
+      if(Array.isArray(v) && v.length) faceDescriptorCache.set(k,new Float32Array(v));
+    });
+  }catch(e){}
+}
+function persistFaceDescriptor(key,descriptor){
+  if(!key || !descriptor) return;
+  try{
+    const raw=JSON.parse(localStorage.getItem(FACE_DESCRIPTOR_STORAGE_KEY)||'{}');
+    raw[key]=Array.from(descriptor);
+    localStorage.setItem(FACE_DESCRIPTOR_STORAGE_KEY,JSON.stringify(raw));
+  }catch(e){}
+}
+loadPersistedFaceDescriptors();
 
 async function ensureFaceModels(){
   if(faceModelsReady) return true;
@@ -4545,28 +4565,43 @@ async function ensureFaceModels(){
 }
 
 async function blobToImageElement(blob){
-  const url=URL.createObjectURL(blob);
   try{
-    const img=new Image();
-    img.crossOrigin='anonymous';
-    await new Promise((resolve,reject)=>{
-      img.onload=resolve;
-      img.onerror=reject;
-      img.src=url;
-    });
-    return img;
-  }finally{
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
-  }
+    if('createImageBitmap' in window){
+      const bitmap=await createImageBitmap(blob);
+      const max=320;
+      const scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+      const w=Math.max(1,Math.round(bitmap.width*scale));
+      const h=Math.max(1,Math.round(bitmap.height*scale));
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(bitmap,0,0,w,h);
+      bitmap.close?.();
+      return canvas;
+    }
+  }catch(e){}
+  const url=URL.createObjectURL(blob);
+  const img=new Image();
+  img.crossOrigin='anonymous';
+  await new Promise((resolve,reject)=>{
+    img.onload=resolve;
+    img.onerror=reject;
+    img.src=url;
+  });
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  return img;
 }
 
 async function getFaceDescriptorFast(blob,cacheKey=''){
   if(cacheKey && faceDescriptorCache.has(cacheKey)) return faceDescriptorCache.get(cacheKey);
   const img=await blobToImageElement(blob);
-  const opts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4});
+  const opts=new faceapi.TinyFaceDetectorOptions({inputSize:160,scoreThreshold:0.35});
   const detection=await faceapi.detectSingleFace(img,opts).withFaceLandmarks().withFaceDescriptor();
   if(!detection) return null;
-  if(cacheKey) faceDescriptorCache.set(cacheKey,detection.descriptor);
+  if(cacheKey){
+    faceDescriptorCache.set(cacheKey,detection.descriptor);
+    persistFaceDescriptor(cacheKey,detection.descriptor);
+  }
   return detection.descriptor;
 }
 
@@ -4763,11 +4798,15 @@ async function loadSelectedOldStudentFace(){
   $('saveMatchedStudentBtn').textContent='حفظ الطالب';
   const url=URL.createObjectURL(blob);
   img.src=url;
-  img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),3000);
+  img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),1500);
   img.classList.remove('hidden');
   empty.classList.add('hidden');
   $('faceMatchStatus').className='face-match-status wait';
   $('faceMatchStatus').textContent='الصورة السابقة جاهزة — التقط صورة جديدة';
+  // تجهيز بصمة الصورة السابقة مسبقاً حتى تكون المقارنة لحظية عند التقاط الصورة الجديدة.
+  ensureFaceModels()
+    .then(ok=>ok&&getFaceDescriptorFast(blob,`student:${addStudentSelectedId}`))
+    .catch(()=>{});
 }
 
 async function findBestStudentMatch(newBlob){
@@ -5240,6 +5279,7 @@ function restoreLastAppLocation(){
   }
 }
 setTimeout(restoreLastAppLocation,0);
+setTimeout(()=>ensureFaceModels().catch(()=>{}),150);
 let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
