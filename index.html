@@ -1632,6 +1632,45 @@
     .att-student-photo-wrap.with-select .att-student-photo{
       order:1!important;
     }
+
+    /* تصحيح موضع تحديد الحضور: يمين الصورة بصرياً */
+    .att-student-photo-wrap.with-select{
+      direction:ltr!important;
+      flex-direction:row!important;
+      justify-content:center!important;
+      align-items:center!important;
+      gap:8px!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-photo{
+      order:0!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check{
+      order:1!important;
+      position:static!important;
+      transform:none!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      width:22px!important;
+      min-width:22px!important;
+      height:22px!important;
+      margin:0!important;
+      padding:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check input{
+      width:20px!important;
+      height:20px!important;
+      min-width:20px!important;
+      min-height:20px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
