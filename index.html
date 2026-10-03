@@ -91,6 +91,11 @@
     .submit{width:100%;background:var(--primary);color:white}
     .hint{text-align:center;color:var(--muted);font-size:9px;margin-top:8px}
     .hidden{display:none!important}
+    #register > .card:not(#landingLoginCard){display:none!important}
+    #register > form.card{display:none!important}
+    #mainPublicNav{display:none!important}
+    .landing-login-card{max-width:430px;margin:18px auto;padding:24px;border-radius:20px}
+    .landing-login-card input{height:52px;border-radius:12px;font-size:15px;background:#eef4ff}
     .admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
     .stat{background:var(--mint);border-radius:9px;padding:10px;text-align:center}
     .stat b{display:block;font-size:18px;color:var(--primary)}
@@ -2155,11 +2160,7 @@
     </div>
     <div class="logo">مدرستي<br>بيانات</div>
   </div>
-  <nav>
-    <button class="tab" id="mainHomeBtn" type="button">الصفحة الرئيسية 🏠</button>
-    <button class="tab" data-page="referral" type="button">تحويل طالب لوكيل شؤون الطلاب</button>
-    <button class="tab" data-page="admin" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('admin').classList.remove('hidden');document.getElementById('dashboard')?.classList.add('hidden');document.getElementById('adminLoginModal')?.classList.remove('hidden');localStorage.setItem('activeMainPage','admin')">دخول الإدارة</button>
-  </nav>
+  <nav id="mainPublicNav" class="hidden"></nav>
 </header>
 
 <main>
@@ -2167,6 +2168,16 @@
   <div class="notice">
     <div class="top">✨ شكراً للطلاب المبادرين بالتسجيل، ودمتم بخير</div>
     <div class="ticker"><span>تنبيه هام: يرجى التأكد من صحة البيانات والصور قبل الإرسال</span></div>
+  </div>
+
+  <div class="card landing-login-card" id="landingLoginCard">
+    <h2 style="text-align:center;font-size:22px;margin-bottom:8px">دخول النظام</h2>
+    <div class="hint" style="font-size:13px;margin-bottom:16px">أدخل اسم المستخدم وكلمة المرور</div>
+    <label>اسم المستخدم</label>
+    <input id="landingUser" inputmode="numeric" autocomplete="username">
+    <label style="margin-top:12px">كلمة المرور</label>
+    <input id="landingPass" type="password" inputmode="numeric" autocomplete="current-password">
+    <button type="button" class="btn btn-primary" id="landingLoginBtn" style="width:100%;height:52px;margin-top:18px;font-size:16px">دخول</button>
   </div>
 
   <div class="card">
@@ -2999,12 +3010,9 @@ const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.
 function goToMainHome(){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('register')?.classList.remove('hidden');
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  $('mainHomeBtn')?.classList.add('active');
   localStorage.setItem('activeMainPage','register');
   document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
 }
-if($('mainHomeBtn')) $('mainHomeBtn').onclick=goToMainHome;
 if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
 if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
 tabs.forEach(b=>b.onclick=()=>{
@@ -9331,6 +9339,26 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
+
+if($('landingLoginBtn')) $('landingLoginBtn').onclick=()=>{
+  const user=String($('landingUser')?.value||'').trim();
+  const pass=String($('landingPass')?.value||'').trim();
+  if(!user || !pass){
+    alert('أدخل اسم المستخدم وكلمة المرور');
+    return;
+  }
+  if($('adminUser')) $('adminUser').value=user;
+  if($('adminPass')) $('adminPass').value=pass;
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('admin')?.classList.remove('hidden');
+  $('dashboard')?.classList.add('hidden');
+  $('adminLoginModal')?.classList.remove('hidden');
+  localStorage.setItem('activeMainPage','admin');
+  $('adminLoginBtn')?.click();
+};
+if($('landingPass')) $('landingPass').addEventListener('keydown',e=>{
+  if(e.key==='Enter') $('landingLoginBtn')?.click();
+});
 
 
 // زر الإدارة تتم إدارته من معالج التبويبات الرئيسي أعلاه.
