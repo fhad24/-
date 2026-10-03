@@ -2345,7 +2345,7 @@ function ensureAdminSettings(){
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
         </div>
         <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
-        <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 تطبيق هذه الصلاحيات على كل المستخدمين</button>
+        <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 إضافة هذه الصلاحيات لكل المستخدمين</button>
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -2447,12 +2447,19 @@ function ensureAdminSettings(){
 
   document.getElementById('applyBulkUserPermissions').onclick=()=>{
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+    if(!permissions.length){
+      alert('حدد صلاحية واحدة على الأقل لإضافتها للجميع');
+      return;
+    }
     const users=getAdminUsers();
-    users.forEach(u=>u.permissions=[...permissions]);
+    users.forEach(u=>{
+      const current=Array.isArray(u.permissions)?u.permissions:[];
+      u.permissions=[...new Set([...current,...permissions])];
+    });
     saveAdminUsers(users);
     cloudApi('sync_users',{users}).catch(e=>console.warn('cloud bulk users',e));
     renderAdminUsersSettings();
-    alert('✅ تم تطبيق الصلاحيات المحددة على جميع المستخدمين');
+    alert('✅ تمت إضافة الصلاحيات المحددة لجميع المستخدمين بدون حذف صلاحياتهم السابقة');
   };
 
   document.getElementById('adminUserSearch').oninput=()=>renderAdminUsersSettings();
