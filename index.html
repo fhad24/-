@@ -586,6 +586,26 @@
     .admin-bulk-perm-grid label{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f4f7f6;border:1px solid #d4e1de;border-radius:12px;padding:12px 14px;font-size:15px}
     .admin-bulk-perm-grid input{width:18px;height:18px}
     @media(max-width:650px){.admin-user-tools,.admin-bulk-perm-grid{grid-template-columns:1fr}}
+  
+    .user-perm-modal{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:12000;display:flex;align-items:center;justify-content:center;padding:14px}
+    .user-perm-card{width:min(860px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:24px;box-shadow:0 20px 60px #0003;direction:rtl}
+    .user-perm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .user-perm-head h3{margin:0;font-size:24px;color:#173b34}
+    .user-perm-close{width:44px;height:44px;border-radius:50%;border:1px solid #d8e2df;background:#fff;font-size:28px;cursor:pointer}
+    .user-perm-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+    .user-perm-meta .box{background:#f5f8f7;border:1px solid #d6e1de;border-radius:14px;padding:14px}
+    .user-perm-meta b{display:block;font-size:16px;margin-bottom:5px}.user-perm-meta span{color:#60736e;font-size:14px}
+    .user-perm-role{margin:8px 0 18px}
+    .user-perm-role label{display:block;font-weight:700;margin-bottom:8px}
+    .user-perm-role select{height:58px;border-radius:14px;font-size:17px}
+    .user-perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .user-perm-grid label{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f5f8f7;border:1px solid #d4e1de;border-radius:14px;padding:16px;font-size:17px}
+    .user-perm-grid input{width:20px;height:20px}
+    .user-perm-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+    .user-perm-actions button{min-height:50px;border-radius:14px;padding:12px 20px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+    .user-perm-toggle{background:#fff;border:1px solid #173b34;color:#173b34}
+    .user-perm-save{background:var(--primary);border:1px solid var(--primary);color:#fff}
+    @media(max-width:650px){.user-perm-grid,.user-perm-meta{grid-template-columns:1fr}.user-perm-card{padding:16px}.user-perm-head h3{font-size:20px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2660,25 +2680,89 @@ function renderAdminUsersSettings(){
   });
 
   document.querySelectorAll('[data-perm-admin-user]').forEach(btn=>btn.onclick=()=>{
-    const users=getAdminUsers();
-    const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.permAdminUser));
-    const u=users[idx]; if(!u) return;
-    const current=(u.permissions||[]).map(x=>labels[x]||x).join('، ');
-    const text=prompt('اكتب الصلاحيات مفصولة بفاصلة:\\nتحضير الطلاب، التقارير والتصدير، تعديل بيانات الطلاب، استيراد البيانات، حذف الطلاب، متابعة مدرستي، تصوير الطلاب، بيانات المدرسة والمستخدمون',current);
-    if(text===null) return;
-    const t=text.toLowerCase(), perms=[];
-    if(t.includes('تحضير')) perms.push('attendance');
-    if(t.includes('تقرير')||t.includes('تصدير')) perms.push('reports');
-    if(t.includes('تعديل')) perms.push('editStudents');
-    if(t.includes('استيراد')||t.includes('excel')||t.includes('باركود')) perms.push('import');
-    if(t.includes('حذف')) perms.push('deleteStudents');
-    if(t.includes('مدرستي')) perms.push('madrasati');
-    if(t.includes('تصوير')||t.includes('صورة')) perms.push('photos');
-    if(t.includes('إعداد')||t.includes('مستخدم')) perms.push('settings');
-    u.permissions=[...new Set(perms)];
-    saveAdminUsers(users); renderAdminUsersSettings(); alert('✅ تم حفظ الصلاحيات');
+    openUserPermissionEditor(String(btn.dataset.permAdminUser||''));
   });
 }
+function openUserPermissionEditor(username){
+  const users=getAdminUsers();
+  const idx=users.findIndex(x=>String(x.username)===String(username));
+  const u=users[idx]; if(!u) return;
+
+  let modal=document.getElementById('userPermModal');
+  if(modal) modal.remove();
+  modal=document.createElement('div');
+  modal.id='userPermModal';
+  modal.className='user-perm-modal';
+  const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+  const permItems=[
+    ['editStudents','تعديل بيانات الطلاب'],
+    ['import','استيراد البيانات (Excel/صور/باركود)'],
+    ['deleteStudents','حذف الطلاب'],
+    ['attendance','تحضير الطلاب'],
+    ['reports','التقارير والتصدير'],
+    ['settings','بيانات المدرسة والمستخدمون'],
+    ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
+    ['photos','تصوير الطلاب لإضافة الصور']
+  ];
+  modal.innerHTML=`
+    <div class="user-perm-card">
+      <div class="user-perm-head">
+        <h3>تعديل صلاحيات المستخدم</h3>
+        <button type="button" class="user-perm-close" id="userPermClose">×</button>
+      </div>
+      <div class="user-perm-meta">
+        <div class="box"><b>${u.name||'بدون اسم'}</b><span>${u.username||''}</span></div>
+        <div class="box"><b>نوع المستخدم</b><span>${u.role||'معلم'}</span></div>
+      </div>
+      <div class="user-perm-role">
+        <label>نوع المستخدم</label>
+        <select id="userPermRole">
+          <option ${u.role==='معلم'?'selected':''}>معلم</option>
+          <option ${u.role==='إداري'?'selected':''}>إداري</option>
+          <option ${u.role==='مدير'?'selected':''}>مدير</option>
+          <option ${u.role==='موظف'?'selected':''}>موظف</option>
+        </select>
+      </div>
+      <h3 style="font-size:20px;margin:8px 0 12px">صلاحيات التعديل</h3>
+      <div class="user-perm-grid">
+        ${permItems.map(([key,label])=>`<label>${label}<input class="user-perm-check" value="${key}" type="checkbox" ${current.has(key)?'checked':''}></label>`).join('')}
+      </div>
+      <div class="user-perm-actions">
+        <button type="button" class="user-perm-toggle" id="userPermToggleAll">☑ تحديد الكل</button>
+        <button type="button" class="user-perm-save" id="userPermSave">حفظ الصلاحيات</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const checks=()=>[...modal.querySelectorAll('.user-perm-check')];
+  const updateToggle=()=>{
+    const all=checks();
+    const allChecked=all.length && all.every(x=>x.checked);
+    document.getElementById('userPermToggleAll').textContent=allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+  };
+  updateToggle();
+  checks().forEach(x=>x.onchange=updateToggle);
+
+  document.getElementById('userPermToggleAll').onclick=()=>{
+    const all=checks();
+    const allChecked=all.length && all.every(x=>x.checked);
+    all.forEach(x=>x.checked=!allChecked);
+    updateToggle();
+  };
+  document.getElementById('userPermClose').onclick=()=>modal.remove();
+  modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
+  document.getElementById('userPermSave').onclick=async()=>{
+    u.role=document.getElementById('userPermRole').value;
+    u.permissions=checks().filter(x=>x.checked).map(x=>x.value);
+    users[idx]=u;
+    saveAdminUsers(users);
+    try{await cloudApi('save_user',{user:u})}catch(e){console.warn('cloud user permission',e)}
+    modal.remove();
+    renderAdminUsersSettings();
+    alert('✅ تم حفظ الصلاحيات');
+  };
+}
+
 function openAdminSettings(){
   if(!adminLoggedIn) return;
   const ov=ensureAdminSettings();
