@@ -3764,7 +3764,17 @@ async function openDeputyReferralsPage(){
         const login=await cloudApi('login',{username,password},false);
         if(login?.token){
           localStorage.setItem('cloudAdminToken',login.token);
-          if(login.user) localStorage.setItem('cloudAdminUser',JSON.stringify(login.user));
+          if(login.user){
+            localStorage.setItem('cloudAdminUser',JSON.stringify({
+              ...login.user,
+              username:String(localUser?.username||username),
+              civil_id:String(localUser?.civilId||localUser?.username||username),
+              name:String(localUser?.name||login.user.name||username),
+              role:String(localUser?.role||login.user.role||'مستخدم'),
+              permissions:Array.isArray(localUser?.permissions)?localUser.permissions:(login.user.permissions||[]),
+              is_owner:false
+            }));
+          }
         }
       }
     }catch(e){
@@ -5272,7 +5282,16 @@ $('adminLoginBtn').onclick=async()=>{
         if(cloudLogin?.token){
           localStorage.setItem('cloudAdminToken',cloudLogin.token);
           if(cloudLogin.user){
-            localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
+            const mergedUser={
+              ...cloudLogin.user,
+              username:String(extra.username||user),
+              civil_id:String(extra.civilId||extra.username||user),
+              name:String(extra.name||extra.username||user),
+              role:String(extra.role||cloudLogin.user.role||'مستخدم'),
+              permissions:Array.isArray(extra.permissions)?extra.permissions:(cloudLogin.user.permissions||[]),
+              is_owner:false
+            };
+            localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
           }
         }
       }catch(cloudErr){
@@ -6537,10 +6556,55 @@ function openUserPermissionEditor(username){
     }
     users[idx]=u;
     saveAdminUsers(users);
-    try{await cloudApi('save_user',{user:u})}catch(e){console.warn('cloud user permission',e)}
+
+    try{
+      // مزامنة قائمة المستخدمين كاملة مع السحابة لضمان حفظ صلاحية ردود الوكلاء والصفوف.
+      let token=localStorage.getItem('cloudAdminToken')||'';
+      if(!token){
+        const p=getAdminProfile();
+        const login=await cloudApi('login',{
+          username:String(p.username||''),
+          password:String(p.password||'')
+        },false);
+        token=login?.token||'';
+        if(token) localStorage.setItem('cloudAdminToken',token);
+      }
+
+      const payloadUsers=getAdminUsers().map(x=>({
+        username:String(x.username||''),
+        civilId:String(x.civilId||x.username||''),
+        name:String(x.name||''),
+        role:String(x.role||'معلم'),
+        password:String(x.password||x.civilId||x.username||''),
+        permissions:Array.isArray(x.permissions)?x.permissions:[]
+      }));
+
+      await cloudApi('sync_users',{users:payloadUsers});
+
+      // تحقق من أن الصلاحيات وصلت فعلًا للسحابة.
+      const verified=await cloudApi('pull_all');
+      const cloudUser=(verified.users||[]).find(x=>String(x.username||'')===String(u.username||''));
+      if(!cloudUser || !(Array.isArray(cloudUser.permissions)&&cloudUser.permissions.includes('referralReview'))){
+        throw new Error('REFERRAL_PERMISSION_NOT_SYNCED');
+      }
+
+      // احتفظ محليًا بنفس البيانات المؤكدة.
+      const localUsers=getAdminUsers();
+      const vi=localUsers.findIndex(x=>String(x.username||'')===String(u.username||''));
+      if(vi>=0){
+        localUsers[vi].permissions=Array.isArray(cloudUser.permissions)?cloudUser.permissions:u.permissions;
+        localUsers[vi].password=String(localUsers[vi].password||localUsers[vi].civilId||localUsers[vi].username||'');
+        saveAdminUsers(localUsers);
+      }
+    }catch(e){
+      console.error('cloud referral permission sync',e);
+      alert('تعذر تثبيت صلاحية ردود الوكلاء في السحابة. حاول حفظ الصلاحيات مرة أخرى.');
+      return;
+    }
+
     modal.remove();
     renderAdminUsersSettings();
-    alert('✅ تم حفظ الصلاحيات');
+    alert('✅ تم حفظ الصلاحيات وتفعيلها سحابيًا');
   };
 }
 
