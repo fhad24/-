@@ -2553,6 +2553,13 @@
       .bulk-permission-users-head button{width:100%}
     }
 
+
+    .admin-user-bulk-select{
+      display:inline-flex!important;align-items:center;gap:7px;margin:8px 0 0!important;padding:6px 10px;
+      border:1px solid #b9d9d1;border-radius:10px;background:#eef8f5;color:#0f7665;font-size:11px!important;font-weight:900!important
+    }
+    .admin-user-bulk-select input{width:18px!important;height:18px!important;margin:0!important}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -6842,6 +6849,19 @@ function ensureAdminSettings(){
           <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
           <div class="admin-settings-field"><label>نوع المستخدم</label><select id="newAdminRole"><option>معلم</option><option>إداري</option><option>مدير</option><option>موظف</option></select></div>
         </div>
+        <div id="bulkPermissionUsersBox" class="bulk-permission-users-box" style="margin-bottom:16px">
+          <div class="bulk-permission-users-head">
+            <div>
+              <b>① اختر المستخدمين أولًا</b>
+              <span>حدد مستخدمًا واحدًا أو عدة مستخدمين ممن تريد تطبيق الصلاحيات عليهم.</span>
+            </div>
+            <button type="button" id="toggleAllBulkPermissionUsers">☑ تحديد كل المستخدمين</button>
+          </div>
+          <div id="bulkPermissionUsersList" class="bulk-permission-users-list"></div>
+          <div id="bulkPermissionUsersCount" class="bulk-permission-users-count">تم تحديد 0 مستخدم</div>
+        </div>
+
+        <h3 style="text-align:center;font-size:20px;margin:18px 0 12px">② اختر الصلاحيات</h3>
         <div class="admin-permissions">
           <label class="admin-permission">تعديل بيانات الطلاب <input class="admin-new-perm" value="editStudents" type="checkbox" checked></label>
           <label class="admin-permission">إضافة طالب <input class="admin-new-perm" value="addStudent" type="checkbox" checked></label>
@@ -6869,17 +6889,6 @@ function ensureAdminSettings(){
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
         </div>
 
-        <div id="bulkPermissionUsersBox" class="bulk-permission-users-box">
-          <div class="bulk-permission-users-head">
-            <div>
-              <b>تحديد المستخدمين لتطبيق الصلاحيات</b>
-              <span>حدد مستخدمًا واحدًا أو مجموعة مستخدمين، ثم طبّق الصلاحيات المحددة أعلاه عليهم فقط.</span>
-            </div>
-            <button type="button" id="toggleAllBulkPermissionUsers">☑ تحديد كل المستخدمين</button>
-          </div>
-          <div id="bulkPermissionUsersList" class="bulk-permission-users-list"></div>
-          <div id="bulkPermissionUsersCount" class="bulk-permission-users-count">تم تحديد 0 مستخدم</div>
-        </div>
 
         <button class="admin-settings-save" id="addAdminUser" type="button">➕ إضافة مستخدم</button>
         <button class="admin-settings-save" id="applyBulkUserPermissions" type="button" style="background:#e8f3f0;color:#0f7665">👥 تطبيق الصلاحيات على المستخدمين المحددين</button>
@@ -7136,9 +7145,11 @@ function ensureAdminSettings(){
       return;
     }
 
-    const selectedUsernames=[...document.querySelectorAll('#bulkPermissionUsersList .bulk-user-perm-check:checked')]
-      .map(x=>String(x.value||''))
-      .filter(Boolean);
+    const selectedUsernames=[...new Set(
+      [...document.querySelectorAll('#bulkPermissionUsersList .bulk-user-perm-check:checked, .bulk-user-card-check:checked')]
+        .map(x=>String(x.value||''))
+        .filter(Boolean)
+    )];
 
     if(!selectedUsernames.length){
       alert('حدد مستخدمًا واحدًا على الأقل لتطبيق الصلاحيات عليه');
@@ -7391,12 +7402,31 @@ function renderBulkPermissionUsers(){
     }
   };
 
-  host.querySelectorAll('.bulk-user-perm-check').forEach(x=>x.onchange=update);
+  const syncAllChecks=(username,checked)=>{
+    document.querySelectorAll('.bulk-user-perm-check, .bulk-user-card-check').forEach(x=>{
+      if(String(x.value||'')===String(username||'')) x.checked=checked;
+    });
+  };
+
+  host.querySelectorAll('.bulk-user-perm-check').forEach(x=>x.onchange=()=>{
+    syncAllChecks(x.value,x.checked);
+    update();
+  });
+
+  document.querySelectorAll('.bulk-user-card-check').forEach(x=>{
+    if(previous.has(String(x.value||''))) x.checked=true;
+    x.onchange=()=>{
+      syncAllChecks(x.value,x.checked);
+      update();
+    };
+  });
+
   if(toggle){
     toggle.onclick=()=>{
       const boxes=[...host.querySelectorAll('.bulk-user-perm-check')];
       const allChecked=boxes.length>0 && boxes.every(x=>x.checked);
       boxes.forEach(x=>x.checked=!allChecked);
+      document.querySelectorAll('.bulk-user-card-check').forEach(x=>x.checked=!allChecked);
       update();
     };
   }
@@ -7447,6 +7477,7 @@ function renderAdminUsersSettings(){
     <div class="admin-user-card">
       <div>
         <b>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</b>
+        ${u.owner?'':`<label class="admin-user-bulk-select">تحديد هذا المستخدم <input type="checkbox" class="bulk-user-card-check" value="${u.username||''}"></label>`}
         <div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
         <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
