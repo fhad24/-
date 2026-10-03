@@ -2529,6 +2529,7 @@
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
+          <button class="admin-pill" id="adminNewReferralBtn">تحويل طالب جديد ➕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
@@ -5244,6 +5245,29 @@ if($('pendingStudentPhotosBtn')) $('pendingStudentPhotosBtn').onclick=openPendin
 setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
+
+if($('adminNewReferralBtn')) $('adminNewReferralBtn').onclick=()=>{
+  try{
+    const form=$('studentReferralForm');
+    if(form) form.reset();
+    if(typeof referralSelectedIds!=='undefined') referralSelectedIds.clear();
+    if(typeof referralAlertLevels!=='undefined') referralAlertLevels.clear();
+    if($('referralActionTaken')) $('referralActionTaken').value='';
+    if($('referralDeputyStatus')) $('referralDeputyStatus').textContent='لا يوجد رد من الوكيل حتى الآن.';
+    if($('referralStudentName')) $('referralStudentName').value='';
+    if($('referralSelectedCount')) $('referralSelectedCount').textContent='(0)';
+    if($('referralNoorTriggerText')) $('referralNoorTriggerText').textContent='اختر الفصل أولًا';
+    if(typeof renderReferralSelectedStudents==='function') renderReferralSelectedStudents();
+    openInternalPage('referral');
+    setTimeout(()=>{
+      if(typeof initReferralPage==='function') initReferralPage();
+      window.scrollTo(0,0);
+    },0);
+  }catch(e){
+    console.error('new referral',e);
+    openInternalPage('referral');
+  }
+};
 
 if($('adminReferralTab')) $('adminReferralTab').onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page==='referral'));
