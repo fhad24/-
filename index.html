@@ -3182,6 +3182,7 @@ function saveAttendanceLog(rows){
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
 async function renderAttendancePage(){
+  if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
   const students=getStudents();
   const allLogs=getAttendanceLog();
   const today=allLogs.filter(x=>x.date===todayKey());
@@ -3292,13 +3293,17 @@ async function renderAttendancePage(){
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
             ${photoHTML}
-            <div class="attendance-saved-name">${x.name||''}</div>
+            <div>
+              <div class="attendance-saved-name">${x.name||''}</div>
+              ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
+            </div>
           </div>
           <div class="attendance-saved-id">${x.idno||'—'}</div>
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">تعديل</button>
+            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
+            <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
         </div>`;
@@ -3341,6 +3346,77 @@ async function renderAttendancePage(){
     img.onload=()=>setTimeout(()=>URL.revokeObjectURL(img.src),4000);
   });
 }
+
+function normalizeWhatsAppNumber(value){
+  let n=String(value||'').replace(/\D/g,'');
+  if(n.startsWith('00966')) n=n.slice(2);
+  if(n.startsWith('966')) return n;
+  if(n.startsWith('05')) return '966'+n.slice(1);
+  if(n.startsWith('5') && n.length===9) return '966'+n;
+  return n;
+}
+
+function attendanceWhatsAppMessage(row,student){
+  const status=row.status==='late'?'متأخر':row.status==='absent'?'غائب':'حاضر';
+  const school=getSchoolSettings().school||'المدرسة';
+  const period=row.period?('، الحصة '+row.period):'';
+  return 'ولي أمر الطالب/ '+(student?.name||row.name||'')+'\n'
+    +'نحيطكم علمًا بأن حالة الطالب في '+school+': '+status+period+'\n'
+    +'التاريخ: '+(row.date||'')+'\n'
+    +'الوقت: '+(row.time||'');
+}
+
+function openAttendanceWhatsAppForRows(rows){
+  const students=getStudents();
+  const items=rows.map(row=>{
+    const student=students.find(s=>String(s.idno)===String(row.idno))||{};
+    const phone=normalizeWhatsAppNumber(student.phone||'');
+    return {row,student,phone};
+  }).filter(x=>x.phone);
+
+  if(!items.length){
+    alert('لا يوجد رقم جوال مسجل للطلاب المحددين');
+    return;
+  }
+
+  if(items.length===1){
+    const x=items[0];
+    window.open('https://wa.me/'+x.phone+'?text='+encodeURIComponent(attendanceWhatsAppMessage(x.row,x.student)),'_blank');
+    return;
+  }
+
+  let modal=$('attendanceWhatsAppModal');
+  if(modal) modal.remove();
+  modal=document.createElement('div');
+  modal.id='attendanceWhatsAppModal';
+  modal.className='wa-modal';
+  modal.innerHTML='<div class="wa-card">'
+    +'<h3>إرسال واتساب للطلاب المحددين ('+items.length+')</h3>'
+    +'<div class="wa-list">'
+    +items.map(x=>'<a class="wa-link" target="_blank" rel="noopener" href="https://wa.me/'+x.phone+'?text='+encodeURIComponent(attendanceWhatsAppMessage(x.row,x.student))+'">'
+      +'<div><strong>'+(x.student.name||x.row.name||'')+'</strong><span>'+x.phone+'</span></div><b>فتح واتساب</b></a>').join('')
+    +'</div><button class="wa-close" type="button">إغلاق</button></div>';
+  document.body.appendChild(modal);
+  modal.querySelector('.wa-close').onclick=()=>modal.remove();
+  modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
+}
+
+if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
+  const boxes=[...document.querySelectorAll('.attendance-wa-select')];
+  if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
+  const allChecked=boxes.every(x=>x.checked);
+  boxes.forEach(x=>x.checked=!allChecked);
+  $('attendanceSelectAllRows').textContent=!allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+};
+
+if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>{
+  const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
+    .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite);
+  if(!indexes.length){alert('حدد طالبًا واحدًا أو مجموعة طلاب أولاً');return}
+  const logs=getAttendanceLog();
+  openAttendanceWhatsAppForRows(indexes.map(i=>logs[i]).filter(Boolean));
+};
+
 
 let attendanceMode='late';
 let attendanceListView='late';
