@@ -4445,6 +4445,7 @@ function printStudents(rows){
 }
 
 async function clearAllStudentPhotos(){
+  faceDescriptorCache.clear();
   try{
     const db=await openPhotoDB();
     await new Promise((resolve,reject)=>{
@@ -4517,22 +4518,30 @@ let faceModelsReady=false;
 let addStudentSelectedId='';
 let addStudentNewFaceBlob=null;
 let addStudentFaceVerified=false;
+const faceDescriptorCache=new Map();
+let faceModelsLoadingPromise=null;
 
 async function ensureFaceModels(){
   if(faceModelsReady) return true;
   if(!window.faceapi) return false;
-  try{
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
-    ]);
-    faceModelsReady=true;
-    return true;
-  }catch(err){
-    console.error('Face model load failed',err);
-    return false;
-  }
+  if(faceModelsLoadingPromise) return faceModelsLoadingPromise;
+  faceModelsLoadingPromise=(async()=>{
+    try{
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
+      ]);
+      faceModelsReady=true;
+      return true;
+    }catch(err){
+      console.error('Face model load failed',err);
+      return false;
+    }finally{
+      faceModelsLoadingPromise=null;
+    }
+  })();
+  return faceModelsLoadingPromise;
 }
 
 async function blobToImageElement(blob){
@@ -4551,20 +4560,28 @@ async function blobToImageElement(blob){
   }
 }
 
-async function compareStudentFaces(oldBlob,newBlob){
+async function getFaceDescriptorFast(blob,cacheKey=''){
+  if(cacheKey && faceDescriptorCache.has(cacheKey)) return faceDescriptorCache.get(cacheKey);
+  const img=await blobToImageElement(blob);
+  const opts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.4});
+  const detection=await faceapi.detectSingleFace(img,opts).withFaceLandmarks().withFaceDescriptor();
+  if(!detection) return null;
+  if(cacheKey) faceDescriptorCache.set(cacheKey,detection.descriptor);
+  return detection.descriptor;
+}
+
+async function compareStudentFaces(oldBlob,newBlob,cacheKey=''){
   const models=await ensureFaceModels();
   if(!models) throw new Error('تعذر تحميل نظام التحقق بالوجه. تأكد من اتصال الإنترنت.');
-  const oldImg=await blobToImageElement(oldBlob);
-  const newImg=await blobToImageElement(newBlob);
-  const opts=new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.45});
 
-  const [a,b]=await Promise.all([
-    faceapi.detectSingleFace(oldImg,opts).withFaceLandmarks().withFaceDescriptor(),
-    faceapi.detectSingleFace(newImg,opts).withFaceLandmarks().withFaceDescriptor()
+  const [oldDescriptor,newDescriptor]=await Promise.all([
+    getFaceDescriptorFast(oldBlob,cacheKey),
+    getFaceDescriptorFast(newBlob)
   ]);
-  if(!a) throw new Error('لم يتم العثور على وجه واضح في الصورة السابقة.');
-  if(!b) throw new Error('لم يتم العثور على وجه واضح في الصورة الجديدة.');
-  const distance=faceapi.euclideanDistance(a.descriptor,b.descriptor);
+  if(!oldDescriptor) throw new Error('لم يتم العثور على وجه واضح في الصورة السابقة.');
+  if(!newDescriptor) throw new Error('لم يتم العثور على وجه واضح في الصورة الجديدة.');
+
+  const distance=faceapi.euclideanDistance(oldDescriptor,newDescriptor);
   return {match:distance<=0.55,distance,similarity:Math.max(0,Math.round((1-distance)*100))};
 }
 
@@ -4754,33 +4771,54 @@ async function loadSelectedOldStudentFace(){
 }
 
 async function findBestStudentMatch(newBlob){
-  const students=getStudents();
+  let students=getStudents();
   if(!students.length) throw new Error('لا توجد بيانات طلاب في قاعدة البيانات.');
+
+  const grade=$('addStudentGrade')?.value||'';
+  const classroom=$('addStudentClass')?.value||'';
+  const filtered=students.filter(s=>
+    (!grade || s.grade===grade) &&
+    (!classroom || String(s.classroom||'')===String(classroom))
+  );
+  if(filtered.length) students=filtered;
 
   const models=await ensureFaceModels();
   if(!models) throw new Error('تعذر تحميل نظام التحقق بالوجه. تأكد من اتصال الإنترنت.');
 
-  const newImg=await blobToImageElement(newBlob);
-  const opts=new faceapi.TinyFaceDetectorOptions({inputSize:416,scoreThreshold:0.45});
-  const newDetection=await faceapi.detectSingleFace(newImg,opts).withFaceLandmarks().withFaceDescriptor();
-  if(!newDetection) throw new Error('لم يتم العثور على وجه واضح في الصورة الجديدة.');
+  const newDescriptor=await getFaceDescriptorFast(newBlob);
+  if(!newDescriptor) throw new Error('لم يتم العثور على وجه واضح في الصورة الجديدة.');
 
   let best=null;
-  for(const student of students){
-    const oldBlob=await getStudentPhoto(`${student.idno}:face`);
-    if(!oldBlob) continue;
-    try{
-      const oldImg=await blobToImageElement(oldBlob);
-      const oldDetection=await faceapi.detectSingleFace(oldImg,opts).withFaceLandmarks().withFaceDescriptor();
-      if(!oldDetection) continue;
-      const distance=faceapi.euclideanDistance(oldDetection.descriptor,newDetection.descriptor);
-      if(!best || distance<best.distance){
-        best={student,oldBlob,distance,similarity:Math.max(0,Math.round((1-distance)*100))};
+  const batchSize=12;
+
+  for(let i=0;i<students.length;i+=batchSize){
+    const batch=students.slice(i,i+batchSize);
+    const results=await Promise.all(batch.map(async student=>{
+      try{
+        const oldBlob=await getStudentPhoto(`${student.idno}:face`);
+        if(!oldBlob) return null;
+        const descriptor=await getFaceDescriptorFast(oldBlob,`student:${student.idno}`);
+        if(!descriptor) return null;
+        const distance=faceapi.euclideanDistance(descriptor,newDescriptor);
+        return {
+          student,
+          oldBlob,
+          distance,
+          similarity:Math.max(0,Math.round((1-distance)*100))
+        };
+      }catch(e){
+        return null;
       }
-    }catch(e){
-      console.warn('تعذر تحليل صورة طالب',student.idno,e);
+    }));
+
+    for(const result of results){
+      if(result && (!best || result.distance<best.distance)) best=result;
     }
+
+    // تطابق قوي جدًا: لا حاجة لإكمال بقية القائمة.
+    if(best && best.distance<=0.32) break;
   }
+
   if(!best) throw new Error('لم أجد صوراً سابقة قابلة للمقارنة في قاعدة البيانات.');
   best.match=best.distance<=0.55;
   return best;
@@ -4822,7 +4860,7 @@ async function processNewStudentFace(file){
     }
 
     try{
-      const result=await compareStudentFaces(oldBlob,file);
+      const result=await compareStudentFaces(oldBlob,file,`student:${selectedStudent.idno}`);
       addStudentSelectedId=String(selectedStudent.idno);
       addStudentNeedsApproval=false;
       $('matchedStudentName').textContent=selectedStudent.name||'—';
@@ -4890,6 +4928,7 @@ async function processNewStudentFace(file){
 
 function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
+  ensureFaceModels().catch(()=>{});
   $('addStudentGrade').value='';
   if($('addStudentSearch')) $('addStudentSearch').value='';
   $('addStudentClass').innerHTML='<option value="">الكل</option>';
