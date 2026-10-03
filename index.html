@@ -622,6 +622,27 @@
     .admin-sort-btn{border:0;background:transparent;font:inherit;font-weight:700;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
     .admin-sort-btn .sort-arrow{font-size:11px;opacity:.55}
     .admin-sort-btn.active .sort-arrow{opacity:1;color:var(--primary)}
+  
+    .attendance-bulk-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin:-4px 0 14px}
+    .attendance-bulk-tools button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:9px 13px;font-family:inherit;font-weight:800;cursor:pointer}
+    .attendance-bulk-tools .wa{background:#18a558;color:#fff;border-color:#18a558}
+    .attendance-row-check{display:flex;align-items:center;justify-content:center}
+    .attendance-row-check input{width:18px;height:18px;accent-color:#0f7665}
+    .attendance-period-chip{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:999px;background:#eef5f3;color:#0f7665;font-size:11px;font-weight:800}
+    .attendance-edit-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .attendance-edit-grid label{display:block;font-weight:700;margin-bottom:6px}
+    .attendance-edit-day{height:52px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+    .attendance-period-row{display:flex;gap:10px;align-items:center;margin:10px 0 4px}
+    .attendance-period-row label{font-weight:800;white-space:nowrap}
+    .attendance-period-row select{height:44px;max-width:220px;border-radius:10px}
+    .wa-modal{position:fixed;inset:0;background:#0007;z-index:14000;display:flex;align-items:center;justify-content:center;padding:14px}
+    .wa-card{width:min(620px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;direction:rtl}
+    .wa-card h3{margin:0 0 14px}.wa-list{display:grid;gap:10px}
+    .wa-link{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid #d9e5e2;border-radius:12px;padding:12px;color:#173b34}
+    .wa-link strong{display:block}.wa-link span{color:#60736e;font-size:12px}.wa-link b{background:#18a558;color:#fff;border-radius:10px;padding:8px 10px}
+    .wa-close{width:100%;margin-top:14px;border:0;border-radius:12px;background:#e8efed;padding:11px;font-family:inherit;font-weight:800}
+    .admin-user-meta-line{display:flex;gap:10px;flex-wrap:wrap;color:#60736e;font-size:13px;margin-top:3px}
+    @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr}.attendance-period-row{align-items:stretch;flex-direction:column}.attendance-period-row select{max-width:none}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -869,6 +890,10 @@
 
         <div class="card attendance-daily-card">
           <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+          <div class="attendance-bulk-tools">
+            <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
+            <button type="button" id="attendanceWhatsAppSelected" class="wa">🟢 واتساب للمحدد</button>
+          </div>
           <div id="attendanceDailyList" class="attendance-daily-empty">لا يوجد طلاب متأخرون مسجلون اليوم.</div>
         </div>
       </div>
@@ -1075,6 +1100,16 @@
       <button type="button" id="attendancePresentTab" class="present">✓ حاضر</button>
     </div>
 
+    <div class="attendance-period-row">
+      <label for="attendancePeriodSelect">🕐 الحصة</label>
+      <select id="attendancePeriodSelect">
+        <option value="">بدون تحديد حصة</option>
+        <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
+        <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option>
+        <option value="7">الحصة السابعة</option>
+      </select>
+    </div>
+
     <label class="attendance-check"><input type="checkbox" id="attendanceAutoSave"> حفظ تلقائي بدون تأكيد أسرع، لكن دون مراجعة سجل الطالب قبل الحفظ</label>
 
     <div class="attendance-modal-grid">
@@ -1130,9 +1165,13 @@
         </div>
 
         <div id="attendanceEditTimeWrap" class="hidden" style="margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fbfa">
-          <label for="attendanceEditTime" style="display:block;font-weight:700;margin-bottom:8px">تعديل وقت الحالة</label>
-          <input id="attendanceEditTime" type="time" step="60" style="height:52px;border-radius:12px;font-size:18px;text-align:center">
-          <div class="hint" style="margin-top:7px;font-size:12px">يمكن تعديل وقت التأخر أو الغياب ثم الضغط على «حفظ التعديل».</div>
+          <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ والوقت</div>
+          <div class="attendance-edit-grid">
+            <div><label for="attendanceEditDate">📅 التاريخ</label><input id="attendanceEditDate" type="date" style="height:52px;border-radius:12px"></div>
+            <div><label>📆 اليوم</label><div id="attendanceEditDayName" class="attendance-edit-day">—</div></div>
+            <div><label for="attendanceEditTime">🕒 الوقت</label><input id="attendanceEditTime" type="time" step="60" style="height:52px;border-radius:12px;font-size:18px;text-align:center"></div>
+          </div>
+          <div class="hint" style="margin-top:8px;font-size:12px">يمكن تعديل تاريخ ووقت التأخر أو الغياب أو الحضور ثم الضغط على «حفظ التعديل».</div>
         </div>
 
         <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
@@ -2504,7 +2543,11 @@ function ensureAdminSettings(){
         <h3 style="text-align:center;font-size:22px;margin-top:28px">تسجيل يدوي لمعلم أو إداري غير موجود</h3>
         <div class="row">
           <div class="admin-settings-field"><label>اسم المستخدم</label><input id="newAdminUsername"></div>
+          <div class="admin-settings-field"><label>السجل المدني</label><input id="newAdminCivilId" inputmode="numeric"></div>
+        </div>
+        <div class="row">
           <div class="admin-settings-field"><label>الاسم</label><input id="newAdminName"></div>
+          <div></div>
         </div>
         <div class="row">
           <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
