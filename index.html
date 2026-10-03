@@ -655,28 +655,28 @@
     .wa-compose-actions button.primary{background:#0f7665;color:#fff}
     .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
   
-    .attendance-edit-grid{display:grid;grid-template-columns:minmax(260px,.82fr) minmax(430px,1.7fr)!important;gap:26px;align-items:center;direction:ltr}
-    .attendance-time-section{padding-inline-end:24px;border-inline-end:1px solid #d7e3e0;direction:rtl}
-    .attendance-date-section{direction:rtl}
-    .attendance-date-row{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(330px,1.55fr);gap:16px;align-items:end}
-    .attendance-edit-grid label{display:block;margin-bottom:8px;font-size:15px;font-weight:800;color:#29463f}
-    .attendance-day-select{width:100%;height:62px;border:1px solid var(--line);border-radius:16px;background:#fff;font-family:inherit;font-size:21px;font-weight:800;padding:0 16px;text-align:right}
-    .hijri-date-controls{display:grid;grid-template-columns:92px minmax(150px,1fr) 126px;gap:10px}
-    .hijri-date-controls select{width:100%;height:62px;border:1px solid var(--line);border-radius:16px;background:#fff;font-family:inherit;font-size:19px;font-weight:700;text-align:center;padding:0 10px}
-    .time-section-title{text-align:center;font-size:18px;font-weight:900;color:#29463f;margin-bottom:10px}
-    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;direction:ltr;max-width:320px;margin:auto}
-    .time-spinner{display:grid;grid-template-rows:auto 42px 72px 42px;gap:5px;align-items:stretch;min-width:96px}
-    .time-spinner-label{text-align:center;font-size:15px;font-weight:800;color:#60736e;margin-bottom:1px}
-    .time-spinner button{width:100%;height:42px;border:1px solid #c9dbd6;background:#fff;border-radius:12px;font-size:28px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
-    .time-spinner input{width:100%;height:72px;border:2px solid #b8d3cc;border-radius:14px;text-align:center;font-size:34px;font-weight:900;color:#102f29;background:#fff;-moz-appearance:textfield;padding:0}
-    .time-spinner input::-webkit-outer-spin-button,.time-spinner input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-    .time-colon{font-size:38px;font-weight:900;color:#173b34;align-self:center;padding-top:32px}
-    @media(max-width:900px){
+    .attendance-edit-grid{display:grid;grid-template-columns:minmax(300px,.95fr) minmax(560px,1.8fr)!important;gap:34px;align-items:start;direction:ltr}
+    .attendance-time-section{padding-inline-end:28px;border-inline-end:1px solid #d7e3e0;direction:rtl}
+    .attendance-date-section{direction:rtl;padding-top:92px}
+    .attendance-date-row{display:grid;grid-template-columns:minmax(285px,.9fr) minmax(500px,1.65fr);gap:20px;align-items:end}
+    .attendance-edit-grid label{display:block;margin-bottom:10px;font-size:18px;font-weight:900;color:#29463f}
+    .attendance-day-select{width:100%;height:62px;border:1px solid #c9dbd6;border-radius:16px;background:#fff;font-family:inherit;font-size:21px;font-weight:800;padding:0 16px;text-align:right;color:#173b34}
+    .hijri-date-controls{display:grid;grid-template-columns:138px minmax(235px,1fr) 190px;gap:12px}
+    .hijri-date-controls select{width:100%;height:62px;border:1px solid #c9dbd6;border-radius:16px;background:#fff;font-family:inherit;font-size:20px;font-weight:800;text-align:center;padding:0 10px;color:#173b34}
+    .time-section-title{text-align:center;font-size:25px;font-weight:900;color:#29463f;margin-bottom:14px}
+    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;direction:ltr;max-width:360px;margin:auto}
+    .time-spinner{display:grid;grid-template-rows:auto 62px 88px 62px;gap:8px;align-items:stretch;min-width:126px}
+    .time-spinner-label{text-align:center;font-size:18px;font-weight:900;color:#60736e;margin-bottom:0}
+    .time-spinner button{width:100%;height:62px;border:1px solid #c9dbd6;background:#fff;border-radius:16px;font-size:38px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
+    .time-spinner input{width:100%;height:88px;border:2px solid #b8d3cc;border-radius:18px;text-align:center;font-size:42px;font-weight:900;color:#102f29;background:#fff;padding:0;letter-spacing:1px}
+    .time-colon{font-size:42px;font-weight:900;color:#173b34;align-self:center;padding-top:45px}
+    @media(max-width:1100px){
       .attendance-edit-grid{grid-template-columns:1fr!important;gap:18px}
       .attendance-time-section{padding-inline-end:0;border-inline-end:0;border-bottom:1px solid #d7e3e0;padding-bottom:18px}
+      .attendance-date-section{padding-top:0}
       .attendance-date-row{grid-template-columns:1fr}
-      .hijri-date-controls{grid-template-columns:92px minmax(140px,1fr) 118px}
-      .time-spinner-wrap{max-width:330px}
+      .hijri-date-controls{grid-template-columns:110px minmax(180px,1fr) 145px}
+      .time-spinner-wrap{max-width:360px}
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1216,14 +1216,14 @@
                 <div class="time-spinner">
                   <div class="time-spinner-label">الدقائق</div>
                   <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
-                  <input id="attendanceEditMinute" type="number" inputmode="numeric" min="0" max="59" value="0">
+                  <input id="attendanceEditMinute" type="text" inputmode="numeric" maxlength="2" value="00">
                   <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
                 </div>
                 <div class="time-colon">:</div>
                 <div class="time-spinner">
                   <div class="time-spinner-label">الساعات</div>
                   <button type="button" data-time-spin="hour" data-dir="1" aria-label="زيادة الساعة">+</button>
-                  <input id="attendanceEditHour" type="number" inputmode="numeric" min="0" max="23" value="7">
+                  <input id="attendanceEditHour" type="text" inputmode="numeric" maxlength="2" value="07">
                   <button type="button" data-time-spin="hour" data-dir="-1" aria-label="تقليل الساعة">−</button>
                 </div>
               </div>
@@ -3740,15 +3740,26 @@ document.querySelectorAll('[data-time-spin]').forEach(btn=>{
     let v=Number(input.value||0)+Number(btn.dataset.dir||0);
     if(v>max) v=min;
     if(v<min) v=max;
-    input.value=String(v);
+    input.value=String(v).padStart(2,'0');
+  });
+});
+
+['attendanceEditHour','attendanceEditMinute'].forEach(id=>{
+  const input=$(id);
+  if(!input) return;
+  input.addEventListener('input',()=>{ input.value=input.value.replace(/\D/g,'').slice(0,2); });
+  input.addEventListener('blur',()=>{
+    const max=id==='attendanceEditHour'?23:59;
+    let v=Math.max(0,Math.min(max,Number(input.value||0)));
+    input.value=String(v).padStart(2,'0');
   });
 });
 
 function setAttendanceTimeControls(value){
   const v=attendanceTimeToInput(value)||'07:00';
   const [h,m]=v.split(':');
-  $('attendanceEditHour').value=String(Number(h));
-  $('attendanceEditMinute').value=String(Number(m));
+  $('attendanceEditHour').value=String(Number(h)).padStart(2,'0');
+  $('attendanceEditMinute').value=String(Number(m)).padStart(2,'0');
 }
 
 function getAttendanceEditedTime(){
