@@ -3706,8 +3706,15 @@ async function loadDeputyReferrals(){
       const id=Number(card?.dataset.referralId||0);
       const reply=card.querySelector('.deputy-reply-text')?.value?.trim()||'';
       const deputyAction=card.querySelector('.deputy-action-select')?.value||'';
-      if(!deputyAction && !reply){
-        alert('اختر ما تم حيال الطالب أو اكتب رد الوكيل.');
+      if(!deputyAction){
+        alert('اختر ما تم حيال الطالب أولًا.');
+        return;
+      }
+      if(!reply){
+        alert('اكتب رد الوكيل للمعلم قبل الحفظ.');
+        return;
+      }
+      if(!confirm('هل تريد حفظ الرد وإرسال المعاملة للمعلم؟ بعد الحفظ ستختفي من قائمة ردود الوكلاء.')){
         return;
       }
       btn.disabled=true;
