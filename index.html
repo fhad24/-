@@ -2398,33 +2398,7 @@
   <div class="add-student-modal-card">
     <button type="button" class="modal-close-x" id="closeAddStudentModal" aria-label="إغلاق">×</button>
     <h2>إضافة طالب</h2>
-    <div class="lead">ابدأ بمسح الطالب بالكاميرا. بعد التعرف سيظهر اسم الطالب وسجله المدني، ثم تُعرض الصورة الجديدة بجانب الصورة السابقة للمقارنة قبل الحفظ أو الإلغاء.</div>
-
-    <div class="face-verify-box" style="margin-top:8px">
-      <button type="button" class="scan-camera-btn" id="scanStudentCameraBtn">📷 مسح بالكاميرا</button>
-      
-      <div class="face-compare-grid">
-        <div class="face-panel">
-          <div class="face-title">الصورة الجديدة</div>
-          <img id="newStudentFace" class="hidden" alt="الصورة الجديدة">
-          <div id="newStudentFaceEmpty" class="face-placeholder">التقط صورة بالكاميرا أولاً</div>
-        </div>
-        <div class="face-panel">
-          <div class="face-title">الصورة السابقة</div>
-          <img id="oldStudentFace" class="hidden" alt="الصورة السابقة">
-          <div id="oldStudentFaceEmpty" class="face-placeholder">سيتم إظهار الصورة المطابقة من قاعدة البيانات</div>
-        </div>
-      </div>
-
-      <div id="faceMatchStatus" class="face-match-status wait">بانتظار مسح الطالب بالكاميرا</div>
-      <div id="matchedStudentInfo" class="matched-student-info">
-        <div class="matched-student-title">بيانات الطالب الذي تم التعرف عليه</div>
-        <div class="matched-student-row">
-          <div class="matched-student-field"><span>اسم الطالب</span><b id="matchedStudentName">—</b></div>
-          <div class="matched-student-field"><span>السجل المدني / رقم الهوية</span><b id="matchedStudentId">—</b></div>
-        </div>
-      </div>
-    </div>
+    <div class="lead">ابدأ باختيار بيانات الطالب: الصف الدراسي، الفصل، ثم اسم الطالب. بعد ذلك استخدم مسح الكاميرا لالتقاط الصورة الجديدة ومقارنتها بالصورة السابقة قبل الحفظ أو الإلغاء.</div>
 
     <div class="student-picker-grid">
       <div>
@@ -2457,6 +2431,32 @@
         <span class="student-select-arrow">⌄</span>
       </button>
       <div id="studentCardGrid" class="student-card-grid hidden"></div>
+    </div>
+
+    <div class="face-verify-box">
+      <button type="button" class="scan-camera-btn" id="scanStudentCameraBtn">📷 مسح بالكاميرا</button>
+      
+      <div class="face-compare-grid">
+        <div class="face-panel">
+          <div class="face-title">الصورة الجديدة</div>
+          <img id="newStudentFace" class="hidden" alt="الصورة الجديدة">
+          <div id="newStudentFaceEmpty" class="face-placeholder">التقط صورة بالكاميرا أولاً</div>
+        </div>
+        <div class="face-panel">
+          <div class="face-title">الصورة السابقة</div>
+          <img id="oldStudentFace" class="hidden" alt="الصورة السابقة">
+          <div id="oldStudentFaceEmpty" class="face-placeholder">سيتم إظهار الصورة المطابقة من قاعدة البيانات</div>
+        </div>
+      </div>
+
+      <div id="faceMatchStatus" class="face-match-status wait">بانتظار مسح الطالب بالكاميرا</div>
+      <div id="matchedStudentInfo" class="matched-student-info">
+        <div class="matched-student-title">بيانات الطالب الذي تم التعرف عليه</div>
+        <div class="matched-student-row">
+          <div class="matched-student-field"><span>اسم الطالب</span><b id="matchedStudentName">—</b></div>
+          <div class="matched-student-field"><span>السجل المدني / رقم الهوية</span><b id="matchedStudentId">—</b></div>
+        </div>
+      </div>
     </div>
 
     <div class="add-student-actions">
