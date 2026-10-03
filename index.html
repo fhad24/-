@@ -2265,7 +2265,38 @@
         </div>
         <div class="referral-field">
           <label>المادة</label>
-          <input id="referralSubject" required placeholder="اسم المادة">
+          <select id="referralSubject" required>
+            <option value="">اختر المادة</option>
+            <option value="الكفايات اللغوية">الكفايات اللغوية</option>
+            <option value="القرآن الكريم وتفسيره">القرآن الكريم وتفسيره</option>
+            <option value="الرياضيات">الرياضيات</option>
+            <option value="الكيمياء">الكيمياء</option>
+            <option value="الأحياء">الأحياء</option>
+            <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+            <option value="التفكير الناقد">التفكير الناقد</option>
+            <option value="التقنية الرقمية">التقنية الرقمية</option>
+            <option value="التربية الصحية والبدنية">التربية الصحية والبدنية</option>
+            <option value="الفيزياء">الفيزياء</option>
+            <option value="التاريخ">التاريخ</option>
+            <option value="التوحيد">التوحيد</option>
+            <option value="الفنون">الفنون</option>
+            <option value="اللياقة">اللياقة</option>
+            <option value="الثقافة الصحية">الثقافة الصحية</option>
+            <option value="مواد متقدمة في البرمجة">مواد متقدمة في البرمجة</option>
+            <option value="هندسة البرمجيات">هندسة البرمجيات</option>
+            <option value="العلوم الطبية الحيوية">العلوم الطبية الحيوية</option>
+            <option value="الأحياء المتقدمة">الأحياء المتقدمة</option>
+            <option value="التشريح">التشريح</option>
+            <option value="الصحة العامة">الصحة العامة</option>
+            <option value="مبادئ الإدارة">مبادئ الإدارة</option>
+            <option value="الاقتصاد">الاقتصاد</option>
+            <option value="المحاسبة">المحاسبة</option>
+            <option value="التقنية الرقمية للأعمال">التقنية الرقمية للأعمال</option>
+            <option value="الفقه">الفقه</option>
+            <option value="التفسير">التفسير</option>
+            <option value="الحديث">الحديث</option>
+            <option value="الأصول">الأصول</option>
+          </select>
         </div>
         <div class="referral-field">
           <label>الحصة الدراسية</label>
@@ -2298,11 +2329,9 @@
       <div class="referral-grid" style="margin-top:18px">
         <div class="referral-field">
           <label>اسم المعلم</label>
-          <input id="referralTeacher" required placeholder="اسم المعلم">
-        </div>
-        <div class="referral-field">
-          <label>التوقيع</label>
-          <input id="referralSignature" placeholder="اسم المعلم كتوقيع">
+          <select id="referralTeacher" required>
+            <option value="">اختر المعلم</option>
+          </select>
         </div>
         <div class="referral-field">
           <label>التاريخ</label>
@@ -2980,11 +3009,29 @@ async function selectReferralStudent(idno){
 function populateReferralStudents(){
   renderReferralStudentResults('');
 }
+function populateReferralTeachers(){
+  const sel=$('referralTeacher');
+  if(!sel || typeof getAdminUsers!=='function') return;
+  const current=sel.value;
+  const users=getAdminUsers();
+  sel.innerHTML='<option value="">اختر المعلم</option>';
+  users.forEach(u=>{
+    const opt=document.createElement('option');
+    opt.value=String(u.username||u.civilId||'');
+    const civil=String(u.civilId||u.username||'');
+    opt.textContent=`${u.name||'بدون اسم'} — ${civil}`;
+    opt.dataset.name=u.name||'';
+    opt.dataset.civilId=civil;
+    sel.appendChild(opt);
+  });
+  if(current && [...sel.options].some(o=>o.value===current)) sel.value=current;
+}
 function initReferralPage(){
   const d=$('referralDate');
   if(d && !d.value) d.value=new Date().toISOString().slice(0,10);
   updateReferralHijriDate();
   populateReferralStudents();
+  populateReferralTeachers();
 }
 if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',e=>{
   e.preventDefault();
@@ -2993,13 +3040,13 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     id:'R'+Date.now(),
     studentName:$('referralStudentName').value.trim(),
     grade:$('referralGrade').value,
-    subject:$('referralSubject').value.trim(),
+    subject:$('referralSubject').value,
     period:$('referralPeriod').value,
     reasons,
     otherReason:$('referralOtherReason').value.trim(),
     problem:$('referralProblem').value.trim(),
-    teacher:$('referralTeacher').value.trim(),
-    signature:$('referralSignature').value.trim(),
+    teacherCivilId:$('referralTeacher').value,
+    teacher:($('referralTeacher').selectedOptions[0]?.dataset.name||$('referralTeacher').selectedOptions[0]?.textContent||'').trim(),
     date:$('referralDate').value,
     hijriDate:$('referralHijriDate').value,
     actionTaken:$('referralActionTaken').value.trim(),
