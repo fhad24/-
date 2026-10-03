@@ -3258,6 +3258,9 @@ function todayKey(){return new Date().toISOString().slice(0,10)}
 
 async function renderAttendancePage(){
   if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
+  if($('attendanceWhatsAppSelected')){
+    $('attendanceWhatsAppSelected').style.display=(attendanceListView==='late'||attendanceListView==='absent')?'':'none';
+  }
   const students=getStudents();
   const allLogs=getAttendanceLog();
   const today=allLogs.filter(x=>x.date===todayKey());
@@ -3449,13 +3452,11 @@ function attendanceWhatsAppReadyTemplate(){
 }
 
 function buildAttendanceWhatsAppMessage(template,row,student){
-  const statusText=row.status==='late'?'متأخر':row.status==='absent'?'غائب':'حاضر';
+  const statusText=row.status==='late'?'متأخر':'غائب';
   const count=attendanceStatusCount(row.idno,row.status);
   const countText=row.status==='late'
     ?('بلغ عدد أيام التأخر المسجلة حتى الآن: '+count+' يوم.')
-    :row.status==='absent'
-      ?('بلغ عدد أيام الغياب المسجلة حتى الآن: '+count+' يوم.')
-      :('بلغ عدد مرات الحضور المسجلة حتى الآن: '+count+'.');
+    :('بلغ عدد أيام الغياب المسجلة حتى الآن: '+count+' يوم.');
   const school=getSchoolSettings().school||'المدرسة';
   const recorder=getCurrentAttendanceRecorder();
   const map={
@@ -3477,6 +3478,11 @@ function buildAttendanceWhatsAppMessage(template,row,student){
 }
 
 function openAttendanceWhatsAppForRows(rows){
+  rows=(rows||[]).filter(row=>row && (row.status==='late'||row.status==='absent'));
+  if(!rows.length){
+    alert('رسائل الواتساب مخصصة للتأخر والغياب فقط');
+    return;
+  }
   const students=getStudents();
   const items=rows.map(row=>{
     const student=students.find(s=>String(s.idno)===String(row.idno))||{};
@@ -3536,6 +3542,10 @@ if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
 };
 
 if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>{
+  if(attendanceListView!=='late' && attendanceListView!=='absent'){
+    alert('رسائل الواتساب متاحة في التأخر والغياب فقط');
+    return;
+  }
   const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
     .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite);
   if(!indexes.length){alert('حدد طالبًا واحدًا أو مجموعة طلاب أولاً');return}
