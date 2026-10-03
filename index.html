@@ -2446,8 +2446,24 @@ function ensureAdminSettings(){
       localStorage.setItem('schoolSettings',JSON.stringify(next));
       applySchoolSettings();
 
-      if(localStorage.getItem('cloudAdminToken')){
-        await cloudApi('save_settings',{settings:next});
+      try{
+        if(localStorage.getItem('cloudAdminToken')){
+          await cloudApi('save_settings',{settings:next});
+        }else{
+          const p=getAdminProfile();
+          await cloudApi('save_settings_with_credentials',{
+            username:p.username,
+            password:p.password,
+            settings:next
+          },false);
+        }
+      }catch(syncErr){
+        const p=getAdminProfile();
+        await cloudApi('save_settings_with_credentials',{
+          username:p.username,
+          password:p.password,
+          settings:next
+        },false);
       }
 
       delete schoolPreview.dataset.pending;
@@ -2802,6 +2818,21 @@ setTimeout(async()=>{
         ministryLogo:s.ministry_logo||'',schoolLogo:s.school_logo||''
       }));
       applySchoolSettings();
+      const logos=document.querySelectorAll('header .logo');
+      if(logos[0] && s.ministry_logo){
+        logos[0].textContent='';
+        logos[0].style.backgroundImage=`url("${s.ministry_logo}")`;
+        logos[0].style.backgroundSize='contain';
+        logos[0].style.backgroundRepeat='no-repeat';
+        logos[0].style.backgroundPosition='center';
+      }
+      if(logos[1] && s.school_logo){
+        logos[1].textContent='';
+        logos[1].style.backgroundImage=`url("${s.school_logo}")`;
+        logos[1].style.backgroundSize='contain';
+        logos[1].style.backgroundRepeat='no-repeat';
+        logos[1].style.backgroundPosition='center';
+      }
     }
   }catch(e){}
 },50);
