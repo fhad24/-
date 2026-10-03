@@ -1486,6 +1486,10 @@
       order:1!important;
       margin:0!important;
     }
+
+    .attendance-class-row{
+      grid-template-columns:1fr!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -1958,7 +1962,7 @@
           <button type="button" data-grade="الثالث الثانوي" class="att-grade">الثالث</button>
         </div>        <div class="attendance-class-row">
           <select id="attendanceClassFilter"><option value="">كل الفصول</option></select>
-          <label><input type="checkbox" id="attendanceHideRegistered" checked> إخفاء المسجلين</label>
+
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -4924,7 +4928,7 @@ async function renderAttendanceStudentList(){
       (!cls||String(s.classroom||'')===cls) &&
       matchesSearch;
   });
-  if($('attendanceHideRegistered').checked) list=list.filter(s=>!todayIds.has(String(s.idno)));
+  if($('attendanceHideRegistered')?.checked) list=list.filter(s=>!todayIds.has(String(s.idno)));
 
   const rendered=await Promise.all(list.map(async s=>{
     const perf=getStudentAttendancePerformance(s.idno);
