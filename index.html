@@ -655,17 +655,25 @@
     .wa-compose-actions button.primary{background:#0f7665;color:#fff}
     .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
   
-    .hijri-date-controls{display:grid;grid-template-columns:80px 1fr 100px;gap:6px}
-    .hijri-date-controls select{height:52px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit;font-size:15px;text-align:center}
-    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end;direction:ltr}
-    .time-spinner{display:grid;grid-template-columns:42px minmax(70px,1fr) 42px;gap:6px;align-items:center}
-    .time-spinner-label{grid-column:1/-1;text-align:center;font-size:12px;font-weight:800;color:#60736e;margin-bottom:2px}
-    .time-spinner button{height:52px;border:1px solid #c9dbd6;background:#fff;border-radius:10px;font-size:26px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
-    .time-spinner input{width:100%;height:52px;border:2px solid #b8d3cc;border-radius:10px;text-align:center;font-size:28px;font-weight:900;color:#102f29;background:#fff;-moz-appearance:textfield}
+    .attendance-edit-grid{display:grid;grid-template-columns:1fr 1.55fr 1.15fr!important;gap:14px;align-items:end;direction:rtl}
+    .attendance-edit-grid>div{min-width:0}
+    .attendance-edit-grid label{display:block;margin-bottom:7px;font-size:14px;font-weight:800;color:#29463f}
+    .attendance-day-select{width:100%;height:58px;border:1px solid var(--line);border-radius:14px;background:#fff;font-family:inherit;font-size:20px;font-weight:800;padding:0 14px;text-align:right}
+    .hijri-date-controls{display:grid;grid-template-columns:86px minmax(120px,1fr) 118px;gap:8px}
+    .hijri-date-controls select{width:100%;height:58px;border:1px solid var(--line);border-radius:14px;background:#fff;font-family:inherit;font-size:18px;font-weight:700;text-align:center;padding:0 8px}
+    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;direction:ltr}
+    .time-spinner{display:grid;grid-template-rows:auto 40px 58px 40px;gap:5px;align-items:stretch;min-width:84px}
+    .time-spinner-label{text-align:center;font-size:13px;font-weight:800;color:#60736e;margin-bottom:1px}
+    .time-spinner button{width:100%;height:40px;border:1px solid #c9dbd6;background:#fff;border-radius:10px;font-size:26px;font-weight:900;cursor:pointer;color:#173b34;line-height:1}
+    .time-spinner input{width:100%;height:58px;border:2px solid #b8d3cc;border-radius:12px;text-align:center;font-size:30px;font-weight:900;color:#102f29;background:#fff;-moz-appearance:textfield;padding:0}
     .time-spinner input::-webkit-outer-spin-button,.time-spinner input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-    .time-colon{font-size:32px;font-weight:900;color:#173b34;padding-bottom:8px}
-    .attendance-edit-grid{grid-template-columns:1.45fr 1fr 1fr!important}
-    @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr!important}.hijri-date-controls{grid-template-columns:70px 1fr 92px}}
+    .time-colon{font-size:34px;font-weight:900;color:#173b34;align-self:center;padding-top:28px}
+    @media(max-width:760px){
+      .attendance-edit-grid{grid-template-columns:1fr!important}
+      .hijri-date-controls{grid-template-columns:86px minmax(120px,1fr) 110px}
+      .attendance-day-select{height:54px}
+      .time-spinner-wrap{max-width:320px;margin:auto}
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -1200,7 +1208,7 @@
           <div class="attendance-edit-grid">
             <div>
               <label>📆 اليوم</label>
-              <select id="attendanceEditWeekday" style="height:52px;border-radius:12px;font-size:17px;font-weight:800">
+              <select id="attendanceEditWeekday" class="attendance-day-select">
                 <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
               </select>
             </div>
@@ -1221,16 +1229,16 @@
               <div class="time-spinner-wrap">
                 <div class="time-spinner">
                   <div class="time-spinner-label">الساعات</div>
-                  <button type="button" data-time-spin="hour" data-dir="-1" aria-label="تقليل الساعة">−</button>
-                  <input id="attendanceEditHour" type="number" inputmode="numeric" min="0" max="23" value="7">
                   <button type="button" data-time-spin="hour" data-dir="1" aria-label="زيادة الساعة">+</button>
+                  <input id="attendanceEditHour" type="number" inputmode="numeric" min="0" max="23" value="7">
+                  <button type="button" data-time-spin="hour" data-dir="-1" aria-label="تقليل الساعة">−</button>
                 </div>
                 <div class="time-colon">:</div>
                 <div class="time-spinner">
                   <div class="time-spinner-label">الدقائق</div>
-                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
-                  <input id="attendanceEditMinute" type="number" inputmode="numeric" min="0" max="59" value="0">
                   <button type="button" data-time-spin="minute" data-dir="1" aria-label="زيادة الدقائق">+</button>
+                  <input id="attendanceEditMinute" type="number" inputmode="numeric" min="0" max="59" value="0">
+                  <button type="button" data-time-spin="minute" data-dir="-1" aria-label="تقليل الدقائق">−</button>
                 </div>
               </div>
             </div>
