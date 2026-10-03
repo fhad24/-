@@ -3539,10 +3539,33 @@ if(studentPhotosExcelInput) studentPhotosExcelInput.onchange=async e=>{
 };
 
 
-function normalizeMadrasatiClassroom(v){
+function normalizeMadrasatiClassroom(v,grade=''){
   let s=String(v??'').trim().replace(/\.0$/,'').replace(/\s+/g,' ');
   if(!s) return '';
-  // إبقاء رقم/اسم الفصل فقط كما ورد في كشف مدرستي، بدون تغيير أي بيانات أخرى.
+
+  const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
+  s=s.replace(/[٠-٩]/g,d=>String(ar.indexOf(d))).replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
+
+  const gradeNames=[
+    String(grade||'').trim(),
+    'الأول الثانوي','الاول الثانوي','أول ثانوي','اول ثانوي',
+    'الثاني الثانوي','ثاني ثانوي',
+    'الثالث الثانوي','ثالث ثانوي'
+  ].filter(Boolean);
+
+  for(const g of gradeNames){
+    s=s.split(g).join(' ');
+  }
+
+  s=s
+    .replace(/الصف|الفصل|الشعبة|فصل|شعبة|class|section/gi,' ')
+    .replace(/[\/:：|\-–—]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  const nums=s.match(/\d+/g);
+  if(nums && nums.length) return String(Number(nums[nums.length-1]));
+
   return s;
 }
 
@@ -3615,7 +3638,7 @@ async function importMadrasatiPlacements(file){
       const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
 
       const grade=gradeRaw!=='' ? normalizeGuidanceGrade(gradeRaw) : '';
-      const classroom=classRaw!=='' ? normalizeMadrasatiClassroom(classRaw) : '';
+      const classroom=classRaw!=='' ? normalizeMadrasatiClassroom(classRaw,grade) : '';
 
       const old=students[idx];
       const newGrade=grade || old.grade || '';
