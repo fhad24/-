@@ -1777,6 +1777,39 @@
       accent-color:#0f7665!important;
       cursor:pointer!important;
     }
+
+    /* تصغير الحصة والمادة وإضافة اسم المعلم بجانبهم أفقياً */
+    .attendance-session-controls{
+      grid-template-columns:150px minmax(220px,1fr) minmax(180px,.9fr)!important;
+      gap:10px!important;
+      padding:10px 12px!important;
+      margin:12px 0 8px!important;
+      align-items:end!important;
+    }
+    .attendance-session-field label{
+      font-size:12px!important;
+      margin-bottom:5px!important;
+    }
+    .attendance-session-field select,
+    .attendance-session-field input{
+      width:100%!important;
+      height:38px!important;
+      min-height:38px!important;
+      border:1px solid #c9dbd6!important;
+      border-radius:9px!important;
+      background:#fff!important;
+      font-family:inherit!important;
+      font-size:13px!important;
+      font-weight:700!important;
+      color:#173b34!important;
+      padding:0 9px!important;
+      box-sizing:border-box!important;
+    }
+    @media(max-width:760px){
+      .attendance-session-controls{
+        grid-template-columns:1fr!important;
+      }
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2395,6 +2428,10 @@
           <option value="الحديث">الحديث</option>
           <option value="الأصول">الأصول</option>
         </select>
+      </div>
+      <div class="attendance-session-field attendance-session-teacher">
+        <label for="attendanceTeacherName">👤 اسم المعلم</label>
+        <input id="attendanceTeacherName" type="text" placeholder="اسم المعلم">
       </div>
     </div>
 
@@ -4934,7 +4971,8 @@ function openAttendanceModal(mode){
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
-  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
+  const recorderNow=getCurrentAttendanceRecorder();
+  if($('attendanceTeacherName')) $('attendanceTeacherName').value=recorderNow.name||'';
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -4983,6 +5021,7 @@ async function openAttendanceEdit(index){
   }
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=String(row.subject||'');
+  if($('attendanceTeacherName')) $('attendanceTeacherName').value=String(row.teacherName||getCurrentAttendanceRecorder().name||'');
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -5356,7 +5395,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       subject:$('attendanceSubjectSelect')?.value||'',
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
-      teacherName:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name,
+      teacherName:($('attendanceTeacherName')?.value||'').trim() || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name),
       teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
       teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
       idno:s.idno,
