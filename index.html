@@ -1323,7 +1323,7 @@ async function cloudPullToLocal(){
 
   const attendance=(data.attendance||[]).map(x=>({
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
-    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||''
+    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??''
   }));
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
@@ -2733,17 +2733,19 @@ function ensureAdminSettings(){
   document.getElementById('addAdminUser').onclick=()=>{
     const username=document.getElementById('newAdminUsername').value.trim();
     const name=document.getElementById('newAdminName').value.trim();
+    const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||username;
     const password=document.getElementById('newAdminPassword').value;
     const role=document.getElementById('newAdminRole').value;
     if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
-    users.push({username,name,password,role,permissions});
+    users.push({username,civilId,name,password,role,permissions});
     saveAdminUsers(users);
     cloudApi('save_user',{user:users[users.length-1]}).catch(e=>console.warn('cloud user',e));
     document.getElementById('newAdminUsername').value='';
     document.getElementById('newAdminName').value='';
+    document.getElementById('newAdminCivilId').value='';
     document.getElementById('newAdminPassword').value='';
     renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
   };
@@ -2800,6 +2802,7 @@ function ensureAdminSettings(){
 
       const payloadUsers=users.map(u=>({
         username:u.username,
+        civilId:u.civilId||u.username,
         name:u.name,
         role:u.role,
         permissions:[...permissions]
@@ -2905,7 +2908,8 @@ function ensureAdminSettings(){
         }
 
         const idx=users.findIndex(u=>String(u.username)===username);
-        const rec={username,name,password,role,permissions};
+        const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||username;
+        const rec={username,civilId,name,password,role,permissions};
         if(idx>=0){users[idx]={...users[idx],...rec,password:password||users[idx].password||''};updated++}
         else{users.push(rec);added++}
       }
@@ -2930,6 +2934,7 @@ async function refreshAdminUsersFromCloud(){
     const oldBy=new Map(oldUsers.map(u=>[String(u.username),u]));
     const cloudUsers=(data.users||[]).filter(u=>!u.is_owner).map(u=>({
       username:String(u.username||''),
+      civilId:String(u.civil_id||u.username||''),
       name:u.name||'',
       role:u.role||'معلم',
       permissions:Array.isArray(u.permissions)?u.permissions:[],
@@ -2960,7 +2965,8 @@ function renderAdminUsersSettings(){
   const q=String(document.getElementById('adminUserSearch')?.value||'').trim().toLowerCase();
   const filtered=q ? users.filter(u=>
     String(u.name||'').toLowerCase().includes(q) ||
-    String(u.username||'').includes(q)
+    String(u.username||'').includes(q) ||
+    String(u.civilId||u.username||'').includes(q)
   ) : users;
   const labels={
     editStudents:'تعديل بيانات الطلاب',
@@ -2978,8 +2984,8 @@ function renderAdminUsersSettings(){
     return `
     <div class="admin-user-card">
       <div>
-        <b>${u.username}</b>
-        <span>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</span>
+        <b>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</b>
+        <div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
         <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
       <div class="admin-user-actions">
@@ -3053,7 +3059,7 @@ function openUserPermissionEditor(username){
         <button type="button" class="user-perm-close" id="userPermClose">×</button>
       </div>
       <div class="user-perm-meta">
-        <div class="box"><b>${u.name||'بدون اسم'}</b><span>${u.username||''}</span></div>
+        <div class="box"><b>${u.name||'بدون اسم'}</b><span>اسم المستخدم: ${u.username||''}</span><span>السجل المدني: ${u.civilId||u.username||''}</span></div>
         <div class="box"><b>نوع المستخدم</b><span>${u.role||'معلم'}</span></div>
       </div>
       <div class="user-perm-role">
@@ -3370,6 +3376,14 @@ function formatAttendanceTimeForDisplay(value){
   return d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
 }
 
+function updateAttendanceEditDayName(){
+  const value=$('attendanceEditDate')?.value||'';
+  if(!value){if($('attendanceEditDayName')) $('attendanceEditDayName').textContent='—';return}
+  const d=new Date(value+'T12:00:00');
+  $('attendanceEditDayName').textContent=d.toLocaleDateString('ar-SA',{weekday:'long'});
+}
+if($('attendanceEditDate')) $('attendanceEditDate').addEventListener('change',updateAttendanceEditDayName);
+
 function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
   attendanceMode=mode;
@@ -3379,6 +3393,7 @@ function openAttendanceModal(mode){
   attendanceFaceCompareResult='none';
   $('attendanceStudentModal').classList.remove('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -3419,6 +3434,9 @@ async function openAttendanceEdit(index){
   $('attendanceStudentModal').classList.remove('hidden');
   $('attendanceEditTimeWrap')?.classList.remove('hidden');
   if($('attendanceEditTime')) $('attendanceEditTime').value=attendanceTimeToInput(row.time);
+  if($('attendanceEditDate')) $('attendanceEditDate').value=String(row.date||todayKey());
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
+  updateAttendanceEditDayName();
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3762,8 +3780,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       ? formatAttendanceTimeForDisplay($('attendanceEditTime').value)
       : '';
     const record={
-      date:attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey(),
+      date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
+      period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
       idno:s.idno,
       name:s.name,
       grade:s.grade||'',
