@@ -3581,14 +3581,10 @@ function setAdminMode(on){
 }
 
 $('adminLoginBtn').onclick=async()=>{
-  const user=$('adminUser').value.trim(), pass=$('adminPass').value;
-  const btn=$('adminLoginBtn'); const oldText=btn.textContent;
-  btn.disabled=true; btn.textContent='جاري الدخول...';
-
-  const p=getAdminProfile();
-  const extra=getAdminUsers().find(x=>String(x.username)===user && String(x.password)===pass);
-  const defaultAdmin=(user==='1015401902' && pass==='13111111');
-  const localOk=(String(p.username)===user && String(p.password)===pass) || !!extra || defaultAdmin;
+  const user=String($('adminUser').value||'').trim();
+  const pass=String($('adminPass').value||'').trim();
+  const btn=$('adminLoginBtn');
+  const oldText=btn.textContent;
 
   const openDashboard=()=>{
     localStorage.setItem('adminLoggedIn','1');
@@ -3596,25 +3592,41 @@ $('adminLoginBtn').onclick=async()=>{
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
-    renderAdmin();
+    try{renderAdmin()}catch(e){console.error('renderAdmin after login',e)}
   };
 
-  try{
-    if(localOk){
-      // لا نمنع الدخول إذا تعطلت أو اختلفت بيانات السحابة.
-      openDashboard();
-      try{
-        await cloudLoginAndSync(user,pass);
-      }catch(e){
-        console.warn('cloud login after local success',e);
-        toast('تم الدخول بنجاح');
-      }
-      return;
-    }
+  const hashText=async(s)=>{
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s)));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  };
 
+  const p=getAdminProfile();
+  const extra=getAdminUsers().find(x=>
+    String(x.username||'').trim()===user &&
+    String(x.password||'').trim()===pass
+  );
+
+  let localOk=(String(p.username||'').trim()===user && String(p.password||'').trim()===pass) || !!extra;
+
+  if(!localOk && user==='1015401902'){
+    const h=await hashText(pass);
+    localOk=(h==='3145fce15ea7c353fb72a705d463849e85b4d21e74b703dca210cc9e168b6ea0');
+  }
+
+  if(localOk){
+    openDashboard();
+    btn.disabled=false;
+    btn.textContent=oldText;
+    return;
+  }
+
+  btn.disabled=true;
+  btn.textContent='جاري الدخول...';
+  try{
     await cloudLoginAndSync(user,pass);
     openDashboard();
   }catch(e){
+    console.error('admin login failed',e);
     toast('اسم المستخدم أو كلمة المرور غير صحيحة');
   }finally{
     btn.disabled=false;
