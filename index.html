@@ -2330,7 +2330,10 @@
 <section id="referral" class="page hidden">
   <div class="referral-page">
     <form id="studentReferralForm" class="card referral-card">
-      <h2 class="referral-title">تحويل طالب لوكيل شؤون الطلاب</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+        <h2 class="referral-title" style="margin:0">تحويل طالب لوكيل شؤون الطلاب</h2>
+        <button type="button" class="btn btn-primary" id="referralNewBtn">➕ تحويل طالب جديد</button>
+      </div>
       <div class="referral-code">نموذج رقم (٣١) — رمز النموذج: (و.ط.ع.ن - ٠٤ - ٠٣)</div>
 
       <div class="referral-grid">
@@ -2529,7 +2532,6 @@
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
-          <button class="admin-pill" id="adminNewReferralBtn">تحويل طالب جديد ➕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
@@ -5246,7 +5248,7 @@ setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
-if($('adminNewReferralBtn')) $('adminNewReferralBtn').onclick=()=>{
+if($('referralNewBtn')) $('referralNewBtn').onclick=()=>{
   try{
     const form=$('studentReferralForm');
     if(form) form.reset();
