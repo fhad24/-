@@ -654,6 +654,16 @@
     .wa-compose-actions button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:10px;padding:9px 12px;font-family:inherit;font-weight:800}
     .wa-compose-actions button.primary{background:#0f7665;color:#fff}
     .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
+  
+    .hijri-date-controls{display:grid;grid-template-columns:80px 1fr 100px;gap:6px}
+    .hijri-date-controls select{height:52px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit;font-size:15px;text-align:center}
+    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;direction:ltr}
+    .time-spinner{display:grid;grid-template-rows:34px 54px 34px;gap:4px}
+    .time-spinner button{border:1px solid #c9dbd6;background:#eef7f4;border-radius:9px;font-size:18px;font-weight:900;cursor:pointer;color:#0f7665}
+    .time-spinner input{width:100%;height:54px;border:1px solid var(--line);border-radius:10px;text-align:center;font-size:22px;font-weight:800}
+    .time-colon{font-size:28px;font-weight:900;color:#173b34}
+    .attendance-edit-grid{grid-template-columns:1.45fr 1fr 1fr!important}
+    @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr!important}.hijri-date-controls{grid-template-columns:70px 1fr 92px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -1183,13 +1193,45 @@
         </div>
 
         <div id="attendanceEditTimeWrap" class="hidden" style="margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fbfa">
-          <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ والوقت</div>
+          <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
+          <input id="attendanceEditDate" type="hidden">
           <div class="attendance-edit-grid">
-            <div><label for="attendanceEditDate">📅 التاريخ</label><input id="attendanceEditDate" type="date" style="height:52px;border-radius:12px"></div>
-            <div><label>📆 اليوم</label><div id="attendanceEditDayName" class="attendance-edit-day">—</div></div>
-            <div><label for="attendanceEditTime">🕒 الوقت</label><input id="attendanceEditTime" type="time" step="60" style="height:52px;border-radius:12px;font-size:18px;text-align:center"></div>
+            <div>
+              <label>📅 التاريخ الهجري</label>
+              <div class="hijri-date-controls">
+                <select id="attendanceHijriDay"></select>
+                <select id="attendanceHijriMonth">
+                  <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
+                  <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
+                  <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
+                </select>
+                <select id="attendanceHijriYear"></select>
+              </div>
+            </div>
+            <div>
+              <label>📆 اليوم</label>
+              <select id="attendanceEditWeekday" style="height:52px;border-radius:12px">
+                <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+              </select>
+            </div>
+            <div>
+              <label>🕒 الوقت</label>
+              <div class="time-spinner-wrap">
+                <div class="time-spinner">
+                  <button type="button" data-time-spin="hour" data-dir="1">▲</button>
+                  <input id="attendanceEditHour" type="number" min="0" max="23" value="7">
+                  <button type="button" data-time-spin="hour" data-dir="-1">▼</button>
+                </div>
+                <div class="time-colon">:</div>
+                <div class="time-spinner">
+                  <button type="button" data-time-spin="minute" data-dir="1">▲</button>
+                  <input id="attendanceEditMinute" type="number" min="0" max="59" value="0">
+                  <button type="button" data-time-spin="minute" data-dir="-1">▼</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="hint" style="margin-top:8px;font-size:12px">يمكن تعديل تاريخ ووقت التأخر أو الغياب أو الحضور ثم الضغط على «حفظ التعديل».</div>
+          <div class="hint" style="margin-top:8px;font-size:12px">اختر التاريخ الهجري واليوم من الأحد إلى الخميس، ويمكن رفع أو خفض الساعات والدقائق من الأسهم.</div>
         </div>
 
         <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
@@ -1342,7 +1384,8 @@ async function cloudPullToLocal(){
   const attendance=(data.attendance||[]).map(x=>({
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
     date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
-    teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||''
+    teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
+    hijriDate:x.hijri_date||'', weekday:x.weekday||''
   }));
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
@@ -3589,13 +3632,99 @@ function formatAttendanceTimeForDisplay(value){
   return d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
 }
 
-function updateAttendanceEditDayName(){
-  const value=$('attendanceEditDate')?.value||'';
-  if(!value){if($('attendanceEditDayName')) $('attendanceEditDayName').textContent='—';return}
-  const d=new Date(value+'T12:00:00');
-  $('attendanceEditDayName').textContent=d.toLocaleDateString('ar-SA',{weekday:'long'});
+const hijriFormatter=(()=>{
+  try{return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura',{year:'numeric',month:'numeric',day:'numeric'})}
+  catch(e){return new Intl.DateTimeFormat('en-u-ca-islamic',{year:'numeric',month:'numeric',day:'numeric'})}
+})();
+
+function gregorianToHijriParts(dateValue){
+  const d=typeof dateValue==='string'?new Date(dateValue+'T12:00:00'):dateValue;
+  const parts=hijriFormatter.formatToParts(d);
+  const get=t=>Number(parts.find(p=>p.type===t)?.value||0);
+  return {year:get('year'),month:get('month'),day:get('day')};
 }
-if($('attendanceEditDate')) $('attendanceEditDate').addEventListener('change',updateAttendanceEditDayName);
+
+function compareHijriParts(a,b){
+  if(a.year!==b.year) return a.year-b.year;
+  if(a.month!==b.month) return a.month-b.month;
+  return a.day-b.day;
+}
+
+function hijriToGregorian(hy,hm,hd){
+  hy=Number(hy);hm=Number(hm);hd=Number(hd);
+  const approxYear=Math.floor(hy*0.970224+621.5774);
+  let lo=Date.UTC(approxYear-2,0,1), hi=Date.UTC(approxYear+2,11,31);
+  const target={year:hy,month:hm,day:hd};
+  for(let i=0;i<24 && lo<=hi;i++){
+    const mid=lo+Math.floor((hi-lo)/(2*86400000))*86400000;
+    const got=gregorianToHijriParts(new Date(mid));
+    const cmp=compareHijriParts(got,target);
+    if(cmp===0) return new Date(mid).toISOString().slice(0,10);
+    if(cmp<0) lo=mid+86400000; else hi=mid-86400000;
+  }
+  for(let t=Math.max(lo-3*86400000,Date.UTC(approxYear-2,0,1));t<=Math.min(lo+3*86400000,Date.UTC(approxYear+2,11,31));t+=86400000){
+    const got=gregorianToHijriParts(new Date(t));
+    if(compareHijriParts(got,target)===0) return new Date(t).toISOString().slice(0,10);
+  }
+  return '';
+}
+
+function fillAttendanceHijriControls(dateStr,hijriValue=''){
+  for(let i=1;i<=30;i++){
+    if(!$('attendanceHijriDay').querySelector('option[value="'+i+'"]')){
+      $('attendanceHijriDay').insertAdjacentHTML('beforeend','<option value="'+i+'">'+i+'</option>');
+    }
+  }
+  let parts;
+  const m=String(hijriValue||'').match(/(\d{3,4})[-\/]([0-9]{1,2})[-\/]([0-9]{1,2})/);
+  if(m) parts={year:Number(m[1]),month:Number(m[2]),day:Number(m[3])};
+  else parts=gregorianToHijriParts(dateStr||todayKey());
+  const ySel=$('attendanceHijriYear');
+  ySel.innerHTML='';
+  for(let y=parts.year-3;y<=parts.year+3;y++) ySel.insertAdjacentHTML('beforeend','<option value="'+y+'">'+y+'</option>');
+  $('attendanceHijriYear').value=String(parts.year);
+  $('attendanceHijriMonth').value=String(parts.month);
+  $('attendanceHijriDay').value=String(parts.day);
+  syncAttendanceGregorianFromHijri();
+}
+
+function selectedHijriDateString(){
+  return $('attendanceHijriYear').value+'-'+String($('attendanceHijriMonth').value).padStart(2,'0')+'-'+String($('attendanceHijriDay').value).padStart(2,'0');
+}
+
+function syncAttendanceGregorianFromHijri(){
+  const g=hijriToGregorian($('attendanceHijriYear').value,$('attendanceHijriMonth').value,$('attendanceHijriDay').value);
+  if(g) $('attendanceEditDate').value=g;
+}
+
+['attendanceHijriDay','attendanceHijriMonth','attendanceHijriYear'].forEach(id=>{
+  $(id)?.addEventListener('change',syncAttendanceGregorianFromHijri);
+});
+
+document.querySelectorAll('[data-time-spin]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const hour=btn.dataset.timeSpin==='hour';
+    const input=$(hour?'attendanceEditHour':'attendanceEditMinute');
+    const max=hour?23:59, min=0;
+    let v=Number(input.value||0)+Number(btn.dataset.dir||0);
+    if(v>max) v=min;
+    if(v<min) v=max;
+    input.value=String(v);
+  });
+});
+
+function setAttendanceTimeControls(value){
+  const v=attendanceTimeToInput(value)||'07:00';
+  const [h,m]=v.split(':');
+  $('attendanceEditHour').value=String(Number(h));
+  $('attendanceEditMinute').value=String(Number(m));
+}
+
+function getAttendanceEditedTime(){
+  const h=Math.max(0,Math.min(23,Number($('attendanceEditHour').value||0)));
+  const m=Math.max(0,Math.min(59,Number($('attendanceEditMinute').value||0)));
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
 
 function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
@@ -3610,7 +3739,7 @@ function openAttendanceModal(mode){
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
-  if($('attendanceEditTime')) $('attendanceEditTime').value='';
+  if($('attendanceEditDate')) $('attendanceEditDate').value='';
   setAttendanceMode(mode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3646,10 +3775,10 @@ async function openAttendanceEdit(index){
 
   $('attendanceStudentModal').classList.remove('hidden');
   $('attendanceEditTimeWrap')?.classList.remove('hidden');
-  if($('attendanceEditTime')) $('attendanceEditTime').value=attendanceTimeToInput(row.time);
-  if($('attendanceEditDate')) $('attendanceEditDate').value=String(row.date||todayKey());
+  setAttendanceTimeControls(row.time);
+  fillAttendanceHijriControls(String(row.date||todayKey()),row.hijriDate||'');
+  if($('attendanceEditWeekday')) $('attendanceEditWeekday').value=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
-  updateAttendanceEditDayName();
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3666,7 +3795,7 @@ function closeAttendanceModal(){
   attendanceEditingIndex=-1;
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
-  if($('attendanceEditTime')) $('attendanceEditTime').value='';
+  if($('attendanceEditDate')) $('attendanceEditDate').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
 }
 
@@ -3989,14 +4118,16 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
 
     const now=new Date();
-    const editedTime=(attendanceEditingIndex>=0 && $('attendanceEditTime')?.value)
-      ? formatAttendanceTimeForDisplay($('attendanceEditTime').value)
+    const editedTime=attendanceEditingIndex>=0
+      ? formatAttendanceTimeForDisplay(getAttendanceEditedTime())
       : '';
     const recorder=getCurrentAttendanceRecorder();
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
       period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
+      hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
+      weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
       teacherName:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name,
       teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
       teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
