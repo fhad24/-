@@ -1527,6 +1527,66 @@
       accent-color:#0f7665!important;
       cursor:pointer!important;
     }
+
+    /* الحضور فقط: التحديد يمين الصورة داخل الصف وبشكل ظاهر */
+    .att-student-row.has-present-select{
+      grid-template-columns:minmax(0,1fr) 92px 92px 100px!important;
+    }
+    .att-student-photo-wrap.with-select{
+      width:92px!important;
+      min-width:92px!important;
+      display:flex!important;
+      flex-direction:row!important;
+      direction:rtl!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      gap:8px!important;
+      overflow:visible!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check{
+      position:static!important;
+      transform:none!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      flex:0 0 20px!important;
+      width:20px!important;
+      height:20px!important;
+      margin:0!important;
+      padding:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      z-index:auto!important;
+      order:0!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check input{
+      display:block!important;
+      width:18px!important;
+      height:18px!important;
+      min-width:18px!important;
+      min-height:18px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-photo{
+      order:1!important;
+      flex:0 0 46px!important;
+    }
+    @media(max-width:800px){
+      .att-student-row.has-present-select{
+        grid-template-columns:minmax(0,1fr) 84px 82px 88px!important;
+      }
+      .att-student-photo-wrap.with-select{
+        width:84px!important;
+        min-width:84px!important;
+        gap:6px!important;
+      }
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4978,14 +5038,14 @@ async function renderAttendanceStudentList(){
       }
     }catch(e){}
     return `
-    <div class="att-student-row ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
+    <div class="att-student-row ${attendanceMode==='present'?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
       <div class="att-student-main">
         <div class="att-name-line">
           <b>${s.name}</b>
         </div>
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
-      <div class="att-student-photo-wrap">
+      <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
         ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
         ${photoHTML}
       </div>
