@@ -2175,6 +2175,7 @@
     <button type="button" id="headerEditBtn">تعديل بيانات الطالب ✏️</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
+    <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
   </div>
 </header>
@@ -2536,6 +2537,7 @@
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
+          <button class="admin-pill" id="adminSettingsBtn">بيانات المدرسة والمستخدمون والصلاحيات ⚙️</button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
       </div>
@@ -4828,6 +4830,14 @@ if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
   if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
 };
+if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
+  try{
+    openAdminDashboardInternal();
+    openAdminSettings();
+  }catch(e){
+    console.error('open header settings',e);
+  }
+};
 
 if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
   try{cloudApi('logout',{}).catch(()=>{})}catch(e){}
@@ -4861,6 +4871,8 @@ function setAdminMode(on){
       const owner=isCurrentOwner();
       const deputyBtn=$('headerDeputyRepliesBtn');
       if(deputyBtn) deputyBtn.style.display=(owner||perms.has('referralReview'))?'':'none';
+      const settingsBtn=$('headerSettingsBtn');
+      if(settingsBtn) settingsBtn.style.display=(owner||perms.has('settings'))?'':'none';
     }catch(e){}
   }
   const adminTab = document.querySelector('.tab[data-page="admin"]');
@@ -5193,6 +5205,7 @@ if($('adminReferralTab')) $('adminReferralTab').onclick=()=>{
   initReferralPage();
 };
 if($('adminDeputyReferralsTab')) $('adminDeputyReferralsTab').onclick=()=>openDeputyReferralsPage();
+if($('adminSettingsBtn')) $('adminSettingsBtn').onclick=()=>openAdminSettings();
 
 function showAdminView(view){
   if(!isCurrentOwner()){
