@@ -91,8 +91,9 @@
     .submit{width:100%;background:var(--primary);color:white}
     .hint{text-align:center;color:var(--muted);font-size:9px;margin-top:8px}
     .hidden{display:none!important}
-    #register > .card:not(#landingLoginCard){display:none!important}
-    #register > form.card{display:none!important}
+    body:not(.admin-mode) #register > .card:not(#landingLoginCard){display:none!important}
+    body:not(.admin-mode) #register > form.card{display:none!important}
+    body.admin-mode #landingLoginCard{display:none!important}
     #mainPublicNav{display:none!important}
     body:not(.admin-mode) header{display:none!important}
     body:not(.admin-mode) #register{max-width:760px;margin:0 auto;padding-top:18px}
@@ -2507,12 +2508,20 @@
             <h3 style="margin:0">الصلاحيات المتاحة لك</h3>
             <button type="button" class="btn btn-soft" id="userHomeBtn">الصفحة الرئيسية 🏠</button>
           </div>
+          <div class="user-permission-buttons" style="margin-bottom:12px">
+            <button type="button" class="user-permission-btn primary" id="userRegisterPageBtn">تسجيل جديد ➕</button>
+            <button type="button" class="user-permission-btn" id="userEditPageBtn">تعديل بيانات الطالب ✏️</button>
+            <button type="button" class="user-permission-btn" id="userReferralPageBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
+          </div>
           <div id="userPermissionButtons" class="user-permission-buttons"></div>
         </div>
       </div>
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
           <button class="admin-pill" id="adminHomeBtn">الصفحة الرئيسية 🏠</button>
+          <button class="admin-pill" id="adminRegisterPageBtn">تسجيل جديد ➕</button>
+          <button class="admin-pill" id="adminEditPageBtn">تعديل بيانات الطالب ✏️</button>
+          <button class="admin-pill" id="adminReferralPageBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill active" id="adminDataTab">بيانات الطلاب 👥</button>
           <button class="admin-pill" id="adminUnregisteredTab">الطلاب غير المسجلين 👤</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
@@ -4724,6 +4733,25 @@ function configureUserDashboard(){
 
 if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
 if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
+
+function openInternalPage(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $(pageId)?.classList.remove('hidden');
+  localStorage.setItem('activeMainPage',pageId);
+  if(pageId==='edit'){
+    $('studentEditLogin')?.classList.remove('hidden');
+    $('studentEditForm')?.classList.add('hidden');
+  }
+  if(pageId==='referral' && typeof initReferralPage==='function'){
+    setTimeout(initReferralPage,0);
+  }
+}
+if($('adminRegisterPageBtn')) $('adminRegisterPageBtn').onclick=()=>openInternalPage('register');
+if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
+if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
+if($('userRegisterPageBtn')) $('userRegisterPageBtn').onclick=()=>openInternalPage('register');
+if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
+if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function setAdminMode(on){
   adminLoggedIn = on;
