@@ -2699,7 +2699,11 @@ tabs.forEach(b=>b.onclick=()=>{
     if(typeof adminLoggedIn!=='undefined' && adminLoggedIn){
       $('adminLoginModal').classList.add('hidden');
       $('dashboard').classList.remove('hidden');
-      if(typeof configureUserDashboard==='function'){
+
+      // زر "الإعدادات" يفتح بيانات المدرسة وحسابات المستخدمين للمدير مباشرة.
+      if(typeof isCurrentOwner==='function' && isCurrentOwner()){
+        if(typeof openAdminSettings==='function') openAdminSettings();
+      }else if(typeof configureUserDashboard==='function'){
         configureUserDashboard();
       }else if(typeof openAdminSettings==='function'){
         openAdminSettings();
@@ -3911,6 +3915,11 @@ function setAdminMode(on){
   const adminTab = document.querySelector('.tab[data-page="admin"]');
   if(adminTab){
     adminTab.textContent = on ? 'الإعدادات ⚙️' : 'دخول الإدارة';
+    if(on){
+      adminTab.title='بيانات المدرسة وحسابات المستخدمين';
+    }else{
+      adminTab.removeAttribute('title');
+    }
   }
   let logoutBtn=document.getElementById('adminLogoutNav');
   if(on && !logoutBtn){
