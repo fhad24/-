@@ -2320,6 +2320,7 @@
           <button class="admin-pill active" id="adminDataTab">بيانات الطلاب 👥</button>
           <button class="admin-pill" id="adminUnregisteredTab">الطلاب غير المسجلين 👤</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
+          <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
         </div>
       </div>
@@ -4410,6 +4411,13 @@ setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
+if($('adminReferralTab')) $('adminReferralTab').onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page==='referral'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('referral')?.classList.remove('hidden');
+  localStorage.setItem('activeMainPage','referral');
+  initReferralPage();
+};
 
 function showAdminView(view){
   if(!isCurrentOwner()){
