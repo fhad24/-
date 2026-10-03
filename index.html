@@ -1671,6 +1671,57 @@
       appearance:auto!important;
       accent-color:#0f7665!important;
     }
+
+    /* FINAL: checkbox always visible to the RIGHT of photo in حاضر */
+    .att-student-row.has-present-select{
+      grid-template-columns:minmax(0,1fr) 94px 92px 100px!important;
+    }
+    .att-student-photo-wrap.with-select{
+      display:flex!important;
+      direction:ltr!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:8px!important;
+      width:94px!important;
+      min-width:94px!important;
+      overflow:visible!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-photo{
+      order:0!important;
+      flex:0 0 46px!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check{
+      order:1!important;
+      position:static!important;
+      transform:none!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      width:22px!important;
+      min-width:22px!important;
+      height:22px!important;
+      margin:0!important;
+      padding:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check input{
+      display:block!important;
+      width:20px!important;
+      height:20px!important;
+      min-width:20px!important;
+      min-height:20px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
+      background:#fff!important;
+      border:1px solid #8b9a96!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -5133,8 +5184,8 @@ async function renderAttendanceStudentList(){
         <span>${s.grade||''} / ${s.classroom||''}</span>
       </div>
       <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
-        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
         ${photoHTML}
+        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
       </div>
       <span class="att-inline-performance">
         <span class="att-inline-late">⏰ ${perf.late}</span>
