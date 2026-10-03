@@ -3390,14 +3390,47 @@ function normalizeWhatsAppNumber(value){
   return n;
 }
 
-function attendanceWhatsAppMessage(row,student){
-  const status=row.status==='late'?'متأخر':row.status==='absent'?'غائب':'حاضر';
+function attendanceStatusCount(idno,status){
+  return getAttendanceLog().filter(x=>String(x.idno)===String(idno) && x.status===status).length;
+}
+
+function attendanceWhatsAppReadyTemplate(){
+  return 'ولي أمر الطالب/ {اسم الطالب}\n'
+    +'نحيطكم علمًا بأن ابنكم {الحالة} اليوم في {اسم المدرسة}.\n'
+    +'{العدد نص}\n'
+    +'{الحصة نص}\n'
+    +'التاريخ: {التاريخ}\n'
+    +'الوقت: {الوقت}\n'
+    +'المسجل: {اسم المستخدم} — {السجل المدني}\n'
+    +'شاكرين لكم تعاونكم.';
+}
+
+function buildAttendanceWhatsAppMessage(template,row,student){
+  const statusText=row.status==='late'?'متأخر':row.status==='absent'?'غائب':'حاضر';
+  const count=attendanceStatusCount(row.idno,row.status);
+  const countText=row.status==='late'
+    ?('بلغ عدد أيام التأخر المسجلة حتى الآن: '+count+' يوم.')
+    :row.status==='absent'
+      ?('بلغ عدد أيام الغياب المسجلة حتى الآن: '+count+' يوم.')
+      :('بلغ عدد مرات الحضور المسجلة حتى الآن: '+count+'.');
   const school=getSchoolSettings().school||'المدرسة';
-  const period=row.period?('، الحصة '+row.period):'';
-  return 'ولي أمر الطالب/ '+(student?.name||row.name||'')+'\n'
-    +'نحيطكم علمًا بأن حالة الطالب في '+school+': '+status+period+'\n'
-    +'التاريخ: '+(row.date||'')+'\n'
-    +'الوقت: '+(row.time||'');
+  const recorder=getCurrentAttendanceRecorder();
+  const map={
+    '{اسم الطالب}':student?.name||row.name||'',
+    '{الحالة}':statusText,
+    '{اسم المدرسة}':school,
+    '{العدد}':String(count),
+    '{العدد نص}':countText,
+    '{الحصة}':row.period?String(row.period):'',
+    '{الحصة نص}':row.period?('الحصة: '+row.period):'',
+    '{التاريخ}':row.date||'',
+    '{الوقت}':row.time||'',
+    '{اسم المستخدم}':row.teacherName||recorder.name||'',
+    '{السجل المدني}':row.teacherCivilId||recorder.civilId||''
+  };
+  let msg=String(template||attendanceWhatsAppReadyTemplate());
+  Object.entries(map).forEach(([k,v])=>{msg=msg.split(k).join(v)});
+  return msg;
 }
 
 function openAttendanceWhatsAppForRows(rows){
@@ -3413,30 +3446,46 @@ function openAttendanceWhatsAppForRows(rows){
     return;
   }
 
-  if(items.length===1){
-    const x=items[0];
-    window.open('https://wa.me/'+x.phone+'?text='+encodeURIComponent(attendanceWhatsAppMessage(x.row,x.student)),'_blank');
-    return;
-  }
-
   let modal=$('attendanceWhatsAppModal');
   if(modal) modal.remove();
   modal=document.createElement('div');
   modal.id='attendanceWhatsAppModal';
   modal.className='wa-modal';
+  const defaultTemplate=attendanceWhatsAppReadyTemplate();
+
   modal.innerHTML='<div class="wa-card">'
-    +'<h3>إرسال واتساب للطلاب المحددين ('+items.length+')</h3>'
-    +'<div class="wa-list">'
-    +items.map(x=>'<a class="wa-link" target="_blank" rel="noopener" href="https://wa.me/'+x.phone+'?text='+encodeURIComponent(attendanceWhatsAppMessage(x.row,x.student))+'">'
-      +'<div><strong>'+(x.student.name||x.row.name||'')+'</strong><span>'+x.phone+'</span></div><b>فتح واتساب</b></a>').join('')
-    +'</div><button class="wa-close" type="button">إغلاق</button></div>';
+    +'<h3>رسالة واتساب قبل الإرسال ('+items.length+' طالب)</h3>'
+    +'<div class="wa-compose">'
+    +'<div class="wa-compose-actions"><button type="button" id="waUseReady" class="primary">رسالة جاهزة</button><button type="button" id="waClearText">كتابة رسالة جديدة</button></div>'
+    +'<textarea id="waMessageTemplate"></textarea>'
+    +'<div class="hint">يمكنك الكتابة بحرية أو استخدام: {اسم الطالب}، {الحالة}، {العدد نص}، {الحصة نص}، {التاريخ}، {الوقت}، {اسم المستخدم}.</div>'
+    +'<button type="button" id="waPrepareLinks" class="admin-settings-save" style="margin-top:0">تجهيز رسائل الواتساب</button>'
+    +'</div>'
+    +'<div class="wa-list" id="waPreparedList"></div>'
+    +'<button class="wa-close" type="button">إغلاق</button></div>';
   document.body.appendChild(modal);
+
+  const ta=$('waMessageTemplate');
+  ta.value=defaultTemplate;
+  $('waUseReady').onclick=()=>{ta.value=defaultTemplate;ta.focus()};
+  $('waClearText').onclick=()=>{ta.value='';ta.focus()};
+  $('waPrepareLinks').onclick=()=>{
+    const template=ta.value.trim();
+    if(!template){alert('اكتب الرسالة أو اختر الرسالة الجاهزة');return}
+    const host=$('waPreparedList');
+    host.innerHTML=items.map(x=>{
+      const msg=buildAttendanceWhatsAppMessage(template,x.row,x.student);
+      return '<a class="wa-link" target="_blank" rel="noopener" href="https://wa.me/'+x.phone+'?text='+encodeURIComponent(msg)+'">'
+        +'<div><strong>'+(x.student.name||x.row.name||'')+'</strong><span>'+x.phone+'</span></div><b>فتح واتساب</b></a>';
+    }).join('');
+  };
+  $('waPrepareLinks').click();
   modal.querySelector('.wa-close').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
 }
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
-  const boxes=[...document.querySelectorAll('.attendance-wa-select')];
+  const boxes=[...document.querySelectorAll('.attendance-wa-select,.attendance-pending-select')];
   if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
   const allChecked=boxes.every(x=>x.checked);
   boxes.forEach(x=>x.checked=!allChecked);
@@ -3449,6 +3498,60 @@ if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>
   if(!indexes.length){alert('حدد طالبًا واحدًا أو مجموعة طلاب أولاً');return}
   const logs=getAttendanceLog();
   openAttendanceWhatsAppForRows(indexes.map(i=>logs[i]).filter(Boolean));
+};
+
+if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
+  const ids=[...document.querySelectorAll('.attendance-pending-select:checked')].map(x=>String(x.dataset.pendingIdCheck||'')).filter(Boolean);
+  if(!ids.length){
+    alert('اذهب إلى «بانتظار تحديد الاسم» وحدد طالبًا أو مجموعة طلاب لإضافتهم كغياب');
+    return;
+  }
+  const period=$('attendanceBulkPeriod')?.value ? Number($('attendanceBulkPeriod').value) : null;
+  const recorder=getCurrentAttendanceRecorder();
+  const students=getStudents();
+  const now=new Date();
+  let rows=getAttendanceLog();
+
+  ids.forEach(id=>{
+    const s=students.find(x=>String(x.idno)===id);
+    if(!s) return;
+    rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===id));
+    rows.push({
+      date:todayKey(),
+      time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
+      period,
+      idno:s.idno,name:s.name,grade:s.grade||'',classroom:s.classroom||'',
+      status:'absent',
+      faceMatch:'none',
+      teacherName:recorder.name,teacherUsername:recorder.username,teacherCivilId:recorder.civilId
+    });
+  });
+
+  saveAttendanceLog(rows);
+  attendanceListView='absent';
+  renderAttendancePage();
+  toast('تم تسجيل الغياب للمحدد');
+};
+
+if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=>{
+  const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
+    .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite).sort((a,b)=>b-a);
+  if(!indexes.length){alert('حدد سجلًا واحدًا أو مجموعة سجلات للحذف');return}
+  if(!confirm('حذف '+indexes.length+' سجل محدد؟')) return;
+
+  let rows=getAttendanceLog();
+  const deleted=indexes.map(i=>rows[i]).filter(Boolean);
+  indexes.forEach(i=>rows.splice(i,1));
+  localStorage.setItem('attendanceLog',JSON.stringify(rows));
+
+  try{
+    if(localStorage.getItem('cloudAdminToken')){
+      await cloudApi('delete_attendance_rows',{rows:deleted});
+    }
+  }catch(e){console.warn('cloud bulk attendance delete',e)}
+
+  renderAttendancePage();
+  toast('تم حذف السجلات المحددة');
 };
 
 
