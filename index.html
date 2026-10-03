@@ -3723,17 +3723,24 @@ async function loadDeputyReferrals(){
         await cloudApi('reply_referral',{id,reply,deputyAction});
         toast('تم حفظ رد الوكيل وإرساله للمعلم');
         localStorage.setItem('lastDeputyReferralId',savedId);
-        await loadDeputyReferrals();
-        setTimeout(()=>{
-          const sameCard=host.querySelector('[data-referral-id="'+savedId+'"]');
-          if(sameCard){
-            sameCard.classList.add('returned-student');
-            sameCard.scrollIntoView({behavior:'smooth',block:'center'});
-            const replyBox=sameCard.querySelector('.deputy-reply-text');
-            if(replyBox) replyBox.focus({preventScroll:true});
-            setTimeout(()=>sameCard.classList.remove('returned-student'),2500);
-          }
-        },60);
+
+        // لا نعيد تحميل القائمة بعد الحفظ حتى لا يختفي الطالب أو يتغير مكانه.
+        // نحدّث نفس بطاقة الطالب مباشرة ونبقيها أمام الوكيل.
+        const statusEl=card?.querySelector('.deputy-status');
+        if(statusEl){
+          statusEl.classList.remove('pending');
+          statusEl.classList.add('replied');
+          statusEl.textContent='تم الرد';
+        }
+        const actionSelect=card?.querySelector('.deputy-action-select');
+        if(actionSelect) actionSelect.value=deputyAction;
+        const replyBox=card?.querySelector('.deputy-reply-text');
+        if(replyBox) replyBox.value=reply;
+        if(card){
+          card.classList.add('returned-student');
+          card.scrollIntoView({behavior:'smooth',block:'center'});
+          setTimeout(()=>card.classList.remove('returned-student'),2500);
+        }
       }catch(e){
         alert('تعذر حفظ رد الوكيل: '+(e?.message||e));
       }finally{
