@@ -2171,8 +2171,7 @@
   </div>
   <nav id="mainPublicNav" class="hidden"></nav>
   <div id="loggedInHeaderNav" class="logged-in-header-nav">
-    <button type="button" id="headerAdminDashboardBtn">لوحة الإدارة 👥</button>
-    <button type="button" id="headerRegisterBtn">تسجيل جديد ➕</button>
+    <button type="button" id="headerAdminDashboardBtn" onclick="openAdminDashboardInternal();return false">لوحة الإدارة 👥</button>
     <button type="button" id="headerEditBtn">تعديل بيانات الطالب ✏️</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
@@ -2519,10 +2518,8 @@
         <div class="card user-permission-card">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
             <h3 style="margin:0">الصلاحيات المتاحة لك</h3>
-            <button type="button" class="btn btn-soft" id="userHomeBtn">الصفحة الرئيسية 🏠</button>
           </div>
           <div class="user-permission-buttons" style="margin-bottom:12px">
-            <button type="button" class="user-permission-btn primary" id="userRegisterPageBtn">تسجيل جديد ➕</button>
             <button type="button" class="user-permission-btn" id="userEditPageBtn">تعديل بيانات الطالب ✏️</button>
             <button type="button" class="user-permission-btn" id="userReferralPageBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           </div>
@@ -2531,8 +2528,6 @@
       </div>
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
-          <button class="admin-pill" id="adminHomeBtn">الصفحة الرئيسية 🏠</button>
-          <button class="admin-pill" id="adminRegisterPageBtn">تسجيل جديد ➕</button>
           <button class="admin-pill" id="adminEditPageBtn">تعديل بيانات الطالب ✏️</button>
           <button class="admin-pill" id="adminReferralPageBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill active" id="adminDataTab">بيانات الطلاب 👥</button>
@@ -3039,8 +3034,6 @@ function goToMainHome(){
   document.getElementById('adminSettingsOverlay')?.classList.add('hidden');
   document.body.classList.remove('admin-mode');
 }
-if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
-if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
 tabs.forEach(b=>b.onclick=()=>{
   tabs.forEach(x=>x.classList.remove('active')); b.classList.add('active');
   pages.forEach(p=>p.classList.add('hidden')); $(b.dataset.page).classList.remove('hidden');
@@ -4749,8 +4742,6 @@ function configureUserDashboard(){
   });
 }
 
-if($('adminHomeBtn')) $('adminHomeBtn').onclick=goToMainHome;
-if($('userHomeBtn')) $('userHomeBtn').onclick=goToMainHome;
 
 function openInternalPage(pageId){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
@@ -4764,26 +4755,54 @@ function openInternalPage(pageId){
     setTimeout(initReferralPage,0);
   }
 }
-if($('adminRegisterPageBtn')) $('adminRegisterPageBtn').onclick=()=>openInternalPage('register');
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
-if($('userRegisterPageBtn')) $('userRegisterPageBtn').onclick=()=>openInternalPage('register');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  if(localStorage.getItem('adminLoggedIn')!=='1'){
+    alert('سجّل الدخول أولًا');
+    return;
+  }
+
+  document.body.classList.add('admin-mode');
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-  $('admin')?.classList.remove('hidden');
-  $('adminLoginModal')?.classList.add('hidden');
-  $('dashboard')?.classList.remove('hidden');
+  const adminPage=$('admin');
+  const dashboard=$('dashboard');
+  const loginModal=$('adminLoginModal');
+
+  adminPage?.classList.remove('hidden');
+  dashboard?.classList.remove('hidden');
+  loginModal?.classList.add('hidden');
+
   localStorage.setItem('activeMainPage','admin');
-  try{configureUserDashboard()}catch(e){}
-  try{ensureAdminToolbarVisible()}catch(e){}
-  try{renderAdmin()}catch(e){}
+
+  try{
+    const owner=isCurrentOwner();
+    if(owner){
+      $('userPermissionPortal')?.classList.add('hidden');
+      const toolbar=document.querySelector('.admin-toolbar');
+      toolbar?.classList.remove('hidden');
+      if(toolbar) toolbar.style.display='block';
+      document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.remove('hidden'));
+      $('attendancePanel')?.classList.add('hidden');
+      try{showAdminView(localStorage.getItem('activeAdminView')||'data')}catch(e){}
+    }else{
+      try{configureUserDashboard()}catch(e){}
+    }
+    try{renderAdmin()}catch(e){}
+  }catch(e){
+    console.error('open admin dashboard',e);
+    const toolbar=document.querySelector('.admin-toolbar');
+    toolbar?.classList.remove('hidden');
+    if(toolbar) toolbar.style.display='block';
+  }
+
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 if($('headerAdminDashboardBtn')) $('headerAdminDashboardBtn').onclick=openAdminDashboardInternal;
-if($('headerRegisterBtn')) $('headerRegisterBtn').onclick=()=>openInternalPage('register');
 if($('headerEditBtn')) $('headerEditBtn').onclick=()=>openInternalPage('edit');
 if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('referral');
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
