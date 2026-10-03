@@ -3653,7 +3653,14 @@ async function loadDeputyReferrals(){
       host.innerHTML='<div class="hint">لا توجد لديك صلاحية الرد على تحويلات الطلاب.</div>';
       return;
     }
-    const rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')!=='replied');
+    let rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')!=='replied');
+    if(!isCurrentOwner()){
+      const currentUser=getCurrentLoggedAdminUser();
+      const allowedGrades=getAllowedReferralGradePermissions(currentUser);
+      if(allowedGrades.length){
+        rows=rows.filter(r=>allowedGrades.includes(referralGradePermissionKey(r.grade)));
+      }
+    }
     if(!rows.length){
       host.innerHTML='<div class="hint">لا توجد تحويلات بانتظار الرد حاليًا.</div>';
       return;
@@ -4833,6 +4840,24 @@ function hideAllUserFeatureViews(){
   document.querySelector('.admin-toolbar')?.classList.add('hidden');
 }
 
+function referralGradePermissionKey(grade){
+  const g=String(typeof studentGradeKey==='function'?studentGradeKey(grade):grade||'').trim();
+  if(g.includes('الأول') || g==='1' || g==='أ') return 'referralGrade:first';
+  if(g.includes('الثاني') || g==='2' || g==='ب') return 'referralGrade:second';
+  if(g.includes('الثالث') || g==='3' || g==='ج') return 'referralGrade:third';
+  return '';
+}
+function referralGradePermissionLabel(key){
+  if(key==='referralGrade:first') return 'ردود الوكلاء: الأول الثانوي';
+  if(key==='referralGrade:second') return 'ردود الوكلاء: الثاني الثانوي';
+  if(key==='referralGrade:third') return 'ردود الوكلاء: الثالث الثانوي';
+  return '';
+}
+function getAllowedReferralGradePermissions(user){
+  const perms=Array.isArray(user?.permissions)?user.permissions:[];
+  return perms.filter(x=>String(x).startsWith('referralGrade:'));
+}
+
 function configureUserDashboard(){
   const portal=$('userPermissionPortal');
   if(!portal) return;
@@ -5840,6 +5865,16 @@ function ensureAdminSettings(){
           <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
+          <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
+        </div>
+        <div id="newReferralGradePermissions" style="margin-top:12px;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
+          <div style="font-weight:900;margin-bottom:8px">تحديد الصفوف المسموح بها في ردود الوكلاء</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap">
+            <label>الأول الثانوي <input class="admin-new-referral-grade" value="referralGrade:first" type="checkbox"></label>
+            <label>الثاني الثانوي <input class="admin-new-referral-grade" value="referralGrade:second" type="checkbox"></label>
+            <label>الثالث الثانوي <input class="admin-new-referral-grade" value="referralGrade:third" type="checkbox"></label>
+          </div>
+          <div class="hint" style="font-size:12px;margin-top:6px">لن تظهر هذه الصفوف للمستخدم إلا عند تفعيل صلاحية ردود الوكلاء.</div>
         </div>
         <div class="admin-perm-toolbar" style="justify-content:center;margin-top:14px">
           <button type="button" id="toggleAllNewPerms">☐ إلغاء تحديد الكل</button>
@@ -6018,6 +6053,9 @@ function ensureAdminSettings(){
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
+    if(permissions.includes('referralReview')){
+      document.querySelectorAll('.admin-new-referral-grade:checked').forEach(x=>permissions.push(x.value));
+    }
     users.push({username,civilId,name,password,role,permissions});
     saveAdminUsers(users);
     cloudApi('save_user',{user:users[users.length-1]}).catch(e=>console.warn('cloud user',e));
@@ -6040,8 +6078,18 @@ function ensureAdminSettings(){
     boxes.forEach(x=>x.checked=!allChecked);
     updateNewPermToggleText();
   };
-  document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=updateNewPermToggleText);
+  const syncNewReferralGradeState=()=>{
+    const enabled=!!document.getElementById('newReferralReviewPerm')?.checked;
+    document.querySelectorAll('.admin-new-referral-grade').forEach(x=>x.disabled=!enabled);
+    const box=document.getElementById('newReferralGradePermissions');
+    if(box) box.style.opacity=enabled?'1':'.55';
+  };
+  document.querySelectorAll('.admin-new-perm').forEach(x=>x.onchange=()=>{
+    updateNewPermToggleText();
+    syncNewReferralGradeState();
+  });
   updateNewPermToggleText();
+  syncNewReferralGradeState();
 
   document.getElementById('applyBulkUserPermissions').onclick=async()=>{
     const btn=document.getElementById('applyBulkUserPermissions');
@@ -6256,7 +6304,11 @@ function renderAdminUsersSettings(){
     reports:'التقارير والتصدير',
     settings:'بيانات المدرسة والمستخدمون',
     madrasati:'متابعة دخول منصة مدرستي',
-    photos:'تصوير الطلاب لإضافة الصور'
+    photos:'تصوير الطلاب لإضافة الصور',
+    referralReview:'ردود الوكلاء',
+    'referralGrade:first':'ردود الوكلاء: الأول الثانوي',
+    'referralGrade:second':'ردود الوكلاء: الثاني الثانوي',
+    'referralGrade:third':'ردود الوكلاء: الثالث الثانوي'
   };
   const all=[{...p,name:p.displayName,role:'مدير',owner:true,permissions:['all']},...filtered];
   host.innerHTML=all.map((u,i)=>{
@@ -6357,6 +6409,15 @@ function openUserPermissionEditor(username){
       <div class="user-perm-grid">
         ${permItems.map(([key,label])=>`<label>${label}<input class="user-perm-check" value="${key}" type="checkbox" ${current.has(key)?'checked':''}></label>`).join('')}
       </div>
+      <div id="userReferralGradeBox" style="margin:14px 0;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
+        <div style="font-weight:900;margin-bottom:8px">الصفوف المسموح بها في ردود الوكلاء</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <label>الأول الثانوي <input class="user-referral-grade-check" value="referralGrade:first" type="checkbox" ${current.has('referralGrade:first')?'checked':''}></label>
+          <label>الثاني الثانوي <input class="user-referral-grade-check" value="referralGrade:second" type="checkbox" ${current.has('referralGrade:second')?'checked':''}></label>
+          <label>الثالث الثانوي <input class="user-referral-grade-check" value="referralGrade:third" type="checkbox" ${current.has('referralGrade:third')?'checked':''}></label>
+        </div>
+        <div class="hint" style="font-size:12px;margin-top:6px">إذا لم تحدد صفًا فستظهر جميع الصفوف لهذا المستخدم.</div>
+      </div>
       <div class="user-perm-actions">
         <button type="button" class="user-perm-toggle" id="userPermToggleAll">☑ تحديد الكل</button>
         <button type="button" class="user-perm-save" id="userPermSave">حفظ الصلاحيات</button>
@@ -6370,20 +6431,32 @@ function openUserPermissionEditor(username){
     const allChecked=all.length && all.every(x=>x.checked);
     document.getElementById('userPermToggleAll').textContent=allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
   };
+  const syncReferralGradeBox=()=>{
+    const review=checks().find(x=>x.value==='referralReview');
+    const enabled=!!review?.checked;
+    modal.querySelectorAll('.user-referral-grade-check').forEach(x=>x.disabled=!enabled);
+    const box=modal.querySelector('#userReferralGradeBox');
+    if(box) box.style.opacity=enabled?'1':'.55';
+  };
   updateToggle();
-  checks().forEach(x=>x.onchange=updateToggle);
+  syncReferralGradeBox();
+  checks().forEach(x=>x.onchange=()=>{updateToggle();syncReferralGradeBox();});
 
   document.getElementById('userPermToggleAll').onclick=()=>{
     const all=checks();
     const allChecked=all.length && all.every(x=>x.checked);
     all.forEach(x=>x.checked=!allChecked);
     updateToggle();
+    syncReferralGradeBox();
   };
   document.getElementById('userPermClose').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
   document.getElementById('userPermSave').onclick=async()=>{
     u.role=document.getElementById('userPermRole').value;
     u.permissions=checks().filter(x=>x.checked).map(x=>x.value);
+    if(u.permissions.includes('referralReview')){
+      modal.querySelectorAll('.user-referral-grade-check:checked').forEach(x=>u.permissions.push(x.value));
+    }
     users[idx]=u;
     saveAdminUsers(users);
     try{await cloudApi('save_user',{user:u})}catch(e){console.warn('cloud user permission',e)}
