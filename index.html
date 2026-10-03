@@ -3665,14 +3665,31 @@ function getCurrentDeputyCredentials(){
   };
 }
 
-async function loadDeputyReferrals(){
+let deputyReferralsLoading=false;
+let deputyRetryTimer=null;
+
+function scheduleDeputyAutoRetry(delay=1500){
+  clearTimeout(deputyRetryTimer);
+  deputyRetryTimer=setTimeout(()=>{
+    const page=$('deputyReferrals');
+    if(page && !page.classList.contains('hidden') && document.visibilityState==='visible'){
+      loadDeputyReferrals(true);
+    }
+  },delay);
+}
+
+async function loadDeputyReferrals(silent=false){
   const host=$('deputyReferralList');
-  if(!host) return;
-  host.innerHTML='<div class="hint">جاري تحميل التحويلات...</div>';
+  if(!host || deputyReferralsLoading) return;
+  deputyReferralsLoading=true;
+  if(!silent || !host.querySelector('[data-referral-id]')){
+    host.innerHTML='<div class="hint">جاري تحميل التحويلات...</div>';
+  }
   try{
     const data=await cloudApi('list_referrals');
     if(!data.canReview){
-      host.innerHTML='<div class="hint">لا توجد لديك صلاحية الرد على تحويلات الطلاب.</div>';
+      host.innerHTML='<div class="hint">جاري تفعيل صلاحية الرد وتحميل التحويلات...</div>';
+      scheduleDeputyAutoRetry(1200);
       return;
     }
     let rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')!=='replied');
@@ -3685,6 +3702,7 @@ async function loadDeputyReferrals(){
     }
     if(!rows.length){
       host.innerHTML='<div class="hint">لا توجد تحويلات بانتظار الرد حاليًا.</div>';
+      scheduleDeputyAutoRetry(3000);
       return;
     }
 
@@ -3770,7 +3788,10 @@ async function loadDeputyReferrals(){
   }catch(e){
     console.error('load deputy referrals',e);
     const msg=String(e?.message||e||'');
-    host.innerHTML='<div class="hint">تعذر تحميل التحويلات الآن'+(msg?' — '+msg:'')+'</div>';
+    host.innerHTML='<div class="hint">جاري إعادة تحميل التحويلات تلقائيًا'+(msg?' — '+msg:'')+'</div>';
+    scheduleDeputyAutoRetry(1200);
+  }finally{
+    deputyReferralsLoading=false;
   }
 }
 
@@ -3823,14 +3844,13 @@ async function openDeputyReferralsPage(){
     console.warn('deputy cloud relogin',e);
   }
 
-  await loadDeputyReferrals();
+  await loadDeputyReferrals(false);
 
-  // تحديث تلقائي بعد فتح الصفحة للتأكد من وصول الإحالات دون الحاجة للزر.
-  clearTimeout(window.__deputyInitialRefreshTimer);
-  window.__deputyInitialRefreshTimer=setTimeout(()=>{
+  // محاولات تلقائية متتابعة عند فتح الصفحة؛ لا حاجة للضغط على تحديث.
+  [500,1500,3000].forEach(ms=>setTimeout(()=>{
     const page=$('deputyReferrals');
-    if(page && !page.classList.contains('hidden')) loadDeputyReferrals();
-  },1200);
+    if(page && !page.classList.contains('hidden')) loadDeputyReferrals(true);
+  },ms));
 }
 if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyReferrals;
 
@@ -3839,19 +3859,19 @@ if(window.__deputyAutoRefreshTimer) clearInterval(window.__deputyAutoRefreshTime
 window.__deputyAutoRefreshTimer=setInterval(()=>{
   const page=$('deputyReferrals');
   if(page && !page.classList.contains('hidden') && document.visibilityState==='visible'){
-    loadDeputyReferrals();
+    loadDeputyReferrals(true);
   }
-},10000);
+},3000);
 
 window.addEventListener('focus',()=>{
   const page=$('deputyReferrals');
-  if(page && !page.classList.contains('hidden')) loadDeputyReferrals();
+  if(page && !page.classList.contains('hidden')) loadDeputyReferrals(true);
 });
 
 document.addEventListener('visibilitychange',()=>{
   const page=$('deputyReferrals');
   if(document.visibilityState==='visible' && page && !page.classList.contains('hidden')){
-    loadDeputyReferrals();
+    loadDeputyReferrals(true);
   }
 });
 if($('refreshTeacherReferralReplies')) $('refreshTeacherReferralReplies').onclick=loadTeacherReferralReplies;
