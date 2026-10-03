@@ -2290,9 +2290,75 @@
       .card{padding:10px!important}
     }
 
+
+    /* صفحة كشوف متابعة الطلاب */
+    .followup-page{max-width:1500px;margin:0 auto}
+    .followup-controls{padding:18px}
+    .followup-title{font-size:24px!important;text-align:center;margin:0 0 14px!important}
+    .followup-filter-grid{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;align-items:end}
+    .followup-filter-grid label{font-size:13px;margin:0 0 6px}
+    .followup-filter-grid input,.followup-filter-grid select{height:46px;font-size:13px;border-radius:10px}
+    .followup-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+    .followup-actions button{min-height:46px;border-radius:11px;font-size:13px;padding:10px 16px}
+    .followup-sheet-wrap{overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+    .followup-sheet{
+      width:100%;min-width:1280px;background:#fff;border:1px solid #111;padding:8px;direction:rtl;color:#111;
+      font-family:Tahoma,Arial,sans-serif
+    }
+    .followup-sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:8px}
+    .followup-sheet-title{font-size:18px;font-weight:900;text-align:center;line-height:1.6}
+    .followup-sheet-meta{font-size:13px;font-weight:800;line-height:1.8}
+    .followup-sheet-meta.left{text-align:left;direction:rtl}
+    .followup-sheet-meta.right{text-align:right}
+    .followup-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+    .followup-table th,.followup-table td{border:1px solid #111!important;padding:3px!important;text-align:center!important;vertical-align:middle!important;height:29px}
+    .followup-table thead th{background:#f3f3f3;font-weight:900;line-height:1.25}
+    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:6px!important}
+    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:10px}
+    .followup-table .class-cell{font-weight:800;white-space:nowrap}
+    .followup-mark{
+      width:100%!important;height:24px!important;min-width:0!important;border:0!important;border-radius:0!important;
+      background:transparent!important;text-align:center!important;padding:0!important;font-size:11px!important;box-shadow:none!important
+    }
+    .followup-mark:focus{outline:2px solid #0f7665!important;background:#f0fbf8!important}
+    .followup-empty{padding:28px!important;font-size:14px;color:#667}
+    .followup-print-note{display:none}
+    .followup-sheet.blank-print .followup-mark{color:transparent!important;text-shadow:none!important}
+    .followup-sheet.blank-print .followup-mark::placeholder{color:transparent!important}
+    @media(max-width:900px){
+      .followup-filter-grid{grid-template-columns:1fr 1fr}
+      .followup-actions{display:grid;grid-template-columns:1fr 1fr}
+      .followup-actions button{width:100%}
+    }
+    @media(max-width:520px){
+      .followup-filter-grid{grid-template-columns:1fr}
+      .followup-actions{grid-template-columns:1fr}
+      .followup-controls{padding:12px}
+      .followup-title{font-size:20px!important}
+    }
+    @media print{
+      body.followup-printing header,
+      body.followup-printing .logged-in-header-nav,
+      body.followup-printing #mainFooter,
+      body.followup-printing .followup-controls{display:none!important}
+      body.followup-printing .app,
+      body.followup-printing main,
+      body.followup-printing #followup{
+        width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important
+      }
+      body.followup-printing .followup-sheet-wrap{overflow:visible!important}
+      body.followup-printing .followup-sheet{min-width:0!important;width:100%!important;border:0!important;padding:0!important}
+      body.followup-printing .followup-table{font-size:9px!important}
+      body.followup-printing .followup-table th,
+      body.followup-printing .followup-table td{height:24px!important;padding:2px!important}
+      body.followup-printing .followup-mark{font-size:9px!important;height:19px!important}
+      @page{size:A4 landscape;margin:7mm}
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
 <body>
@@ -2317,6 +2383,7 @@
     <button type="button" id="headerEditBtn">تعديل بيانات الطالب ✏️</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
+    <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
   </div>
@@ -2684,6 +2751,99 @@
       </div>
       <div id="deputyReferralList" class="deputy-referral-list">
         <div class="hint">جاري تحميل التحويلات...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="followup" class="page hidden">
+  <div class="followup-page">
+    <div class="card followup-controls">
+      <h2 class="followup-title">كشوف متابعة الطلاب</h2>
+      <div class="hint" style="font-size:12px;margin-bottom:14px">
+        اختر الصف والفصل ليتم جلب أسماء الطلاب تلقائيًا من قاعدة البيانات، ثم يمكنك تعبئة الكشف إلكترونيًا أو طباعته فارغًا أو تصديره PDF.
+      </div>
+      <div class="followup-filter-grid">
+        <div>
+          <label>الفصل الدراسي</label>
+          <select id="followupTerm">
+            <option value="الأول">الأول</option>
+            <option value="الثاني">الثاني</option>
+          </select>
+        </div>
+        <div>
+          <label>العام الهجري</label>
+          <input id="followupYear" value="1448" inputmode="numeric">
+        </div>
+        <div>
+          <label>المادة</label>
+          <input id="followupSubject" placeholder="مثال: الرياضيات">
+        </div>
+        <div>
+          <label>معلم المادة</label>
+          <input id="followupTeacher" placeholder="اسم المعلم">
+        </div>
+        <div>
+          <label>الصف</label>
+          <select id="followupGrade">
+            <option value="">اختر الصف</option>
+          </select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <select id="followupClass">
+            <option value="">اختر الفصل</option>
+          </select>
+        </div>
+      </div>
+      <div class="followup-actions">
+        <button type="button" class="btn btn-primary" id="followupLoadBtn">تحميل الطلاب</button>
+        <button type="button" class="btn btn-soft" id="followupSaveBtn">حفظ إلكتروني</button>
+        <button type="button" class="btn btn-outline" id="followupPrintBlankBtn">طباعة فارغة</button>
+        <button type="button" class="btn btn-outline" id="followupPrintFilledBtn">طباعة البيانات الحالية</button>
+        <button type="button" class="btn btn-primary" id="followupPdfBtn">تصدير PDF</button>
+        <button type="button" class="btn btn-soft" id="followupClearBtn">مسح الخانات</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:10px">
+      <div class="followup-sheet-wrap">
+        <div id="followupSheet" class="followup-sheet">
+          <div class="followup-sheet-head">
+            <div class="followup-sheet-meta right" id="followupHeadRight">المادة: —<br>معلم المادة: —</div>
+            <div class="followup-sheet-title" id="followupHeadTitle">سجل متابعة الفصل الدراسي الأول لعام 1448 هـ</div>
+            <div class="followup-sheet-meta left" id="followupHeadLeft">الصف / الفصل: —<br>عدد الطلاب: 0</div>
+          </div>
+          <table class="followup-table">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width:90px">السجل المدني</th>
+                <th rowspan="2" style="width:180px">اسم الطالب</th>
+                <th rowspan="2" style="width:62px">الفصل</th>
+                <th colspan="4">غياب</th>
+                <th colspan="4">مشاركة</th>
+                <th colspan="4">واجبات</th>
+                <th colspan="4">أنشطة</th>
+                <th colspan="2">الاختبارات</th>
+                <th rowspan="2" style="width:74px">بحوث ومشاريع</th>
+                <th colspan="4">أخرى</th>
+              </tr>
+              <tr>
+                <th>1</th><th>2</th><th>3</th><th>4</th>
+                <th>1</th><th>2</th><th>3</th><th>4</th>
+                <th>1</th><th>2</th><th>3</th><th>4</th>
+                <th>1</th><th>2</th><th>3</th><th>4</th>
+                <th>نصفي</th><th>نهائي</th>
+                <th>1</th><th>2</th><th>3</th><th>4</th>
+              </tr>
+            </thead>
+            <tbody id="followupBody">
+              <tr><td colspan="26" class="followup-empty">اختر الصف والفصل ثم اضغط «تحميل الطلاب».</td></tr>
+            </tbody>
+          </table>
+          <div class="followup-print-note">مدير المدرسة: <span id="followupManagerName"></span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -5202,6 +5362,216 @@ function configureUserDashboard(){
 }
 
 
+
+const FOLLOWUP_FIELDS=['absence1','absence2','absence3','absence4','participation1','participation2','participation3','participation4','homework1','homework2','homework3','homework4','activity1','activity2','activity3','activity4','midterm','final','projects','other1','other2','other3','other4'];
+
+function followupStorageKey(){
+  const user=getCurrentLoggedAdminUser?.()||{};
+  const username=String(user.username||user.civil_id||'user');
+  const term=String($('followupTerm')?.value||'');
+  const year=String($('followupYear')?.value||'');
+  const subject=String($('followupSubject')?.value||'').trim();
+  const grade=String($('followupGrade')?.value||'');
+  const classroom=String($('followupClass')?.value||'');
+  return ['studentFollowup',username,term,year,subject,grade,classroom].join('|');
+}
+
+function getFollowupSaved(){
+  try{return JSON.parse(localStorage.getItem(followupStorageKey())||'{}')||{}}catch(e){return {}}
+}
+
+function currentFollowupStudents(){
+  const grade=$('followupGrade')?.value||'';
+  const classroom=$('followupClass')?.value||'';
+  return getStudents()
+    .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade)) && (!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+}
+
+function populateFollowupGrades(){
+  const select=$('followupGrade');
+  if(!select) return;
+  const current=select.value;
+  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar'));
+  select.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${g}">${g}</option>`).join('');
+  if(grades.includes(current)) select.value=current;
+}
+
+function populateFollowupClasses(){
+  const grade=$('followupGrade')?.value||'';
+  const select=$('followupClass');
+  if(!select) return;
+  const current=select.value;
+  const classes=[...new Set(getStudents()
+    .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
+    .map(s=>studentClassKey(s.classroom)).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  select.innerHTML='<option value="">اختر الفصل</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
+  if(classes.includes(current)) select.value=current;
+}
+
+function updateFollowupHeader(students=[]){
+  const term=$('followupTerm')?.value||'الأول';
+  const year=$('followupYear')?.value||'';
+  const subject=$('followupSubject')?.value.trim()||'—';
+  const teacher=$('followupTeacher')?.value.trim()||'—';
+  const grade=$('followupGrade')?.value||'—';
+  const classroom=$('followupClass')?.value||'—';
+  if($('followupHeadTitle')) $('followupHeadTitle').textContent=`سجل متابعة الفصل الدراسي ${term} لعام ${year||'ــــ'} هـ`;
+  if($('followupHeadRight')) $('followupHeadRight').innerHTML=`المادة: ${subject}<br>معلم المادة: ${teacher}`;
+  if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':('الفصل '+classroom)}<br>عدد الطلاب: ${students.length}`;
+  const settings=getSchoolSettings?.()||{};
+  if($('followupManagerName')) $('followupManagerName').textContent=settings.manager||'';
+}
+
+function renderFollowupTable(){
+  const body=$('followupBody');
+  if(!body) return;
+  const grade=$('followupGrade')?.value||'';
+  const classroom=$('followupClass')?.value||'';
+  if(!grade || !classroom){
+    body.innerHTML='<tr><td colspan="26" class="followup-empty">اختر الصف والفصل ثم اضغط «تحميل الطلاب».</td></tr>';
+    updateFollowupHeader([]);
+    return;
+  }
+  const students=currentFollowupStudents();
+  const saved=getFollowupSaved();
+  updateFollowupHeader(students);
+  if(!students.length){
+    body.innerHTML='<tr><td colspan="26" class="followup-empty">لا يوجد طلاب في هذا الصف والفصل.</td></tr>';
+    return;
+  }
+
+  body.innerHTML=students.map(s=>{
+    const sid=String(s.idno||'');
+    const row=saved[sid]||{};
+    const marks=FOLLOWUP_FIELDS.map(field=>{
+      const val=String(row[field]??'').replace(/"/g,'&quot;');
+      return `<td><input class="followup-mark" data-student="${sid}" data-field="${field}" value="${val}" maxlength="8"></td>`;
+    }).join('');
+    return `<tr>
+      <td class="civil-id">${sid||'—'}</td>
+      <td class="student-name">${s.name||'—'}</td>
+      <td class="class-cell">${displayStudentClassroom?displayStudentClassroom(studentClassKey(s.classroom)):studentClassKey(s.classroom)}</td>
+      ${marks}
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('.followup-mark').forEach(inp=>{
+    inp.addEventListener('change',saveFollowupElectronic);
+    inp.addEventListener('blur',saveFollowupElectronic);
+  });
+}
+
+function saveFollowupElectronic(){
+  const rows={};
+  document.querySelectorAll('#followupBody .followup-mark').forEach(inp=>{
+    const sid=String(inp.dataset.student||'');
+    const field=String(inp.dataset.field||'');
+    if(!sid||!field) return;
+    if(!rows[sid]) rows[sid]={};
+    rows[sid][field]=inp.value||'';
+  });
+  try{
+    localStorage.setItem(followupStorageKey(),JSON.stringify(rows));
+    localStorage.setItem('followupLastMeta',JSON.stringify({
+      term:$('followupTerm')?.value||'',
+      year:$('followupYear')?.value||'',
+      subject:$('followupSubject')?.value||'',
+      teacher:$('followupTeacher')?.value||'',
+      grade:$('followupGrade')?.value||'',
+      classroom:$('followupClass')?.value||''
+    }));
+  }catch(e){}
+}
+
+function clearFollowupMarks(){
+  if(!confirm('مسح جميع الخانات المدخلة لهذا الكشف؟')) return;
+  document.querySelectorAll('#followupBody .followup-mark').forEach(inp=>inp.value='');
+  saveFollowupElectronic();
+  toast('تم مسح خانات المتابعة');
+}
+
+function prepareFollowupPrint(blank=false){
+  const sheet=$('followupSheet');
+  if(!sheet) return;
+  if(blank) sheet.classList.add('blank-print');
+  document.body.classList.add('followup-printing');
+  const cleanup=()=>{
+    document.body.classList.remove('followup-printing');
+    sheet.classList.remove('blank-print');
+    window.removeEventListener('afterprint',cleanup);
+  };
+  window.addEventListener('afterprint',cleanup);
+  window.print();
+  setTimeout(cleanup,1500);
+}
+
+async function exportFollowupPdf(){
+  if(!window.html2pdf){
+    alert('تعذر تشغيل أداة تصدير PDF.');
+    return;
+  }
+  const sheet=$('followupSheet');
+  if(!sheet) return;
+  const grade=$('followupGrade')?.value||'الصف';
+  const classroom=$('followupClass')?.value||'الفصل';
+  const subject=$('followupSubject')?.value.trim()||'المادة';
+  const filename=`كشف متابعة - ${grade} - ${classroom} - ${subject}.pdf`;
+  const btn=$('followupPdfBtn');
+  const old=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='جاري تجهيز PDF...'}
+  try{
+    await html2pdf().set({
+      margin:5,
+      filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+      pagebreak:{mode:['avoid-all','css','legacy']}
+    }).from(sheet).save();
+  }catch(e){
+    console.error('followup pdf',e);
+    alert('تعذر تصدير PDF الآن.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old}
+  }
+}
+
+function initStudentFollowupPage(){
+  populateFollowupGrades();
+  const current=getCurrentLoggedAdminUser?.()||{};
+  if($('followupTeacher') && !$('followupTeacher').value){
+    $('followupTeacher').value=String(current.name||current.username||'');
+  }
+  try{
+    const last=JSON.parse(localStorage.getItem('followupLastMeta')||'{}');
+    if(last.term && $('followupTerm')) $('followupTerm').value=last.term;
+    if(last.year && $('followupYear')) $('followupYear').value=last.year;
+    if(last.subject && $('followupSubject')) $('followupSubject').value=last.subject;
+    if(last.teacher && $('followupTeacher')) $('followupTeacher').value=last.teacher;
+    if(last.grade && $('followupGrade')) $('followupGrade').value=last.grade;
+    populateFollowupClasses();
+    if(last.classroom && $('followupClass')) $('followupClass').value=last.classroom;
+  }catch(e){populateFollowupClasses()}
+  renderFollowupTable();
+}
+
+if($('followupGrade')) $('followupGrade').onchange=()=>{populateFollowupClasses();renderFollowupTable()};
+if($('followupClass')) $('followupClass').onchange=renderFollowupTable;
+if($('followupLoadBtn')) $('followupLoadBtn').onclick=renderFollowupTable;
+if($('followupSaveBtn')) $('followupSaveBtn').onclick=()=>{saveFollowupElectronic();toast('تم حفظ الكشف إلكترونيًا')};
+if($('followupPrintBlankBtn')) $('followupPrintBlankBtn').onclick=()=>prepareFollowupPrint(true);
+if($('followupPrintFilledBtn')) $('followupPrintFilledBtn').onclick=()=>prepareFollowupPrint(false);
+if($('followupPdfBtn')) $('followupPdfBtn').onclick=exportFollowupPdf;
+if($('followupClearBtn')) $('followupClearBtn').onclick=clearFollowupMarks;
+['followupTerm','followupYear','followupSubject','followupTeacher'].forEach(id=>{
+  $(id)?.addEventListener('change',()=>{updateFollowupHeader(currentFollowupStudents());saveFollowupElectronic()});
+  $(id)?.addEventListener('input',()=>updateFollowupHeader(currentFollowupStudents()));
+});
+
+
 function openInternalPage(pageId){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(pageId)?.classList.remove('hidden');
@@ -5212,6 +5582,9 @@ function openInternalPage(pageId){
   }
   if(pageId==='referral' && typeof initReferralPage==='function'){
     setTimeout(initReferralPage,0);
+  }
+  if(pageId==='followup' && typeof initStudentFollowupPage==='function'){
+    setTimeout(initStudentFollowupPage,0);
   }
 }
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
@@ -5310,6 +5683,7 @@ if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>openInternalPage('
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
   if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
 };
+if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>openInternalPage('followup');
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
     openAdminDashboardInternal();
