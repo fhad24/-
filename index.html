@@ -4169,13 +4169,15 @@ async function renderAttendancePage(){
         : '';
       return `
         <div class="attendance-saved-row">
-          <div class="attendance-saved-student ${isPresentRow?'with-name-check':''}">
-            ${presentCheck}
+          <div class="attendance-saved-student">
             <div class="attendance-photo-select-wrap">
               ${photoHTML}
             </div>
             <div>
-              <div class="attendance-saved-name">${x.name||''}</div>
+              <div class="attendance-saved-name-line">
+                ${presentCheck}
+                <div class="attendance-saved-name">${x.name||''}</div>
+              </div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
               ${x.subject?`<span class="attendance-period-chip">📘 ${x.subject}</span>`:''}
               ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
@@ -6321,6 +6323,47 @@ function printStudents(rows){
       margin:0!important;
       accent-color:#0f7665!important;
       cursor:pointer!important;
+    }
+
+    /* التحضير اليومي فقط: علامة التحديد يمين اسم الطالب */
+    .attendance-saved-student{
+      grid-template-columns:56px minmax(0,1fr)!important;
+      direction:rtl!important;
+      align-items:center!important;
+    }
+    .attendance-saved-name-line{
+      display:flex!important;
+      flex-direction:row!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      gap:10px!important;
+      direction:rtl!important;
+      min-width:0!important;
+    }
+    .attendance-name-check{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      flex:0 0 18px!important;
+      margin:0!important;
+      padding:0!important;
+      order:0!important;
+    }
+    .attendance-name-check input{
+      width:18px!important;
+      height:18px!important;
+      margin:0!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
+    }
+    .attendance-saved-name-line .attendance-saved-name{
+      order:1!important;
+      min-width:0!important;
+    }
+    @media(max-width:1050px){
+      .attendance-saved-student{
+        grid-template-columns:46px minmax(0,1fr)!important;
+      }
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
