@@ -1129,6 +1129,12 @@
           اختر الطالب، ثم التقط صورة جديدة. ستتم المقارنة تلقائياً.
         </div>
 
+        <div id="attendanceEditTimeWrap" class="hidden" style="margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fbfa">
+          <label for="attendanceEditTime" style="display:block;font-weight:700;margin-bottom:8px">تعديل وقت الحالة</label>
+          <input id="attendanceEditTime" type="time" step="60" style="height:52px;border-radius:12px;font-size:18px;text-align:center">
+          <div class="hint" style="margin-top:7px;font-size:12px">يمكن تعديل وقت التأخر أو الغياب ثم الضغط على «حفظ التعديل».</div>
+        </div>
+
         <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
         <div class="attendance-camera-buttons">
           <button type="button" class="dark" id="attendanceCaptureBtn">📷 التقاط صورة</button>
@@ -3295,7 +3301,31 @@ let attendanceNewPhotoBlob=null;
 let attendanceFaceVerified=false;
 let attendanceFaceCompareResult='none'; // none | matched | mismatch | error
 let attendanceEditingIndex=-1;
+let attendanceEditingOriginal=null;
 let cameraCaptureContext='student-add';
+
+function attendanceTimeToInput(value){
+  let s=String(value||'').trim();
+  if(!s) return '';
+  const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
+  s=s.replace(/[٠-٩]/g,d=>String(ar.indexOf(d))).replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
+  const am=/\bص\b|صباح/i.test(s), pm=/\bم\b|مساء/i.test(s);
+  const m=s.match(/(\d{1,2})\s*[:：]\s*(\d{2})/);
+  if(!m) return '';
+  let h=Number(m[1]), min=Number(m[2]);
+  if(pm && h<12) h+=12;
+  if(am && h===12) h=0;
+  if(h>23||min>59) return '';
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+function formatAttendanceTimeForDisplay(value){
+  const m=String(value||'').match(/^(\d{2}):(\d{2})$/);
+  if(!m) return String(value||'');
+  const d=new Date();
+  d.setHours(Number(m[1]),Number(m[2]),0,0);
+  return d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+}
 
 function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
@@ -3307,6 +3337,9 @@ function openAttendanceModal(mode){
   $('attendanceStudentModal').classList.remove('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
+  attendanceEditingOriginal=null;
+  $('attendanceEditTimeWrap')?.classList.add('hidden');
+  if($('attendanceEditTime')) $('attendanceEditTime').value='';
   setAttendanceMode(mode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3333,6 +3366,7 @@ async function openAttendanceEdit(index){
   if(!row){toast('تعذر العثور على السجل');return}
 
   attendanceEditingIndex=index;
+  attendanceEditingOriginal={...row};
   attendanceMode=row.status||'late';
   attendanceSelectedId=String(row.idno||'');
   attendanceNewPhotoBlob=null;
@@ -3340,6 +3374,8 @@ async function openAttendanceEdit(index){
   attendanceFaceCompareResult='none';
 
   $('attendanceStudentModal').classList.remove('hidden');
+  $('attendanceEditTimeWrap')?.classList.remove('hidden');
+  if($('attendanceEditTime')) $('attendanceEditTime').value=attendanceTimeToInput(row.time);
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3354,15 +3390,26 @@ function closeAttendanceModal(){
   $('attendanceStudentModal').classList.add('hidden');
   attendanceSelectedId='';
   attendanceEditingIndex=-1;
+  attendanceEditingOriginal=null;
+  $('attendanceEditTimeWrap')?.classList.add('hidden');
+  if($('attendanceEditTime')) $('attendanceEditTime').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
 }
 
 function setAttendanceMode(mode){
   attendanceMode=mode;
   const late=mode==='late';
-  $('attendanceModalTitle').textContent=late?'إضافة طالب — متأخر':'إضافة طالب — حاضر';
+  const present=mode==='present';
+  const absent=mode==='absent';
+  if(absent){
+    $('attendanceModalTitle').textContent=attendanceEditingIndex>=0?'تعديل حالة الطالب — غائب':'إضافة طالب — غائب';
+  }else{
+    $('attendanceModalTitle').textContent=late
+      ?(attendanceEditingIndex>=0?'تعديل حالة الطالب — متأخر':'إضافة طالب — متأخر')
+      :(attendanceEditingIndex>=0?'تعديل حالة الطالب — حاضر':'إضافة طالب — حاضر');
+  }
   $('attendanceLateTab').classList.toggle('active',late);
-  $('attendancePresentTab').classList.toggle('active',!late);
+  $('attendancePresentTab').classList.toggle('active',present);
 }
 
 function fillAttendanceClasses(){
@@ -3668,9 +3715,12 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
 
     const now=new Date();
+    const editedTime=(attendanceEditingIndex>=0 && $('attendanceEditTime')?.value)
+      ? formatAttendanceTimeForDisplay($('attendanceEditTime').value)
+      : '';
     const record={
-      date:todayKey(),
-      time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
+      date:attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey(),
+      time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
       idno:s.idno,
       name:s.name,
       grade:s.grade||'',
@@ -3693,7 +3743,11 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     closeAttendanceModal();
     renderAttendancePage();
     renderAdmin();
-    toast(attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':'تم حفظ الطالب حاضراً بنجاح');
+    if(attendanceEditingIndex>=0){
+      toast('تم حفظ تعديل الحالة والوقت بنجاح');
+    }else{
+      toast(attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح');
+    }
   }catch(err){
     console.error('attendance save failed',err);
     toast('تعذر الحفظ، حاول مرة أخرى');
