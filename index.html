@@ -643,6 +643,17 @@
     .wa-close{width:100%;margin-top:14px;border:0;border-radius:12px;background:#e8efed;padding:11px;font-family:inherit;font-weight:800}
     .admin-user-meta-line{display:flex;gap:10px;flex-wrap:wrap;color:#60736e;font-size:13px;margin-top:3px}
     @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr}.attendance-period-row{align-items:stretch;flex-direction:column}.attendance-period-row select{max-width:none}}
+  
+    .attendance-recorder-chip{display:block;margin-top:4px;color:#60736e;font-size:11px;line-height:1.5}
+    .attendance-bulk-period{height:40px;border:1px solid #cfded9;border-radius:10px;background:#fff;padding:0 10px;font-family:inherit}
+    .attendance-bulk-tools .danger{border-color:#d92d20;color:#b42318;background:#fff}
+    .attendance-bulk-tools .absent{border-color:#b42318;color:#fff;background:#c92a1d}
+    .wa-compose{display:grid;gap:10px;margin:12px 0}
+    .wa-compose textarea{width:100%;min-height:150px;border:1px solid #cfded9;border-radius:12px;padding:12px;font-family:inherit;font-size:14px;resize:vertical}
+    .wa-compose-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .wa-compose-actions button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:10px;padding:9px 12px;font-family:inherit;font-weight:800}
+    .wa-compose-actions button.primary{background:#0f7665;color:#fff}
+    .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -892,6 +903,13 @@
           <h3 id="attendanceDayTitle">التأخر اليومي</h3>
           <div class="attendance-bulk-tools">
             <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
+            <select id="attendanceBulkPeriod" class="attendance-bulk-period">
+              <option value="">الحصة</option>
+              <option value="1">الأولى</option><option value="2">الثانية</option><option value="3">الثالثة</option>
+              <option value="4">الرابعة</option><option value="5">الخامسة</option><option value="6">السادسة</option><option value="7">السابعة</option>
+            </select>
+            <button type="button" id="attendanceBulkAbsent" class="absent">✕ تسجيل غياب للمحدد</button>
+            <button type="button" id="attendanceDeleteSelected" class="danger">🗑 حذف المحدد</button>
             <button type="button" id="attendanceWhatsAppSelected" class="wa">🟢 واتساب للمحدد</button>
           </div>
           <div id="attendanceDailyList" class="attendance-daily-empty">لا يوجد طلاب متأخرون مسجلون اليوم.</div>
@@ -1323,7 +1341,8 @@ async function cloudPullToLocal(){
 
   const attendance=(data.attendance||[]).map(x=>({
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
-    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??''
+    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+    teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||''
   }));
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
@@ -3172,6 +3191,19 @@ setTimeout(async()=>{
   }catch(e){}
 },50);
 
+function getCurrentAttendanceRecorder(){
+  let cloud={};
+  try{cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){}
+  const p=getAdminProfile();
+  const users=getAdminUsers();
+  const u=users.find(x=>String(x.username)===String(cloud.username||p.username||''))||{};
+  return {
+    name:String(cloud.name||u.name||p.displayName||''),
+    username:String(cloud.username||u.username||p.username||''),
+    civilId:String(cloud.civil_id||u.civilId||u.username||p.username||'')
+  };
+}
+
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
@@ -3242,7 +3274,8 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
           <div class="attendance-saved-time">—</div>
           <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل</button>
+            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
+            <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
           </div>
         </div>`;
     }));
@@ -3296,6 +3329,7 @@ async function renderAttendancePage(){
             <div>
               <div class="attendance-saved-name">${x.name||''}</div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
+              ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
             </div>
           </div>
           <div class="attendance-saved-id">${x.idno||'—'}</div>
@@ -3855,10 +3889,14 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const editedTime=(attendanceEditingIndex>=0 && $('attendanceEditTime')?.value)
       ? formatAttendanceTimeForDisplay($('attendanceEditTime').value)
       : '';
+    const recorder=getCurrentAttendanceRecorder();
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
       period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
+      teacherName:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name,
+      teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
+      teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
       idno:s.idno,
       name:s.name,
       grade:s.grade||'',
