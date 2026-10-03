@@ -1863,6 +1863,36 @@
       }
       .att-select-all-wrap{grid-column:1/-1}
     }
+
+    /* الحصة + المادة + المعلم: صغيرة وأفقية بجانب بعض */
+    .attendance-session-controls{
+      display:grid!important;
+      grid-template-columns:130px minmax(190px,1fr) minmax(190px,1fr)!important;
+      gap:8px!important;
+      padding:8px 10px!important;
+      margin:10px 0 8px!important;
+      align-items:end!important;
+      direction:rtl!important;
+    }
+    .attendance-session-field label{
+      font-size:11px!important;
+      margin:0 0 4px!important;
+      line-height:1.2!important;
+    }
+    .attendance-session-field select,
+    .attendance-session-field input{
+      height:34px!important;
+      min-height:34px!important;
+      border-radius:8px!important;
+      font-size:12px!important;
+      padding:0 8px!important;
+      margin:0!important;
+    }
+    @media(max-width:680px){
+      .attendance-session-controls{
+        grid-template-columns:1fr!important;
+      }
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2493,8 +2523,10 @@
         </select>
       </div>
       <div class="attendance-session-field attendance-session-teacher">
-        <label for="attendanceTeacherName">👤 اسم المعلم</label>
-        <input id="attendanceTeacherName" type="text" placeholder="اسم المعلم">
+        <label for="attendanceTeacherSelect">👤 اسم المعلم</label>
+        <select id="attendanceTeacherSelect">
+          <option value="">اختر المعلم</option>
+        </select>
       </div>
     </div>
 
@@ -4488,6 +4520,41 @@ setTimeout(async()=>{
   }catch(e){}
 },50);
 
+function fillAttendanceTeacherSelect(selectedUsername=''){
+  const sel=$('attendanceTeacherSelect');
+  if(!sel) return;
+
+  const p=getAdminProfile();
+  const owner={username:String(p.username||''),name:String(p.displayName||'المدير'),role:'مدير'};
+  const users=[owner,...getAdminUsers()]
+    .filter(u=>String(u.name||'').trim())
+    .filter((u,i,arr)=>arr.findIndex(x=>String(x.username||'')===String(u.username||''))===i);
+
+  sel.innerHTML='<option value="">اختر المعلم</option>'+users.map(u=>{
+    const username=String(u.username||'');
+    const name=String(u.name||username||'');
+    const role=String(u.role||'');
+    return `<option value="${username}" data-name="${name.replace(/"/g,'&quot;')}" data-role="${role.replace(/"/g,'&quot;')}">${name}${role?' — '+role:''}</option>`;
+  }).join('');
+
+  const recorder=getCurrentAttendanceRecorder();
+  const preferred=String(selectedUsername||recorder.username||'');
+  if(preferred && [...sel.options].some(o=>o.value===preferred)) sel.value=preferred;
+}
+
+function getSelectedAttendanceTeacher(){
+  const sel=$('attendanceTeacherSelect');
+  if(!sel || !sel.value) return getCurrentAttendanceRecorder();
+  const users=[{username:getAdminProfile().username,name:getAdminProfile().displayName,role:'مدير'},...getAdminUsers()];
+  const u=users.find(x=>String(x.username||'')===String(sel.value||''));
+  if(!u) return getCurrentAttendanceRecorder();
+  return {
+    name:String(u.name||u.username||''),
+    username:String(u.username||''),
+    civilId:String(u.civilId||u.username||'')
+  };
+}
+
 function getCurrentAttendanceRecorder(){
   let cloud={};
   try{cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){}
@@ -5036,8 +5103,7 @@ function openAttendanceModal(mode){
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
-  const recorderNow=getCurrentAttendanceRecorder();
-  if($('attendanceTeacherName')) $('attendanceTeacherName').value=recorderNow.name||'';
+  fillAttendanceTeacherSelect();
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
   $('attendanceEditTimeWrap')?.classList.add('hidden');
@@ -5086,7 +5152,7 @@ async function openAttendanceEdit(index){
   }
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=String(row.subject||'');
-  if($('attendanceTeacherName')) $('attendanceTeacherName').value=String(row.teacherName||getCurrentAttendanceRecorder().name||'');
+  fillAttendanceTeacherSelect(String(row.teacherUsername||row.teacherCivilId||''));
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -5509,7 +5575,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const editedTime=attendanceEditingIndex>=0
       ? formatAttendanceTimeForDisplay(getAttendanceEditedTime())
       : '';
-    const recorder=getCurrentAttendanceRecorder();
+    const recorder=getSelectedAttendanceTeacher();
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
@@ -5517,7 +5583,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       subject:$('attendanceSubjectSelect')?.value||'',
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
-      teacherName:($('attendanceTeacherName')?.value||'').trim() || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name),
+      teacherName:recorder.name,
       teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
       teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
       idno:s.idno,
