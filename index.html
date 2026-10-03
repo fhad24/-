@@ -1587,6 +1587,51 @@
         gap:6px!important;
       }
     }
+
+    /* تأكيد نهائي: تحديد الحضور يظهر فوراً يمين الصورة */
+    .att-student-photo-wrap.with-select{
+      display:flex!important;
+      flex-direction:row!important;
+      direction:rtl!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      gap:8px!important;
+      width:92px!important;
+      min-width:92px!important;
+      overflow:visible!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check{
+      display:flex!important;
+      position:static!important;
+      transform:none!important;
+      align-items:center!important;
+      justify-content:center!important;
+      width:22px!important;
+      min-width:22px!important;
+      height:22px!important;
+      margin:0!important;
+      padding:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      order:0!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-select-check input{
+      display:block!important;
+      width:20px!important;
+      min-width:20px!important;
+      height:20px!important;
+      min-height:20px!important;
+      margin:0!important;
+      opacity:1!important;
+      visibility:visible!important;
+      -webkit-appearance:checkbox!important;
+      appearance:auto!important;
+      accent-color:#0f7665!important;
+      cursor:pointer!important;
+    }
+    .att-student-photo-wrap.with-select .att-student-photo{
+      order:1!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4830,6 +4875,9 @@ function setAttendanceMode(mode){
   $('attendancePresentTab').classList.toggle('active',present);
   const sessionControls=document.querySelector('.attendance-session-controls');
   if(sessionControls) sessionControls.classList.toggle('hidden',!present);
+  if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden')){
+    renderAttendanceStudentList();
+  }
 }
 
 function fillAttendanceClasses(){
