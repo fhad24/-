@@ -2118,6 +2118,19 @@
     .referral-actions button{min-width:180px;height:52px;border-radius:12px;font-size:15px}
     .referral-note{font-size:12px;color:#6d7f7a;text-align:center;margin-top:10px}
     .teacher-replies-box{margin-top:16px;border-top:1px solid #dce6e3;padding-top:14px}
+    .referral-history-card{margin-top:18px;padding:18px;border-radius:16px;direction:rtl}
+    .referral-history-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .referral-history-head h3{margin:0;color:#173b34;font-size:19px}
+    .referral-history-count{font-size:12px;font-weight:800;color:#5f736e}
+    .referral-history-table-wrap{overflow:auto;border:1px solid #dce6e3;border-radius:12px}
+    .referral-history-table{width:100%;border-collapse:collapse;min-width:980px;background:#fff}
+    .referral-history-table th,.referral-history-table td{padding:10px 9px;border-bottom:1px solid #e6efed;text-align:right;font-size:12px;vertical-align:top}
+    .referral-history-table th{background:#f3f8f7;color:#173b34;font-weight:900;position:sticky;top:0;z-index:1}
+    .referral-history-table tr:last-child td{border-bottom:0}
+    .referral-history-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;white-space:nowrap}
+    .referral-history-status.pending{background:#fff4d6;color:#8a5a00}
+    .referral-history-status.replied{background:#e7f6f1;color:#0f7665}
+    .referral-history-empty{padding:22px;text-align:center;color:#6d7f7a}
     .teacher-replies-box h3{font-size:17px;color:#173b34}
     .teacher-reply-item{border:1px solid #d7e2df;border-radius:10px;padding:10px;margin-top:8px;background:#fbfdfc;font-size:12px;line-height:1.8}
     .deputy-referral-page{max-width:1100px;margin:0 auto;direction:rtl}
@@ -2476,6 +2489,38 @@
       </div>
       <div class="referral-note">يتم حفظ النموذج داخل النظام ويمكن طباعته مباشرة.</div>
     </form>
+
+    <div class="card referral-history-card">
+      <div class="referral-history-head">
+        <div>
+          <h3>سجل الطلاب الذين تم تحويلهم</h3>
+          <div class="referral-history-count" id="referralHistoryCount">0 تحويل</div>
+        </div>
+        <button type="button" class="btn btn-soft" id="refreshReferralHistoryBtn">تحديث السجل</button>
+      </div>
+      <div class="referral-history-table-wrap">
+        <table class="referral-history-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>اسم الطالب</th>
+              <th>السجل المدني</th>
+              <th>الصف</th>
+              <th>الفصل</th>
+              <th>المادة</th>
+              <th>الحصة</th>
+              <th>سبب التحويل</th>
+              <th>التنبيه</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="referralHistoryBody">
+            <tr><td colspan="11" class="referral-history-empty">لا توجد تحويلات حتى الآن.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -3330,6 +3375,66 @@ function populateReferralTeachers(){
   nameInput.value=name;
   civilLabel.textContent='السجل المدني: '+(civil||'—');
 }
+function getLocalReferralHistory(){
+  try{
+    const rows=JSON.parse(localStorage.getItem('studentReferrals')||'[]');
+    return Array.isArray(rows)?rows:[];
+  }catch(e){ return []; }
+}
+function referralHistoryReason(row){
+  const reasons=Array.isArray(row.reasons)?row.reasons:[];
+  const other=String(row.other_reason??row.otherReason??'').trim();
+  return [...reasons,other].filter(Boolean).join('، ')||'—';
+}
+function renderReferralHistoryRows(rows){
+  const body=$('referralHistoryBody');
+  const count=$('referralHistoryCount');
+  if(!body) return;
+  const list=Array.isArray(rows)?rows:[];
+  if(count) count.textContent=list.length+' تحويل';
+  if(!list.length){
+    body.innerHTML='<tr><td colspan="11" class="referral-history-empty">لا توجد تحويلات حتى الآن.</td></tr>';
+    return;
+  }
+  body.innerHTML=list.map((r,i)=>{
+    const replied=String(r.status||'')==='replied' || !!(r.deputy_reply||r.deputy_action);
+    const status=replied?'تم الرد':'بانتظار رد الوكيل';
+    const studentName=r.student_name??r.studentName??'—';
+    const civil=r.student_civil_id??r.studentCivilId??'—';
+    const grade=r.grade||'—';
+    const classroom=r.classroom||'—';
+    const subject=r.subject||'—';
+    const period=r.period||'—';
+    const alert=r.alert_level??r.alertLevel??'1';
+    const date=r.hijri_date??r.hijriDate??r.date??'—';
+    return `<tr>
+      <td>${i+1}</td>
+      <td><b>${studentName}</b></td>
+      <td>${civil}</td>
+      <td>${grade}</td>
+      <td>${classroom}</td>
+      <td>${subject}</td>
+      <td>${period}</td>
+      <td>${referralHistoryReason(r)}</td>
+      <td>التنبيه ${alert}</td>
+      <td>${date}</td>
+      <td><span class="referral-history-status ${replied?'replied':'pending'}">${status}</span></td>
+    </tr>`;
+  }).join('');
+}
+async function loadReferralHistory(){
+  const localRows=getLocalReferralHistory();
+  renderReferralHistoryRows(localRows);
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token) return;
+  try{
+    const data=await cloudApi('list_referrals');
+    const cloudRows=Array.isArray(data.rows)?data.rows:[];
+    if(cloudRows.length) renderReferralHistoryRows(cloudRows);
+  }catch(e){
+    console.warn('load referral history',e);
+  }
+}
 function initReferralPage(){
   updateReferralDates();
   refreshReferralClasses();
@@ -3337,6 +3442,7 @@ function initReferralPage(){
   renderReferralSelectedStudents();
   populateReferralTeachers();
   loadTeacherReferralReplies();
+  loadReferralHistory();
 }
 if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',async e=>{
   e.preventDefault();
@@ -3402,8 +3508,10 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     console.warn('create referrals',err);
     toast('تم حفظ التحويل محليًا وتعذر إرساله سحابيًا');
   }
+  await loadReferralHistory();
 });
 if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
+if($('refreshReferralHistoryBtn')) $('refreshReferralHistoryBtn').onclick=()=>loadReferralHistory();
 if($('referralNoorTrigger')) $('referralNoorTrigger').onclick=()=>{
   if(!$('referralClass')?.value) return;
   $('referralStudentResults')?.classList.toggle('hidden');
