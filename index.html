@@ -4634,7 +4634,10 @@ function getCurrentLoggedAdminUser(){
 
 function isCurrentOwner(){
   const u=getCurrentLoggedAdminUser();
-  return !!u.is_owner || String(u.role||'')==='مدير' && String(u.username||'')===String(getAdminProfile().username||'');
+  const role=String(u?.role||'').trim();
+  const username=String(u?.username||'').trim();
+  const ownerUsername=String(getAdminProfile()?.username||'').trim();
+  return !!u?.is_owner || role==='مدير' || (!!username && !!ownerUsername && username===ownerUsername);
 }
 
 function hideAllUserFeatureViews(){
@@ -4656,7 +4659,9 @@ function configureUserDashboard(){
     portal.classList.add('hidden');
     registerTab?.classList.remove('hidden');
     editTab?.classList.remove('hidden');
-    document.querySelector('.admin-toolbar')?.classList.remove('hidden');
+    const toolbar=document.querySelector('.admin-toolbar');
+    toolbar?.classList.remove('hidden');
+    if(toolbar) toolbar.style.display='block';
     const view=localStorage.getItem('activeAdminView')||'data';
     showAdminView(view==='attendance'?'attendance':'data');
     return;
@@ -4753,6 +4758,14 @@ if($('userRegisterPageBtn')) $('userRegisterPageBtn').onclick=()=>openInternalPa
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
+
+function ensureAdminToolbarVisible(){
+  if(isCurrentOwner()){
+    const toolbar=document.querySelector('.admin-toolbar');
+    toolbar?.classList.remove('hidden');
+    if(toolbar) toolbar.style.display='block';
+  }
+}
 function setAdminMode(on){
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
@@ -4813,7 +4826,7 @@ $('adminLoginBtn').onclick=async()=>{
     $('dashboard').classList.remove('hidden');
     try{setAdminMode(true)}catch(e){}
     try{renderAdmin()}catch(e){console.error('renderAdmin direct login',e)}
-    try{configureUserDashboard()}catch(e){}
+    try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
     btn.disabled=false;
     btn.textContent=oldText;
     return;
@@ -4826,7 +4839,7 @@ $('adminLoginBtn').onclick=async()=>{
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
     try{renderAdmin()}catch(e){console.error('renderAdmin after login',e)}
-    try{configureUserDashboard()}catch(e){}
+    try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
   };
 
   const hashText=async(s)=>{
@@ -9415,6 +9428,7 @@ function restoreLastAppLocation(){
       $('adminLoginModal')?.classList.add('hidden');
       $('dashboard')?.classList.remove('hidden');
       setAdminMode(true);
+      try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
 
       const view=localStorage.getItem('activeAdminView')||'data';
       showAdminView(view);
