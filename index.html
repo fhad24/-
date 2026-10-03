@@ -2356,6 +2356,85 @@
       @page{size:A4 landscape;margin:7mm}
     }
 
+
+    /* واجهة دخول رسمية محسنة */
+    body:not(.admin-mode){background:linear-gradient(180deg,#f7fbfa 0%,#eef7f4 100%)}
+    body:not(.admin-mode) #register{max-width:980px;margin:0 auto;padding:18px 16px 34px}
+    body:not(.admin-mode) #register .notice{max-width:940px;margin:0 auto 18px;border-radius:18px;box-shadow:0 4px 18px #0f76650d}
+    body:not(.admin-mode) #register .notice .top{font-size:14px;font-weight:800;padding:14px}
+    body:not(.admin-mode) #register .ticker{font-size:14px;font-weight:800;padding:12px 14px}
+
+    .login-hero{
+      max-width:940px;margin:0 auto 22px;padding:26px 28px 24px;border-radius:26px;
+      background:
+        radial-gradient(circle at 14% 18%,#dff3ed 0 4px,transparent 5px),
+        radial-gradient(circle at 86% 22%,#d8efe8 0 3px,transparent 4px),
+        linear-gradient(135deg,#ffffff 0%,#f8fcfb 58%,#edf8f5 100%);
+      border:1px solid #cfe2dc;box-shadow:0 10px 34px #0f766510;position:relative;overflow:hidden
+    }
+    .login-hero:after{
+      content:"";position:absolute;left:-8%;right:-8%;bottom:-42px;height:92px;border-radius:50% 50% 0 0;
+      background:linear-gradient(180deg,#178b78 0%,#0f7665 65%,#0a5d50 100%);opacity:.96
+    }
+    .login-hero-inner{position:relative;z-index:1}
+    .login-hero-brand-row{
+      display:grid;grid-template-columns:1fr 140px 1fr;gap:20px;align-items:center;margin-bottom:16px
+    }
+    .login-hero-logo-card{
+      min-height:126px;border:1px solid #d9e6e2;background:#fff;border-radius:22px;padding:14px;
+      display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px #00000008
+    }
+    .login-hero-logo-card img{max-width:100%;max-height:96px;object-fit:contain}
+    .login-hero-logo-fallback{font-size:16px;font-weight:900;color:#0f7665;text-align:center;line-height:1.6}
+    .login-hero-school{text-align:center;font-size:31px;font-weight:900;color:#143c35;margin:6px 0 4px;line-height:1.45}
+    .login-hero-authority{
+      width:max-content;max-width:90%;margin:10px auto 18px;padding:8px 18px;border-radius:999px;
+      background:#e3f4ef;color:#17443c;font-size:15px;font-weight:800
+    }
+    .login-hero-credits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 auto 34px;max-width:720px}
+    .login-credit{
+      border:1px solid #cfe2dc;background:#ffffffd9;border-radius:18px;padding:14px 16px;text-align:center;
+      font-size:13px;color:#2b4d46;line-height:1.8
+    }
+    .login-credit b{display:block;color:#153f37;font-size:16px}
+    .login-system-badge{
+      width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin:-8px auto 12px;
+      background:#e2f3ef;color:#0f7665;font-size:28px;border:1px solid #cbe5de
+    }
+    .landing-login-card{
+      max-width:760px!important;margin:0 auto!important;padding:34px 36px 36px!important;border-radius:28px!important;
+      border:1px solid #ceded9!important;box-shadow:0 12px 38px #102f2a12!important;background:#fff!important
+    }
+    .landing-login-card h2{font-size:34px!important;color:#153f37!important;margin-bottom:6px!important;font-weight:900!important}
+    .landing-login-card .hint{font-size:16px!important;color:#6b8580!important;margin-bottom:24px!important}
+    .landing-login-card label{font-size:14px!important;margin:14px 0 7px!important;color:#143c35!important}
+    .landing-login-card input{
+      height:76px!important;border-radius:16px!important;font-size:20px!important;background:#edf4ff!important;
+      border:1px solid #c8d7d3!important;padding:0 18px!important
+    }
+    .landing-login-card #landingLoginBtn{
+      height:76px!important;border-radius:14px!important;font-size:22px!important;margin-top:26px!important
+    }
+
+    @media(max-width:700px){
+      body:not(.admin-mode) #register{padding:10px 8px 24px!important}
+      .login-hero{padding:18px 12px 16px;border-radius:20px}
+      .login-hero-brand-row{grid-template-columns:1fr 92px 1fr;gap:8px}
+      .login-hero-logo-card{min-height:92px;padding:8px;border-radius:16px}
+      .login-hero-logo-card img{max-height:68px}
+      .login-hero-logo-fallback{font-size:11px}
+      .login-hero-school{font-size:21px}
+      .login-hero-authority{font-size:12px;padding:7px 12px}
+      .login-hero-credits{grid-template-columns:1fr;gap:8px;margin-bottom:28px}
+      .login-credit{padding:10px;font-size:11px}
+      .login-credit b{font-size:14px}
+      .landing-login-card{padding:24px 18px 26px!important;border-radius:22px!important}
+      .landing-login-card h2{font-size:28px!important}
+      .landing-login-card .hint{font-size:14px!important}
+      .landing-login-card input{height:58px!important;font-size:17px!important}
+      .landing-login-card #landingLoginBtn{height:58px!important;font-size:19px!important}
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2397,7 +2476,32 @@
     <div class="ticker"><span>تنبيه هام: يرجى التأكد من صحة البيانات والصور قبل الإرسال</span></div>
   </div>
 
+  <div class="login-hero" id="loginHero">
+    <div class="login-hero-inner">
+      <div class="login-hero-brand-row">
+        <div class="login-hero-logo-card">
+          <img id="loginMinistryLogo" class="hidden" alt="شعار وزارة التعليم">
+          <div id="loginMinistryFallback" class="login-hero-logo-fallback">وزارة التعليم<br>تعليم نجران</div>
+        </div>
+        <div class="login-hero-logo-card">
+          <img id="loginSchoolLogo" class="hidden" alt="شعار المدرسة">
+          <div id="loginSchoolFallback" class="login-hero-logo-fallback">شعار المدرسة</div>
+        </div>
+        <div class="login-hero-logo-card">
+          <div class="login-hero-logo-fallback">نظام إدارة<br>شؤون الطلاب</div>
+        </div>
+      </div>
+      <div id="loginHeroSchool" class="login-hero-school">مدرسة شرحبيل بن حسنة الثانوية</div>
+      <div id="loginHeroAuthority" class="login-hero-authority">الإدارة العامة للتعليم بمنطقة نجران</div>
+      <div class="login-hero-credits">
+        <div class="login-credit">تصميم وكيل شؤون الطلاب<b id="loginHeroDesigner">محمد الشامي السلامي</b></div>
+        <div class="login-credit">مدير المدرسة<b id="loginHeroManager">عبدالله عيظة البديدي</b></div>
+      </div>
+    </div>
+  </div>
+
   <div class="card landing-login-card" id="landingLoginCard">
+    <div class="login-system-badge">🔒</div>
     <h2 style="text-align:center;font-size:22px;margin-bottom:8px">دخول النظام</h2>
     <div class="hint" style="font-size:13px;margin-bottom:16px">أدخل اسم المستخدم وكلمة المرور</div>
     <label>اسم المستخدم</label>
@@ -6442,6 +6546,42 @@ function applySchoolSettings(){
   if(manager) manager.textContent=s.manager ? `مدير المدرسة: ${s.manager}` : '';
   const ticker=document.querySelector('.ticker span');
   if(ticker) ticker.textContent=s.tickerText||'';
+
+  const loginHeroSchool=document.getElementById('loginHeroSchool');
+  const loginHeroAuthority=document.getElementById('loginHeroAuthority');
+  const loginHeroDesigner=document.getElementById('loginHeroDesigner');
+  const loginHeroManager=document.getElementById('loginHeroManager');
+  if(loginHeroSchool) loginHeroSchool.textContent=s.school||'';
+  if(loginHeroAuthority) loginHeroAuthority.textContent=s.authority||'';
+  if(loginHeroDesigner) loginHeroDesigner.textContent=s.designer||'';
+  if(loginHeroManager) loginHeroManager.textContent=s.manager||'';
+
+  const loginSchoolLogo=document.getElementById('loginSchoolLogo');
+  const loginSchoolFallback=document.getElementById('loginSchoolFallback');
+  if(loginSchoolLogo && loginSchoolFallback){
+    if(s.schoolLogo){
+      loginSchoolLogo.src=s.schoolLogo;
+      loginSchoolLogo.classList.remove('hidden');
+      loginSchoolFallback.classList.add('hidden');
+    }else{
+      loginSchoolLogo.removeAttribute('src');
+      loginSchoolLogo.classList.add('hidden');
+      loginSchoolFallback.classList.remove('hidden');
+    }
+  }
+  const loginMinistryLogo=document.getElementById('loginMinistryLogo');
+  const loginMinistryFallback=document.getElementById('loginMinistryFallback');
+  if(loginMinistryLogo && loginMinistryFallback){
+    if(s.ministryLogo){
+      loginMinistryLogo.src=s.ministryLogo;
+      loginMinistryLogo.classList.remove('hidden');
+      loginMinistryFallback.classList.add('hidden');
+    }else{
+      loginMinistryLogo.removeAttribute('src');
+      loginMinistryLogo.classList.add('hidden');
+      loginMinistryFallback.classList.remove('hidden');
+    }
+  }
   const logos=document.querySelectorAll('header .logo');
   if(logos[0] && s.ministryLogo){
     logos[0].textContent='';
