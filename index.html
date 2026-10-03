@@ -4988,7 +4988,7 @@ async function createAdminBackupZip(){
       'document.getElementById("usersBody").innerHTML=DATA.users.filter(x=>!q||[x.name,x.username,x.civilId,x.civil_id,x.role].some(v=>String(v||"").toLowerCase().includes(q))).map(x=>"<tr><td>"+esc(x.name)+"</td><td>"+esc(x.civilId||x.civil_id||x.username)+"</td><td>"+esc(x.role)+"</td><td>"+esc((x.permissions||[]).join("، "))+"</td></tr>").join("");}'+
       'render();document.getElementById("search").addEventListener("input",e=>render(e.target.value));'+
       'document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".tabpane").forEach(x=>x.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden")});'+
-      '</script></body></html>';
+      '<\/script></body></html>';
     zip.file('offline/index.html',offlineHtml);
 
     zip.file('README_RESTORE.txt',
