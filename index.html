@@ -3455,7 +3455,9 @@ async function loadReferralHistory(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return;
   try{
-    const data=await cloudApi('list_referrals');
+    const creds=getCurrentDeputyCredentials();
+    if(!creds.username || !creds.password) throw new Error('MISSING_DEPUTY_CREDENTIALS');
+    const data=await cloudApi('list_referrals_with_credentials',creds,false);
     const cloudRows=Array.isArray(data.rows)?data.rows:[];
     if(cloudRows.length) renderReferralHistoryRows(cloudRows);
   }catch(e){
@@ -3643,6 +3645,26 @@ async function loadTeacherReferralReplies(){
   }
 }
 
+function getCurrentDeputyCredentials(){
+  const current=getCurrentLoggedAdminUser();
+  const username=String(current?.username||current?.civil_id||'').trim();
+  if(!username) return {username:'',password:''};
+
+  if(isCurrentOwner()){
+    const p=getAdminProfile();
+    return {
+      username:String(p.username||username).trim(),
+      password:String(p.password||'').trim()
+    };
+  }
+
+  const localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username);
+  return {
+    username,
+    password:String(localUser?.password||localUser?.civilId||localUser?.username||'').trim()
+  };
+}
+
 async function loadDeputyReferrals(){
   const host=$('deputyReferralList');
   if(!host) return;
@@ -3721,7 +3743,9 @@ async function loadDeputyReferrals(){
       const oldText=btn.textContent;
       btn.textContent='جاري الحفظ...';
       try{
-        await cloudApi('reply_referral',{id,reply,deputyAction});
+        const creds=getCurrentDeputyCredentials();
+        if(!creds.username || !creds.password) throw new Error('MISSING_DEPUTY_CREDENTIALS');
+        await cloudApi('reply_referral_with_credentials',{...creds,id,reply,deputyAction},false);
         toast('تم حفظ رد الوكيل وإرساله للمعلم');
 
         // بعد الحفظ يختفي الطالب من قائمة ردود الوكلاء مباشرة.
@@ -3745,7 +3769,8 @@ async function loadDeputyReferrals(){
     });
   }catch(e){
     console.error('load deputy referrals',e);
-    host.innerHTML='<div class="hint">تعذر تحميل التحويلات الآن.</div>';
+    const msg=String(e?.message||e||'');
+    host.innerHTML='<div class="hint">تعذر تحميل التحويلات الآن'+(msg?' — '+msg:'')+'</div>';
   }
 }
 
