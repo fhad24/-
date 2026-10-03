@@ -5524,7 +5524,94 @@ async function renderAttendanceStudentList(){
     return String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'})*attendanceStudentSortDir;
   });
 
-  if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
+  document.querySelectorAll('.att-sort-btn').forEach(btn=>{
+    const active=btn.dataset.attSort===attendanceStudentSortKey;
+    btn.classList.toggle('active',active);
+    btn.textContent=(btn.dataset.attSort==='name'?'اسم الطالب':btn.dataset.attSort==='idno'?'السجل':btn.dataset.attSort==='class'?'الصف':'الصورة')+(active?(attendanceStudentSortDir===1?' ▲':' ▼'):'');
+  });
+  const selectAllWrap=$('attendancePresentSelectAllWrap');
+  if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
+
+  const rendered=await Promise.all(list.map(async s=>{
+    const perf=getStudentAttendancePerformance(s.idno);
+    let photoHTML='<div class="att-student-photo placeholder">👤</div>';
+    try{
+      const blob=await getStudentPhoto(`${s.idno}:face`);
+      if(blob){
+        const src=await makeSharpAttendanceThumb(blob,String(s.idno));
+        photoHTML=`<img class="att-student-photo" src="${src}" alt="صورة الطالب">`;
+      }
+    }catch(e){}
+    return `
+    <div class="att-student-row ${attendanceMode==='present'?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
+      <div class="att-student-main">
+        <div class="att-name-line"><b>${s.name}</b></div>
+        <span class="att-inline-performance">
+          <span class="att-inline-late">⏰ ${perf.late}</span>
+          <span class="att-inline-absent">✕ ${perf.absent}</span>
+        </span>
+      </div>
+      <div class="att-student-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
+      <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
+        ${photoHTML}
+        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
+      </div>
+      <div class="att-student-id-cell">${s.idno||'—'}</div>
+    </div>`;
+  }));
+
+  $('attendanceStudentList').innerHTML=rendered.join('') || '<div class="hint" style="padding:14px">لا توجد أسماء مطابقة</div>';
+  $('attendanceListCount').textContent=q
+    ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
+    : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
+
+  if($('attendancePresentSelectAll')){
+    const visibleIds=list.map(s=>String(s.idno));
+    $('attendancePresentSelectAll').checked=attendanceMode==='present' && visibleIds.length>0 && visibleIds.every(id=>attendancePresentSelectedIds.has(id));
+    $('attendancePresentSelectAll').indeterminate=attendanceMode==='present' && visibleIds.some(id=>attendancePresentSelectedIds.has(id)) && !visibleIds.every(id=>attendancePresentSelectedIds.has(id));
+  }
+
+  document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
+    box.onclick=(e)=>e.stopPropagation();
+    box.onchange=(e)=>{
+      e.stopPropagation();
+      const id=String(box.dataset.selectId||'');
+      if(box.checked) attendancePresentSelectedIds.add(id);
+      else attendancePresentSelectedIds.delete(id);
+    };
+  });
+
+  document.querySelectorAll('.att-student-row[data-id]').forEach(row=>{
+    row.onclick=(e)=>{
+      if(e.target.closest('.att-student-select-check')) return;
+      attendanceSelectedId=row.dataset.id;
+      renderAttendanceStudentList();
+      const s=getStudents().find(x=>String(x.idno)===String(attendanceSelectedId));
+      showAttendanceSelectedStudent(s);
+    };
+  });
+}
+
+document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
+  btn.onclick=()=>{
+    attendanceListView=btn.dataset.attView||'late';
+    renderAttendancePage();
+  };
+});
+
+if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
+if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>openAttendanceModal('present');
+if($('closeAttendanceModal')) $('closeAttendanceModal').onclick=closeAttendanceModal;
+if($('cancelAttendanceStudentBtn')) $('cancelAttendanceStudentBtn').onclick=closeAttendanceModal;
+if($('attendanceLateTab')) $('attendanceLateTab').onclick=()=>setAttendanceMode('late');
+if($('attendancePresentTab')) $('attendancePresentTab').onclick=()=>setAttendanceMode('present');
+if($('attendanceStudentSearch')){
+  const searchInput=$('attendanceStudentSearch');
+  ['input','keyup','search','change'].forEach(evt=>searchInput.addEventListener(evt,renderAttendanceStudentList));
+  searchInput.addEventListener('paste',()=>setTimeout(renderAttendanceStudentList,0));
+}
+
+if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
 if($('attendanceHideRegistered')) $('attendanceHideRegistered').onchange=renderAttendanceStudentList;
 
 document.querySelectorAll('.att-sort-btn').forEach(btn=>{
