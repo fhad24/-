@@ -1810,6 +1810,59 @@
         grid-template-columns:1fr!important;
       }
     }
+
+    .attendance-student-list-toolbar{
+      display:grid;
+      grid-template-columns:1.2fr .9fr .8fr .75fr auto;
+      gap:6px;
+      align-items:center;
+      margin:6px 0;
+      direction:rtl;
+    }
+    .att-sort-btn{
+      height:34px;
+      border:1px solid #cbd9d6;
+      border-radius:8px;
+      background:#fff;
+      color:#29463f;
+      font-family:inherit;
+      font-size:11px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .att-sort-btn.active{
+      border-color:#0f7665;
+      background:#e9f7f3;
+      color:#0f7665;
+    }
+    .att-select-all-wrap{
+      min-height:34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:0 8px;
+      border:1px solid #cbd9d6;
+      border-radius:8px;
+      background:#fff;
+      font-size:11px;
+      font-weight:800;
+      color:#29463f;
+      white-space:nowrap;
+    }
+    .att-select-all-wrap input{
+      width:17px;
+      height:17px;
+      margin:0;
+      accent-color:#0f7665;
+    }
+    @media(max-width:700px){
+      .attendance-student-list-toolbar{
+        grid-template-columns:1fr 1fr;
+      }
+      .att-select-all-wrap{grid-column:1/-1}
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2283,6 +2336,16 @@
         </div>        <div class="attendance-class-row">
           <select id="attendanceClassFilter"><option value="">كل الفصول</option></select>
 
+        </div>
+        <div class="attendance-student-list-toolbar">
+          <button type="button" class="att-sort-btn" data-att-sort="name">اسم الطالب</button>
+          <button type="button" class="att-sort-btn" data-att-sort="idno">السجل</button>
+          <button type="button" class="att-sort-btn" data-att-sort="class">الصف</button>
+          <button type="button" class="att-sort-btn" data-att-sort="photo">الصورة</button>
+          <label id="attendancePresentSelectAllWrap" class="att-select-all-wrap hidden">
+            <input type="checkbox" id="attendancePresentSelectAll">
+            <span>تحديد الكل</span>
+          </label>
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -4823,6 +4886,8 @@ let attendanceMode='late';
 let attendanceListView='late';
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
+let attendanceStudentSortKey='name';
+let attendanceStudentSortDir=1;
 let attendanceGradeFilter='';
 let attendanceNewPhotoBlob=null;
 let attendanceFaceVerified=false;
@@ -5259,6 +5324,26 @@ async function renderAttendanceStudentList(){
   });
   if($('attendanceHideRegistered')?.checked) list=list.filter(s=>!todayIds.has(String(s.idno)));
 
+  const sortValue=(s)=>{
+    if(attendanceStudentSortKey==='idno') return String(s.idno||'');
+    if(attendanceStudentSortKey==='class') return String((s.grade||'')+' '+(s.classroom||''));
+    if(attendanceStudentSortKey==='photo') return s.hasFace?1:0;
+    return String(s.name||'');
+  };
+  list.sort((a,b)=>{
+    const av=sortValue(a), bv=sortValue(b);
+    if(attendanceStudentSortKey==='photo') return (av-bv)*attendanceStudentSortDir;
+    return String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'})*attendanceStudentSortDir;
+  });
+
+  document.querySelectorAll('.att-sort-btn').forEach(btn=>{
+    const active=btn.dataset.attSort===attendanceStudentSortKey;
+    btn.classList.toggle('active',active);
+    btn.textContent=(btn.dataset.attSort==='name'?'اسم الطالب':btn.dataset.attSort==='idno'?'السجل':btn.dataset.attSort==='class'?'الصف':'الصورة')+(active?(attendanceStudentSortDir===1?' ▲':' ▼'):'');
+  });
+  const selectAllWrap=$('attendancePresentSelectAllWrap');
+  if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
+
   const rendered=await Promise.all(list.map(async s=>{
     const perf=getStudentAttendancePerformance(s.idno);
     let photoHTML='<div class="att-student-photo placeholder">👤</div>';
@@ -5293,6 +5378,12 @@ async function renderAttendanceStudentList(){
   $('attendanceListCount').textContent=q
     ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
     : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
+
+  if($('attendancePresentSelectAll')){
+    const visibleIds=list.map(s=>String(s.idno));
+    $('attendancePresentSelectAll').checked=attendanceMode==='present' && visibleIds.length>0 && visibleIds.every(id=>attendancePresentSelectedIds.has(id));
+    $('attendancePresentSelectAll').indeterminate=attendanceMode==='present' && visibleIds.some(id=>attendancePresentSelectedIds.has(id)) && !visibleIds.every(id=>attendancePresentSelectedIds.has(id));
+  }
 
   document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
     box.onclick=(e)=>e.stopPropagation();
@@ -5340,6 +5431,37 @@ if($('attendanceStudentSearch')){
 }
 if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
 if($('attendanceHideRegistered')) $('attendanceHideRegistered').onchange=renderAttendanceStudentList;
+
+document.querySelectorAll('.att-sort-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    const key=btn.dataset.attSort||'name';
+    if(attendanceStudentSortKey===key) attendanceStudentSortDir*=-1;
+    else { attendanceStudentSortKey=key; attendanceStudentSortDir=1; }
+    renderAttendanceStudentList();
+  };
+});
+
+if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=>{
+  if(attendanceMode!=='present') return;
+  const q=normalizeSearchText($('attendanceStudentSearch')?.value||'');
+  const cls=$('attendanceClassFilter')?.value||'';
+  let visible=getStudents().filter(s=>{
+    const matchesSearch=!q ||
+      normalizeSearchText(s.name).includes(q) ||
+      normalizeSearchText(s.idno).includes(q) ||
+      normalizeSearchText(s.phone).includes(q);
+    return (!attendanceGradeFilter||s.grade===attendanceGradeFilter) &&
+      (!cls||String(s.classroom||'')===cls) &&
+      matchesSearch;
+  });
+  const checked=$('attendancePresentSelectAll').checked;
+  visible.forEach(s=>{
+    const id=String(s.idno);
+    if(checked) attendancePresentSelectedIds.add(id);
+    else attendancePresentSelectedIds.delete(id);
+  });
+  renderAttendanceStudentList();
+};
 document.querySelectorAll('.att-grade').forEach(btn=>btn.onclick=()=>{
   attendanceGradeFilter=btn.dataset.grade||'';
   document.querySelectorAll('.att-grade').forEach(x=>x.classList.toggle('active',x===btn));
