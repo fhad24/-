@@ -622,6 +622,48 @@
     .admin-sort-btn{border:0;background:transparent;font:inherit;font-weight:700;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
     .admin-sort-btn .sort-arrow{font-size:11px;opacity:.55}
     .admin-sort-btn.active .sort-arrow{opacity:1;color:var(--primary)}
+  
+    .attendance-bulk-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin:-4px 0 14px}
+    .attendance-bulk-tools button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:9px 13px;font-family:inherit;font-weight:800;cursor:pointer}
+    .attendance-bulk-tools .wa{background:#18a558;color:#fff;border-color:#18a558}
+    .attendance-row-check{display:flex;align-items:center;justify-content:center}
+    .attendance-row-check input{width:18px;height:18px;accent-color:#0f7665}
+    .attendance-period-chip{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:999px;background:#eef5f3;color:#0f7665;font-size:11px;font-weight:800}
+    .attendance-edit-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .attendance-edit-grid label{display:block;font-weight:700;margin-bottom:6px}
+    .attendance-edit-day{height:52px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+    .attendance-period-row{display:flex;gap:10px;align-items:center;margin:10px 0 4px}
+    .attendance-period-row label{font-weight:800;white-space:nowrap}
+    .attendance-period-row select{height:44px;max-width:220px;border-radius:10px}
+    .wa-modal{position:fixed;inset:0;background:#0007;z-index:14000;display:flex;align-items:center;justify-content:center;padding:14px}
+    .wa-card{width:min(620px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;direction:rtl}
+    .wa-card h3{margin:0 0 14px}.wa-list{display:grid;gap:10px}
+    .wa-link{display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;border:1px solid #d9e5e2;border-radius:12px;padding:12px;color:#173b34}
+    .wa-link strong{display:block}.wa-link span{color:#60736e;font-size:12px}.wa-link b{background:#18a558;color:#fff;border-radius:10px;padding:8px 10px}
+    .wa-close{width:100%;margin-top:14px;border:0;border-radius:12px;background:#e8efed;padding:11px;font-family:inherit;font-weight:800}
+    .admin-user-meta-line{display:flex;gap:10px;flex-wrap:wrap;color:#60736e;font-size:13px;margin-top:3px}
+    @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr}.attendance-period-row{align-items:stretch;flex-direction:column}.attendance-period-row select{max-width:none}}
+  
+    .attendance-recorder-chip{display:block;margin-top:4px;color:#60736e;font-size:11px;line-height:1.5}
+    .attendance-bulk-period{height:40px;border:1px solid #cfded9;border-radius:10px;background:#fff;padding:0 10px;font-family:inherit}
+    .attendance-bulk-tools .danger{border-color:#d92d20;color:#b42318;background:#fff}
+    .attendance-bulk-tools .absent{border-color:#b42318;color:#fff;background:#c92a1d}
+    .wa-compose{display:grid;gap:10px;margin:12px 0}
+    .wa-compose textarea{width:100%;min-height:150px;border:1px solid #cfded9;border-radius:12px;padding:12px;font-family:inherit;font-size:14px;resize:vertical}
+    .wa-compose-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .wa-compose-actions button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:10px;padding:9px 12px;font-family:inherit;font-weight:800}
+    .wa-compose-actions button.primary{background:#0f7665;color:#fff}
+    .attendance-pending-select{width:18px;height:18px;accent-color:#0f7665}
+  
+    .hijri-date-controls{display:grid;grid-template-columns:80px 1fr 100px;gap:6px}
+    .hijri-date-controls select{height:52px;border:1px solid var(--line);border-radius:12px;background:#fff;font-family:inherit;font-size:15px;text-align:center}
+    .time-spinner-wrap{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;direction:ltr}
+    .time-spinner{display:grid;grid-template-rows:34px 54px 34px;gap:4px}
+    .time-spinner button{border:1px solid #c9dbd6;background:#eef7f4;border-radius:9px;font-size:18px;font-weight:900;cursor:pointer;color:#0f7665}
+    .time-spinner input{width:100%;height:54px;border:1px solid var(--line);border-radius:10px;text-align:center;font-size:22px;font-weight:800}
+    .time-colon{font-size:28px;font-weight:900;color:#173b34}
+    .attendance-edit-grid{grid-template-columns:1.45fr 1fr 1fr!important}
+    @media(max-width:650px){.attendance-edit-grid{grid-template-columns:1fr!important}.hijri-date-controls{grid-template-columns:70px 1fr 92px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -869,6 +911,17 @@
 
         <div class="card attendance-daily-card">
           <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+          <div class="attendance-bulk-tools">
+            <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
+            <select id="attendanceBulkPeriod" class="attendance-bulk-period">
+              <option value="">الحصة</option>
+              <option value="1">الأولى</option><option value="2">الثانية</option><option value="3">الثالثة</option>
+              <option value="4">الرابعة</option><option value="5">الخامسة</option><option value="6">السادسة</option><option value="7">السابعة</option>
+            </select>
+            <button type="button" id="attendanceBulkAbsent" class="absent">✕ تسجيل غياب للمحدد</button>
+            <button type="button" id="attendanceDeleteSelected" class="danger">🗑 حذف المحدد</button>
+            <button type="button" id="attendanceWhatsAppSelected" class="wa">🟢 واتساب للمحدد</button>
+          </div>
           <div id="attendanceDailyList" class="attendance-daily-empty">لا يوجد طلاب متأخرون مسجلون اليوم.</div>
         </div>
       </div>
@@ -1075,6 +1128,16 @@
       <button type="button" id="attendancePresentTab" class="present">✓ حاضر</button>
     </div>
 
+    <div class="attendance-period-row">
+      <label for="attendancePeriodSelect">🕐 الحصة</label>
+      <select id="attendancePeriodSelect">
+        <option value="">بدون تحديد حصة</option>
+        <option value="1">الحصة الأولى</option><option value="2">الحصة الثانية</option><option value="3">الحصة الثالثة</option>
+        <option value="4">الحصة الرابعة</option><option value="5">الحصة الخامسة</option><option value="6">الحصة السادسة</option>
+        <option value="7">الحصة السابعة</option>
+      </select>
+    </div>
+
     <label class="attendance-check"><input type="checkbox" id="attendanceAutoSave"> حفظ تلقائي بدون تأكيد أسرع، لكن دون مراجعة سجل الطالب قبل الحفظ</label>
 
     <div class="attendance-modal-grid">
@@ -1127,6 +1190,48 @@
 
         <div id="attendanceFaceCompareStatus" class="face-match-status wait">
           اختر الطالب، ثم التقط صورة جديدة. ستتم المقارنة تلقائياً.
+        </div>
+
+        <div id="attendanceEditTimeWrap" class="hidden" style="margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:#f8fbfa">
+          <div style="font-weight:800;margin-bottom:10px">🗓️🕒 تعديل اليوم والتاريخ الهجري والوقت</div>
+          <input id="attendanceEditDate" type="hidden">
+          <div class="attendance-edit-grid">
+            <div>
+              <label>📅 التاريخ الهجري</label>
+              <div class="hijri-date-controls">
+                <select id="attendanceHijriDay"></select>
+                <select id="attendanceHijriMonth">
+                  <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخر</option>
+                  <option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option><option value="8">شعبان</option>
+                  <option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
+                </select>
+                <select id="attendanceHijriYear"></select>
+              </div>
+            </div>
+            <div>
+              <label>📆 اليوم</label>
+              <select id="attendanceEditWeekday" style="height:52px;border-radius:12px">
+                <option>الأحد</option><option>الاثنين</option><option>الثلاثاء</option><option>الأربعاء</option><option>الخميس</option>
+              </select>
+            </div>
+            <div>
+              <label>🕒 الوقت</label>
+              <div class="time-spinner-wrap">
+                <div class="time-spinner">
+                  <button type="button" data-time-spin="hour" data-dir="1">▲</button>
+                  <input id="attendanceEditHour" type="number" min="0" max="23" value="7">
+                  <button type="button" data-time-spin="hour" data-dir="-1">▼</button>
+                </div>
+                <div class="time-colon">:</div>
+                <div class="time-spinner">
+                  <button type="button" data-time-spin="minute" data-dir="1">▲</button>
+                  <input id="attendanceEditMinute" type="number" min="0" max="59" value="0">
+                  <button type="button" data-time-spin="minute" data-dir="-1">▼</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:8px;font-size:12px">اختر التاريخ الهجري واليوم من الأحد إلى الخميس، ويمكن رفع أو خفض الساعات والدقائق من الأسهم.</div>
         </div>
 
         <select id="attendanceCameraSelect"><option>الكاميرا الخلفية</option><option>الكاميرا الأمامية</option></select>
@@ -1278,7 +1383,9 @@ async function cloudPullToLocal(){
 
   const attendance=(data.attendance||[]).map(x=>({
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
-    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||''
+    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+    teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
+    hijriDate:x.hijri_date||'', weekday:x.weekday||''
   }));
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
@@ -2498,7 +2605,11 @@ function ensureAdminSettings(){
         <h3 style="text-align:center;font-size:22px;margin-top:28px">تسجيل يدوي لمعلم أو إداري غير موجود</h3>
         <div class="row">
           <div class="admin-settings-field"><label>اسم المستخدم</label><input id="newAdminUsername"></div>
+          <div class="admin-settings-field"><label>السجل المدني</label><input id="newAdminCivilId" inputmode="numeric"></div>
+        </div>
+        <div class="row">
           <div class="admin-settings-field"><label>الاسم</label><input id="newAdminName"></div>
+          <div></div>
         </div>
         <div class="row">
           <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
@@ -2684,17 +2795,19 @@ function ensureAdminSettings(){
   document.getElementById('addAdminUser').onclick=()=>{
     const username=document.getElementById('newAdminUsername').value.trim();
     const name=document.getElementById('newAdminName').value.trim();
+    const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||username;
     const password=document.getElementById('newAdminPassword').value;
     const role=document.getElementById('newAdminRole').value;
     if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
-    users.push({username,name,password,role,permissions});
+    users.push({username,civilId,name,password,role,permissions});
     saveAdminUsers(users);
     cloudApi('save_user',{user:users[users.length-1]}).catch(e=>console.warn('cloud user',e));
     document.getElementById('newAdminUsername').value='';
     document.getElementById('newAdminName').value='';
+    document.getElementById('newAdminCivilId').value='';
     document.getElementById('newAdminPassword').value='';
     renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
   };
@@ -2751,6 +2864,7 @@ function ensureAdminSettings(){
 
       const payloadUsers=users.map(u=>({
         username:u.username,
+        civilId:u.civilId||u.username,
         name:u.name,
         role:u.role,
         permissions:[...permissions]
@@ -2856,7 +2970,8 @@ function ensureAdminSettings(){
         }
 
         const idx=users.findIndex(u=>String(u.username)===username);
-        const rec={username,name,password,role,permissions};
+        const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||username;
+        const rec={username,civilId,name,password,role,permissions};
         if(idx>=0){users[idx]={...users[idx],...rec,password:password||users[idx].password||''};updated++}
         else{users.push(rec);added++}
       }
@@ -2881,6 +2996,7 @@ async function refreshAdminUsersFromCloud(){
     const oldBy=new Map(oldUsers.map(u=>[String(u.username),u]));
     const cloudUsers=(data.users||[]).filter(u=>!u.is_owner).map(u=>({
       username:String(u.username||''),
+      civilId:String(u.civil_id||u.username||''),
       name:u.name||'',
       role:u.role||'معلم',
       permissions:Array.isArray(u.permissions)?u.permissions:[],
@@ -2911,7 +3027,8 @@ function renderAdminUsersSettings(){
   const q=String(document.getElementById('adminUserSearch')?.value||'').trim().toLowerCase();
   const filtered=q ? users.filter(u=>
     String(u.name||'').toLowerCase().includes(q) ||
-    String(u.username||'').includes(q)
+    String(u.username||'').includes(q) ||
+    String(u.civilId||u.username||'').includes(q)
   ) : users;
   const labels={
     editStudents:'تعديل بيانات الطلاب',
@@ -2929,8 +3046,8 @@ function renderAdminUsersSettings(){
     return `
     <div class="admin-user-card">
       <div>
-        <b>${u.username}</b>
-        <span>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</span>
+        <b>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</b>
+        <div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
         <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
       <div class="admin-user-actions">
@@ -3004,7 +3121,7 @@ function openUserPermissionEditor(username){
         <button type="button" class="user-perm-close" id="userPermClose">×</button>
       </div>
       <div class="user-perm-meta">
-        <div class="box"><b>${u.name||'بدون اسم'}</b><span>${u.username||''}</span></div>
+        <div class="box"><b>${u.name||'بدون اسم'}</b><span>اسم المستخدم: ${u.username||''}</span><span>السجل المدني: ${u.civilId||u.username||''}</span></div>
         <div class="box"><b>نوع المستخدم</b><span>${u.role||'معلم'}</span></div>
       </div>
       <div class="user-perm-role">
@@ -3117,6 +3234,19 @@ setTimeout(async()=>{
   }catch(e){}
 },50);
 
+function getCurrentAttendanceRecorder(){
+  let cloud={};
+  try{cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){}
+  const p=getAdminProfile();
+  const users=getAdminUsers();
+  const u=users.find(x=>String(x.username)===String(cloud.username||p.username||''))||{};
+  return {
+    name:String(cloud.name||u.name||p.displayName||''),
+    username:String(cloud.username||u.username||p.username||''),
+    civilId:String(cloud.civil_id||u.civilId||u.username||p.username||'')
+  };
+}
+
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
@@ -3127,6 +3257,10 @@ function saveAttendanceLog(rows){
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
 async function renderAttendancePage(){
+  if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
+  if($('attendanceWhatsAppSelected')){
+    $('attendanceWhatsAppSelected').style.display=(attendanceListView==='late'||attendanceListView==='absent')?'':'none';
+  }
   const students=getStudents();
   const allLogs=getAttendanceLog();
   const today=allLogs.filter(x=>x.date===todayKey());
@@ -3186,7 +3320,8 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
           <div class="attendance-saved-time">—</div>
           <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل</button>
+            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
+            <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
           </div>
         </div>`;
     }));
@@ -3237,13 +3372,18 @@ async function renderAttendancePage(){
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
             ${photoHTML}
-            <div class="attendance-saved-name">${x.name||''}</div>
+            <div>
+              <div class="attendance-saved-name">${x.name||''}</div>
+              ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
+              ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
+            </div>
           </div>
           <div class="attendance-saved-id">${x.idno||'—'}</div>
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
           <div class="attendance-saved-time">${x.time||''}</div>
           <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">تعديل</button>
+            <label class="attendance-row-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>
+            <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
             <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
           </div>
         </div>`;
@@ -3287,6 +3427,187 @@ async function renderAttendancePage(){
   });
 }
 
+function normalizeWhatsAppNumber(value){
+  let n=String(value||'').replace(/\D/g,'');
+  if(n.startsWith('00966')) n=n.slice(2);
+  if(n.startsWith('966')) return n;
+  if(n.startsWith('05')) return '966'+n.slice(1);
+  if(n.startsWith('5') && n.length===9) return '966'+n;
+  return n;
+}
+
+function attendanceStatusCount(idno,status){
+  return getAttendanceLog().filter(x=>String(x.idno)===String(idno) && x.status===status).length;
+}
+
+function attendanceWhatsAppReadyTemplate(){
+  return 'ولي أمر الطالب/ {اسم الطالب}\n'
+    +'نحيطكم علمًا بأن ابنكم {الحالة} اليوم في {اسم المدرسة}.\n'
+    +'{العدد نص}\n'
+    +'{الحصة نص}\n'
+    +'التاريخ: {التاريخ}\n'
+    +'الوقت: {الوقت}\n'
+    +'المسجل: {اسم المستخدم} — {السجل المدني}\n'
+    +'شاكرين لكم تعاونكم.';
+}
+
+function buildAttendanceWhatsAppMessage(template,row,student){
+  const statusText=row.status==='late'?'متأخر':'غائب';
+  const count=attendanceStatusCount(row.idno,row.status);
+  const countText=row.status==='late'
+    ?('بلغ عدد أيام التأخر المسجلة حتى الآن: '+count+' يوم.')
+    :('بلغ عدد أيام الغياب المسجلة حتى الآن: '+count+' يوم.');
+  const school=getSchoolSettings().school||'المدرسة';
+  const recorder=getCurrentAttendanceRecorder();
+  const map={
+    '{اسم الطالب}':student?.name||row.name||'',
+    '{الحالة}':statusText,
+    '{اسم المدرسة}':school,
+    '{العدد}':String(count),
+    '{العدد نص}':countText,
+    '{الحصة}':row.period?String(row.period):'',
+    '{الحصة نص}':row.period?('الحصة: '+row.period):'',
+    '{التاريخ}':row.date||'',
+    '{الوقت}':row.time||'',
+    '{اسم المستخدم}':row.teacherName||recorder.name||'',
+    '{السجل المدني}':row.teacherCivilId||recorder.civilId||''
+  };
+  let msg=String(template||attendanceWhatsAppReadyTemplate());
+  Object.entries(map).forEach(([k,v])=>{msg=msg.split(k).join(v)});
+  return msg;
+}
+
+function openAttendanceWhatsAppForRows(rows){
+  rows=(rows||[]).filter(row=>row && (row.status==='late'||row.status==='absent'));
+  if(!rows.length){
+    alert('رسائل الواتساب مخصصة للتأخر والغياب فقط');
+    return;
+  }
+  const students=getStudents();
+  const items=rows.map(row=>{
+    const student=students.find(s=>String(s.idno)===String(row.idno))||{};
+    const phone=normalizeWhatsAppNumber(student.phone||'');
+    return {row,student,phone};
+  }).filter(x=>x.phone);
+
+  if(!items.length){
+    alert('لا يوجد رقم جوال مسجل للطلاب المحددين');
+    return;
+  }
+
+  let modal=$('attendanceWhatsAppModal');
+  if(modal) modal.remove();
+  modal=document.createElement('div');
+  modal.id='attendanceWhatsAppModal';
+  modal.className='wa-modal';
+  const defaultTemplate=attendanceWhatsAppReadyTemplate();
+
+  modal.innerHTML='<div class="wa-card">'
+    +'<h3>رسالة واتساب قبل الإرسال ('+items.length+' طالب)</h3>'
+    +'<div class="wa-compose">'
+    +'<div class="wa-compose-actions"><button type="button" id="waUseReady" class="primary">رسالة جاهزة</button><button type="button" id="waClearText">كتابة رسالة جديدة</button></div>'
+    +'<textarea id="waMessageTemplate"></textarea>'
+    +'<div class="hint">يمكنك الكتابة بحرية أو استخدام: {اسم الطالب}، {الحالة}، {العدد نص}، {الحصة نص}، {التاريخ}، {الوقت}، {اسم المستخدم}.</div>'
+    +'<button type="button" id="waPrepareLinks" class="admin-settings-save" style="margin-top:0">تجهيز رسائل الواتساب</button>'
+    +'</div>'
+    +'<div class="wa-list" id="waPreparedList"></div>'
+    +'<button class="wa-close" type="button">إغلاق</button></div>';
+  document.body.appendChild(modal);
+
+  const ta=$('waMessageTemplate');
+  ta.value=defaultTemplate;
+  $('waUseReady').onclick=()=>{ta.value=defaultTemplate;ta.focus()};
+  $('waClearText').onclick=()=>{ta.value='';ta.focus()};
+  $('waPrepareLinks').onclick=()=>{
+    const template=ta.value.trim();
+    if(!template){alert('اكتب الرسالة أو اختر الرسالة الجاهزة');return}
+    const host=$('waPreparedList');
+    host.innerHTML=items.map(x=>{
+      const msg=buildAttendanceWhatsAppMessage(template,x.row,x.student);
+      return '<a class="wa-link" target="_blank" rel="noopener" href="https://wa.me/'+x.phone+'?text='+encodeURIComponent(msg)+'">'
+        +'<div><strong>'+(x.student.name||x.row.name||'')+'</strong><span>'+x.phone+'</span></div><b>فتح واتساب</b></a>';
+    }).join('');
+  };
+  $('waPrepareLinks').click();
+  modal.querySelector('.wa-close').onclick=()=>modal.remove();
+  modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
+}
+
+if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
+  const boxes=[...document.querySelectorAll('.attendance-wa-select,.attendance-pending-select')];
+  if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
+  const allChecked=boxes.every(x=>x.checked);
+  boxes.forEach(x=>x.checked=!allChecked);
+  $('attendanceSelectAllRows').textContent=!allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+};
+
+if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>{
+  if(attendanceListView!=='late' && attendanceListView!=='absent'){
+    alert('رسائل الواتساب متاحة في التأخر والغياب فقط');
+    return;
+  }
+  const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
+    .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite);
+  if(!indexes.length){alert('حدد طالبًا واحدًا أو مجموعة طلاب أولاً');return}
+  const logs=getAttendanceLog();
+  openAttendanceWhatsAppForRows(indexes.map(i=>logs[i]).filter(Boolean));
+};
+
+if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
+  const ids=[...document.querySelectorAll('.attendance-pending-select:checked')].map(x=>String(x.dataset.pendingIdCheck||'')).filter(Boolean);
+  if(!ids.length){
+    alert('اذهب إلى «بانتظار تحديد الاسم» وحدد طالبًا أو مجموعة طلاب لإضافتهم كغياب');
+    return;
+  }
+  const period=$('attendanceBulkPeriod')?.value ? Number($('attendanceBulkPeriod').value) : null;
+  const recorder=getCurrentAttendanceRecorder();
+  const students=getStudents();
+  const now=new Date();
+  let rows=getAttendanceLog();
+
+  ids.forEach(id=>{
+    const s=students.find(x=>String(x.idno)===id);
+    if(!s) return;
+    rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===id));
+    rows.push({
+      date:todayKey(),
+      time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
+      period,
+      idno:s.idno,name:s.name,grade:s.grade||'',classroom:s.classroom||'',
+      status:'absent',
+      faceMatch:'none',
+      teacherName:recorder.name,teacherUsername:recorder.username,teacherCivilId:recorder.civilId
+    });
+  });
+
+  saveAttendanceLog(rows);
+  attendanceListView='absent';
+  renderAttendancePage();
+  toast('تم تسجيل الغياب للمحدد');
+};
+
+if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=>{
+  const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
+    .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite).sort((a,b)=>b-a);
+  if(!indexes.length){alert('حدد سجلًا واحدًا أو مجموعة سجلات للحذف');return}
+  if(!confirm('حذف '+indexes.length+' سجل محدد؟')) return;
+
+  let rows=getAttendanceLog();
+  const deleted=indexes.map(i=>rows[i]).filter(Boolean);
+  indexes.forEach(i=>rows.splice(i,1));
+  localStorage.setItem('attendanceLog',JSON.stringify(rows));
+
+  try{
+    if(localStorage.getItem('cloudAdminToken')){
+      await cloudApi('delete_attendance_rows',{rows:deleted});
+    }
+  }catch(e){console.warn('cloud bulk attendance delete',e)}
+
+  renderAttendancePage();
+  toast('تم حذف السجلات المحددة');
+};
+
+
 let attendanceMode='late';
 let attendanceListView='late';
 let attendanceSelectedId='';
@@ -3295,7 +3616,125 @@ let attendanceNewPhotoBlob=null;
 let attendanceFaceVerified=false;
 let attendanceFaceCompareResult='none'; // none | matched | mismatch | error
 let attendanceEditingIndex=-1;
+let attendanceEditingOriginal=null;
 let cameraCaptureContext='student-add';
+
+function attendanceTimeToInput(value){
+  let s=String(value||'').trim();
+  if(!s) return '';
+  const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
+  s=s.replace(/[٠-٩]/g,d=>String(ar.indexOf(d))).replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
+  const am=/\bص\b|صباح/i.test(s), pm=/\bم\b|مساء/i.test(s);
+  const m=s.match(/(\d{1,2})\s*[:：]\s*(\d{2})/);
+  if(!m) return '';
+  let h=Number(m[1]), min=Number(m[2]);
+  if(pm && h<12) h+=12;
+  if(am && h===12) h=0;
+  if(h>23||min>59) return '';
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+function formatAttendanceTimeForDisplay(value){
+  const m=String(value||'').match(/^(\d{2}):(\d{2})$/);
+  if(!m) return String(value||'');
+  const d=new Date();
+  d.setHours(Number(m[1]),Number(m[2]),0,0);
+  return d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+}
+
+const hijriFormatter=(()=>{
+  try{return new Intl.DateTimeFormat('en-u-ca-islamic-umalqura',{year:'numeric',month:'numeric',day:'numeric'})}
+  catch(e){return new Intl.DateTimeFormat('en-u-ca-islamic',{year:'numeric',month:'numeric',day:'numeric'})}
+})();
+
+function gregorianToHijriParts(dateValue){
+  const d=typeof dateValue==='string'?new Date(dateValue+'T12:00:00'):dateValue;
+  const parts=hijriFormatter.formatToParts(d);
+  const get=t=>Number(parts.find(p=>p.type===t)?.value||0);
+  return {year:get('year'),month:get('month'),day:get('day')};
+}
+
+function compareHijriParts(a,b){
+  if(a.year!==b.year) return a.year-b.year;
+  if(a.month!==b.month) return a.month-b.month;
+  return a.day-b.day;
+}
+
+function hijriToGregorian(hy,hm,hd){
+  hy=Number(hy);hm=Number(hm);hd=Number(hd);
+  const approxYear=Math.floor(hy*0.970224+621.5774);
+  let lo=Date.UTC(approxYear-2,0,1), hi=Date.UTC(approxYear+2,11,31);
+  const target={year:hy,month:hm,day:hd};
+  for(let i=0;i<24 && lo<=hi;i++){
+    const mid=lo+Math.floor((hi-lo)/(2*86400000))*86400000;
+    const got=gregorianToHijriParts(new Date(mid));
+    const cmp=compareHijriParts(got,target);
+    if(cmp===0) return new Date(mid).toISOString().slice(0,10);
+    if(cmp<0) lo=mid+86400000; else hi=mid-86400000;
+  }
+  for(let t=Math.max(lo-3*86400000,Date.UTC(approxYear-2,0,1));t<=Math.min(lo+3*86400000,Date.UTC(approxYear+2,11,31));t+=86400000){
+    const got=gregorianToHijriParts(new Date(t));
+    if(compareHijriParts(got,target)===0) return new Date(t).toISOString().slice(0,10);
+  }
+  return '';
+}
+
+function fillAttendanceHijriControls(dateStr,hijriValue=''){
+  for(let i=1;i<=30;i++){
+    if(!$('attendanceHijriDay').querySelector('option[value="'+i+'"]')){
+      $('attendanceHijriDay').insertAdjacentHTML('beforeend','<option value="'+i+'">'+i+'</option>');
+    }
+  }
+  let parts;
+  const m=String(hijriValue||'').match(/(\d{3,4})[-\/]([0-9]{1,2})[-\/]([0-9]{1,2})/);
+  if(m) parts={year:Number(m[1]),month:Number(m[2]),day:Number(m[3])};
+  else parts=gregorianToHijriParts(dateStr||todayKey());
+  const ySel=$('attendanceHijriYear');
+  ySel.innerHTML='';
+  for(let y=parts.year-3;y<=parts.year+3;y++) ySel.insertAdjacentHTML('beforeend','<option value="'+y+'">'+y+'</option>');
+  $('attendanceHijriYear').value=String(parts.year);
+  $('attendanceHijriMonth').value=String(parts.month);
+  $('attendanceHijriDay').value=String(parts.day);
+  syncAttendanceGregorianFromHijri();
+}
+
+function selectedHijriDateString(){
+  return $('attendanceHijriYear').value+'-'+String($('attendanceHijriMonth').value).padStart(2,'0')+'-'+String($('attendanceHijriDay').value).padStart(2,'0');
+}
+
+function syncAttendanceGregorianFromHijri(){
+  const g=hijriToGregorian($('attendanceHijriYear').value,$('attendanceHijriMonth').value,$('attendanceHijriDay').value);
+  if(g) $('attendanceEditDate').value=g;
+}
+
+['attendanceHijriDay','attendanceHijriMonth','attendanceHijriYear'].forEach(id=>{
+  $(id)?.addEventListener('change',syncAttendanceGregorianFromHijri);
+});
+
+document.querySelectorAll('[data-time-spin]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const hour=btn.dataset.timeSpin==='hour';
+    const input=$(hour?'attendanceEditHour':'attendanceEditMinute');
+    const max=hour?23:59, min=0;
+    let v=Number(input.value||0)+Number(btn.dataset.dir||0);
+    if(v>max) v=min;
+    if(v<min) v=max;
+    input.value=String(v);
+  });
+});
+
+function setAttendanceTimeControls(value){
+  const v=attendanceTimeToInput(value)||'07:00';
+  const [h,m]=v.split(':');
+  $('attendanceEditHour').value=String(Number(h));
+  $('attendanceEditMinute').value=String(Number(m));
+}
+
+function getAttendanceEditedTime(){
+  const h=Math.max(0,Math.min(23,Number($('attendanceEditHour').value||0)));
+  const m=Math.max(0,Math.min(59,Number($('attendanceEditMinute').value||0)));
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
 
 function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
@@ -3306,7 +3745,11 @@ function openAttendanceModal(mode){
   attendanceFaceCompareResult='none';
   $('attendanceStudentModal').classList.remove('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
+  attendanceEditingOriginal=null;
+  $('attendanceEditTimeWrap')?.classList.add('hidden');
+  if($('attendanceEditDate')) $('attendanceEditDate').value='';
   setAttendanceMode(mode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3333,6 +3776,7 @@ async function openAttendanceEdit(index){
   if(!row){toast('تعذر العثور على السجل');return}
 
   attendanceEditingIndex=index;
+  attendanceEditingOriginal={...row};
   attendanceMode=row.status||'late';
   attendanceSelectedId=String(row.idno||'');
   attendanceNewPhotoBlob=null;
@@ -3340,6 +3784,11 @@ async function openAttendanceEdit(index){
   attendanceFaceCompareResult='none';
 
   $('attendanceStudentModal').classList.remove('hidden');
+  $('attendanceEditTimeWrap')?.classList.remove('hidden');
+  setAttendanceTimeControls(row.time);
+  fillAttendanceHijriControls(String(row.date||todayKey()),row.hijriDate||'');
+  if($('attendanceEditWeekday')) $('attendanceEditWeekday').value=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -3354,15 +3803,26 @@ function closeAttendanceModal(){
   $('attendanceStudentModal').classList.add('hidden');
   attendanceSelectedId='';
   attendanceEditingIndex=-1;
+  attendanceEditingOriginal=null;
+  $('attendanceEditTimeWrap')?.classList.add('hidden');
+  if($('attendanceEditDate')) $('attendanceEditDate').value='';
   $('saveAttendanceStudentBtn').textContent='حفظ';
 }
 
 function setAttendanceMode(mode){
   attendanceMode=mode;
   const late=mode==='late';
-  $('attendanceModalTitle').textContent=late?'إضافة طالب — متأخر':'إضافة طالب — حاضر';
+  const present=mode==='present';
+  const absent=mode==='absent';
+  if(absent){
+    $('attendanceModalTitle').textContent=attendanceEditingIndex>=0?'تعديل حالة الطالب — غائب':'إضافة طالب — غائب';
+  }else{
+    $('attendanceModalTitle').textContent=late
+      ?(attendanceEditingIndex>=0?'تعديل حالة الطالب — متأخر':'إضافة طالب — متأخر')
+      :(attendanceEditingIndex>=0?'تعديل حالة الطالب — حاضر':'إضافة طالب — حاضر');
+  }
   $('attendanceLateTab').classList.toggle('active',late);
-  $('attendancePresentTab').classList.toggle('active',!late);
+  $('attendancePresentTab').classList.toggle('active',present);
 }
 
 function fillAttendanceClasses(){
@@ -3668,9 +4128,19 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
 
     const now=new Date();
+    const editedTime=attendanceEditingIndex>=0
+      ? formatAttendanceTimeForDisplay(getAttendanceEditedTime())
+      : '';
+    const recorder=getCurrentAttendanceRecorder();
     const record={
-      date:todayKey(),
-      time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
+      date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
+      time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
+      period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
+      hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
+      weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
+      teacherName:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherName ? attendanceEditingOriginal.teacherName : recorder.name,
+      teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
+      teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
       idno:s.idno,
       name:s.name,
       grade:s.grade||'',
@@ -3693,7 +4163,11 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     closeAttendanceModal();
     renderAttendancePage();
     renderAdmin();
-    toast(attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':'تم حفظ الطالب حاضراً بنجاح');
+    if(attendanceEditingIndex>=0){
+      toast('تم حفظ تعديل الحالة والوقت بنجاح');
+    }else{
+      toast(attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح');
+    }
   }catch(err){
     console.error('attendance save failed',err);
     toast('تعذر الحفظ، حاول مرة أخرى');
