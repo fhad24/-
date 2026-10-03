@@ -2002,6 +2002,38 @@
       .user-permission-buttons{grid-template-columns:1fr}
       .user-welcome-card h2{font-size:20px}
     }
+
+    /* نموذج تحويل طالب لوكيل شؤون الطلاب */
+    .referral-page{max-width:980px;margin:0 auto}
+    .referral-card{padding:28px;border-radius:18px;direction:rtl}
+    .referral-title{text-align:center;margin:0 0 8px;font-size:24px;color:#102f5b;font-weight:900}
+    .referral-code{text-align:center;color:#2d4f76;font-size:14px;font-weight:700;margin-bottom:22px}
+    .referral-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .referral-field label{font-size:15px;margin-bottom:7px}
+    .referral-field input,.referral-field select,.referral-field textarea{
+      width:100%;border:1px solid #cbd9d6;border-radius:12px;background:#fff;font-family:inherit;font-size:15px;padding:10px 12px
+    }
+    .referral-field input,.referral-field select{height:48px}
+    .referral-field textarea{min-height:100px;resize:vertical}
+    .referral-reasons{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+    .referral-reason{display:flex;align-items:center;gap:8px;border:1px solid #d8e2df;border-radius:12px;padding:12px;background:#f8fbfa;font-weight:700;font-size:14px}
+    .referral-reason input{width:18px;height:18px;accent-color:var(--primary)}
+    .referral-section-title{font-size:17px;font-weight:900;margin:22px 0 10px;color:#173b34}
+    .referral-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+    .referral-actions button{min-width:180px;height:52px;border-radius:12px;font-size:15px}
+    .referral-note{font-size:12px;color:#6d7f7a;text-align:center;margin-top:10px}
+    @media(max-width:720px){
+      .referral-grid{grid-template-columns:1fr}
+      .referral-reasons{grid-template-columns:1fr 1fr}
+      .referral-card{padding:18px}
+    }
+    @media print{
+      body *{visibility:hidden!important}
+      #referral,#referral *{visibility:visible!important}
+      #referral{position:absolute;inset:0;background:#fff}
+      #referral .referral-actions,#referral .referral-note{display:none!important}
+      #referral .card{box-shadow:none;border:0}
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2026,6 +2058,7 @@
   <nav>
     <button class="tab active" data-page="register" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('register').classList.remove('hidden');localStorage.setItem('activeMainPage','register')">تسجيل جديد</button>
     <button class="tab" data-page="edit" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('edit').classList.remove('hidden');document.getElementById('studentEditLogin')?.classList.remove('hidden');document.getElementById('studentEditForm')?.classList.add('hidden');localStorage.setItem('activeMainPage','edit')">تعديل بيانات الطالب</button>
+    <button class="tab" data-page="referral" type="button">تحويل طالب لوكيل شؤون الطلاب</button>
     <button class="tab" data-page="admin" type="button" onclick="document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById('admin').classList.remove('hidden');document.getElementById('dashboard')?.classList.add('hidden');document.getElementById('adminLoginModal')?.classList.remove('hidden');localStorage.setItem('activeMainPage','admin')">دخول الإدارة</button>
   </nav>
 </header>
@@ -2165,6 +2198,93 @@
     <button class="btn btn-primary" style="width:100%;margin-top:14px;height:50px;font-size:14px" type="submit">حفظ التعديلات</button>
     <button class="btn btn-soft" style="width:100%;margin-top:9px" type="button" id="editLogoutBtn">خروج من صفحة التعديل</button>
   </form>
+</section>
+
+<section id="referral" class="page hidden">
+  <div class="referral-page">
+    <form id="studentReferralForm" class="card referral-card">
+      <h2 class="referral-title">تحويل طالب لوكيل شؤون الطلاب</h2>
+      <div class="referral-code">نموذج رقم (٣١) — رمز النموذج: (و.ط.ع.ن - ٠٤ - ٠٣)</div>
+
+      <div class="referral-grid">
+        <div class="referral-field">
+          <label>اسم الطالب</label>
+          <input id="referralStudentName" list="referralStudentsList" required placeholder="اكتب أو اختر اسم الطالب">
+          <datalist id="referralStudentsList"></datalist>
+        </div>
+        <div class="referral-field">
+          <label>الصف</label>
+          <select id="referralGrade" required>
+            <option value="">اختر الصف</option>
+            <option>الأول الثانوي</option>
+            <option>الثاني الثانوي</option>
+            <option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div class="referral-field">
+          <label>المادة</label>
+          <input id="referralSubject" required placeholder="اسم المادة">
+        </div>
+        <div class="referral-field">
+          <label>الحصة الدراسية</label>
+          <select id="referralPeriod" required>
+            <option value="">اختر الحصة</option>
+            <option>الأولى</option><option>الثانية</option><option>الثالثة</option><option>الرابعة</option>
+            <option>الخامسة</option><option>السادسة</option><option>السابعة</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="referral-section-title">سبب التحويل</div>
+      <div class="referral-reasons">
+        <label class="referral-reason"><input type="checkbox" name="referralReason" value="عدم أداء الواجب">عدم أداء الواجب</label>
+        <label class="referral-reason"><input type="checkbox" name="referralReason" value="مشاغبة">مشاغبة</label>
+        <label class="referral-reason"><input type="checkbox" name="referralReason" value="تأخر عن الحصة">تأخر عن الحصة</label>
+        <label class="referral-reason"><input type="checkbox" name="referralReason" value="ضعف دراسي">ضعف دراسي</label>
+      </div>
+
+      <div class="referral-field" style="margin-top:12px">
+        <label>أخرى (تذكر)</label>
+        <input id="referralOtherReason" placeholder="اكتب سببًا آخر إن وجد">
+      </div>
+
+      <div class="referral-field" style="margin-top:14px">
+        <label>إيضاح المشكلة</label>
+        <textarea id="referralProblem" required placeholder="اكتب توضيح المشكلة بالتفصيل"></textarea>
+      </div>
+
+      <div class="referral-grid" style="margin-top:18px">
+        <div class="referral-field">
+          <label>اسم المعلم</label>
+          <input id="referralTeacher" required placeholder="اسم المعلم">
+        </div>
+        <div class="referral-field">
+          <label>التوقيع</label>
+          <input id="referralSignature" placeholder="اسم المعلم كتوقيع">
+        </div>
+        <div class="referral-field">
+          <label>التاريخ</label>
+          <input id="referralDate" type="date" required>
+        </div>
+        <div class="referral-field">
+          <label>التاريخ الهجري</label>
+          <input id="referralHijriDate" readonly placeholder="يُحسب تلقائيًا">
+        </div>
+      </div>
+
+      <div class="referral-field" style="margin-top:18px">
+        <label>ما تم حيال الطالب (خاص بوكيل المدرسة)</label>
+        <textarea id="referralActionTaken" placeholder="يُعبأ من قبل وكيل شؤون الطلاب"></textarea>
+      </div>
+
+      <div class="referral-actions">
+        <button type="submit" class="btn btn-primary">حفظ التحويل</button>
+        <button type="button" class="btn btn-soft" id="printReferralBtn">طباعة النموذج</button>
+        <button type="reset" class="btn btn-outline">مسح الحقول</button>
+      </div>
+      <div class="referral-note">يتم حفظ النموذج داخل النظام ويمكن طباعته مباشرة.</div>
+    </form>
+  </div>
 </section>
 
 <section id="admin" class="page hidden">
@@ -2744,6 +2864,57 @@ function toast(msg){
   const t=$('toast'); t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
+
+function updateReferralHijriDate(){
+  const el=$('referralHijriDate');
+  if(!el) return;
+  try{
+    el.value=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  }catch(e){ el.value=''; }
+}
+function populateReferralStudents(){
+  const list=$('referralStudentsList');
+  if(!list || typeof getStudents!=='function') return;
+  list.innerHTML='';
+  getStudents().forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.name||'';
+    o.dataset.idno=s.idno||'';
+    list.appendChild(o);
+  });
+}
+function initReferralPage(){
+  const d=$('referralDate');
+  if(d && !d.value) d.value=new Date().toISOString().slice(0,10);
+  updateReferralHijriDate();
+  populateReferralStudents();
+}
+if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const reasons=[...document.querySelectorAll('input[name="referralReason"]:checked')].map(x=>x.value);
+  const rec={
+    id:'R'+Date.now(),
+    studentName:$('referralStudentName').value.trim(),
+    grade:$('referralGrade').value,
+    subject:$('referralSubject').value.trim(),
+    period:$('referralPeriod').value,
+    reasons,
+    otherReason:$('referralOtherReason').value.trim(),
+    problem:$('referralProblem').value.trim(),
+    teacher:$('referralTeacher').value.trim(),
+    signature:$('referralSignature').value.trim(),
+    date:$('referralDate').value,
+    hijriDate:$('referralHijriDate').value,
+    actionTaken:$('referralActionTaken').value.trim(),
+    createdAt:new Date().toISOString()
+  };
+  const rows=(()=>{try{return JSON.parse(localStorage.getItem('studentReferrals')||'[]')}catch(e){return []}})();
+  rows.unshift(rec);
+  localStorage.setItem('studentReferrals',JSON.stringify(rows));
+  toast('تم حفظ تحويل الطالب');
+});
+if($('printReferralBtn')) $('printReferralBtn').onclick=()=>window.print();
+document.querySelector('.tab[data-page="referral"]')?.addEventListener('click',()=>setTimeout(initReferralPage,0));
 
 const CLOUD_API_URL='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
 let cloudSyncBusy=false;
