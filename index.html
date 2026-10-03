@@ -6714,6 +6714,11 @@ function ensureAdminSettings(){
       localStorage.setItem('schoolSettings',JSON.stringify(next));
       applySchoolSettings();
 
+      // احفظ الشريط أولًا بشكل مستقل حتى لا يتأثر بأي خطأ في حفظ بقية الإعدادات.
+      const tickerSave=await cloudApi('save_ticker',{tickerText},false);
+      if(!tickerSave?.ok) throw new Error('TICKER_SAVE_FAILED');
+
+      // بعد نجاح الشريط، حاول حفظ بقية إعدادات المدرسة.
       try{
         if(localStorage.getItem('cloudAdminToken')){
           await cloudApi('save_settings',{settings:next});
@@ -6726,16 +6731,17 @@ function ensureAdminSettings(){
           },false);
         }
       }catch(syncErr){
-        const p=getAdminProfile();
-        await cloudApi('save_settings_with_credentials',{
-          username:p.username,
-          password:p.password,
-          settings:next
-        },false);
+        try{
+          const p=getAdminProfile();
+          await cloudApi('save_settings_with_credentials',{
+            username:p.username,
+            password:p.password,
+            settings:next
+          },false);
+        }catch(settingsErr){
+          console.warn('school settings save failed after ticker saved',settingsErr);
+        }
       }
-
-      // حفظ مستقل للشريط الإخباري لضمان عدم رجوعه للنص القديم.
-      await cloudApi('save_ticker',{tickerText},false);
 
       // تحقق من النص المحفوظ وأعد عرضه فورًا.
       const verifyTicker=await cloudApi('school_settings_public',{},false);
@@ -6746,6 +6752,7 @@ function ensureAdminSettings(){
         applySchoolSettings();
         if(document.getElementById('settingsTickerText')) document.getElementById('settingsTickerText').value=confirmed;
       }
+      await refreshPublicTickerFromCloud();
 
       delete schoolPreview.dataset.pending;
       delete ministryPreview.dataset.pending;
@@ -7306,6 +7313,21 @@ function openAdminSettings(){
   localStorage.setItem('adminSettingsOpen','1');
 }
 applySchoolSettings();
+async function refreshPublicTickerFromCloud(){
+  try{
+    const r=await cloudApi('school_settings_public',{},false);
+    const text=String(r?.settings?.ticker_text||'');
+    const ticker=document.querySelector('.ticker span');
+    if(ticker) ticker.textContent=text;
+    const current=getSchoolSettings();
+    localStorage.setItem('schoolSettings',JSON.stringify({...current,tickerText:text}));
+    return text;
+  }catch(e){
+    console.warn('ticker refresh',e);
+    return '';
+  }
+}
+
 setTimeout(async()=>{
   try{
     const r=await cloudApi('school_settings_public',{},false);
@@ -10662,7 +10684,10 @@ function restoreLastAppLocation(){
   const loggedIn=localStorage.getItem('adminLoggedIn')==='1';
   const page=loggedIn ? (localStorage.getItem('activeMainPage')||'admin') : 'register';
 
-  if(!loggedIn) localStorage.setItem('activeMainPage','register');
+  if(!loggedIn){
+    localStorage.setItem('activeMainPage','register');
+    setTimeout(()=>refreshPublicTickerFromCloud(),0);
+  }
 
   tabs.forEach(x=>x.classList.toggle('active',x.dataset.page===page));
   pages.forEach(p=>p.classList.toggle('hidden',p.id!==page));
