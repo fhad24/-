@@ -606,6 +606,18 @@
     .user-perm-toggle{background:#fff;border:1px solid #173b34;color:#173b34}
     .user-perm-save{background:var(--primary);border:1px solid var(--primary);color:#fff}
     @media(max-width:650px){.user-perm-grid,.user-perm-meta{grid-template-columns:1fr}.user-perm-card{padding:16px}.user-perm-head h3{font-size:20px}}
+  
+    .pending-photo-modal{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:13000;display:flex;align-items:center;justify-content:center;padding:14px}
+    .pending-photo-card{width:min(920px,97vw);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:22px;direction:rtl}
+    .pending-photo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .pending-photo-head h2{margin:0;font-size:22px}.pending-photo-close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:28px}
+    .pending-photo-list{display:grid;gap:12px}.pending-photo-row{display:grid;grid-template-columns:100px 1fr auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:12px;background:#fbfdfd}
+    .pending-photo-row img{width:100px;height:110px;object-fit:cover;border-radius:12px;background:#eef3f2}
+    .pending-photo-info b{display:block;font-size:17px;margin-bottom:6px}.pending-photo-info span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+    .pending-photo-actions{display:flex;gap:8px;flex-wrap:wrap}.pending-photo-actions button{border-radius:12px;padding:10px 14px;font-family:inherit;font-weight:700;cursor:pointer}
+    .pending-approve{background:var(--primary);color:#fff;border:1px solid var(--primary)}.pending-reject{background:#fff;color:#b42318;border:1px solid #dc4b42}
+    .photo-status-chip{font-size:11px;border-radius:999px;padding:4px 8px;background:#e5f5f0;color:#0f7665;margin-inline-start:6px}
+    @media(max-width:650px){.pending-photo-row{grid-template-columns:82px 1fr}.pending-photo-row img{width:82px;height:94px}.pending-photo-actions{grid-column:1/-1}.pending-photo-actions button{flex:1}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -917,6 +929,7 @@
         </div>
 
         <button class="btn btn-primary add-student-btn" id="addStudentBtn">+ إضافة طالب</button>
+        <button class="admin-outline-btn" id="pendingStudentPhotosBtn" type="button" style="width:100%;margin:-4px 0 14px">📷 صور الطلاب بانتظار اعتماد الإدارة <span id="pendingStudentPhotosCount"></span></button>
 
         <div class="admin-bulk-actions">
           <button class="admin-outline-btn" id="printStudentsBtn">طباعة 🖨️</button>
@@ -2168,6 +2181,95 @@ function renderAdmin(){
     </tr>`).join('');
   hydrateAdminPhotos();
 }
+
+async function updatePendingStudentPhotosCount(){
+  const el=$('pendingStudentPhotosCount');
+  if(!el || !localStorage.getItem('cloudAdminToken')) return;
+  try{
+    const r=await cloudApi('list_pending_photos');
+    el.textContent=r.rows?.length?`(${r.rows.length})`:'';
+  }catch(e){el.textContent=''}
+}
+
+async function openPendingStudentPhotos(){
+  if(!localStorage.getItem('cloudAdminToken')){
+    alert('سجّل دخول الإدارة أولاً لاعتماد الصور');
+    return;
+  }
+  let modal=$('pendingStudentPhotosModal');
+  if(modal) modal.remove();
+  modal=document.createElement('div');
+  modal.id='pendingStudentPhotosModal';
+  modal.className='pending-photo-modal';
+  modal.innerHTML=`
+    <div class="pending-photo-card">
+      <div class="pending-photo-head">
+        <h2>صور الطلاب بانتظار اعتماد الإدارة</h2>
+        <button class="pending-photo-close" type="button">×</button>
+      </div>
+      <div class="pending-photo-list" id="pendingPhotoList"><div class="hint">جاري تحميل الصور...</div></div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.pending-photo-close').onclick=()=>modal.remove();
+  modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
+
+  try{
+    const r=await cloudApi('list_pending_photos');
+    const rows=r.rows||[];
+    const host=$('pendingPhotoList');
+    if(!rows.length){
+      host.innerHTML='<div class="hint" style="padding:24px;text-align:center">لا توجد صور بانتظار الاعتماد</div>';
+      updatePendingStudentPhotosCount();
+      return;
+    }
+    host.innerHTML=rows.map(row=>`
+      <div class="pending-photo-row" data-pending-id="${row.id}">
+        <img src="${row.image_data}" alt="">
+        <div class="pending-photo-info">
+          <b>${row.student_name||'بدون اسم'}</b>
+          <span>السجل المدني: ${row.idno||''}</span>
+          <span>أرسلها: ${row.submitted_by||'مستخدم'}</span>
+          <span>${row.created_at?new Date(row.created_at).toLocaleString('ar-SA'):''}</span>
+        </div>
+        <div class="pending-photo-actions">
+          <button class="pending-approve" type="button" data-approve-pending="${row.id}">اعتماد الصورة</button>
+          <button class="pending-reject" type="button" data-reject-pending="${row.id}">رفض</button>
+        </div>
+      </div>`).join('');
+
+    host.querySelectorAll('[data-approve-pending]').forEach(btn=>btn.onclick=async()=>{
+      const old=btn.textContent; btn.disabled=true; btn.textContent='جاري الاعتماد...';
+      try{
+        const res=await cloudApi('approve_pending_photo',{id:Number(btn.dataset.approvePending)});
+        const blob=dataURLToBlob(res.image_data||'');
+        if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+        await cloudPullToLocal();
+        btn.closest('.pending-photo-row')?.remove();
+        renderAdmin();
+        updatePendingStudentPhotosCount();
+        toast('تم اعتماد الصورة وإضافتها لقاعدة البيانات الأصلية');
+      }catch(e){
+        console.error(e); alert('تعذر اعتماد الصورة');
+        btn.disabled=false; btn.textContent=old;
+      }
+    });
+
+    host.querySelectorAll('[data-reject-pending]').forEach(btn=>btn.onclick=async()=>{
+      if(!confirm('رفض هذه الصورة؟')) return;
+      try{
+        await cloudApi('reject_pending_photo',{id:Number(btn.dataset.rejectPending)});
+        btn.closest('.pending-photo-row')?.remove();
+        updatePendingStudentPhotosCount();
+        toast('تم رفض الصورة');
+      }catch(e){alert('تعذر رفض الصورة')}
+    });
+  }catch(e){
+    $('pendingPhotoList').innerHTML='<div class="hint" style="padding:24px;text-align:center">تعذر تحميل الصور المعلقة</div>';
+  }
+}
+
+if($('pendingStudentPhotosBtn')) $('pendingStudentPhotosBtn').onclick=openPendingStudentPhotos;
+setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
@@ -4480,34 +4582,62 @@ function refreshAddStudentClasses(){
 }
 
 let studentCardRenderToken=0;
+let addStudentNeedsApproval=false;
+
+function normalizeStudentSearch(value){
+  return String(value||'')
+    .normalize('NFKD')
+    .replace(/[\u064B-\u065F\u0670]/g,'')
+    .replace(/[إأآٱ]/g,'ا')
+    .replace(/ى/g,'ي')
+    .replace(/ؤ/g,'و')
+    .replace(/ئ/g,'ي')
+    .replace(/ة/g,'ه')
+    .replace(/[٠-٩]/g,d=>'0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+    .replace(/[۰-۹]/g,d=>'0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)])
+    .replace(/\s+/g,' ')
+    .trim()
+    .toLowerCase();
+}
+
 async function renderStudentCards(list){
   const myToken=++studentCardRenderToken;
-  list=dedupeStudents(list);
   const grid=$('studentCardGrid');
   const count=$('studentSelectCount');
   if(!grid) return;
 
   list=dedupeStudents(list);
-  if(count) count.textContent=`(${list.length})`;
+  const prepared=await Promise.all(list.map(async s=>{
+    let blob=null;
+    try{blob=await getStudentPhoto(`${s.idno}:face`)}catch(e){}
+    return {s,blob,hasPhoto:!!blob || !!s.hasFace || !!s.faceImage};
+  }));
+  prepared.sort((a,b)=>{
+    if(a.hasPhoto!==b.hasPhoto) return a.hasPhoto?-1:1;
+    return String(a.s.name||'').localeCompare(String(b.s.name||''),'ar');
+  });
+
+  if(myToken!==studentCardRenderToken) return;
+  if(count) count.textContent=`(${prepared.length})`;
   grid.innerHTML='';
 
-  if(!list.length){
+  if(!prepared.length){
     grid.innerHTML='<div class="hint" style="padding:14px">لا يوجد طلاب ضمن الاختيار الحالي</div>';
     return;
   }
 
-  for(const s of list){
+  for(const item of prepared){
+    const s=item.s;
     const card=document.createElement('button');
     card.type='button';
     card.className='student-pick-card'+(String(addStudentSelectedId)===String(s.idno)?' selected':'');
     card.dataset.id=String(s.idno);
 
-    const blob=await getStudentPhoto(`${s.idno}:face`);
     let photo;
-    if(blob){
+    if(item.blob){
       photo=document.createElement('img');
       photo.className='student-pick-photo';
-      const url=URL.createObjectURL(blob);
+      const url=URL.createObjectURL(item.blob);
       photo.src=url;
       photo.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),3000);
     }else{
@@ -4519,12 +4649,17 @@ async function renderStudentCards(list){
     const name=document.createElement('div');
     name.className='student-pick-name';
     name.textContent=s.name||'بدون اسم';
+    if(item.hasPhoto){
+      const chip=document.createElement('span');
+      chip.className='photo-status-chip';
+      chip.textContent='لديه صورة';
+      name.appendChild(chip);
+    }
 
     const id=document.createElement('div');
     id.className='student-pick-id';
     id.textContent=s.idno||'—';
 
-    if(myToken!==studentCardRenderToken) return;
     card.append(photo,name,id);
     card.onclick=async()=>{
       addStudentSelectedId=String(s.idno);
@@ -4540,18 +4675,38 @@ async function renderStudentCards(list){
 function refreshAddStudentNames(){
   const grade=$('addStudentGrade').value;
   const classroom=$('addStudentClass').value;
-  const q=($('addStudentSearch')?.value||'').trim().toLowerCase();
+  const rawQ=$('addStudentSearch')?.value||'';
+  const q=normalizeStudentSearch(rawQ);
   const sel=$('addStudentName');
-  const list=dedupeStudents(getStudents()).filter(s=>
-    (!grade||s.grade===grade) &&
-    (!classroom||String(s.classroom||'')===classroom) &&
-    (!q || String(s.name||'').toLowerCase().includes(q) || String(s.idno||'').includes(q))
-  );
-  sel.innerHTML='<option value="">اختر الطالب</option>'+list.map(s=>`<option value="${s.idno}">${s.name} — ${s.idno}</option>`).join('');
+  const currentId=String(addStudentSelectedId||sel.value||'');
+
+  const list=dedupeStudents(getStudents()).filter(s=>{
+    const name=normalizeStudentSearch(s.name||'');
+    const id=normalizeStudentSearch(s.idno||'');
+    const phone=normalizeStudentSearch(s.phone||'');
+    return (!grade||s.grade===grade) &&
+      (!classroom||String(s.classroom||'')===classroom) &&
+      (!q || name.includes(q) || id.includes(q) || phone.includes(q));
+  });
+
+  const sorted=list.slice().sort((a,b)=>{
+    const ap=!!a.hasFace, bp=!!b.hasFace;
+    if(ap!==bp) return ap?-1:1;
+    return String(a.name||'').localeCompare(String(b.name||''),'ar');
+  });
+
+  sel.innerHTML='<option value="">اختر الطالب</option>'+sorted.map(s=>`<option value="${s.idno}">${s.name} — ${s.idno}</option>`).join('');
   sel.disabled=false;
-  $('studentSelectTriggerText').textContent='اختر اسم الطالب';
-  addStudentSelectedId='';
-  renderStudentCards(list);
+
+  if(currentId && sorted.some(s=>String(s.idno)===currentId)){
+    sel.value=currentId;
+  }else if(q){
+    addStudentSelectedId='';
+    $('studentSelectTriggerText').textContent='اختر اسم الطالب';
+  }
+
+  renderStudentCards(sorted);
+  if(q) $('studentCardGrid')?.classList.remove('hidden');
 }
 
 function resetAddStudentFaceState(){
@@ -4580,11 +4735,15 @@ async function loadSelectedOldStudentFace(){
   }
   const blob=await getStudentPhoto(`${addStudentSelectedId}:face`);
   if(!blob){
+    addStudentNeedsApproval=true;
     empty.textContent='لا توجد صورة سابقة محفوظة لهذا الطالب';
-    $('faceMatchStatus').className='face-match-status bad';
-    $('faceMatchStatus').textContent='لا يمكن التحقق حتى توجد صورة سابقة للطالب';
+    $('faceMatchStatus').className='face-match-status wait';
+    $('faceMatchStatus').textContent='هذا الطالب بدون صورة — التقط صورة جديدة لإرسالها لاعتماد الإدارة';
+    $('saveMatchedStudentBtn').textContent='إرسال الصورة لاعتماد الإدارة';
     return;
   }
+  addStudentNeedsApproval=false;
+  $('saveMatchedStudentBtn').textContent='حفظ الطالب';
   const url=URL.createObjectURL(blob);
   img.src=url;
   img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),3000);
@@ -4630,8 +4789,9 @@ async function findBestStudentMatch(newBlob){
 async function processNewStudentFace(file){
   addStudentNewFaceBlob=file;
   addStudentFaceVerified=false;
-  addStudentSelectedId='';
-  $('saveMatchedStudentBtn').disabled=true;
+
+  const selectedBefore=String(addStudentSelectedId||$('addStudentName')?.value||'');
+  const selectedStudent=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(selectedBefore));
 
   const newImg=$('newStudentFace');
   const newEmpty=$('newStudentFaceEmpty');
@@ -4641,18 +4801,61 @@ async function processNewStudentFace(file){
   newImg.classList.remove('hidden');
   newEmpty.classList.add('hidden');
 
+  if(selectedStudent){
+    let oldBlob=null;
+    try{oldBlob=await getStudentPhoto(`${selectedStudent.idno}:face`)}catch(e){}
+    if(!oldBlob){
+      addStudentSelectedId=String(selectedStudent.idno);
+      addStudentNeedsApproval=true;
+      addStudentFaceVerified=true;
+      $('matchedStudentName').textContent=selectedStudent.name||'—';
+      $('matchedStudentId').textContent=selectedStudent.idno||'—';
+      $('matchedStudentInfo').classList.add('show');
+      $('oldStudentFace').classList.add('hidden');
+      $('oldStudentFaceEmpty').classList.remove('hidden');
+      $('oldStudentFaceEmpty').textContent='لا توجد صورة سابقة — سيتم إرسال الصورة الجديدة للاعتماد';
+      $('faceMatchStatus').className='face-match-status ok';
+      $('faceMatchStatus').textContent='الصورة جاهزة للإرسال إلى الإدارة لاعتمادها في قاعدة البيانات الأصلية';
+      $('saveMatchedStudentBtn').disabled=false;
+      $('saveMatchedStudentBtn').textContent='إرسال الصورة لاعتماد الإدارة';
+      return;
+    }
+
+    try{
+      const result=await compareStudentFaces(oldBlob,file);
+      addStudentSelectedId=String(selectedStudent.idno);
+      addStudentNeedsApproval=false;
+      $('matchedStudentName').textContent=selectedStudent.name||'—';
+      $('matchedStudentId').textContent=selectedStudent.idno||'—';
+      $('matchedStudentInfo').classList.add('show');
+      const oldImg=$('oldStudentFace'), oldEmpty=$('oldStudentFaceEmpty');
+      const oldUrl=URL.createObjectURL(oldBlob);
+      oldImg.src=oldUrl; oldImg.onload=()=>setTimeout(()=>URL.revokeObjectURL(oldUrl),3000);
+      oldImg.classList.remove('hidden'); oldEmpty.classList.add('hidden');
+      addStudentFaceVerified=!!result.match;
+      $('saveMatchedStudentBtn').disabled=!result.match;
+      $('saveMatchedStudentBtn').textContent='حفظ الطالب';
+      $('faceMatchStatus').className=result.match?'face-match-status ok':'face-match-status bad';
+      $('faceMatchStatus').textContent=result.match
+        ?`تم التحقق من ${selectedStudent.name} — نسبة التشابه ${result.similarity}%`
+        :`الصورة لا تطابق ${selectedStudent.name} — نسبة التشابه ${result.similarity}%`;
+      return;
+    }catch(e){}
+  }
+
+  addStudentSelectedId='';
+  $('saveMatchedStudentBtn').disabled=true;
   $('oldStudentFace').classList.add('hidden');
   $('oldStudentFaceEmpty').classList.remove('hidden');
   $('oldStudentFaceEmpty').textContent='جاري البحث عن الصورة المطابقة...';
-
   $('faceMatchStatus').className='face-match-status wait';
   $('faceMatchStatus').textContent='جاري التعرف على الطالب ومقارنة الصورة بقاعدة البيانات...';
 
   try{
     const result=await findBestStudentMatch(file);
     const student=result.student;
-
     addStudentSelectedId=String(student.idno);
+    addStudentNeedsApproval=false;
     $('matchedStudentName').textContent=student.name||'—';
     $('matchedStudentId').textContent=student.idno||'—';
     $('matchedStudentInfo').classList.add('show');
@@ -4665,25 +4868,18 @@ async function processNewStudentFace(file){
     $('studentSelectTriggerText').textContent=student.name||'بدون اسم';
     $('studentCardGrid').classList.add('hidden');
 
-    const oldImg=$('oldStudentFace');
-    const oldEmpty=$('oldStudentFaceEmpty');
+    const oldImg=$('oldStudentFace'), oldEmpty=$('oldStudentFaceEmpty');
     const oldUrl=URL.createObjectURL(result.oldBlob);
-    oldImg.src=oldUrl;
-    oldImg.onload=()=>setTimeout(()=>URL.revokeObjectURL(oldUrl),3000);
-    oldImg.classList.remove('hidden');
-    oldEmpty.classList.add('hidden');
+    oldImg.src=oldUrl; oldImg.onload=()=>setTimeout(()=>URL.revokeObjectURL(oldUrl),3000);
+    oldImg.classList.remove('hidden'); oldEmpty.classList.add('hidden');
 
-    if(result.match){
-      addStudentFaceVerified=true;
-      $('saveMatchedStudentBtn').disabled=false;
-      $('faceMatchStatus').className='face-match-status ok';
-      $('faceMatchStatus').textContent=`تم التعرف على ${student.name} — نسبة التشابه ${result.similarity}%`;
-    }else{
-      addStudentFaceVerified=false;
-      $('saveMatchedStudentBtn').disabled=true;
-      $('faceMatchStatus').className='face-match-status bad';
-      $('faceMatchStatus').textContent=`أقرب نتيجة: ${student.name} — التشابه ${result.similarity}% فقط، أعد التصوير`;
-    }
+    addStudentFaceVerified=!!result.match;
+    $('saveMatchedStudentBtn').disabled=!result.match;
+    $('saveMatchedStudentBtn').textContent='حفظ الطالب';
+    $('faceMatchStatus').className=result.match?'face-match-status ok':'face-match-status bad';
+    $('faceMatchStatus').textContent=result.match
+      ?`تم التعرف على ${student.name} — نسبة التشابه ${result.similarity}%`
+      :`أقرب نتيجة: ${student.name} — التشابه ${result.similarity}% فقط، أعد التصوير`;
   }catch(err){
     addStudentFaceVerified=false;
     $('saveMatchedStudentBtn').disabled=true;
@@ -4715,6 +4911,8 @@ function openAddStudentModal(){
   addStudentSelectedId='';
   addStudentNewFaceBlob=null;
   addStudentFaceVerified=false;
+  addStudentNeedsApproval=false;
+  $('saveMatchedStudentBtn').textContent='حفظ الطالب';
   $('matchedStudentName').textContent='—';
   $('matchedStudentId').textContent='—';
   $('matchedStudentInfo').classList.remove('show');
@@ -4744,7 +4942,10 @@ document.addEventListener('click',e=>{
   if(wrap && grid && !wrap.contains(e.target)) grid.classList.add('hidden');
 });
 
-if($('addStudentSearch')) $('addStudentSearch').oninput=refreshAddStudentNames;
+if($('addStudentSearch')){
+  $('addStudentSearch').addEventListener('input',refreshAddStudentNames);
+  $('addStudentSearch').addEventListener('focus',()=>{$('studentCardGrid')?.classList.remove('hidden');refreshAddStudentNames();});
+}
 if($('addStudentGrade')) $('addStudentGrade').onchange=refreshAddStudentClasses;
 if($('addStudentClass')) $('addStudentClass').onchange=refreshAddStudentNames;
 if($('addStudentName')) $('addStudentName').onchange=async ()=>{
@@ -4907,26 +5108,57 @@ if($('cancelLiveCameraBtn')) $('cancelLiveCameraBtn').onclick=async ()=>{
 
 if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
   if(!addStudentSelectedId || !addStudentFaceVerified || !addStudentNewFaceBlob){
-    toast('يجب التحقق من صورة الطالب أولاً');
+    toast('التقط صورة الطالب أولاً');
     return;
   }
   const students=getStudents();
   const idx=students.findIndex(s=>normalizeCivilId(s.idno)===normalizeCivilId(addStudentSelectedId));
   if(idx<0){ toast('لم يتم العثور على الطالب'); return; }
 
-  await saveStudentPhoto(`${addStudentSelectedId}:face`,addStudentNewFaceBlob);
-  students[idx]={
-    ...students[idx],
-    hasFace:true,
-    verification:'مؤكد',
-    registered:true,
-    verifiedByFace:true,
-    faceVerifiedAt:new Date().toISOString()
-  };
-  saveStudents(students);
-  renderAdmin();
-  closeAddStudentModal();
-  toast('تم التحقق من هوية الطالب وحفظه');
+  const btn=$('saveMatchedStudentBtn');
+  const oldText=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='جاري الحفظ...';
+
+  try{
+    if(addStudentNeedsApproval){
+      const imageData=await blobToDataURL(addStudentNewFaceBlob);
+      const cloudUser=(()=>{try{return JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){return {}}})();
+      await cloudApi('submit_pending_photo',{
+        idno:String(students[idx].idno),
+        student_name:students[idx].name||'',
+        image_data:imageData,
+        submitted_by:cloudUser.name||getAdminProfile().displayName||''
+      },false);
+
+      students[idx]={...students[idx],photoPendingApproval:true};
+      localStorage.setItem('students',JSON.stringify(students));
+      closeAddStudentModal();
+      toast('تم إرسال صورة الطالب للإدارة لاعتمادها');
+      updatePendingStudentPhotosCount().catch(()=>{});
+      return;
+    }
+
+    await saveStudentPhoto(`${addStudentSelectedId}:face`,addStudentNewFaceBlob);
+    students[idx]={
+      ...students[idx],
+      hasFace:true,
+      verification:'مؤكد',
+      registered:true,
+      verifiedByFace:true,
+      faceVerifiedAt:new Date().toISOString()
+    };
+    saveStudents(students);
+    renderAdmin();
+    closeAddStudentModal();
+    toast('تم التحقق من هوية الطالب وحفظه');
+  }catch(e){
+    console.error(e);
+    alert('تعذر حفظ الصورة. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=oldText;
+  }
 };
 
 
