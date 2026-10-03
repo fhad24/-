@@ -2356,16 +2356,42 @@ function ensureAdminSettings(){
     document.querySelectorAll('.admin-settings-pane').forEach(x=>x.classList.toggle('active',x.dataset.settingsPane===btn.dataset.settingsTab));
     if(btn.dataset.settingsTab==='users') renderAdminUsersSettings();
   });
-  const readLogoFile=(input,img,fallback)=>{
+  const readLogoFile=async(input,img,fallback)=>{
     const file=input.files?.[0]; if(!file) return;
-    const reader=new FileReader();
-    reader.onload=()=>{
-      img.src=reader.result;
-      img.dataset.pending=reader.result;
+    try{
+      const raw=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(String(reader.result||''));
+        reader.onerror=reject;
+        reader.readAsDataURL(file);
+      });
+      const data=await new Promise((resolve,reject)=>{
+        const pic=new Image();
+        pic.onload=()=>{
+          try{
+            const max=600;
+            let w=pic.naturalWidth||pic.width, h=pic.naturalHeight||pic.height;
+            const scale=Math.min(1,max/Math.max(w,h));
+            w=Math.max(1,Math.round(w*scale)); h=Math.max(1,Math.round(h*scale));
+            const canvas=document.createElement('canvas');
+            canvas.width=w; canvas.height=h;
+            const ctx=canvas.getContext('2d');
+            ctx.drawImage(pic,0,0,w,h);
+            resolve(canvas.toDataURL('image/jpeg',0.86));
+          }catch(e){reject(e)}
+        };
+        pic.onerror=reject;
+        pic.src=raw;
+      });
+      img.src=data;
+      img.dataset.pending=data;
       img.classList.remove('hidden');
       fallback.classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
+      input.value='';
+    }catch(e){
+      console.error(e);
+      alert('تعذر قراءة الشعار من الجوال، جرّب صورة JPG أو PNG أخرى.');
+    }
   };
   document.getElementById('changeSchoolLogoBtn').onclick=()=>document.getElementById('schoolLogoInput').click();
   document.getElementById('changeMinistryLogoBtn').onclick=()=>document.getElementById('ministryLogoInput').click();
@@ -2380,23 +2406,40 @@ function ensureAdminSettings(){
     document.getElementById('ministryLogoFallback')
   );
 
-  document.getElementById('saveSchoolSettings').onclick=()=>{
-    const current=getSchoolSettings();
-    const schoolPreview=document.getElementById('schoolLogoPreview');
-    const ministryPreview=document.getElementById('ministryLogoPreview');
-    localStorage.setItem('schoolSettings',JSON.stringify({
-      authority:document.getElementById('settingsAuthority').value.trim(),
-      school:document.getElementById('settingsSchool').value.trim(),
-      designer:document.getElementById('settingsDesigner').value.trim(),
-      manager:document.getElementById('settingsManager').value.trim(),
-      schoolLogo:schoolPreview.dataset.pending||current.schoolLogo||'',
-      ministryLogo:ministryPreview.dataset.pending||current.ministryLogo||''
-    }));
-    delete schoolPreview.dataset.pending;
-    delete ministryPreview.dataset.pending;
-    applySchoolSettings();
-    cloudApi('save_settings',{settings:getSchoolSettings()}).catch(e=>console.warn('cloud settings',e));
-    alert('✅ تم حفظ بيانات المدرسة بنجاح');
+  document.getElementById('saveSchoolSettings').onclick=async()=>{
+    const btn=document.getElementById('saveSchoolSettings');
+    const oldText=btn.textContent;
+    btn.disabled=true;
+    btn.textContent='جاري الحفظ...';
+    try{
+      const current=getSchoolSettings();
+      const schoolPreview=document.getElementById('schoolLogoPreview');
+      const ministryPreview=document.getElementById('ministryLogoPreview');
+      const next={
+        authority:document.getElementById('settingsAuthority').value.trim(),
+        school:document.getElementById('settingsSchool').value.trim(),
+        designer:document.getElementById('settingsDesigner').value.trim(),
+        manager:document.getElementById('settingsManager').value.trim(),
+        schoolLogo:schoolPreview.dataset.pending||schoolPreview.src||current.schoolLogo||'',
+        ministryLogo:ministryPreview.dataset.pending||ministryPreview.src||current.ministryLogo||''
+      };
+      localStorage.setItem('schoolSettings',JSON.stringify(next));
+      applySchoolSettings();
+
+      if(localStorage.getItem('cloudAdminToken')){
+        await cloudApi('save_settings',{settings:next});
+      }
+
+      delete schoolPreview.dataset.pending;
+      delete ministryPreview.dataset.pending;
+      alert('✅ تم حفظ بيانات المدرسة والشعارات بنجاح');
+    }catch(e){
+      console.error(e);
+      alert('تعذر حفظ الشعار. تم الاحتفاظ به على هذا الجهاز فقط، وحاول مرة أخرى بعد تحديث الصفحة.');
+    }finally{
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
   };
   document.getElementById('saveAdminAccount').onclick=()=>{
     const p=getAdminProfile();
