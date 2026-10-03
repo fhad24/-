@@ -618,6 +618,10 @@
     .pending-approve{background:var(--primary);color:#fff;border:1px solid var(--primary)}.pending-reject{background:#fff;color:#b42318;border:1px solid #dc4b42}
     .photo-status-chip{font-size:11px;border-radius:999px;padding:4px 8px;background:#e5f5f0;color:#0f7665;margin-inline-start:6px}
     @media(max-width:650px){.pending-photo-row{grid-template-columns:82px 1fr}.pending-photo-row img{width:82px;height:94px}.pending-photo-actions{grid-column:1/-1}.pending-photo-actions button{flex:1}}
+  
+    .admin-sort-btn{border:0;background:transparent;font:inherit;font-weight:700;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
+    .admin-sort-btn .sort-arrow{font-size:11px;opacity:.55}
+    .admin-sort-btn.active .sort-arrow{opacity:1;color:var(--primary)}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -951,16 +955,16 @@
             <thead>
               <tr>
                 <th><label class="table-select-all" title="تحديد الكل"><input type="checkbox" id="selectAllPrintCheck"><span>الطباعة</span></label></th>
-                <th>الصورة</th>
-                <th>حالة القص</th>
-                <th>اسم الطالب</th>
-                <th>الهوية/الإقامة</th>
-                <th>الجوال</th>
-                <th>الصف</th>
-                <th>الفصل</th>
-                <th>التحقق</th>
-                <th>صورة الهوية</th>
-                <th>تاريخ التسجيل</th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="photo">الصورة <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="cropStatus">حالة القص <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="name">اسم الطالب <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="idno">الهوية/الإقامة <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="phone">الجوال <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="grade">الصف <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="classroom">الفصل <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="verification">التحقق <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="idPhoto">صورة الهوية <span class="sort-arrow">⇅</span></button></th>
+                <th><button type="button" class="admin-sort-btn" data-admin-sort="registrationDate">تاريخ التسجيل <span class="sort-arrow">⇅</span></button></th>
                 <th>الإجراءات</th>
               </tr>
             </thead>
@@ -2137,6 +2141,51 @@ function openAdminLogin(){
   setAdminMode(false);
 }
 
+let adminSortKey='photo';
+let adminSortDir='desc';
+
+function adminSortValue(student,key){
+  if(key==='photo') return student.hasFace?1:0;
+  if(key==='idPhoto') return student.hasId?1:0;
+  return String(student?.[key]??'').trim();
+}
+
+function sortAdminStudents(list){
+  return list.slice().sort((a,b)=>{
+    const av=adminSortValue(a,adminSortKey);
+    const bv=adminSortValue(b,adminSortKey);
+    let cmp=0;
+    if(typeof av==='number' && typeof bv==='number') cmp=av-bv;
+    else cmp=String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
+    if(cmp===0){
+      const an=String(a.name||''), bn=String(b.name||'');
+      cmp=an.localeCompare(bn,'ar',{numeric:true,sensitivity:'base'});
+    }
+    return adminSortDir==='asc'?cmp:-cmp;
+  });
+}
+
+function updateAdminSortHeaders(){
+  document.querySelectorAll('[data-admin-sort]').forEach(btn=>{
+    const active=btn.dataset.adminSort===adminSortKey;
+    btn.classList.toggle('active',active);
+    const arrow=btn.querySelector('.sort-arrow');
+    if(arrow) arrow.textContent=active?(adminSortDir==='asc'?'↑':'↓'):'⇅';
+  });
+}
+
+document.querySelectorAll('[data-admin-sort]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const key=btn.dataset.adminSort;
+    if(adminSortKey===key) adminSortDir=adminSortDir==='asc'?'desc':'asc';
+    else{
+      adminSortKey=key;
+      adminSortDir=(key==='photo'||key==='idPhoto')?'desc':'asc';
+    }
+    renderAdmin();
+  });
+});
+
 function renderAdmin(){
   const beforeCount=(()=>{try{return JSON.parse(localStorage.getItem('students')||'[]').length}catch(e){return 0}})();
   const s = getStudents();
@@ -2156,9 +2205,11 @@ function renderAdmin(){
   $('miniNotRegistered').textContent = notRegistered;
 
   const search=($('adminSearch')?.value||'').trim().toLowerCase();
-  const list=search ? s.filter(x=>
+  const filtered=search ? s.filter(x=>
     [x.name,x.idno,x.phone,x.referenceNo].some(v=>String(v||'').toLowerCase().includes(search))
   ) : s;
+  const list=sortAdminStudents(filtered);
+  updateAdminSortHeaders();
 
   if(!list.length){
     $('studentsTable').innerHTML = `<tr><td colspan="12" style="padding:30px;color:#6d7f7a">لا توجد بيانات طلاب للعرض</td></tr>`;
