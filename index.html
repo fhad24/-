@@ -3559,11 +3559,33 @@ function studentGradeKey(v){
 }
 
 function studentClassKey(v){
-  const s=normalizeDigitsText(v).trim();
+  let s=normalizeDigitsText(v).trim().replace(/\s+/g,' ');
   if(!s) return '';
+
+  // إذا كان الفصل رقماً نأخذ الرقم الأخير من الاسم المستورد.
   const nums=s.match(/\d+/g);
   if(nums && nums.length) return String(Number(nums[nums.length-1]));
+
+  // تنظيف صيغ مدرستي مثل: "ال أ" أو "الفصل أ" أو "الأول الثانوي : أ".
+  s=s
+    .replace(/[/:：|\-–—]+/g,' ')
+    .replace(/الأول الثانوي|الاول الثانوي|أول ثانوي|اول ثانوي|الثاني الثانوي|ثاني ثانوي|الثالث الثانوي|ثالث ثانوي/gi,' ')
+    .replace(/الصف|الفصل|الشعبة|فصل|شعبة|الثانوي/gi,' ')
+    .replace(/(^|\s)ال(?=\s|$)/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  // صيغ مثل "ال ج" أو "ال أ" تصبح الحرف نفسه.
+  const letter=s.match(/(?:^|\s)([أإآابتثجحخدذرزسشصضطظعغفقكلمنهوي])(?:\s|$)/);
+  if(letter) return letter[1].replace(/[إآ]/,'أ');
+
+  // وإذا بقيت كلمة قصيرة نعرضها كما هي بعد التنظيف.
   return s;
+}
+
+function displayStudentClassroom(v){
+  const key=studentClassKey(v);
+  return key || String(v??'').trim() || '—';
 }
 
 async function importMadrasatiPlacements(file){
@@ -3909,7 +3931,7 @@ function renderAdmin(){
       <td>${x.idno || '—'}</td>
       <td>${x.phone || '—'}</td>
       <td>${x.grade || '—'}</td>
-      <td>${x.classroom || '—'}</td>
+      <td>${displayStudentClassroom(x.classroom)}</td>
       <td class="${x.verification==='مؤكد' ? 'status-ok' : 'status-warn'}">${x.verification || 'مؤكد'}</td>
       <td>${x.hasId ? `<img class="student-thumb id-card" data-photo-key="${x.idno}:id" alt="صورة الهوية">` : '<span class="photo-placeholder">لا صورة</span>'}</td>
       <td>${x.registrationDate || x.birth || '—'}</td>
@@ -4937,7 +4959,7 @@ async function renderAttendancePage(){
             <div class="attendance-saved-name">${s.name||''}</div>
           </div>
           <div class="attendance-saved-id">${s.idno||'—'}</div>
-          <div class="attendance-saved-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
+          <div class="attendance-saved-class-cell">${s.grade||'—'} / ${displayStudentClassroom(s.classroom)}</div>
           <div class="attendance-saved-time">—</div>
           <div class="attendance-saved-actions">
             <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
@@ -5012,7 +5034,7 @@ async function renderAttendancePage(){
             </div>
           </div>
           <div class="attendance-saved-id">${x.idno||'—'}</div>
-          <div class="attendance-saved-class-cell">${x.grade||'—'} / ${x.classroom||'—'}</div>
+          <div class="attendance-saved-class-cell">${x.grade||'—'} / ${displayStudentClassroom(x.classroom)}</div>
           <div class="attendance-saved-time">${attendanceListView==='late'
             ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
             : attendanceListView==='present'
@@ -5523,7 +5545,7 @@ async function showAttendanceSelectedStudent(student){
   attendanceNewPhotoBlob=null;
   $('attendanceInfoName').textContent=student?.name||'—';
   $('attendanceInfoId').textContent=student?.idno||'—';
-  $('attendanceInfoClass').textContent=student?`${student.grade||'—'} / ${student.classroom||'—'}`:'—';
+  $('attendanceInfoClass').textContent=student?`${student.grade||'—'} / ${displayStudentClassroom(student.classroom)}`:'—';
 
   if(student){
     const perf=getStudentAttendancePerformance(student.idno);
@@ -5725,7 +5747,7 @@ async function renderAttendanceStudentList(){
           <span class="att-inline-absent">✕ ${perf.absent}</span>
         </span>
       </div>
-      <div class="att-student-class-cell">${s.grade||'—'} / ${s.classroom||'—'}</div>
+      <div class="att-student-class-cell">${s.grade||'—'} / ${displayStudentClassroom(s.classroom)}</div>
       <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
         ${photoHTML}
         ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
