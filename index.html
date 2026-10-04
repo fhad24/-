@@ -2699,7 +2699,18 @@
     .teacher-camera-video{width:100%;max-height:420px;object-fit:cover;border-radius:14px;border:1px solid #d5e5e0;background:#111}
     .teacher-camera-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
     .teacher-photo-preview{display:none;max-width:100%;max-height:420px;margin:12px auto 0;border-radius:14px;border:1px solid #d5e5e0}
-    .teacher-followup-history,.manager-followup-list{display:grid;gap:12px}
+    .teacher-followup-history{display:grid;gap:12px}
+    .manager-followup-list{margin-top:14px;overflow-x:auto}
+    .manager-followup-table{width:100%;min-width:1220px;border-collapse:separate;border-spacing:0;border:1px solid #d4e3df;border-radius:14px;overflow:hidden;background:#fff}
+    .manager-followup-table th{background:#eaf6f2;color:#17483f;font-size:12px;font-weight:900;padding:10px 8px;border-bottom:1px solid #cfe1dc;white-space:nowrap;text-align:center}
+    .manager-followup-table td{padding:9px 8px;border-bottom:1px solid #e4ece9;border-left:1px solid #edf2f0;vertical-align:middle;text-align:center;font-size:11px;color:#36564f}
+    .manager-followup-table tbody tr:last-child td{border-bottom:0}
+    .manager-followup-table tbody tr:hover{background:#fbfefd}
+    .manager-followup-table .teacher-name-cell{font-weight:900;color:#173b34;min-width:150px}
+    .manager-followup-table .notes-cell{min-width:180px;max-width:240px;white-space:normal;line-height:1.7;text-align:right}
+    .manager-followup-table .thanks-cell{min-width:310px;text-align:right}
+    .manager-followup-table .manager-teacher-thanks{width:100%;min-height:88px;height:88px;resize:none;box-sizing:border-box;font-size:11px;line-height:1.6}
+    .manager-followup-table .manager-send-thanks{width:100%;margin-top:6px}
     .teacher-followup-card,.manager-followup-card{
       border:1px solid #d4e3df;border-radius:16px;background:#fff;padding:14px;box-shadow:0 3px 12px #00000008
     }
@@ -3344,7 +3355,7 @@
         </div>
         <button type="button" class="btn btn-soft" id="teacherClassManagerRefresh">تحديث المتابعات</button>
       </div>
-      <div id="teacherClassManagerList" class="manager-followup-list" style="margin-top:14px">
+      <div id="teacherClassManagerList" class="manager-followup-list">
         <div class="hint">جاري تحميل المتابعات...</div>
       </div>
     </div>
@@ -6301,26 +6312,48 @@ async function loadTeacherClassManagerFollowups(){
     const rows=Array.isArray(res?.rows)?res.rows:[];
     if(!rows.length){host.innerHTML='<div class="hint">لا توجد متابعات مرسلة حتى الآن.</div>';return}
     const school=getSchoolSettings();
-    host.innerHTML=rows.map(r=>{
-      const defaultMsg=`شكرًا لك أستاذ ${r.teacher_name||''} على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.`;
-      return `<div class="manager-followup-card" data-teacher-followup-id="${r.id}">
-        <div class="manager-followup-card-head">
-          <div class="manager-followup-meta">
-            <b>${r.teacher_name||'—'} — ${r.teacher_civil_id||''}</b><br>
-            المادة: ${r.subject||'—'} — الصف: ${r.grade||'—'} — الفصل: ${r.classroom||'—'} — الحصة: ${r.period||'—'}<br>
-            التاريخ والوقت: ${teacherClassFormatDateTime(r.submitted_at)}<br>
-            الملاحظات: ${r.notes||'لا توجد ملاحظات'}
-          </div>
-          ${r.image_data?`<img class="manager-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')">`:''}
-        </div>
-        <div class="manager-thanks-box">
-          <label>رسالة شكر للمعلم من مدير المدرسة</label>
-          <textarea class="manager-teacher-thanks">${r.manager_reply||defaultMsg}</textarea>
-          <button type="button" class="btn btn-primary manager-send-thanks" style="width:100%;margin-top:8px">${r.manager_reply?'تحديث رسالة الشكر':'إرسال رسالة الشكر للمعلم'}</button>
-          ${r.manager_reply?`<div class="teacher-manager-reply"><b>آخر رد:</b>${r.manager_reply}<br><span style="font-size:10px">— ${r.manager_name||school.manager||'مدير المدرسة'} ${r.replied_at?' | '+teacherClassFormatDateTime(r.replied_at):''}</span></div>`:''}
-        </div>
-      </div>`;
-    }).join('');
+    host.innerHTML=`
+      <table class="manager-followup-table">
+        <thead>
+          <tr>
+            <th>م</th>
+            <th>اسم المعلم</th>
+            <th>السجل المدني</th>
+            <th>المادة</th>
+            <th>الصف</th>
+            <th>الفصل</th>
+            <th>الحصة</th>
+            <th>التاريخ والوقت</th>
+            <th>ملاحظات المعلم</th>
+            <th>صورة السبورة</th>
+            <th>الحالة</th>
+            <th>رسالة المدير للمعلم</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,index)=>{
+            const defaultMsg=`شكرًا لك أستاذ ${r.teacher_name||''} على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.`;
+            return `<tr data-teacher-followup-id="${r.id}">
+              <td>${index+1}</td>
+              <td class="teacher-name-cell">${r.teacher_name||'—'}</td>
+              <td>${r.teacher_civil_id||'—'}</td>
+              <td>${r.subject||'—'}</td>
+              <td>${r.grade||'—'}</td>
+              <td>${r.classroom||'—'}</td>
+              <td>${r.period||'—'}</td>
+              <td style="min-width:175px">${teacherClassFormatDateTime(r.submitted_at)}</td>
+              <td class="notes-cell">${r.notes||'لا توجد ملاحظات'}</td>
+              <td>${r.image_data?`<img class="manager-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة">`:'—'}</td>
+              <td><span class="teacher-status-badge ${r.manager_reply?'replied':''}">${r.manager_reply?'تم الرد':'بانتظار الرد'}</span></td>
+              <td class="thanks-cell">
+                <textarea class="manager-teacher-thanks">${r.manager_reply||defaultMsg}</textarea>
+                <button type="button" class="btn btn-primary manager-send-thanks">${r.manager_reply?'تحديث رسالة الشكر':'إرسال رسالة الشكر'}</button>
+                ${r.manager_reply?`<div class="teacher-manager-reply"><b>آخر رد:</b>${r.manager_reply}<br><span style="font-size:10px">— ${r.manager_name||school.manager||'مدير المدرسة'} ${r.replied_at?' | '+teacherClassFormatDateTime(r.replied_at):''}</span></div>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
 
     host.querySelectorAll('.manager-send-thanks').forEach(btn=>btn.onclick=async()=>{
       const card=btn.closest('[data-teacher-followup-id]');
