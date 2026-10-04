@@ -6776,16 +6776,20 @@ $('adminLoginBtn').onclick=async()=>{
   };
 
   const p=getAdminProfile();
-  const extraCandidate=getAdminUsers().find(x=>String(x.username||'').trim()===user);
+  const normalizedLoginUser=normalizeCivilId(user)||user;
+  const normalizedLoginPass=normalizeCivilId(pass)||pass;
+  const extraCandidate=getAdminUsers().find(x=>{
+    const username=String(x.username||'').trim();
+    const civil=String(x.civilId||x.username||'').trim();
+    return username===user || civil===user || normalizeCivilId(username)===normalizedLoginUser || normalizeCivilId(civil)===normalizedLoginUser;
+  });
   const extraPasswordOk=!!extraCandidate && (
     String(extraCandidate.password||'').trim()===pass ||
-    (
-      !String(extraCandidate.password||'').trim() &&
-      (
-        pass===String(extraCandidate.username||'').trim() ||
-        pass===String(extraCandidate.civilId||extraCandidate.username||'').trim()
-      )
-    )
+    normalizeCivilId(String(extraCandidate.password||''))===normalizedLoginPass ||
+    String(extraCandidate.username||'').trim()===pass ||
+    String(extraCandidate.civilId||extraCandidate.username||'').trim()===pass ||
+    normalizeCivilId(String(extraCandidate.username||''))===normalizedLoginPass ||
+    normalizeCivilId(String(extraCandidate.civilId||extraCandidate.username||''))===normalizedLoginPass
   );
   const extra=extraPasswordOk ? extraCandidate : null;
 
