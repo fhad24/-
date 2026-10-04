@@ -5948,7 +5948,6 @@ function configureUserDashboard(){
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
     ['reports','التقارير 📊','reports'],
-    ['editStudents','تعديل بيانات الطلاب ✏️','data'],
     ['addStudent','إضافة طالب ➕','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
@@ -5958,7 +5957,6 @@ function configureUserDashboard(){
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
-    ['settings','الإعدادات ⚙️','settings']
   ];
   const host=$('userPermissionButtons');
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
@@ -7998,13 +7996,11 @@ function ensureAdminSettings(){
 
         <h3 style="text-align:center;font-size:20px;margin:18px 0 12px">② اختر الصلاحيات</h3>
         <div class="admin-permissions">
-          <label class="admin-permission">تعديل بيانات الطلاب <input class="admin-new-perm" value="editStudents" type="checkbox" checked></label>
           <label class="admin-permission">إضافة طالب <input class="admin-new-perm" value="addStudent" type="checkbox" checked></label>
           <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
           <label class="admin-permission">حذف الطلاب <input class="admin-new-perm" value="deleteStudents" type="checkbox" checked></label>
           <label class="admin-permission">تحضير الطلاب <input class="admin-new-perm" value="attendance" type="checkbox" checked></label>
           <label class="admin-permission">التقارير والتصدير <input class="admin-new-perm" value="reports" type="checkbox" checked></label>
-          <label class="admin-permission">بيانات المدرسة والمستخدمون <input class="admin-new-perm" value="settings" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
           <label class="admin-permission">كشوف متابعة الطلاب <input class="admin-new-perm" value="followupSheets" type="checkbox"></label>
@@ -8676,13 +8672,11 @@ function openUserPermissionEditor(username){
   modal.className='user-perm-modal';
   const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const permItems=[
-    ['editStudents','تعديل بيانات الطلاب'],
     ['addStudent','إضافة طالب'],
     ['import','استيراد البيانات (Excel/صور/باركود)'],
     ['deleteStudents','حذف الطلاب'],
     ['attendance','تحضير الطلاب'],
     ['reports','التقارير والتصدير'],
-    ['settings','بيانات المدرسة والمستخدمون'],
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
     ['photos','تصوير الطلاب لإضافة الصور'],
     ['followupSheets','كشوف متابعة الطلاب'],
