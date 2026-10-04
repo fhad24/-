@@ -7285,13 +7285,12 @@ async function renderApprovedStudentPhotosView(modal){
 }
 
 async function openPendingStudentPhotos(){
-  if(!isCurrentOwner()){
-    return;
-  }
+  if(!isCurrentOwner()) return;
   if(!localStorage.getItem('cloudAdminToken')){
-    alert('سجّل دخول الإدارة أولاً لاعتماد الصور');
+    alert('سجّل دخول الإدارة أولاً لعرض كشف الصور واعتمادها');
     return;
   }
+
   let modal=$('pendingStudentPhotosModal');
   if(modal) modal.remove();
   modal=document.createElement('div');
@@ -7300,223 +7299,318 @@ async function openPendingStudentPhotos(){
   modal.innerHTML=`
     <div class="pending-photo-card">
       <div class="pending-photo-head">
-        <h2>كشف صور الطلاب بانتظار اعتماد الإدارة</h2>
+        <h2>كشف صور الطلاب — المعلقة والمعتمدة</h2>
         <button class="pending-photo-close" type="button">×</button>
       </div>
-      <div class="pending-photo-tools">
-        <label><input type="checkbox" id="pendingSelectAll"> تحديد الكل</label>
-        <label>ترتيب الكشف
-          <select id="pendingPhotoSort">
-            <option value="name">الاسم أبجديًا</option>
-            <option value="classroom">الصف والفصل</option>
-            <option value="idno">السجل المدني</option>
+
+      <div class="pending-photo-tools" style="gap:10px;align-items:end">
+        <label>الحالة
+          <select id="photoUnifiedStatus">
+            <option value="all">المعلقة والمعتمدة</option>
+            <option value="pending">بانتظار الاعتماد</option>
+            <option value="approved">تم اعتمادها</option>
           </select>
         </label>
-        <button class="pending-bulk-approve" id="pendingBulkApprove" type="button">اعتماد وحفظ المحدد</button>
-        <button class="pending-history-btn" id="pendingApprovedHistoryBtn" type="button">✅ عرض الصور المعتمدة</button>
-        <span class="pending-selected-count" id="pendingSelectedCount">لم يتم تحديد أي طالب</span>
+
+        <label>ترتيب حسب
+          <select id="photoUnifiedSort">
+            <option value="name">الاسم</option>
+            <option value="classroom">الفصل</option>
+            <option value="date">التاريخ</option>
+            <option value="idno">السجل المدني</option>
+            <option value="grade">الصف</option>
+          </select>
+        </label>
+
+        <label id="photoUnifiedSelectAllWrap"><input type="checkbox" id="photoUnifiedSelectAll"> تحديد كل المعلقة الظاهرة</label>
+        <button class="pending-bulk-approve" id="photoUnifiedBulkApprove" type="button">اعتماد المحدد</button>
+        <button class="pending-history-btn" id="photoUnifiedPdfBtn" type="button">حفظ الكشف PDF</button>
+        <span class="pending-selected-count" id="photoUnifiedSummary">جاري التحميل...</span>
       </div>
-      <div class="pending-photo-list" id="pendingPhotoList"><div class="hint" style="padding:24px">جاري تحميل الصور...</div></div>
+
+      <div class="pending-photo-list" id="pendingPhotoList">
+        <div class="hint" style="padding:24px">جاري تحميل الكشف...</div>
+      </div>
     </div>`;
+
   document.body.appendChild(modal);
   modal.querySelector('.pending-photo-close').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
-  $('pendingApprovedHistoryBtn').onclick=()=>renderApprovedStudentPhotosView(modal);
 
-  try{
-    const r=await cloudApi('list_pending_photos');
-    let rows=Array.isArray(r.rows)?r.rows:[];
+  const selected=new Set();
+  let rows=[];
+
+  const formatDayDate=(iso)=>{
+    if(!iso) return '—';
+    try{
+      const d=new Date(iso);
+      const day=d.toLocaleDateString('ar-SA',{weekday:'long'});
+      const date=d.toLocaleDateString('ar-SA');
+      const time=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+      return day+' — '+date+' — '+time;
+    }catch(e){return iso}
+  };
+
+  const sortRows=(arr)=>{
+    const mode=$('photoUnifiedSort')?.value||'name';
+    return [...arr].sort((a,b)=>{
+      if(mode==='idno') return String(a.idno||'').localeCompare(String(b.idno||''),'ar',{numeric:true});
+      if(mode==='grade'){
+        const x=String(a.grade||'').localeCompare(String(b.grade||''),'ar');
+        return x || String(a.student_name||'').localeCompare(String(b.student_name||''),'ar');
+      }
+      if(mode==='classroom'){
+        const g=String(a.grade||'').localeCompare(String(b.grade||''),'ar');
+        if(g) return g;
+        const ca=String(studentClassKey?a.classroom?studentClassKey(a.classroom):'':a.classroom||'');
+        const cb=String(studentClassKey?b.classroom?studentClassKey(b.classroom):'':b.classroom||'');
+        const ccmp=ca.localeCompare(cb,'ar',{numeric:true});
+        return ccmp || String(a.student_name||'').localeCompare(String(b.student_name||''),'ar');
+      }
+      if(mode==='date'){
+        const da=new Date(a.reviewed_at||a.created_at||0).getTime();
+        const db=new Date(b.reviewed_at||b.created_at||0).getTime();
+        return db-da;
+      }
+      return String(a.student_name||'').localeCompare(String(b.student_name||''),'ar',{sensitivity:'base'});
+    });
+  };
+
+  const currentRows=()=>{
+    const status=$('photoUnifiedStatus')?.value||'all';
+    return sortRows(rows.filter(r=>{
+      if(status==='pending') return r.status==='pending';
+      if(status==='approved') return r.status==='approved';
+      return r.status==='pending'||r.status==='approved';
+    }));
+  };
+
+  const updateSummary=()=>{
+    const visible=currentRows();
+    const p=visible.filter(r=>r.status==='pending').length;
+    const a=visible.filter(r=>r.status==='approved').length;
+    const el=$('photoUnifiedSummary');
+    if(el) el.textContent=`المعروض: ${visible.length} — بانتظار الاعتماد: ${p} — المعتمدة: ${a} — المحدد: ${selected.size}`;
+    const all=$('photoUnifiedSelectAll');
+    const pend=visible.filter(r=>r.status==='pending');
+    if(all){
+      const picked=pend.filter(r=>selected.has(Number(r.id))).length;
+      all.checked=!!pend.length && picked===pend.length;
+      all.indeterminate=!!picked && picked<pend.length;
+    }
+  };
+
+  const approveOne=async(row)=>{
+    if(row.status!=='pending') return;
+    const existing=!!getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(row.idno) && s.hasFace);
+    if(existing && !confirm(`الطالب ${row.student_name||''} لديه صورة سابقة. هل تريد استبدالها بالصورة الجديدة؟`)) return false;
+    const res=await cloudApi('approve_pending_photo',{id:Number(row.id)});
+    const blob=dataURLToBlob(res.image_data||'');
+    if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+    return true;
+  };
+
+  const render=()=>{
     const host=$('pendingPhotoList');
-    const allStudents=getStudents();
-    const studentMap=new Map(allStudents.map(s=>[String(s.idno||'').trim(),s]));
-    const selected=new Set();
+    const displayRows=currentRows();
+    if(!displayRows.length){
+      host.innerHTML='<div class="hint" style="padding:26px;text-align:center">لا توجد صور ضمن هذا الاختيار.</div>';
+      updateSummary();
+      return;
+    }
 
-    const enriched=rows.map(row=>{
-      const student=studentMap.get(String(row.idno||'').trim())||{};
-      return {
-        ...row,
-        student_name:row.student_name||student.name||'بدون اسم',
-        grade:row.grade||student.grade||'—',
-        classroom:row.classroom||student.classroom||'—',
-        hasPreviousPhoto:Boolean(student.hasFace)
-      };
+    host.innerHTML=`
+      <table class="pending-photo-table">
+        <thead>
+          <tr>
+            <th>تحديد</th>
+            <th>الصورة</th>
+            <th>اسم الطالب</th>
+            <th>السجل المدني</th>
+            <th>الصف</th>
+            <th>الفصل</th>
+            <th>الحالة</th>
+            <th>المستخدم الذي أدخل الصورة</th>
+            <th>يوم/تاريخ الإرسال</th>
+            <th>يوم/تاريخ الاعتماد</th>
+            <th>اعتمدها</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${displayRows.map(row=>`
+            <tr data-photo-row="${row.id}">
+              <td>${row.status==='pending'
+                ? `<input class="photo-unified-check" type="checkbox" data-photo-check="${row.id}" ${selected.has(Number(row.id))?'checked':''}>`
+                : '—'}</td>
+              <td><img class="pending-student-photo" src="${row.image_data||''}" alt="صورة الطالب" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة"></td>
+              <td class="pending-student-name">${row.student_name||'—'}</td>
+              <td>${row.idno||'—'}</td>
+              <td>${row.grade||'—'}</td>
+              <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
+              <td>${row.status==='approved'
+                ? '<span style="color:#087f5b;font-weight:900">✅ معتمدة</span>'
+                : '<span style="color:#b7791f;font-weight:900">⏳ بانتظار الاعتماد</span>'}</td>
+              <td>${row.submitted_by||'—'}</td>
+              <td style="min-width:180px">${formatDayDate(row.created_at)}</td>
+              <td style="min-width:180px">${row.status==='approved'?formatDayDate(row.reviewed_at):'—'}</td>
+              <td>${row.status==='approved'?(row.reviewed_by||'الإدارة'):'—'}</td>
+              <td>
+                ${row.status==='pending'
+                  ? `<div class="pending-photo-actions">
+                       <button class="pending-approve" type="button" data-photo-approve="${row.id}">اعتماد</button>
+                       <button class="pending-reject" type="button" data-photo-reject="${row.id}">رفض</button>
+                     </div>`
+                  : '<span style="color:#087f5b;font-weight:800">تم الاعتماد</span>'}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    host.querySelectorAll('[data-photo-check]').forEach(chk=>chk.onchange=()=>{
+      const id=Number(chk.dataset.photoCheck);
+      if(chk.checked) selected.add(id); else selected.delete(id);
+      updateSummary();
     });
 
-    const updateSelectedText=()=>{
-      const el=$('pendingSelectedCount');
-      if(el) el.textContent=selected.size?`تم تحديد ${selected.size} طالب`:'لم يتم تحديد أي طالب';
-      const all=$('pendingSelectAll');
-      if(all){
-        all.checked=Boolean(enriched.length && selected.size===enriched.length);
-        all.indeterminate=Boolean(selected.size && selected.size<enriched.length);
+    host.querySelectorAll('[data-photo-approve]').forEach(btn=>btn.onclick=async()=>{
+      const id=Number(btn.dataset.photoApprove);
+      const row=rows.find(x=>Number(x.id)===id);
+      const old=btn.textContent; btn.disabled=true; btn.textContent='جاري الاعتماد...';
+      try{
+        const ok=await approveOne(row);
+        if(!ok){btn.disabled=false;btn.textContent=old;return}
+        selected.delete(id);
+        await reload();
+        toast('تم اعتماد الصورة وحفظها');
+      }catch(e){
+        console.error(e); alert('تعذر اعتماد الصورة');
+        btn.disabled=false;btn.textContent=old;
       }
-    };
+    });
 
-    const sortRows=(arr)=>{
-      const mode=$('pendingPhotoSort')?.value||'name';
-      return [...arr].sort((a,b)=>{
-        if(mode==='idno') return String(a.idno||'').localeCompare(String(b.idno||''),'ar',{numeric:true});
-        if(mode==='classroom'){
-          const ga=String(a.grade||''),gb=String(b.grade||'');
-          const gcmp=ga.localeCompare(gb,'ar',{numeric:true});
-          if(gcmp) return gcmp;
-          const ca=studentClassKey?studentClassKey(a.classroom):String(a.classroom||'');
-          const cb=studentClassKey?studentClassKey(b.classroom):String(b.classroom||'');
-          const ccmp=String(ca).localeCompare(String(cb),'ar',{numeric:true});
-          if(ccmp) return ccmp;
-        }
-        return String(a.student_name||'').localeCompare(String(b.student_name||''),'ar',{sensitivity:'base'});
-      });
-    };
+    host.querySelectorAll('[data-photo-reject]').forEach(btn=>btn.onclick=async()=>{
+      const id=Number(btn.dataset.photoReject);
+      if(!confirm('رفض هذه الصورة؟')) return;
+      try{
+        await cloudApi('reject_pending_photo',{id});
+        selected.delete(id);
+        await reload();
+        toast('تم رفض الصورة');
+      }catch(e){alert('تعذر رفض الصورة')}
+    });
 
-    const renderPendingTable=()=>{
-      if(!enriched.length){
-        host.innerHTML='<div class="hint" style="padding:24px;text-align:center">لا توجد صور بانتظار الاعتماد</div>';
-        updatePendingStudentPhotosCount();
-        updateSelectedText();
-        return;
-      }
-      const displayRows=sortRows(enriched);
-      host.innerHTML=`
-        <table class="pending-photo-table">
-          <thead>
-            <tr>
-              <th>تحديد</th>
-              <th>الصورة المرسلة</th>
-              <th>اسم الطالب</th>
-              <th>السجل المدني</th>
-              <th>الصف</th>
-              <th>الفصل</th>
-              <th>أرسلها</th>
-              <th>تاريخ الإرسال</th>
-              <th>الإجراءات</th>
-            </tr>
-          </thead>
+    updateSummary();
+  };
+
+  const reload=async()=>{
+    const r=await cloudApi('list_all_student_photos');
+    rows=Array.isArray(r.rows)?r.rows:[];
+    render();
+    updatePendingStudentPhotosCount().catch(()=>{});
+  };
+
+  $('photoUnifiedSort').onchange=render;
+  $('photoUnifiedStatus').onchange=()=>{
+    selected.clear();
+    render();
+  };
+
+  $('photoUnifiedSelectAll').onchange=e=>{
+    selected.clear();
+    if(e.target.checked){
+      currentRows().filter(r=>r.status==='pending').forEach(r=>selected.add(Number(r.id)));
+    }
+    render();
+  };
+
+  $('photoUnifiedBulkApprove').onclick=async()=>{
+    const chosen=rows.filter(r=>selected.has(Number(r.id)) && r.status==='pending');
+    if(!chosen.length){alert('حدد طالبًا واحدًا على الأقل من الصور المعلقة.');return}
+    if(!confirm(`هل تريد اعتماد الصور المحددة وعددها ${chosen.length}؟`)) return;
+    const btn=$('photoUnifiedBulkApprove');
+    const old=btn.textContent; btn.disabled=true;
+    let done=0,failed=0;
+    for(const row of chosen){
+      btn.textContent=`جاري الاعتماد ${done+failed} / ${chosen.length}`;
+      try{
+        const ok=await approveOne(row);
+        if(ok) done++;
+      }catch(e){console.error(e);failed++}
+    }
+    selected.clear();
+    btn.disabled=false;btn.textContent=old;
+    await reload();
+    if(failed) alert(`تم اعتماد ${done} صورة، وتعذر اعتماد ${failed} صورة.`);
+    else toast(`تم اعتماد ${done} صورة بنجاح`);
+  };
+
+  $('photoUnifiedPdfBtn').onclick=async()=>{
+    if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
+    const displayRows=currentRows();
+    if(!displayRows.length){alert('لا توجد بيانات لحفظها.');return}
+    const btn=$('photoUnifiedPdfBtn'); const old=btn.textContent;
+    btn.disabled=true;btn.textContent='جاري تجهيز PDF...';
+    try{
+      const school=getSchoolSettings();
+      const report=document.createElement('div');
+      report.dir='rtl';
+      report.style.cssText='font-family:Tahoma,Arial,sans-serif;color:#173b34;padding:18px;background:#fff;width:1500px';
+      report.innerHTML=`
+        <div style="text-align:center;margin-bottom:12px">
+          <div style="font-size:13px">${school.authority||''}</div>
+          <h2 style="margin:4px 0">${school.school||'المدرسة'}</h2>
+          <h3 style="margin:4px 0">كشف صور الطلاب — المعلقة والمعتمدة</h3>
+          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA')}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:8px">
+          <thead><tr style="background:#eaf6f2">
+            <th>م</th><th>الصورة</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف</th><th>الفصل</th>
+            <th>الحالة</th><th>المستخدم المدخل</th><th>يوم/تاريخ الإرسال</th><th>يوم/تاريخ الاعتماد</th><th>اعتمدها</th>
+          </tr></thead>
           <tbody>
-            ${displayRows.map(row=>`
-              <tr data-pending-id="${row.id}">
-                <td><input class="pending-row-check" type="checkbox" data-select-pending="${row.id}" ${selected.has(Number(row.id))?'checked':''}></td>
-                <td>
-                  <img class="pending-student-photo" src="${row.image_data}" alt="صورة الطالب" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة">
-                  ${row.hasPreviousPhoto?'<span class="pending-old-photo">لديه صورة سابقة</span>':''}
-                </td>
-                <td class="pending-student-name">${row.student_name||'بدون اسم'}</td>
+            ${displayRows.map((row,i)=>`
+              <tr>
+                <td>${i+1}</td>
+                <td>${row.image_data?`<img src="${row.image_data}" style="width:48px;height:58px;object-fit:cover;border-radius:5px">`:'—'}</td>
+                <td>${row.student_name||'—'}</td>
                 <td>${row.idno||'—'}</td>
                 <td>${row.grade||'—'}</td>
                 <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
-                <td>${row.submitted_by||'مستخدم'}</td>
-                <td style="min-width:155px">${row.created_at?new Date(row.created_at).toLocaleString('ar-SA'):'—'}</td>
-                <td>
-                  <div class="pending-photo-actions">
-                    <button class="pending-approve" type="button" data-approve-pending="${row.id}">اعتماد</button>
-                    <button class="pending-reject" type="button" data-reject-pending="${row.id}">رفض</button>
-                  </div>
-                </td>
+                <td>${row.status==='approved'?'معتمدة':'بانتظار الاعتماد'}</td>
+                <td>${row.submitted_by||'—'}</td>
+                <td>${formatDayDate(row.created_at)}</td>
+                <td>${row.status==='approved'?formatDayDate(row.reviewed_at):'—'}</td>
+                <td>${row.status==='approved'?(row.reviewed_by||'الإدارة'):'—'}</td>
               </tr>`).join('')}
           </tbody>
         </table>`;
+      report.querySelectorAll('th,td').forEach(td=>td.style.cssText='border:1px solid #cbd8d4;padding:4px;text-align:center;vertical-align:middle');
+      document.body.appendChild(report);
+      await html2pdf().set({
+        margin:5,
+        filename:'كشف-صور-الطلاب-المعلقة-والمعتمدة.pdf',
+        image:{type:'jpeg',quality:.96},
+        html2canvas:{scale:1.5,useCORS:true},
+        jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+        pagebreak:{mode:['css','legacy']}
+      }).from(report).save();
+      report.remove();
+      toast('تم حفظ الكشف PDF');
+    }catch(e){
+      console.error(e);alert('تعذر إنشاء ملف PDF');
+    }finally{
+      btn.disabled=false;btn.textContent=old;
+    }
+  };
 
-      host.querySelectorAll('[data-select-pending]').forEach(chk=>chk.onchange=()=>{
-        const id=Number(chk.dataset.selectPending);
-        if(chk.checked) selected.add(id); else selected.delete(id);
-        updateSelectedText();
-      });
-
-      host.querySelectorAll('[data-approve-pending]').forEach(btn=>btn.onclick=async()=>{
-        const id=Number(btn.dataset.approvePending);
-        const row=enriched.find(x=>Number(x.id)===id);
-        if(row?.hasPreviousPhoto && !confirm(`الطالب ${row.student_name} لديه صورة سابقة. هل تريد استبدال الصورة السابقة بالصورة الجديدة؟`)) return;
-        const old=btn.textContent; btn.disabled=true; btn.textContent='جاري الاعتماد...';
-        try{
-          const res=await cloudApi('approve_pending_photo',{id});
-          const blob=dataURLToBlob(res.image_data||'');
-          if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
-          recordApprovedStudentPhoto(row,res);
-          const idx=enriched.findIndex(x=>Number(x.id)===id);
-          if(idx>=0) enriched.splice(idx,1);
-          selected.delete(id);
-          await cloudPullToLocal();
-          renderPendingTable();
-          renderAdmin();
-          updatePendingStudentPhotosCount();
-          toast('تم اعتماد الصورة وحفظها');
-        }catch(e){
-          console.error(e); alert('تعذر اعتماد الصورة');
-          btn.disabled=false; btn.textContent=old;
-        }
-      });
-
-      host.querySelectorAll('[data-reject-pending]').forEach(btn=>btn.onclick=async()=>{
-        const id=Number(btn.dataset.rejectPending);
-        if(!confirm('رفض هذه الصورة؟')) return;
-        try{
-          await cloudApi('reject_pending_photo',{id});
-          const idx=enriched.findIndex(x=>Number(x.id)===id);
-          if(idx>=0) enriched.splice(idx,1);
-          selected.delete(id);
-          renderPendingTable();
-          updatePendingStudentPhotosCount();
-          toast('تم رفض الصورة');
-        }catch(e){alert('تعذر رفض الصورة')}
-      });
-      updateSelectedText();
-    };
-
-    $('pendingPhotoSort').onchange=renderPendingTable;
-    $('pendingSelectAll').onchange=e=>{
-      selected.clear();
-      if(e.target.checked) enriched.forEach(row=>selected.add(Number(row.id)));
-      renderPendingTable();
-    };
-
-    $('pendingBulkApprove').onclick=async()=>{
-      const ids=[...selected];
-      if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return}
-      const chosen=enriched.filter(row=>ids.includes(Number(row.id)));
-      const replacements=chosen.filter(row=>row.hasPreviousPhoto).length;
-      const msg=replacements
-        ? `سيتم اعتماد وحفظ ${chosen.length} صورة، ومنها ${replacements} طالب لديهم صور سابقة. هل تريد استبدال الصور السابقة بالصور الجديدة؟`
-        : `هل تريد اعتماد وحفظ الصور المحددة وعددها ${chosen.length}؟`;
-      if(!confirm(msg)) return;
-
-      const btn=$('pendingBulkApprove');
-      const old=btn.textContent;
-      btn.disabled=true;
-      btn.textContent=`جاري الحفظ 0 / ${chosen.length}`;
-      let done=0,failed=0;
-      for(const row of chosen){
-        try{
-          const res=await cloudApi('approve_pending_photo',{id:Number(row.id)});
-          const blob=dataURLToBlob(res.image_data||'');
-          if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
-          recordApprovedStudentPhoto(row,res);
-          const idx=enriched.findIndex(x=>Number(x.id)===Number(row.id));
-          if(idx>=0) enriched.splice(idx,1);
-          selected.delete(Number(row.id));
-          done++;
-        }catch(e){
-          console.error('bulk pending photo approve',row.id,e);
-          failed++;
-        }
-        btn.textContent=`جاري الحفظ ${done+failed} / ${chosen.length}`;
-      }
-      try{await cloudPullToLocal();}catch(e){console.warn(e)}
-      renderPendingTable();
-      renderAdmin();
-      updatePendingStudentPhotosCount();
-      btn.disabled=false;
-      btn.textContent=old;
-      if(failed) alert(`تم اعتماد ${done} صورة، وتعذر اعتماد ${failed} صورة.`);
-      else toast(`تم اعتماد وحفظ ${done} صورة بنجاح`);
-    };
-
-    renderPendingTable();
+  try{
+    await reload();
   }catch(e){
     console.error(e);
-    $('pendingPhotoList').innerHTML='<div class="hint" style="padding:24px;text-align:center">تعذر تحميل الصور المعلقة</div>';
+    $('pendingPhotoList').innerHTML='<div class="hint" style="padding:24px;text-align:center">تعذر تحميل كشف الصور</div>';
   }
 }
-
 if($('pendingStudentPhotosBtn')){
   $('pendingStudentPhotosBtn').style.display=isCurrentOwner()?'':'none';
   if(isCurrentOwner()) $('pendingStudentPhotosBtn').onclick=openPendingStudentPhotos;
