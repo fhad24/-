@@ -6770,6 +6770,49 @@ $('adminLoginBtn').onclick=async()=>{
     try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
   };
 
+  // مسار دخول مباشر وآمن للمستخدمين الأساسيين:
+  // اسم المستخدم = السجل المدني، وكلمة المرور = السجل المدني.
+  // لا يعتمد على حالة التخزين المحلي أو نجاح المزامنة السحابية.
+  const normalizedUserDirect=normalizeCivilId(user);
+  const normalizedPassDirect=normalizeCivilId(pass);
+  const builtinDirect=BUILTIN_ADMIN_USERS.find(x=>normalizeCivilId(x.username)===normalizedUserDirect);
+  if(builtinDirect && normalizedUserDirect && normalizedPassDirect===normalizedUserDirect){
+    const latest=getAdminUsers().find(x=>normalizeCivilId(x.username)===normalizedUserDirect) || builtinDirect;
+    localStorage.setItem('currentLocalAdminUser',JSON.stringify({
+      username:String(latest.username||builtinDirect.username||user),
+      civil_id:String(latest.civilId||latest.username||builtinDirect.username||user),
+      name:String(latest.name||builtinDirect.name||user),
+      role:String(latest.role||builtinDirect.role||'معلم'),
+      permissions:Array.isArray(latest.permissions)?latest.permissions:(builtinDirect.permissions||[]),
+      is_owner:false
+    }));
+    localStorage.removeItem('cloudAdminUser');
+    localStorage.removeItem('cloudAdminToken');
+
+    // افتح الواجهة فورًا، ثم حاول إنشاء جلسة سحابية في الخلفية دون تعطيل الدخول.
+    openDashboard();
+    try{
+      cloudApi('login',{username:String(latest.username||user),password:pass},false).then(cloudLogin=>{
+        if(cloudLogin?.token){
+          localStorage.setItem('cloudAdminToken',cloudLogin.token);
+          const merged={
+            ...(cloudLogin.user||{}),
+            username:String(latest.username||user),
+            civil_id:String(latest.civilId||latest.username||user),
+            name:String(latest.name||builtinDirect.name||user),
+            role:String(latest.role||builtinDirect.role||'معلم'),
+            permissions:Array.isArray(latest.permissions)?latest.permissions:(builtinDirect.permissions||[]),
+            is_owner:false
+          };
+          localStorage.setItem('cloudAdminUser',JSON.stringify(merged));
+        }
+      }).catch(e=>console.warn('direct user cloud login',e));
+    }catch(e){}
+    btn.disabled=false;
+    btn.textContent=oldText;
+    return;
+  }
+
   const hashText=async(s)=>{
     const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s)));
     return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
