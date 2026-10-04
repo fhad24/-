@@ -2022,7 +2022,7 @@
       }
     }
 
-    .user-permission-portal{max-width:980px;margin:0 auto 18px}
+    .user-permission-portal{max-width:1500px;margin:0 auto 18px}
     .user-welcome-card{
       display:flex;align-items:center;gap:16px;padding:22px 24px;border-radius:20px;
       background:#fff;direction:rtl
@@ -2033,20 +2033,21 @@
     }
     .user-welcome-card h2{margin:0 0 7px;font-size:24px;color:#173b34}
     .user-welcome-card div div{font-size:16px;color:#60736e;font-weight:700}
-    .user-permission-card{padding:22px 24px;border-radius:20px}
-    .user-permission-card h3{margin:0 0 16px;font-size:20px;text-align:center}
+    .user-permission-card{padding:18px 20px;border-radius:20px}
+    .user-permission-card h3{margin:0 0 14px;font-size:20px;text-align:center}
     .user-permission-buttons{
-      display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px
+      display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-start;align-items:center;direction:rtl
     }
     .user-permission-btn{
-      min-height:64px;border:1px solid #bfd2cd;border-radius:16px;background:#fff;
-      color:#173b34;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;
-      padding:12px 14px
+      min-height:72px;border:1px solid #173b34;border-radius:22px;background:#fff;
+      color:#173b34;font-family:inherit;font-size:17px;font-weight:900;cursor:pointer;
+      padding:14px 28px;min-width:170px;white-space:nowrap;box-shadow:none
     }
-    .user-permission-btn:hover{background:#eef8f5;border-color:#0f7665}
-    .user-permission-btn.primary{background:#0f7665;color:#fff;border-color:#0f7665}
+    .user-permission-btn:hover{background:#f5faf8;border-color:#0f7665}
+    .user-permission-btn.primary{background:#fff;color:#173b34;border-color:#173b34}
     @media(max-width:720px){
-      .user-permission-buttons{grid-template-columns:1fr}
+      .user-permission-buttons{display:grid;grid-template-columns:1fr;gap:10px}
+      .user-permission-btn{width:100%;min-width:0;min-height:58px;border-radius:16px;font-size:15px}
       .user-welcome-card h2{font-size:20px}
     }
 
@@ -5895,9 +5896,9 @@ function configureUserDashboard(){
     ['settings','الإعدادات ⚙️','settings']
   ];
   const host=$('userPermissionButtons');
-  host.innerHTML=defs.filter(x=>perms.has(x[0])).map((x,i)=>
-    `<button type="button" class="user-permission-btn ${i===0?'primary':''}" data-user-action="${x[2]}">${x[1]}</button>`
-  ).join('') || '<div class="hint" style="grid-column:1/-1;padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
+  host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
+    `<button type="button" class="user-permission-btn" data-user-action="${x[2]}">${x[1]}</button>`
+  ).join('') || '<div class="hint" style="padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
 
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
     const action=btn.dataset.userAction;
