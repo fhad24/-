@@ -3577,7 +3577,7 @@
           <input id="adminSearch" placeholder="بحث بالاسم أو الهوية أو الجوال">
         </div>
 
-        <button class="btn btn-primary add-student-btn" id="addStudentBtn">+ إضافة طالب</button>
+        <button class="btn btn-primary add-student-btn" id="addStudentBtn">+ إضافة طالب/تعديل</button>
         <button class="admin-outline-btn" id="pendingStudentPhotosBtn" type="button" style="width:100%;margin:-4px 0 14px">📷 صور الطلاب بانتظار اعتماد الإدارة <span id="pendingStudentPhotosCount"></span></button>
 
         <div class="admin-bulk-actions">
@@ -3642,9 +3642,15 @@
 <div id="addStudentModal" class="modal-backdrop hidden">
   <div class="add-student-modal-card">
     <button type="button" class="modal-close-x" id="closeAddStudentModal" aria-label="إغلاق">×</button>
-    <h2>إضافة طالب</h2>
-    <div class="lead">ابدأ باختيار بيانات الطالب: الصف الدراسي، الفصل، ثم اسم الطالب. بعد ذلك استخدم مسح الكاميرا لالتقاط الصورة الجديدة ومقارنتها بالصورة السابقة قبل الحفظ أو الإلغاء.</div>
+    <h2 id="addStudentModalTitle">إضافة طالب/تعديل</h2>
+    <div class="lead">من هذه الصفحة يمكنك إضافة طالب جديد أو اختيار طالب موجود وتعديل بياناته. ويمكنك أيضًا التقاط صورة جديدة بالكاميرا عند الحاجة.</div>
 
+    <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" id="addStudentModeNew">➕ إضافة طالب جديد</button>
+      <button type="button" class="btn btn-outline" id="addStudentModeEdit">✏️ تعديل طالب موجود</button>
+    </div>
+
+    <div id="existingStudentPickerBlock">
     <div class="student-picker-grid">
       <div>
         <label>الصف الدراسي</label>
@@ -3676,6 +3682,39 @@
         <span class="student-select-arrow">⌄</span>
       </button>
       <div id="studentCardGrid" class="student-card-grid hidden"></div>
+    </div>
+
+    </div>
+
+    <div id="addEditStudentFields" style="margin:16px 0;padding:14px;border:1px solid #d5e2de;border-radius:14px;background:#fbfdfc">
+      <div style="font-weight:900;margin-bottom:10px">بيانات الطالب</div>
+      <div class="student-picker-grid">
+        <div>
+          <label>اسم الطالب</label>
+          <input id="addEditStudentFullName" placeholder="اسم الطالب الرباعي">
+        </div>
+        <div>
+          <label>السجل المدني</label>
+          <input id="addEditStudentIdno" inputmode="numeric" maxlength="10" placeholder="رقم الهوية / الإقامة">
+        </div>
+        <div>
+          <label>رقم الجوال</label>
+          <input id="addEditStudentPhone" inputmode="tel" placeholder="05xxxxxxxx">
+        </div>
+        <div>
+          <label>الصف الدراسي</label>
+          <select id="addEditStudentGrade">
+            <option value="">اختر الصف</option>
+            <option>الأول الثانوي</option>
+            <option>الثاني الثانوي</option>
+            <option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <input id="addEditStudentClassroom" placeholder="مثال: 1">
+        </div>
+      </div>
     </div>
 
     <div class="face-verify-box">
@@ -5948,7 +5987,7 @@ function configureUserDashboard(){
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
     ['reports','التقارير 📊','reports'],
-    ['addStudent','إضافة طالب ➕','addStudent'],
+    ['addStudent','إضافة طالب/تعديل ✏️➕','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['photos','تصوير الطلاب 📷','photos'],
@@ -7996,7 +8035,7 @@ function ensureAdminSettings(){
 
         <h3 style="text-align:center;font-size:20px;margin:18px 0 12px">② اختر الصلاحيات</h3>
         <div class="admin-permissions">
-          <label class="admin-permission">إضافة طالب <input class="admin-new-perm" value="addStudent" type="checkbox" checked></label>
+          <label class="admin-permission">إضافة طالب/تعديل <input class="admin-new-perm" value="addStudent" type="checkbox" checked></label>
           <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
           <label class="admin-permission">حذف الطلاب <input class="admin-new-perm" value="deleteStudents" type="checkbox" checked></label>
           <label class="admin-permission">تحضير الطلاب <input class="admin-new-perm" value="attendance" type="checkbox" checked></label>
@@ -8672,7 +8711,7 @@ function openUserPermissionEditor(username){
   modal.className='user-perm-modal';
   const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const permItems=[
-    ['addStudent','إضافة طالب'],
+    ['addStudent','إضافة طالب/تعديل'],
     ['import','استيراد البيانات (Excel/صور/باركود)'],
     ['deleteStudents','حذف الطلاب'],
     ['attendance','تحضير الطلاب'],
@@ -11821,6 +11860,21 @@ async function processNewStudentFace(file){
   addStudentNewFaceBlob=file;
   addStudentFaceVerified=false;
 
+  if(addStudentEntryMode==='new'){
+    const newImg=$('newStudentFace');
+    const newEmpty=$('newStudentFaceEmpty');
+    const newUrl=URL.createObjectURL(file);
+    newImg.src=newUrl;
+    newImg.onload=()=>setTimeout(()=>URL.revokeObjectURL(newUrl),3000);
+    newImg.classList.remove('hidden');
+    newEmpty.classList.add('hidden');
+    addStudentFaceVerified=true;
+    $('faceMatchStatus').className='face-match-status ok';
+    $('faceMatchStatus').textContent='تم التقاط صورة الطالب الجديد';
+    $('saveMatchedStudentBtn').disabled=false;
+    return;
+  }
+
   const selectedBefore=String(addStudentSelectedId||$('addStudentName')?.value||'');
   const selectedStudent=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(selectedBefore));
 
@@ -11919,9 +11973,47 @@ async function processNewStudentFace(file){
   }
 }
 
+let addStudentEntryMode='new';
+let addStudentOriginalId='';
+
+function fillAddEditStudentFields(student){
+  $('addEditStudentFullName').value=student?.name||'';
+  $('addEditStudentIdno').value=student?.idno||'';
+  $('addEditStudentPhone').value=student?.phone||'';
+  $('addEditStudentGrade').value=student?.grade||'';
+  $('addEditStudentClassroom').value=student?.classroom||'';
+}
+
+function setAddStudentEntryMode(mode){
+  addStudentEntryMode=mode==='edit'?'edit':'new';
+  const edit=addStudentEntryMode==='edit';
+  $('existingStudentPickerBlock').style.display=edit?'':'none';
+  $('addStudentModeNew').className='btn '+(!edit?'btn-primary':'btn-outline');
+  $('addStudentModeEdit').className='btn '+(edit?'btn-primary':'btn-outline');
+  $('addStudentModalTitle').textContent=edit?'تعديل بيانات طالب':'إضافة طالب جديد';
+  addStudentOriginalId='';
+  addStudentSelectedId='';
+  addStudentNewFaceBlob=null;
+  addStudentFaceVerified=false;
+  addStudentNeedsApproval=false;
+  fillAddEditStudentFields(null);
+  $('matchedStudentInfo').classList.remove('show');
+  $('oldStudentFace').classList.add('hidden');
+  $('oldStudentFaceEmpty').classList.remove('hidden');
+  $('oldStudentFaceEmpty').textContent=edit?'اختر الطالب لعرض صورته السابقة':'لا توجد صورة سابقة لطالب جديد';
+  $('newStudentFace').classList.add('hidden');
+  $('newStudentFaceEmpty').classList.remove('hidden');
+  $('newStudentFaceEmpty').textContent='التقط صورة بالكاميرا عند الحاجة';
+  $('faceMatchStatus').className='face-match-status wait';
+  $('faceMatchStatus').textContent=edit?'اختر طالبًا لتعديل بياناته':'أدخل بيانات الطالب الجديد';
+  $('saveMatchedStudentBtn').disabled=false;
+  $('saveMatchedStudentBtn').textContent=edit?'حفظ التعديلات':'إضافة الطالب';
+}
+
 function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
   ensureFaceModels().catch(()=>{});
+  setAddStudentEntryMode('new');
   $('addStudentGrade').value='';
   if($('addStudentSearch')) $('addStudentSearch').value='';
   $('addStudentClass').innerHTML='<option value="">الكل</option>';
@@ -11944,13 +12036,9 @@ function openAddStudentModal(){
   addStudentNewFaceBlob=null;
   addStudentFaceVerified=false;
   addStudentNeedsApproval=false;
-  $('saveMatchedStudentBtn').textContent='حفظ الطالب';
   $('matchedStudentName').textContent='—';
   $('matchedStudentId').textContent='—';
   $('matchedStudentInfo').classList.remove('show');
-  $('saveMatchedStudentBtn').disabled=true;
-  $('faceMatchStatus').className='face-match-status wait';
-  $('faceMatchStatus').textContent='بانتظار مسح الطالب بالكاميرا';
 }
 
 function closeAddStudentModal(){
@@ -11958,6 +12046,8 @@ function closeAddStudentModal(){
 }
 
 if($('addStudentBtn')) $('addStudentBtn').onclick=openAddStudentModal;
+if($('addStudentModeNew')) $('addStudentModeNew').onclick=()=>setAddStudentEntryMode('new');
+if($('addStudentModeEdit')) $('addStudentModeEdit').onclick=()=>setAddStudentEntryMode('edit');
 if($('closeAddStudentModal')) $('closeAddStudentModal').onclick=closeAddStudentModal;
 if($('cancelAddStudentBtn')) $('cancelAddStudentBtn').onclick=closeAddStudentModal;
 
@@ -11984,9 +12074,13 @@ if($('addStudentName')) $('addStudentName').onchange=async ()=>{
   addStudentSelectedId=$('addStudentName').value;
   const student=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(addStudentSelectedId));
   if(student){
+    addStudentOriginalId=String(student.idno||'');
+    fillAddEditStudentFields(student);
     $('matchedStudentName').textContent=student.name||'—';
     $('matchedStudentId').textContent=student.idno||'—';
     $('matchedStudentInfo').classList.add('show');
+    $('saveMatchedStudentBtn').disabled=false;
+    $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
   }else{
     $('matchedStudentInfo').classList.remove('show');
   }
@@ -12139,54 +12233,85 @@ if($('cancelLiveCameraBtn')) $('cancelLiveCameraBtn').onclick=async ()=>{
 };
 
 if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
-  if(!addStudentSelectedId || !addStudentFaceVerified || !addStudentNewFaceBlob){
-    toast('التقط صورة الطالب أولاً');
+  const name=String($('addEditStudentFullName')?.value||'').trim();
+  const idno=normalizeCivilId($('addEditStudentIdno')?.value||'');
+  const phone=String($('addEditStudentPhone')?.value||'').trim();
+  const grade=String($('addEditStudentGrade')?.value||'').trim();
+  const classroom=String($('addEditStudentClassroom')?.value||'').trim();
+
+  if(!name || !idno || !grade || !classroom){
+    alert('أكمل اسم الطالب والسجل المدني والصف والفصل.');
     return;
   }
-  const students=getStudents();
-  const idx=students.findIndex(s=>normalizeCivilId(s.idno)===normalizeCivilId(addStudentSelectedId));
-  if(idx<0){ toast('لم يتم العثور على الطالب'); return; }
 
+  const students=getStudents();
   const btn=$('saveMatchedStudentBtn');
   const oldText=btn.textContent;
   btn.disabled=true;
   btn.textContent='جاري الحفظ...';
 
   try{
-    if(addStudentNeedsApproval){
-      const imageData=await blobToDataURL(addStudentNewFaceBlob);
-      const cloudUser=(()=>{try{return JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){return {}}})();
-      await cloudApi('submit_pending_photo',{
-        idno:String(students[idx].idno),
-        student_name:students[idx].name||'',
-        image_data:imageData,
-        submitted_by:cloudUser.name||getAdminProfile().displayName||''
-      },false);
-
-      students[idx]={...students[idx],photoPendingApproval:true};
-      localStorage.setItem('students',JSON.stringify(students));
+    if(addStudentEntryMode==='new'){
+      if(students.some(s=>normalizeCivilId(s.idno)===idno)){
+        alert('لا يمكن الإضافة: السجل المدني موجود مسبقًا. اختر وضع تعديل طالب موجود.');
+        return;
+      }
+      const rec={
+        name,idno,phone,grade,classroom,
+        registered:!!addStudentNewFaceBlob,
+        verification:addStudentNewFaceBlob?'مؤكد':'غير مؤكد',
+        hasFace:!!addStudentNewFaceBlob,
+        registrationDate:new Date().toISOString()
+      };
+      students.push(rec);
+      saveStudents(students);
+      if(addStudentNewFaceBlob) await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
+      try{renderAdmin()}catch(e){}
       closeAddStudentModal();
-      toast('تم إرسال صورة الطالب للإدارة لاعتمادها');
-      updatePendingStudentPhotosCount().catch(()=>{});
+      toast('تمت إضافة الطالب بنجاح');
       return;
     }
 
-    await saveStudentPhoto(`${addStudentSelectedId}:face`,addStudentNewFaceBlob);
-    students[idx]={
-      ...students[idx],
-      hasFace:true,
-      verification:'مؤكد',
-      registered:true,
-      verifiedByFace:true,
-      faceVerifiedAt:new Date().toISOString()
-    };
+    const oldId=normalizeCivilId(addStudentOriginalId||addStudentSelectedId);
+    const idx=students.findIndex(s=>normalizeCivilId(s.idno)===oldId);
+    if(idx<0){
+      alert('اختر طالبًا موجودًا أولًا.');
+      return;
+    }
+    if(idno!==oldId && students.some((s,i)=>i!==idx && normalizeCivilId(s.idno)===idno)){
+      alert('لا يمكن تغيير السجل المدني: الرقم مستخدم لطالب آخر.');
+      return;
+    }
+
+    const old={...students[idx]};
+    students[idx]={...old,name,idno,phone,grade,classroom};
     saveStudents(students);
-    renderAdmin();
+
+    if(idno!==oldId){
+      try{
+        const oldFace=await getStudentPhoto(`${oldId}:face`);
+        if(oldFace) await saveStudentPhoto(`${idno}:face`,oldFace,true);
+        const oldIdPhoto=await getStudentPhoto(`${oldId}:id`);
+        if(oldIdPhoto) await saveStudentPhoto(`${idno}:id`,oldIdPhoto,true);
+      }catch(e){console.warn('move student photos',e)}
+    }
+
+    if(addStudentNewFaceBlob){
+      if(!addStudentFaceVerified){
+        alert('الصورة الجديدة لم تجتز التحقق. أعد التصوير أو احفظ التعديلات بدون تغيير الصورة.');
+        return;
+      }
+      await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
+      students[idx]={...students[idx],hasFace:true,verification:'مؤكد',registered:true,verifiedByFace:true,faceVerifiedAt:new Date().toISOString()};
+      saveStudents(students);
+    }
+
+    try{renderAdmin()}catch(e){}
     closeAddStudentModal();
-    toast('تم التحقق من هوية الطالب وحفظه');
+    toast('تم تعديل بيانات الطالب بنجاح');
   }catch(e){
     console.error(e);
-    alert('تعذر حفظ الصورة. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.');
+    alert('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
   }finally{
     btn.disabled=false;
     btn.textContent=oldText;
