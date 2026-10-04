@@ -152,6 +152,12 @@
       padding:12px 18px;font-size:14px;font-weight:700;min-height:52px;cursor:pointer;white-space:nowrap;flex:0 0 auto
     }
     .admin-outline-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    body.user-attendance-only .admin-data-view{display:none!important}
+    body.user-attendance-only .admin-summary-row,
+    body.user-attendance-only .admin-mini-row,
+    body.user-attendance-only .admin-data-card,
+    body.user-attendance-only .admin-filters,
+    body.user-attendance-only .add-student-btn{display:none!important}
     .admin-summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
     .admin-summary-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
     .admin-summary-card .icon{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:28px;background:#edf6f3}
@@ -5785,6 +5791,25 @@ function hideAllUserFeatureViews(){
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
   $('attendancePanel')?.classList.add('hidden');
   document.querySelector('.admin-toolbar')?.classList.add('hidden');
+  document.body.classList.remove('user-attendance-only');
+}
+
+function applyUserAttendancePrivacy(){
+  if(isCurrentOwner()){
+    document.body.classList.remove('user-attendance-only');
+    return;
+  }
+  document.body.classList.add('user-attendance-only');
+  document.querySelectorAll('.admin-data-view').forEach(el=>{
+    el.classList.add('hidden');
+    el.style.display='none';
+  });
+  const summary=document.querySelector('.admin-summary-row');
+  const mini=document.querySelector('.admin-mini-row');
+  const dataCard=document.querySelector('.admin-data-card');
+  const filters=document.querySelector('.admin-filters');
+  const addBtn=document.querySelector('.add-student-btn');
+  [summary,mini,dataCard,filters,addBtn].forEach(el=>{if(el) el.style.display='none'});
 }
 
 function referralGradePermissionKey(grade){
@@ -5815,6 +5840,7 @@ function configureUserDashboard(){
   const editTab=document.querySelector('.tab[data-page="edit"]');
 
   if(owner){
+    document.body.classList.remove('user-attendance-only');
     portal.classList.add('hidden');
     registerTab?.classList.remove('hidden');
     editTab?.classList.remove('hidden');
@@ -5861,12 +5887,17 @@ function configureUserDashboard(){
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
     const action=btn.dataset.userAction;
     if(action==='attendance'){
+      applyUserAttendancePrivacy();
       $('attendancePanel')?.classList.remove('hidden');
       renderAttendancePage();
       return;
     }
     if(action==='data'){
-      document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.remove('hidden'));
+      document.body.classList.remove('user-attendance-only');
+      document.querySelectorAll('.admin-data-view').forEach(el=>{
+        el.classList.remove('hidden');
+        el.style.display='';
+      });
       return;
     }
     if(action==='addStudent'){
@@ -7371,6 +7402,8 @@ function showAdminView(view){
   if(view==='data') $('adminDataTab').classList.add('active');
   if(view==='attendance'){
     $('adminAttendanceTab').classList.add('active');
+    if(!isCurrentOwner()) applyUserAttendancePrivacy();
+    else document.body.classList.remove('user-attendance-only');
     renderAttendancePage();
   }
 }
