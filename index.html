@@ -234,8 +234,34 @@
 
   
     .add-student-modal-card{
-      width:min(540px,94vw);max-height:92vh;overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:28px;
-      padding:28px 30px 26px;box-shadow:0 22px 70px #0005;position:relative
+      width:min(1120px,97vw);max-height:94vh;overflow-y:auto;overflow-x:hidden;background:#fff;border-radius:22px;
+      padding:22px;box-shadow:0 22px 70px #0005;position:relative
+    }
+    .add-edit-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+    .add-edit-list-side,.add-edit-details-side{min-width:0}
+    .add-edit-list-side h3,.add-edit-details-side h3{font-size:16px;margin:0 0 9px}
+    .add-edit-filter-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:8px 0}
+    .add-edit-filter-row button{border:1px solid #d4e0dd;background:#fff;padding:10px;font-family:inherit;font-weight:800}
+    .add-edit-filter-row button.active{background:#0f7665;color:#fff}
+    .add-edit-class-row{margin-bottom:8px}
+    .add-edit-class-row select{height:44px}
+    .add-edit-sort-row{display:grid;grid-template-columns:1.4fr 1fr .9fr 1fr;gap:6px;margin:8px 0}
+    .add-edit-sort-row button{height:42px;border:1px solid #cfdeda;border-radius:10px;background:#fff;font-family:inherit;font-weight:800;color:#294a43}
+    .add-edit-sort-row button.active{background:#e6f4f0;color:#0f7665;border-color:#0f7665}
+    .add-edit-student-list{border:1px solid #d4e0dd;border-radius:10px;max-height:500px;overflow:auto;background:#fff}
+    .add-edit-list-count{font-size:11px;color:#6d7f7a;margin-top:7px}
+    .add-edit-data-card{border:1px solid #d4e0dd;border-radius:12px;background:#fbfdfc;padding:12px;margin-bottom:12px}
+    .add-edit-data-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .add-edit-data-grid .wide{grid-column:1/-1}
+    .add-edit-data-grid label{font-size:12px;font-weight:800;margin-bottom:5px}
+    .add-edit-data-grid input,.add-edit-data-grid select{height:46px;border-radius:10px;background:#fff}
+    .add-edit-list-side .student-search-input{height:46px}
+    .add-edit-new-note{font-size:11px;color:#60736e;background:#eef8f5;border-radius:9px;padding:8px 10px;margin-bottom:10px}
+    @media(max-width:800px){
+      .add-edit-layout{display:block}
+      .add-edit-details-side{margin-top:16px}
+      .add-edit-data-grid{grid-template-columns:1fr}
+      .add-edit-data-grid .wide{grid-column:auto}
     }
     .add-student-modal-card h2{font-size:25px;text-align:center;margin:8px 0 10px}
     .add-student-modal-card .lead{font-size:15px;line-height:1.9;text-align:center;color:#667c76;margin-bottom:18px}
@@ -3643,75 +3669,66 @@
   <div class="add-student-modal-card">
     <button type="button" class="modal-close-x" id="closeAddStudentModal" aria-label="إغلاق">×</button>
     <h2 id="addStudentModalTitle">إضافة طالب/تعديل</h2>
-    <div class="lead">أدخل بيانات طالب جديد، أو ابحث باسم الطالب أو السجل المدني ثم اختر الطالب الموجود لتظهر بياناته في نفس الخانات.</div>
+    <div class="lead">اختر طالبًا من قاعدة الطلاب لتعديل بياناته، أو اترك الاختيار بدون تحديد وأدخل بيانات طالب جديد.</div>
 
-    <div id="addEditStudentFields" style="margin:16px 0;padding:14px;border:1px solid #d5e2de;border-radius:14px;background:#fbfdfc">
-      <div class="student-picker-grid">
-        <div>
-          <label>اسم الطالب</label>
-          <input id="addEditStudentFullName" autocomplete="off" placeholder="اكتب اسم الطالب">
+    <div class="add-edit-layout">
+      <div class="add-edit-list-side">
+        <h3>الأسماء من قاعدة الطلاب</h3>
+        <input id="addStudentSearch" class="student-search-input" placeholder="ابحث بالاسم أو رقم الهوية...">
+        <div class="add-edit-filter-row">
+          <button type="button" class="add-student-grade-filter active" data-add-grade="">الكل</button>
+          <button type="button" class="add-student-grade-filter" data-add-grade="الأول الثانوي">الأول</button>
+          <button type="button" class="add-student-grade-filter" data-add-grade="الثاني الثانوي">الثاني</button>
+          <button type="button" class="add-student-grade-filter" data-add-grade="الثالث الثانوي">الثالث</button>
         </div>
-        <div>
-          <label>السجل المدني</label>
-          <input id="addEditStudentIdno" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="رقم الهوية / الإقامة">
+        <div class="add-edit-class-row">
+          <select id="addStudentClassFilter"><option value="">كل الفصول</option></select>
         </div>
-        <div>
-          <label>رقم الجوال</label>
-          <input id="addEditStudentPhone" inputmode="tel" placeholder="05xxxxxxxx">
+        <div class="add-edit-sort-row">
+          <button type="button" class="add-student-sort active" data-add-sort="name">اسم الطالب ▲</button>
+          <button type="button" class="add-student-sort" data-add-sort="class">الصف</button>
+          <button type="button" class="add-student-sort" data-add-sort="photo">الصورة</button>
+          <button type="button" class="add-student-sort" data-add-sort="idno">السجل</button>
         </div>
-        <div>
-          <label>الصف الدراسي</label>
-          <select id="addEditStudentGrade">
-            <option value="">اختر الصف</option>
-            <option>الأول الثانوي</option>
-            <option>الثاني الثانوي</option>
-            <option>الثالث الثانوي</option>
-          </select>
-        </div>
-        <div>
-          <label>الفصل</label>
-          <input id="addEditStudentClassroom" placeholder="مثال: 1">
-        </div>
+        <div id="studentCardGrid" class="add-edit-student-list"></div>
+        <div id="addStudentListCount" class="add-edit-list-count">المعروض: 0</div>
       </div>
 
-      <div class="student-cards-title" style="margin-top:14px">البحث عن طالب موجود للتعديل</div>
-      <input id="addStudentSearch" class="student-search-input" placeholder="ابحث باسم الطالب أو السجل المدني">
-      <div id="studentCardGrid" class="student-card-grid hidden"></div>
-    </div>
-
-    <div class="face-verify-box">
-      <button type="button" class="scan-camera-btn" id="scanStudentCameraBtn">📷 مسح بالكاميرا</button>
-      
-      <div class="face-compare-grid">
-        <div class="face-panel">
-          <div class="face-title">الصورة الجديدة</div>
-          <img id="newStudentFace" class="hidden" alt="الصورة الجديدة">
-          <div id="newStudentFaceEmpty" class="face-placeholder">التقط صورة بالكاميرا أولاً</div>
+      <div class="add-edit-details-side">
+        <h3>بيانات الطالب والتحقق بالصورة</h3>
+        <div class="add-edit-new-note">لإضافة طالب جديد: اكتب البيانات مباشرة بدون اختيار اسم من القائمة.</div>
+        <div id="addEditStudentFields" class="add-edit-data-card">
+          <div class="add-edit-data-grid">
+            <div class="wide"><label>اسم الطالب</label><input id="addEditStudentFullName" autocomplete="off" placeholder="اسم الطالب الرباعي"></div>
+            <div><label>السجل المدني</label><input id="addEditStudentIdno" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="رقم الهوية / الإقامة"></div>
+            <div><label>رقم الجوال</label><input id="addEditStudentPhone" inputmode="tel" placeholder="05xxxxxxxx"></div>
+            <div><label>الصف الدراسي</label><select id="addEditStudentGrade"><option value="">اختر الصف</option><option>الأول الثانوي</option><option>الثاني الثانوي</option><option>الثالث الثانوي</option></select></div>
+            <div><label>الفصل</label><input id="addEditStudentClassroom" placeholder="مثال: 1"></div>
+          </div>
         </div>
-        <div class="face-panel">
-          <div class="face-title">الصورة السابقة</div>
-          <img id="oldStudentFace" class="hidden" alt="الصورة السابقة">
-          <div id="oldStudentFaceEmpty" class="face-placeholder">سيتم إظهار الصورة المطابقة من قاعدة البيانات</div>
+        <div class="face-verify-box" style="margin-top:0">
+          <div class="face-compare-grid">
+            <div class="face-panel"><div class="face-title">الصورة السابقة</div><img id="oldStudentFace" class="hidden" alt="الصورة السابقة"><div id="oldStudentFaceEmpty" class="face-placeholder">لا توجد صورة سابقة</div></div>
+            <div class="face-panel"><div class="face-title">الصورة الجديدة</div><img id="newStudentFace" class="hidden" alt="الصورة الجديدة"><div id="newStudentFaceEmpty" class="face-placeholder">التقط صورة جديدة</div></div>
+          </div>
+          <button type="button" class="scan-camera-btn" id="scanStudentCameraBtn">📷 التقاط صورة بالكاميرا</button>
+          <div id="faceMatchStatus" class="face-match-status wait">اختر طالبًا أو أدخل بيانات طالب جديد.</div>
+          <div id="matchedStudentInfo" class="matched-student-info">
+            <div class="matched-student-title">الطالب المحدد</div>
+            <div class="matched-student-row">
+              <div class="matched-student-field"><span>اسم الطالب</span><b id="matchedStudentName">—</b></div>
+              <div class="matched-student-field"><span>السجل المدني</span><b id="matchedStudentId">—</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="add-student-actions">
+          <button type="button" class="btn btn-primary" id="saveMatchedStudentBtn">حفظ</button>
+          <button type="button" class="btn btn-outline" id="cancelAddStudentBtn">إلغاء</button>
         </div>
       </div>
-
-      <div id="faceMatchStatus" class="face-match-status wait">بانتظار مسح الطالب بالكاميرا</div>
-      <div id="matchedStudentInfo" class="matched-student-info">
-        <div class="matched-student-title">بيانات الطالب الذي تم التعرف عليه</div>
-        <div class="matched-student-row">
-          <div class="matched-student-field"><span>اسم الطالب</span><b id="matchedStudentName">—</b></div>
-          <div class="matched-student-field"><span>السجل المدني / رقم الهوية</span><b id="matchedStudentId">—</b></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="add-student-actions">
-      <button type="button" class="btn btn-primary" id="saveMatchedStudentBtn" disabled>حفظ الطالب</button>
-      <button type="button" class="btn btn-outline" id="cancelAddStudentBtn">إلغاء</button>
     </div>
   </div>
 </div>
-
 
 <div id="attendanceStudentModal" class="modal-backdrop hidden">
   <div class="attendance-modal-card">
@@ -11924,6 +11941,9 @@ async function processNewStudentFace(file){
 
 let addStudentEntryMode='new';
 let addStudentOriginalId='';
+let addStudentListGrade='';
+let addStudentListClass='';
+let addStudentListSort='name';
 
 function fillAddEditStudentFields(student){
   $('addEditStudentFullName').value=student?.name||'';
@@ -11932,127 +11952,75 @@ function fillAddEditStudentFields(student){
   $('addEditStudentGrade').value=student?.grade||'';
   $('addEditStudentClassroom').value=student?.classroom||'';
 }
-
 function resetUnifiedAddEditStudentForm(){
-  addStudentEntryMode='new';
-  addStudentOriginalId='';
-  addStudentSelectedId='';
-  addStudentNewFaceBlob=null;
-  addStudentFaceVerified=false;
-  addStudentNeedsApproval=false;
+  addStudentEntryMode='new'; addStudentOriginalId=''; addStudentSelectedId='';
+  addStudentNewFaceBlob=null; addStudentFaceVerified=false; addStudentNeedsApproval=false;
   fillAddEditStudentFields(null);
-  if($('addStudentSearch')) $('addStudentSearch').value='';
-  $('matchedStudentName').textContent='—';
-  $('matchedStudentId').textContent='—';
+  $('matchedStudentName').textContent='—'; $('matchedStudentId').textContent='—';
   $('matchedStudentInfo').classList.remove('show');
-  $('oldStudentFace').classList.add('hidden');
-  $('oldStudentFaceEmpty').classList.remove('hidden');
-  $('oldStudentFaceEmpty').textContent='لا توجد صورة سابقة لطالب جديد';
-  $('newStudentFace').classList.add('hidden');
-  $('newStudentFaceEmpty').classList.remove('hidden');
-  $('newStudentFaceEmpty').textContent='التقط صورة بالكاميرا عند الحاجة';
-  $('faceMatchStatus').className='face-match-status wait';
-  $('faceMatchStatus').textContent='أدخل بيانات الطالب أو اختر طالبًا موجودًا للتعديل';
-  $('saveMatchedStudentBtn').disabled=false;
-  $('saveMatchedStudentBtn').textContent='حفظ';
+  $('oldStudentFace').classList.add('hidden'); $('oldStudentFaceEmpty').classList.remove('hidden'); $('oldStudentFaceEmpty').textContent='لا توجد صورة سابقة';
+  $('newStudentFace').classList.add('hidden'); $('newStudentFaceEmpty').classList.remove('hidden'); $('newStudentFaceEmpty').textContent='التقط صورة جديدة';
+  $('faceMatchStatus').className='face-match-status wait'; $('faceMatchStatus').textContent='اختر طالبًا أو أدخل بيانات طالب جديد.';
+  $('saveMatchedStudentBtn').disabled=false; $('saveMatchedStudentBtn').textContent='حفظ';
 }
-
+function refreshAddStudentClassFilter(){
+  const sel=$('addStudentClassFilter'); if(!sel) return;
+  const classes=[...new Set(getStudents().filter(s=>!addStudentListGrade||studentGradeKey(s.grade)===studentGradeKey(addStudentListGrade)).map(s=>studentClassKey(s.classroom)).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  sel.innerHTML='<option value="">كل الفصول</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
+}
 async function selectExistingStudentForUnifiedForm(student){
   if(!student) return;
-  addStudentEntryMode='edit';
-  addStudentOriginalId=String(student.idno||'');
-  addStudentSelectedId=String(student.idno||'');
+  addStudentEntryMode='edit'; addStudentOriginalId=String(student.idno||''); addStudentSelectedId=String(student.idno||'');
   fillAddEditStudentFields(student);
-  $('matchedStudentName').textContent=student.name||'—';
-  $('matchedStudentId').textContent=student.idno||'—';
-  $('matchedStudentInfo').classList.add('show');
-  $('studentCardGrid').classList.add('hidden');
-  if($('addStudentSearch')) $('addStudentSearch').value=student.name||'';
-  $('saveMatchedStudentBtn').disabled=false;
-  $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
+  $('matchedStudentName').textContent=student.name||'—'; $('matchedStudentId').textContent=student.idno||'—'; $('matchedStudentInfo').classList.add('show');
+  $('saveMatchedStudentBtn').disabled=false; $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
   await loadSelectedOldStudentFace();
+  renderAddStudentDatabaseList();
 }
-
-function getUnifiedStudentMatches(query=''){
-  const q=normalizeStudentSearch(query);
-  if(!q) return [];
-  return dedupeStudents(getStudents()).filter(s=>{
-    const name=normalizeStudentSearch(s.name||'');
-    const id=normalizeStudentSearch(s.idno||'');
-    return name.includes(q)||id.includes(q);
-  }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar')).slice(0,80);
-}
-
-async function renderUnifiedStudentSearchResults(query=''){
-  const grid=$('studentCardGrid');
-  if(!grid) return;
-  const list=getUnifiedStudentMatches(query);
-  grid.innerHTML='';
-  if(!String(query||'').trim()){
-    grid.classList.add('hidden');
-    return;
+async function renderAddStudentDatabaseList(){
+  const host=$('studentCardGrid'); if(!host) return;
+  const q=normalizeStudentSearch($('addStudentSearch')?.value||'');
+  let rows=dedupeStudents(getStudents()).filter(s=>{
+    const mq=!q||normalizeStudentSearch(s.name||'').includes(q)||normalizeStudentSearch(s.idno||'').includes(q);
+    const mg=!addStudentListGrade||studentGradeKey(s.grade)===studentGradeKey(addStudentListGrade);
+    const mc=!addStudentListClass||studentClassKey(s.classroom)===String(addStudentListClass);
+    return mq&&mg&&mc;
+  });
+  const prepared=await Promise.all(rows.map(async s=>{let photo=null;try{photo=await getStudentPhoto(`${s.idno}:face`)}catch(e){}return {s,photo,hasPhoto:!!photo||!!s.hasFace};}));
+  prepared.sort((a,b)=>{
+    if(addStudentListSort==='idno') return String(a.s.idno||'').localeCompare(String(b.s.idno||''),'ar',{numeric:true});
+    if(addStudentListSort==='class'){const g=String(a.s.grade||'').localeCompare(String(b.s.grade||''),'ar');return g||String(studentClassKey(a.s.classroom)).localeCompare(String(studentClassKey(b.s.classroom)),'ar',{numeric:true});}
+    if(addStudentListSort==='photo'&&a.hasPhoto!==b.hasPhoto) return a.hasPhoto?-1:1;
+    return String(a.s.name||'').localeCompare(String(b.s.name||''),'ar');
+  });
+  host.innerHTML='';
+  for(const item of prepared){
+    const s=item.s;
+    const row=document.createElement('div');
+    row.className='att-student-row'+(normalizeCivilId(addStudentOriginalId)===normalizeCivilId(s.idno)?' selected':'');
+    const main=document.createElement('div'); main.className='att-student-main'; main.innerHTML=`<div class="att-name-line"><b>${s.name||'بدون اسم'}</b></div><span>${s.idno||'—'}</span>`;
+    const photoWrap=document.createElement('div'); photoWrap.className='att-student-photo-wrap';
+    if(item.photo){const img=document.createElement('img');img.className='att-student-photo';const url=URL.createObjectURL(item.photo);img.src=url;img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),2500);photoWrap.appendChild(img);}
+    else{const ph=document.createElement('div');ph.className='att-student-photo placeholder';ph.textContent='👤';photoWrap.appendChild(ph);}
+    const grade=document.createElement('span'); grade.textContent=s.grade||'—';
+    const cls=document.createElement('span'); cls.textContent=displayStudentClassroom?displayStudentClassroom(s.classroom):(s.classroom||'—');
+    row.append(main,photoWrap,grade,cls); row.onclick=()=>selectExistingStudentForUnifiedForm(s); host.appendChild(row);
   }
-  if(!list.length){
-    grid.innerHTML='<div class="hint" style="padding:14px">لا يوجد طالب مطابق — يمكنك إدخال البيانات كطالب جديد.</div>';
-    grid.classList.remove('hidden');
-    return;
-  }
-  for(const s of list){
-    const card=document.createElement('button');
-    card.type='button';
-    card.className='student-pick-card';
-    let photo=null;
-    try{photo=await getStudentPhoto(`${s.idno}:face`)}catch(e){}
-    if(photo){
-      const img=document.createElement('img');
-      img.className='student-pick-photo';
-      const url=URL.createObjectURL(photo);
-      img.src=url;
-      img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),2500);
-      card.appendChild(img);
-    }else{
-      const ph=document.createElement('div');
-      ph.className='student-pick-placeholder';
-      ph.textContent='👤';
-      card.appendChild(ph);
-    }
-    const name=document.createElement('div');
-    name.className='student-pick-name';
-    name.textContent=s.name||'بدون اسم';
-    const id=document.createElement('div');
-    id.className='student-pick-id';
-    id.textContent=s.idno||'—';
-    card.append(name,id);
-    card.onclick=()=>selectExistingStudentForUnifiedForm(s);
-    grid.appendChild(card);
-  }
-  grid.classList.remove('hidden');
+  if(!prepared.length) host.innerHTML='<div class="hint" style="padding:18px;text-align:center">لا يوجد طلاب مطابقون.</div>';
+  if($('addStudentListCount')) $('addStudentListCount').textContent=`المعروض: ${prepared.length}`;
 }
 
 function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
   ensureFaceModels().catch(()=>{});
-  resetUnifiedAddEditStudentForm();
+  addStudentListGrade=''; addStudentListClass=''; addStudentListSort='name';
   if($('addStudentSearch')) $('addStudentSearch').value='';
-  renderUnifiedStudentSearchResults('');
-  $('studentCardGrid').classList.add('hidden');
-
-  $('oldStudentFace').classList.add('hidden');
-  $('oldStudentFaceEmpty').classList.remove('hidden');
-  $('oldStudentFaceEmpty').textContent='سيتم إظهار الصورة المطابقة من قاعدة البيانات';
-  $('newStudentFace').classList.add('hidden');
-  $('newStudentFaceEmpty').classList.remove('hidden');
-  $('newStudentFaceEmpty').textContent='التقط صورة بالكاميرا أولاً';
-
-  addStudentSelectedId='';
-  addStudentNewFaceBlob=null;
-  addStudentFaceVerified=false;
-  addStudentNeedsApproval=false;
-  $('matchedStudentName').textContent='—';
-  $('matchedStudentId').textContent='—';
-  $('matchedStudentInfo').classList.remove('show');
+  document.querySelectorAll('.add-student-grade-filter').forEach(b=>b.classList.toggle('active',!b.dataset.addGrade));
+  document.querySelectorAll('.add-student-sort').forEach(b=>b.classList.toggle('active',b.dataset.addSort==='name'));
+  refreshAddStudentClassFilter();
+  resetUnifiedAddEditStudentForm();
+  renderAddStudentDatabaseList();
 }
-
 function closeAddStudentModal(){
   $('addStudentModal').classList.add('hidden');
 }
@@ -12061,25 +12029,14 @@ if($('addStudentBtn')) $('addStudentBtn').onclick=openAddStudentModal;
 if($('closeAddStudentModal')) $('closeAddStudentModal').onclick=closeAddStudentModal;
 if($('cancelAddStudentBtn')) $('cancelAddStudentBtn').onclick=closeAddStudentModal;
 
-if($('addStudentSearch')){
-  $('addStudentSearch').addEventListener('input',e=>renderUnifiedStudentSearchResults(e.target.value));
-  $('addStudentSearch').addEventListener('focus',e=>renderUnifiedStudentSearchResults(e.target.value));
-}
-if($('addEditStudentFullName')){
-  $('addEditStudentFullName').addEventListener('input',e=>{
-    if(addStudentEntryMode==='new') renderUnifiedStudentSearchResults(e.target.value);
-  });
-}
-if($('addEditStudentIdno')){
-  $('addEditStudentIdno').addEventListener('input',e=>{
-    if(addStudentEntryMode==='new') renderUnifiedStudentSearchResults(e.target.value);
-  });
-}
-document.addEventListener('click',e=>{
-  const grid=$('studentCardGrid');
-  const search=$('addStudentSearch');
-  if(grid && search && e.target!==search && !grid.contains(e.target)) grid.classList.add('hidden');
+if($('addStudentSearch')) $('addStudentSearch').addEventListener('input',()=>renderAddStudentDatabaseList());
+document.querySelectorAll('.add-student-grade-filter').forEach(btn=>btn.onclick=()=>{
+  addStudentListGrade=btn.dataset.addGrade||''; addStudentListClass='';
+  document.querySelectorAll('.add-student-grade-filter').forEach(x=>x.classList.toggle('active',x===btn));
+  refreshAddStudentClassFilter(); renderAddStudentDatabaseList();
 });
+if($('addStudentClassFilter')) $('addStudentClassFilter').onchange=e=>{addStudentListClass=String(e.target.value||'');renderAddStudentDatabaseList();};
+document.querySelectorAll('.add-student-sort').forEach(btn=>btn.onclick=()=>{addStudentListSort=btn.dataset.addSort||'name';document.querySelectorAll('.add-student-sort').forEach(x=>x.classList.toggle('active',x===btn));renderAddStudentDatabaseList();});
 
 let liveCameraStream=null;
 let currentCameraDeviceId='';
