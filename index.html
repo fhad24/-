@@ -3740,6 +3740,7 @@
         </div>
         <div class="add-student-actions">
           <button type="button" class="btn btn-primary" id="saveMatchedStudentBtn">حفظ</button>
+          <button type="button" class="btn btn-outline" id="clearAddEditStudentBtn">🧹 تفريغ البيانات</button>
           <button type="button" class="btn btn-outline" id="cancelAddStudentBtn">إلغاء</button>
         </div>
       </div>
@@ -12281,6 +12282,18 @@ function closeAddStudentModal(){
 if($('addStudentBtn')) $('addStudentBtn').onclick=openAddStudentModal;
 if($('closeAddStudentModal')) $('closeAddStudentModal').onclick=closeAddStudentModal;
 if($('cancelAddStudentBtn')) $('cancelAddStudentBtn').onclick=closeAddStudentModal;
+if($('clearAddEditStudentBtn')) $('clearAddEditStudentBtn').onclick=()=>{
+  resetUnifiedAddEditStudentForm();
+  if($('addStudentSearch')) $('addStudentSearch').value='';
+  addStudentListGrade='';
+  addStudentListClass='';
+  addStudentListSort='name';
+  document.querySelectorAll('.add-student-grade-filter').forEach(b=>b.classList.toggle('active',String(b.dataset.addGrade||'')===''));
+  document.querySelectorAll('.add-student-sort').forEach(b=>b.classList.toggle('active',String(b.dataset.addSort||'')==='name'));
+  refreshAddStudentClassFilter();
+  renderAddStudentDatabaseList();
+  toast('تم تفريغ البيانات');
+};
 
 if($('addStudentSearch')) $('addStudentSearch').addEventListener('input',()=>renderAddStudentDatabaseList());
 document.querySelectorAll('.add-student-grade-filter').forEach(btn=>btn.onclick=()=>{
