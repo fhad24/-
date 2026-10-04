@@ -622,16 +622,29 @@
     @media(max-width:650px){.user-perm-grid,.user-perm-meta{grid-template-columns:1fr}.user-perm-card{padding:16px}.user-perm-head h3{font-size:20px}}
   
     .pending-photo-modal{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:13000;display:flex;align-items:center;justify-content:center;padding:14px}
-    .pending-photo-card{width:min(920px,97vw);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:22px;direction:rtl}
-    .pending-photo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-    .pending-photo-head h2{margin:0;font-size:22px}.pending-photo-close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:28px}
-    .pending-photo-list{display:grid;gap:12px}.pending-photo-row{display:grid;grid-template-columns:100px 1fr auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:12px;background:#fbfdfd}
-    .pending-photo-row img{width:100px;height:110px;object-fit:cover;border-radius:12px;background:#eef3f2}
-    .pending-photo-info b{display:block;font-size:17px;margin-bottom:6px}.pending-photo-info span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
-    .pending-photo-actions{display:flex;gap:8px;flex-wrap:wrap}.pending-photo-actions button{border-radius:12px;padding:10px 14px;font-family:inherit;font-weight:700;cursor:pointer}
+    .pending-photo-card{width:min(1320px,98vw);max-height:94vh;overflow:auto;background:#fff;border-radius:24px;padding:22px;direction:rtl}
+    .pending-photo-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .pending-photo-head h2{margin:0;font-size:24px}.pending-photo-close{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:28px;cursor:pointer}
+    .pending-photo-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;background:#f5faf8;border:1px solid #d8e6e2;border-radius:14px;margin-bottom:12px}
+    .pending-photo-tools label{display:flex;align-items:center;gap:7px;font-weight:800;color:#244a42}
+    .pending-photo-tools select{height:42px;min-width:190px;border:1px solid #cbdcd7;border-radius:10px;background:#fff;font-family:inherit;padding:0 10px}
+    .pending-photo-tools input[type="checkbox"],.pending-row-check{width:19px;height:19px;accent-color:var(--primary)}
+    .pending-bulk-approve{border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:11px;padding:10px 16px;font-family:inherit;font-weight:900;cursor:pointer}
+    .pending-selected-count{font-size:12px;color:#60736e;font-weight:800}
+    .pending-photo-list{overflow-x:auto;border:1px solid #d8e3e0;border-radius:14px}
+    .pending-photo-table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0;background:#fff}
+    .pending-photo-table th{position:sticky;top:0;z-index:2;background:#eaf6f2;color:#17483f;font-size:12px;font-weight:900;padding:10px 8px;border-bottom:1px solid #cfe0db;white-space:nowrap;text-align:center}
+    .pending-photo-table td{padding:9px 8px;border-bottom:1px solid #e6eeeb;border-left:1px solid #eef3f1;text-align:center;vertical-align:middle;font-size:12px;color:#36564f}
+    .pending-photo-table tbody tr:last-child td{border-bottom:0}
+    .pending-photo-table tbody tr:hover{background:#fbfefd}
+    .pending-photo-table .pending-student-name{font-weight:900;color:#173b34;text-align:right;min-width:190px}
+    .pending-student-photo{width:76px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #d5e2de;background:#eef3f2;cursor:pointer}
+    .pending-old-photo{display:block;margin-top:4px;font-size:10px;color:#9a5b00;font-weight:800}
+    .pending-photo-actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-width:150px}
+    .pending-photo-actions button{border-radius:10px;padding:8px 10px;font-family:inherit;font-weight:800;cursor:pointer;white-space:nowrap}
     .pending-approve{background:var(--primary);color:#fff;border:1px solid var(--primary)}.pending-reject{background:#fff;color:#b42318;border:1px solid #dc4b42}
     .photo-status-chip{font-size:11px;border-radius:999px;padding:4px 8px;background:#e5f5f0;color:#0f7665;margin-inline-start:6px}
-    @media(max-width:650px){.pending-photo-row{grid-template-columns:82px 1fr}.pending-photo-row img{width:82px;height:94px}.pending-photo-actions{grid-column:1/-1}.pending-photo-actions button{flex:1}}
+    @media(max-width:650px){.pending-photo-card{padding:12px}.pending-photo-head h2{font-size:19px}.pending-photo-tools{align-items:stretch}.pending-photo-tools select,.pending-bulk-approve{width:100%}}
   
     .admin-sort-btn{border:0;background:transparent;font:inherit;font-weight:700;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
     .admin-sort-btn .sort-arrow{font-size:11px;opacity:.55}
@@ -6926,10 +6939,22 @@ async function openPendingStudentPhotos(){
   modal.innerHTML=`
     <div class="pending-photo-card">
       <div class="pending-photo-head">
-        <h2>صور الطلاب بانتظار اعتماد الإدارة</h2>
+        <h2>كشف صور الطلاب بانتظار اعتماد الإدارة</h2>
         <button class="pending-photo-close" type="button">×</button>
       </div>
-      <div class="pending-photo-list" id="pendingPhotoList"><div class="hint">جاري تحميل الصور...</div></div>
+      <div class="pending-photo-tools">
+        <label><input type="checkbox" id="pendingSelectAll"> تحديد الكل</label>
+        <label>ترتيب الكشف
+          <select id="pendingPhotoSort">
+            <option value="name">الاسم أبجديًا</option>
+            <option value="classroom">الصف والفصل</option>
+            <option value="idno">السجل المدني</option>
+          </select>
+        </label>
+        <button class="pending-bulk-approve" id="pendingBulkApprove" type="button">اعتماد وحفظ المحدد</button>
+        <span class="pending-selected-count" id="pendingSelectedCount">لم يتم تحديد أي طالب</span>
+      </div>
+      <div class="pending-photo-list" id="pendingPhotoList"><div class="hint" style="padding:24px">جاري تحميل الصور...</div></div>
     </div>`;
   document.body.appendChild(modal);
   modal.querySelector('.pending-photo-close').onclick=()=>modal.remove();
@@ -6937,55 +6962,192 @@ async function openPendingStudentPhotos(){
 
   try{
     const r=await cloudApi('list_pending_photos');
-    const rows=r.rows||[];
+    let rows=Array.isArray(r.rows)?r.rows:[];
     const host=$('pendingPhotoList');
-    if(!rows.length){
-      host.innerHTML='<div class="hint" style="padding:24px;text-align:center">لا توجد صور بانتظار الاعتماد</div>';
-      updatePendingStudentPhotosCount();
-      return;
-    }
-    host.innerHTML=rows.map(row=>`
-      <div class="pending-photo-row" data-pending-id="${row.id}">
-        <img src="${row.image_data}" alt="">
-        <div class="pending-photo-info">
-          <b>${row.student_name||'بدون اسم'}</b>
-          <span>السجل المدني: ${row.idno||''}</span>
-          <span>أرسلها: ${row.submitted_by||'مستخدم'}</span>
-          <span>${row.created_at?new Date(row.created_at).toLocaleString('ar-SA'):''}</span>
-        </div>
-        <div class="pending-photo-actions">
-          <button class="pending-approve" type="button" data-approve-pending="${row.id}">اعتماد الصورة</button>
-          <button class="pending-reject" type="button" data-reject-pending="${row.id}">رفض</button>
-        </div>
-      </div>`).join('');
+    const allStudents=getStudents();
+    const studentMap=new Map(allStudents.map(s=>[String(s.idno||'').trim(),s]));
+    const selected=new Set();
 
-    host.querySelectorAll('[data-approve-pending]').forEach(btn=>btn.onclick=async()=>{
-      const old=btn.textContent; btn.disabled=true; btn.textContent='جاري الاعتماد...';
-      try{
-        const res=await cloudApi('approve_pending_photo',{id:Number(btn.dataset.approvePending)});
-        const blob=dataURLToBlob(res.image_data||'');
-        if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
-        await cloudPullToLocal();
-        btn.closest('.pending-photo-row')?.remove();
-        renderAdmin();
-        updatePendingStudentPhotosCount();
-        toast('تم اعتماد الصورة وإضافتها لقاعدة البيانات الأصلية');
-      }catch(e){
-        console.error(e); alert('تعذر اعتماد الصورة');
-        btn.disabled=false; btn.textContent=old;
+    const enriched=rows.map(row=>{
+      const student=studentMap.get(String(row.idno||'').trim())||{};
+      return {
+        ...row,
+        student_name:row.student_name||student.name||'بدون اسم',
+        grade:row.grade||student.grade||'—',
+        classroom:row.classroom||student.classroom||'—',
+        hasPreviousPhoto:Boolean(student.hasFace)
+      };
+    });
+
+    const updateSelectedText=()=>{
+      const el=$('pendingSelectedCount');
+      if(el) el.textContent=selected.size?`تم تحديد ${selected.size} طالب`:'لم يتم تحديد أي طالب';
+      const all=$('pendingSelectAll');
+      if(all){
+        all.checked=Boolean(enriched.length && selected.size===enriched.length);
+        all.indeterminate=Boolean(selected.size && selected.size<enriched.length);
       }
-    });
+    };
 
-    host.querySelectorAll('[data-reject-pending]').forEach(btn=>btn.onclick=async()=>{
-      if(!confirm('رفض هذه الصورة؟')) return;
-      try{
-        await cloudApi('reject_pending_photo',{id:Number(btn.dataset.rejectPending)});
-        btn.closest('.pending-photo-row')?.remove();
+    const sortRows=(arr)=>{
+      const mode=$('pendingPhotoSort')?.value||'name';
+      return [...arr].sort((a,b)=>{
+        if(mode==='idno') return String(a.idno||'').localeCompare(String(b.idno||''),'ar',{numeric:true});
+        if(mode==='classroom'){
+          const ga=String(a.grade||''),gb=String(b.grade||'');
+          const gcmp=ga.localeCompare(gb,'ar',{numeric:true});
+          if(gcmp) return gcmp;
+          const ca=studentClassKey?studentClassKey(a.classroom):String(a.classroom||'');
+          const cb=studentClassKey?studentClassKey(b.classroom):String(b.classroom||'');
+          const ccmp=String(ca).localeCompare(String(cb),'ar',{numeric:true});
+          if(ccmp) return ccmp;
+        }
+        return String(a.student_name||'').localeCompare(String(b.student_name||''),'ar',{sensitivity:'base'});
+      });
+    };
+
+    const renderPendingTable=()=>{
+      if(!enriched.length){
+        host.innerHTML='<div class="hint" style="padding:24px;text-align:center">لا توجد صور بانتظار الاعتماد</div>';
         updatePendingStudentPhotosCount();
-        toast('تم رفض الصورة');
-      }catch(e){alert('تعذر رفض الصورة')}
-    });
+        updateSelectedText();
+        return;
+      }
+      const displayRows=sortRows(enriched);
+      host.innerHTML=`
+        <table class="pending-photo-table">
+          <thead>
+            <tr>
+              <th>تحديد</th>
+              <th>الصورة المرسلة</th>
+              <th>اسم الطالب</th>
+              <th>السجل المدني</th>
+              <th>الصف</th>
+              <th>الفصل</th>
+              <th>أرسلها</th>
+              <th>تاريخ الإرسال</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${displayRows.map(row=>`
+              <tr data-pending-id="${row.id}">
+                <td><input class="pending-row-check" type="checkbox" data-select-pending="${row.id}" ${selected.has(Number(row.id))?'checked':''}></td>
+                <td>
+                  <img class="pending-student-photo" src="${row.image_data}" alt="صورة الطالب" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة">
+                  ${row.hasPreviousPhoto?'<span class="pending-old-photo">لديه صورة سابقة</span>':''}
+                </td>
+                <td class="pending-student-name">${row.student_name||'بدون اسم'}</td>
+                <td>${row.idno||'—'}</td>
+                <td>${row.grade||'—'}</td>
+                <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
+                <td>${row.submitted_by||'مستخدم'}</td>
+                <td style="min-width:155px">${row.created_at?new Date(row.created_at).toLocaleString('ar-SA'):'—'}</td>
+                <td>
+                  <div class="pending-photo-actions">
+                    <button class="pending-approve" type="button" data-approve-pending="${row.id}">اعتماد</button>
+                    <button class="pending-reject" type="button" data-reject-pending="${row.id}">رفض</button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+
+      host.querySelectorAll('[data-select-pending]').forEach(chk=>chk.onchange=()=>{
+        const id=Number(chk.dataset.selectPending);
+        if(chk.checked) selected.add(id); else selected.delete(id);
+        updateSelectedText();
+      });
+
+      host.querySelectorAll('[data-approve-pending]').forEach(btn=>btn.onclick=async()=>{
+        const id=Number(btn.dataset.approvePending);
+        const row=enriched.find(x=>Number(x.id)===id);
+        if(row?.hasPreviousPhoto && !confirm(`الطالب ${row.student_name} لديه صورة سابقة. هل تريد استبدال الصورة السابقة بالصورة الجديدة؟`)) return;
+        const old=btn.textContent; btn.disabled=true; btn.textContent='جاري الاعتماد...';
+        try{
+          const res=await cloudApi('approve_pending_photo',{id});
+          const blob=dataURLToBlob(res.image_data||'');
+          if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+          const idx=enriched.findIndex(x=>Number(x.id)===id);
+          if(idx>=0) enriched.splice(idx,1);
+          selected.delete(id);
+          await cloudPullToLocal();
+          renderPendingTable();
+          renderAdmin();
+          updatePendingStudentPhotosCount();
+          toast('تم اعتماد الصورة وحفظها');
+        }catch(e){
+          console.error(e); alert('تعذر اعتماد الصورة');
+          btn.disabled=false; btn.textContent=old;
+        }
+      });
+
+      host.querySelectorAll('[data-reject-pending]').forEach(btn=>btn.onclick=async()=>{
+        const id=Number(btn.dataset.rejectPending);
+        if(!confirm('رفض هذه الصورة؟')) return;
+        try{
+          await cloudApi('reject_pending_photo',{id});
+          const idx=enriched.findIndex(x=>Number(x.id)===id);
+          if(idx>=0) enriched.splice(idx,1);
+          selected.delete(id);
+          renderPendingTable();
+          updatePendingStudentPhotosCount();
+          toast('تم رفض الصورة');
+        }catch(e){alert('تعذر رفض الصورة')}
+      });
+      updateSelectedText();
+    };
+
+    $('pendingPhotoSort').onchange=renderPendingTable;
+    $('pendingSelectAll').onchange=e=>{
+      selected.clear();
+      if(e.target.checked) enriched.forEach(row=>selected.add(Number(row.id)));
+      renderPendingTable();
+    };
+
+    $('pendingBulkApprove').onclick=async()=>{
+      const ids=[...selected];
+      if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return}
+      const chosen=enriched.filter(row=>ids.includes(Number(row.id)));
+      const replacements=chosen.filter(row=>row.hasPreviousPhoto).length;
+      const msg=replacements
+        ? `سيتم اعتماد وحفظ ${chosen.length} صورة، ومنها ${replacements} طالب لديهم صور سابقة. هل تريد استبدال الصور السابقة بالصور الجديدة؟`
+        : `هل تريد اعتماد وحفظ الصور المحددة وعددها ${chosen.length}؟`;
+      if(!confirm(msg)) return;
+
+      const btn=$('pendingBulkApprove');
+      const old=btn.textContent;
+      btn.disabled=true;
+      btn.textContent=`جاري الحفظ 0 / ${chosen.length}`;
+      let done=0,failed=0;
+      for(const row of chosen){
+        try{
+          const res=await cloudApi('approve_pending_photo',{id:Number(row.id)});
+          const blob=dataURLToBlob(res.image_data||'');
+          if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+          const idx=enriched.findIndex(x=>Number(x.id)===Number(row.id));
+          if(idx>=0) enriched.splice(idx,1);
+          selected.delete(Number(row.id));
+          done++;
+        }catch(e){
+          console.error('bulk pending photo approve',row.id,e);
+          failed++;
+        }
+        btn.textContent=`جاري الحفظ ${done+failed} / ${chosen.length}`;
+      }
+      try{await cloudPullToLocal();}catch(e){console.warn(e)}
+      renderPendingTable();
+      renderAdmin();
+      updatePendingStudentPhotosCount();
+      btn.disabled=false;
+      btn.textContent=old;
+      if(failed) alert(`تم اعتماد ${done} صورة، وتعذر اعتماد ${failed} صورة.`);
+      else toast(`تم اعتماد وحفظ ${done} صورة بنجاح`);
+    };
+
+    renderPendingTable();
   }catch(e){
+    console.error(e);
     $('pendingPhotoList').innerHTML='<div class="hint" style="padding:24px;text-align:center">تعذر تحميل الصور المعلقة</div>';
   }
 }
