@@ -3692,6 +3692,23 @@
         </div>
         <div id="studentCardGrid" class="add-edit-student-list"></div>
         <div id="addStudentListCount" class="add-edit-list-count">المعروض: 0</div>
+
+        <div id="addEditStudentSummary" style="margin-top:16px">
+          <h3>بيانات الطالب والتحقق بالصورة</h3>
+          <div class="attendance-student-info-card">
+            <div><span>اسم الطالب</span><b id="addEditInfoName">—</b></div>
+            <div><span>السجل المدني</span><b id="addEditInfoId">—</b></div>
+            <div><span>الصف / الفصل</span><b id="addEditInfoClass">—</b></div>
+          </div>
+          <div class="attendance-performance-box">
+            <div class="attendance-performance-badges">
+              <div class="performance-badge late">⏰ أيام التأخر السابقة: <b id="addEditPrevLate">0</b></div>
+              <div class="performance-badge absent">✕ أيام الغياب السابقة: <b id="addEditPrevAbsent">0</b></div>
+              <div class="performance-badge present">✓ أيام الحضور السابقة: <b id="addEditPrevPresent">0</b></div>
+            </div>
+            <div class="attendance-performance-last" id="addEditLastRecords">لا توجد أيام تحضير سابقة مسجلة بعد</div>
+          </div>
+        </div>
       </div>
 
       <div class="add-edit-details-side">
@@ -12062,18 +12079,70 @@ function resetUnifiedAddEditStudentForm(){
   $('newStudentFace').classList.add('hidden'); $('newStudentFaceEmpty').classList.remove('hidden'); $('newStudentFaceEmpty').textContent='التقط صورة جديدة';
   $('faceMatchStatus').className='face-match-status wait'; $('faceMatchStatus').textContent='اختر طالبًا أو أدخل بيانات طالب جديد.';
   $('saveMatchedStudentBtn').disabled=false; $('saveMatchedStudentBtn').textContent='حفظ';
+  resetAddEditStudentSummary();
 }
 function refreshAddStudentClassFilter(){
   const sel=$('addStudentClassFilter'); if(!sel) return;
   const classes=[...new Set(getStudents().filter(s=>!addStudentListGrade||studentGradeKey(s.grade)===studentGradeKey(addStudentListGrade)).map(s=>studentClassKey(s.classroom)).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
   sel.innerHTML='<option value="">كل الفصول</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
 }
+function resetAddEditStudentSummary(){
+  if($('addEditInfoName')) $('addEditInfoName').textContent='—';
+  if($('addEditInfoId')) $('addEditInfoId').textContent='—';
+  if($('addEditInfoClass')) $('addEditInfoClass').textContent='—';
+  if($('addEditPrevLate')) $('addEditPrevLate').textContent='0';
+  if($('addEditPrevAbsent')) $('addEditPrevAbsent').textContent='0';
+  if($('addEditPrevPresent')) $('addEditPrevPresent').textContent='0';
+  if($('addEditLastRecords')) $('addEditLastRecords').textContent='لا توجد أيام تحضير سابقة مسجلة بعد';
+}
+
+async function updateAddEditStudentSummary(student){
+  if(!student){ resetAddEditStudentSummary(); return; }
+  if($('addEditInfoName')) $('addEditInfoName').textContent=student.name||'—';
+  if($('addEditInfoId')) $('addEditInfoId').textContent=student.idno||'—';
+  if($('addEditInfoClass')) $('addEditInfoClass').textContent=(student.grade||'—')+' / '+(displayStudentClassroom?displayStudentClassroom(student.classroom):(student.classroom||'—'));
+
+  let perf=null;
+  try{
+    const u=getCurrentLoggedAdminUser?.()||{};
+    const username=String(u.username||u.civil_id||u.civilId||'').trim();
+    const password=String(u.civil_id||u.civilId||u.username||'').trim();
+    if(username && password){
+      perf=await cloudApi('get_student_attendance_performance_with_credentials',{username,password,idno:String(student.idno||'')},false);
+    }
+  }catch(e){ console.warn('add/edit performance cloud',e); }
+
+  if(!perf){
+    const local=getStudentAttendancePerformance?.(student.idno)||{late:0,absent:0,present:0,recent:[]};
+    perf=local;
+  }
+
+  if($('addEditPrevLate')) $('addEditPrevLate').textContent=Number(perf.late||0);
+  if($('addEditPrevAbsent')) $('addEditPrevAbsent').textContent=Number(perf.absent||0);
+  if($('addEditPrevPresent')) $('addEditPrevPresent').textContent=Number(perf.present||0);
+
+  const recent=Array.isArray(perf.recent)?perf.recent:[];
+  if($('addEditLastRecords')){
+    if(recent.length){
+      const labels=recent.map(x=>{
+        if(typeof x==='string') return x;
+        const label=x.status==='late'?'متأخر':x.status==='absent'?'غائب':'حاضر';
+        return (x.date||'—')+' — '+label+(x.time?(' ('+x.time+')'):'');
+      });
+      $('addEditLastRecords').innerHTML='<b>آخر سجل للطالب:</b> '+labels.join(' • ');
+    }else{
+      $('addEditLastRecords').textContent='لا توجد أيام تحضير سابقة مسجلة بعد';
+    }
+  }
+}
+
 async function selectExistingStudentForUnifiedForm(student){
   if(!student) return;
   addStudentEntryMode='edit'; addStudentOriginalId=String(student.idno||''); addStudentSelectedId=String(student.idno||'');
   fillAddEditStudentFields(student);
   $('matchedStudentName').textContent=student.name||'—'; $('matchedStudentId').textContent=student.idno||'—'; $('matchedStudentInfo').classList.add('show');
   $('saveMatchedStudentBtn').disabled=false; $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
+  await updateAddEditStudentSummary(student);
   await loadSelectedOldStudentFace();
   renderAddStudentDatabaseList();
 }
