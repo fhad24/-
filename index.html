@@ -12006,20 +12006,41 @@ async function renderAddStudentDatabaseList(){
     const cls=document.createElement('span'); cls.textContent=displayStudentClassroom?displayStudentClassroom(s.classroom):(s.classroom||'—');
     row.append(main,photoWrap,grade,cls); row.onclick=()=>selectExistingStudentForUnifiedForm(s); host.appendChild(row);
   }
-  if(!prepared.length) host.innerHTML='<div class="hint" style="padding:18px;text-align:center">لا يوجد طلاب مطابقون.</div>';
+  if(!prepared.length){
+    const total=getStudents().length;
+    host.innerHTML=total
+      ? '<div class="hint" style="padding:18px;text-align:center">لا يوجد طلاب مطابقون للبحث أو الفلاتر الحالية.</div>'
+      : '<div class="hint" style="padding:18px;text-align:center;color:#b42318;font-weight:800">لا توجد بيانات طلاب محمّلة. أعد فتح الصفحة بعد اكتمال المزامنة.</div>';
+  }
   if($('addStudentListCount')) $('addStudentListCount').textContent=`المعروض: ${prepared.length}`;
 }
 
-function openAddStudentModal(){
+async function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
   ensureFaceModels().catch(()=>{});
   addStudentListGrade=''; addStudentListClass=''; addStudentListSort='name';
   if($('addStudentSearch')) $('addStudentSearch').value='';
   document.querySelectorAll('.add-student-grade-filter').forEach(b=>b.classList.toggle('active',!b.dataset.addGrade));
   document.querySelectorAll('.add-student-sort').forEach(b=>b.classList.toggle('active',b.dataset.addSort==='name'));
+
+  const listHost=$('studentCardGrid');
+  if(listHost) listHost.innerHTML='<div class="hint" style="padding:18px;text-align:center">جاري تحميل بيانات الطلاب...</div>';
+
+  try{
+    if(localStorage.getItem('cloudAdminToken')){
+      await cloudPullToLocal();
+    }
+  }catch(e){
+    console.warn('load students for add/edit',e);
+  }
+
   refreshAddStudentClassFilter();
   resetUnifiedAddEditStudentForm();
-  renderAddStudentDatabaseList();
+  await renderAddStudentDatabaseList();
+
+  if($('addStudentListCount') && getStudents().length){
+    $('addStudentListCount').textContent='إجمالي قاعدة الطلاب: '+getStudents().length+' — المعروض: '+document.querySelectorAll('#studentCardGrid .att-student-row').length;
+  }
 }
 function closeAddStudentModal(){
   $('addStudentModal').classList.add('hidden');
