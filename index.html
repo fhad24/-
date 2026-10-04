@@ -2022,7 +2022,7 @@
       }
     }
 
-    .user-permission-portal{max-width:1500px;margin:0 auto 18px}
+    .user-permission-portal{width:100%;max-width:none;margin:0 auto 18px;padding:0 12px;box-sizing:border-box}
     .user-welcome-card{
       display:flex;align-items:center;gap:16px;padding:22px 24px;border-radius:20px;
       background:#fff;direction:rtl
@@ -2033,19 +2033,25 @@
     }
     .user-welcome-card h2{margin:0 0 7px;font-size:24px;color:#173b34}
     .user-welcome-card div div{font-size:16px;color:#60736e;font-weight:700}
-    .user-permission-card{padding:18px 20px;border-radius:20px}
-    .user-permission-card h3{margin:0 0 14px;font-size:20px;text-align:center}
+    .user-permission-card{
+      padding:18px 22px;border-radius:22px;background:#fff;border:1px solid #d7e2df;
+      box-shadow:0 4px 12px #0000000b
+    }
+    .user-permission-card h3{display:none}
     .user-permission-buttons{
-      display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-start;align-items:center;direction:rtl
+      display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:center;direction:rtl;
+      margin:0!important
     }
     .user-permission-btn{
       min-height:72px;border:1px solid #173b34;border-radius:22px;background:#fff;
-      color:#173b34;font-family:inherit;font-size:17px;font-weight:900;cursor:pointer;
-      padding:14px 28px;min-width:170px;white-space:nowrap;box-shadow:none
+      color:#173b34;font-family:inherit;font-size:18px;font-weight:900;cursor:pointer;
+      padding:14px 30px;min-width:170px;white-space:nowrap;box-shadow:none;
+      display:inline-flex;align-items:center;justify-content:center;gap:8px
     }
-    .user-permission-btn:hover{background:#f5faf8;border-color:#0f7665}
+    .user-permission-btn:hover{background:#f7fbfa;border-color:#0f7665}
     .user-permission-btn.primary{background:#fff;color:#173b34;border-color:#173b34}
     @media(max-width:720px){
+      .user-permission-card{padding:12px}
       .user-permission-buttons{display:grid;grid-template-columns:1fr;gap:10px}
       .user-permission-btn{width:100%;min-width:0;min-height:58px;border-radius:16px;font-size:15px}
       .user-welcome-card h2{font-size:20px}
@@ -3420,12 +3426,6 @@
           </div>
         </div>
         <div class="card user-permission-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-            <h3 style="margin:0">الصلاحيات المتاحة لك</h3>
-          </div>
-          <div class="user-permission-buttons" style="margin-bottom:12px">
-            <button type="button" class="user-permission-btn" id="userEditPageBtn">تعديل بيانات الطالب ✏️</button>
-          </div>
           <div id="userPermissionButtons" class="user-permission-buttons"></div>
         </div>
       </div>
