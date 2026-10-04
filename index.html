@@ -8,6 +8,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#0f7665" />
   <title>تسجيل بيانات الطلاب</title>
+  <script>
+    try{
+      if(localStorage.getItem('activeSessionMode')==='user'){
+        document.documentElement.classList.add('user-session-home');
+      }
+    }catch(e){}
+  </script>
   <style>
     *{box-sizing:border-box}
     :root{
@@ -152,6 +159,9 @@
       padding:12px 18px;font-size:14px;font-weight:700;min-height:52px;cursor:pointer;white-space:nowrap;flex:0 0 auto
     }
     .admin-outline-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    html.user-session-home #dashboard .admin-shell > :not(#userPermissionPortal){display:none!important}
+    html.user-session-home #userPermissionPortal{display:block!important}
+    html.user-session-home #userPermissionPortal.hidden{display:block!important}
     body.user-permissions-only #dashboard .admin-shell > :not(#userPermissionPortal){display:none!important}
     body.user-permissions-only #userPermissionPortal{display:block!important}
     body.user-permissions-only .admin-toolbar,
@@ -5907,6 +5917,8 @@ function configureUserDashboard(){
   const editTab=document.querySelector('.tab[data-page="edit"]');
 
   if(owner){
+    localStorage.setItem('activeSessionMode','owner');
+    document.documentElement.classList.remove('user-session-home');
     document.body.classList.remove('user-attendance-only','user-permissions-only');
     portal.classList.add('hidden');
     registerTab?.classList.remove('hidden');
@@ -5922,6 +5934,8 @@ function configureUserDashboard(){
   registerTab?.classList.add('hidden');
   editTab?.classList.add('hidden');
 
+  localStorage.setItem('activeSessionMode','user');
+  document.documentElement.classList.add('user-session-home');
   hideAllUserFeatureViews();
   document.body.classList.add('user-permissions-only');
   portal.classList.remove('hidden');
@@ -5954,6 +5968,7 @@ function configureUserDashboard(){
 
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
     const action=btn.dataset.userAction;
+    document.documentElement.classList.remove('user-session-home');
     document.body.classList.remove('user-permissions-only');
     if(action==='attendance'){
       applyUserAttendancePrivacy();
@@ -6693,6 +6708,8 @@ if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
   localStorage.removeItem('currentLocalAdminUser');
   localStorage.removeItem('adminLoggedIn');
   localStorage.removeItem('adminSettingsOpen');
+  localStorage.removeItem('activeSessionMode');
+  document.documentElement.classList.remove('user-session-home');
   localStorage.setItem('activeMainPage','register');
   clearLoginFields();
   setAdminMode(false);
@@ -6773,6 +6790,8 @@ function setAdminMode(on){
       localStorage.removeItem('currentLocalAdminUser');
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminSettingsOpen');
+      localStorage.removeItem('activeSessionMode');
+      document.documentElement.classList.remove('user-session-home');
       localStorage.setItem('activeMainPage','register');
       document.querySelector('.tab[data-page="register"]')?.classList.remove('hidden');
       document.querySelector('.tab[data-page="edit"]')?.classList.remove('hidden');
@@ -6799,6 +6818,8 @@ $('adminLoginBtn').onclick=async()=>{
       username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
       permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true
     }));
+    localStorage.setItem('activeSessionMode','owner');
+    document.documentElement.classList.remove('user-session-home');
     localStorage.removeItem('cloudAdminUser');
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
@@ -6813,13 +6834,16 @@ $('adminLoginBtn').onclick=async()=>{
   }
 
   const openDashboard=()=>{
+    const ownerNow=isCurrentOwner();
+    localStorage.setItem('activeSessionMode',ownerNow?'owner':'user');
+    document.documentElement.classList.toggle('user-session-home',!ownerNow);
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
     try{
-      if(isCurrentOwner()) renderAdmin();
+      if(ownerNow) renderAdmin();
       configureUserDashboard();
       ensureAdminToolbarVisible();
     }catch(e){console.error('open dashboard after login',e)}
@@ -12244,10 +12268,14 @@ function restoreLastAppLocation(){
       $('dashboard')?.classList.remove('hidden');
       setAdminMode(true);
 
-      const owner=typeof isCurrentOwner==='function' ? isCurrentOwner() : true;
+      const savedMode=localStorage.getItem('activeSessionMode');
+      const owner=savedMode==='user' ? false : (savedMode==='owner' ? true : (typeof isCurrentOwner==='function' ? isCurrentOwner() : true));
       if(!owner){
+        document.documentElement.classList.add('user-session-home');
         document.body.classList.add('user-permissions-only');
         document.body.classList.remove('user-attendance-only');
+      }else{
+        document.documentElement.classList.remove('user-session-home');
       }
       if(owner){
         document.body.classList.remove('user-permissions-only','user-attendance-only');
