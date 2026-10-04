@@ -630,6 +630,11 @@
     .pending-photo-tools select{height:42px;min-width:190px;border:1px solid #cbdcd7;border-radius:10px;background:#fff;font-family:inherit;padding:0 10px}
     .pending-photo-tools input[type="checkbox"],.pending-row-check{width:19px;height:19px;accent-color:var(--primary)}
     .pending-bulk-approve{border:1px solid var(--primary);background:var(--primary);color:#fff;border-radius:11px;padding:10px 16px;font-family:inherit;font-weight:900;cursor:pointer}
+    .pending-history-btn,.pending-back-btn,.pending-pdf-btn{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:11px;padding:10px 14px;font-family:inherit;font-weight:900;cursor:pointer}
+    .pending-pdf-btn{background:#0f7665;color:#fff}
+    .pending-approved-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}
+    .pending-approved-head h3{margin:0;color:#173b34}
+    .pending-approved-actions{display:flex;gap:8px;flex-wrap:wrap}
     .pending-selected-count{font-size:12px;color:#60736e;font-weight:800}
     .pending-photo-list{overflow-x:auto;border:1px solid #d8e3e0;border-radius:14px}
     .pending-photo-table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0;background:#fff}
@@ -6926,6 +6931,164 @@ async function updatePendingStudentPhotosCount(){
   }catch(e){el.textContent=''}
 }
 
+function getApprovedStudentPhotoHistory(){
+  try{
+    const rows=JSON.parse(localStorage.getItem('approvedStudentPhotoHistory')||'[]');
+    return Array.isArray(rows)?rows:[];
+  }catch(e){return []}
+}
+
+function recordApprovedStudentPhoto(row,res){
+  const history=getApprovedStudentPhotoHistory();
+  const current=getCurrentLoggedAdminUser?.()||{};
+  const item={
+    approval_id:String(row?.id||Date.now()),
+    idno:String(res?.idno||row?.idno||''),
+    student_name:String(row?.student_name||res?.student_name||''),
+    grade:String(row?.grade||''),
+    classroom:String(row?.classroom||''),
+    submitted_by:String(row?.submitted_by||''),
+    submitted_at:String(row?.created_at||''),
+    approved_by:String(current?.name||current?.displayName||current?.username||getAdminProfile().displayName||'الإدارة'),
+    approved_at:new Date().toISOString()
+  };
+  history.unshift(item);
+  localStorage.setItem('approvedStudentPhotoHistory',JSON.stringify(history.slice(0,3000)));
+}
+
+async function renderApprovedStudentPhotosView(modal){
+  const card=modal?.querySelector('.pending-photo-card');
+  if(!card) return;
+  const history=getApprovedStudentPhotoHistory();
+  card.innerHTML=`
+    <div class="pending-photo-head">
+      <h2>كشف صور الطلاب التي تم اعتمادها</h2>
+      <button class="pending-photo-close" type="button">×</button>
+    </div>
+    <div class="pending-approved-head">
+      <h3>عدد عمليات الاعتماد: ${history.length}</h3>
+      <div class="pending-approved-actions">
+        <button class="pending-back-btn" id="approvedPhotosBackBtn" type="button">↩ الرجوع إلى صور بانتظار الاعتماد</button>
+        <button class="pending-pdf-btn" id="approvedPhotosPdfBtn" type="button">حفظ الكشف PDF</button>
+      </div>
+    </div>
+    <div class="pending-photo-list" id="approvedPhotoList">
+      ${history.length?`
+        <table class="pending-photo-table">
+          <thead>
+            <tr>
+              <th>م</th>
+              <th>الصورة المعتمدة</th>
+              <th>اسم الطالب</th>
+              <th>السجل المدني</th>
+              <th>الصف</th>
+              <th>الفصل</th>
+              <th>أرسلها</th>
+              <th>اعتمدها</th>
+              <th>تاريخ الاعتماد</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${history.map((row,i)=>`
+              <tr>
+                <td>${i+1}</td>
+                <td><div class="approved-photo-slot" data-approved-photo-idno="${row.idno}"><span class="photo-placeholder">تحميل...</span></div></td>
+                <td class="pending-student-name">${row.student_name||'—'}</td>
+                <td>${row.idno||'—'}</td>
+                <td>${row.grade||'—'}</td>
+                <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
+                <td>${row.submitted_by||'—'}</td>
+                <td>${row.approved_by||'الإدارة'}</td>
+                <td style="min-width:155px">${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA'):'—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`:'<div class="hint" style="padding:30px;text-align:center">لم يتم تسجيل صور معتمدة بعد.</div>'}
+    </div>`;
+
+  card.querySelector('.pending-photo-close').onclick=()=>modal.remove();
+  $('approvedPhotosBackBtn').onclick=()=>{ modal.remove(); openPendingStudentPhotos(); };
+
+  for(const slot of card.querySelectorAll('[data-approved-photo-idno]')){
+    try{
+      const blob=await getStudentPhoto(String(slot.dataset.approvedPhotoIdno||'')+':face');
+      if(blob){
+        const url=URL.createObjectURL(blob);
+        slot.innerHTML=`<img class="pending-student-photo" src="${url}" alt="الصورة المعتمدة" title="اضغط لتكبير الصورة">`;
+        const img=slot.querySelector('img');
+        img.onclick=()=>window.open(img.src,'_blank');
+      }else slot.innerHTML='<span class="photo-placeholder">لا صورة</span>';
+    }catch(e){slot.innerHTML='<span class="photo-placeholder">لا صورة</span>'}
+  }
+
+  $('approvedPhotosPdfBtn').onclick=async()=>{
+    if(!history.length){alert('لا توجد صور معتمدة لحفظها.');return}
+    if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
+    const btn=$('approvedPhotosPdfBtn');
+    const old=btn.textContent; btn.disabled=true; btn.textContent='جاري تجهيز PDF...';
+    try{
+      const school=getSchoolSettings();
+      const rows=[];
+      for(let i=0;i<history.length;i++){
+        const row=history[i];
+        let src='';
+        try{
+          const blob=await getStudentPhoto(String(row.idno||'')+':face');
+          if(blob) src=await blobToDataURL(blob);
+        }catch(e){}
+        rows.push(`
+          <tr>
+            <td>${i+1}</td>
+            <td>${src?`<img src="${src}" style="width:58px;height:68px;object-fit:cover;border-radius:6px;border:1px solid #bbb">`:'—'}</td>
+            <td>${row.student_name||'—'}</td>
+            <td>${row.idno||'—'}</td>
+            <td>${row.grade||'—'}</td>
+            <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
+            <td>${row.approved_by||'الإدارة'}</td>
+            <td>${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA'):'—'}</td>
+          </tr>`);
+      }
+      const report=document.createElement('div');
+      report.dir='rtl';
+      report.style.cssText='font-family:Tahoma,Arial,sans-serif;color:#173b34;padding:18px;background:#fff;width:1000px';
+      report.innerHTML=`
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:13px">${school.authority||''}</div>
+          <h2 style="margin:5px 0">${school.school||'المدرسة'}</h2>
+          <h3 style="margin:5px 0">كشف صور الطلاب التي تم اعتمادها</h3>
+          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA')}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead><tr style="background:#eaf6f2">
+            <th style="border:1px solid #bccfc9;padding:6px">م</th>
+            <th style="border:1px solid #bccfc9;padding:6px">الصورة</th>
+            <th style="border:1px solid #bccfc9;padding:6px">اسم الطالب</th>
+            <th style="border:1px solid #bccfc9;padding:6px">السجل المدني</th>
+            <th style="border:1px solid #bccfc9;padding:6px">الصف</th>
+            <th style="border:1px solid #bccfc9;padding:6px">الفصل</th>
+            <th style="border:1px solid #bccfc9;padding:6px">المعتمد</th>
+            <th style="border:1px solid #bccfc9;padding:6px">تاريخ الاعتماد</th>
+          </tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+        <div style="margin-top:16px;font-size:11px">مدير المدرسة: ${school.manager||''}</div>`;
+      report.querySelectorAll('td').forEach(td=>td.style.cssText='border:1px solid #d3dfdb;padding:6px;text-align:center;vertical-align:middle');
+      document.body.appendChild(report);
+      await html2pdf().set({
+        margin:6,
+        filename:'كشف-الصور-المعتمدة.pdf',
+        image:{type:'jpeg',quality:.96},
+        html2canvas:{scale:1.7,useCORS:true},
+        jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+        pagebreak:{mode:['css','legacy']}
+      }).from(report).save();
+      report.remove();
+      toast('تم حفظ كشف الصور المعتمدة PDF');
+    }catch(e){
+      console.error(e);alert('تعذر إنشاء ملف PDF');
+    }finally{btn.disabled=false;btn.textContent=old}
+  };
+}
+
 async function openPendingStudentPhotos(){
   if(!localStorage.getItem('cloudAdminToken')){
     alert('سجّل دخول الإدارة أولاً لاعتماد الصور');
@@ -6952,6 +7115,7 @@ async function openPendingStudentPhotos(){
           </select>
         </label>
         <button class="pending-bulk-approve" id="pendingBulkApprove" type="button">اعتماد وحفظ المحدد</button>
+        <button class="pending-history-btn" id="pendingApprovedHistoryBtn" type="button">✅ عرض الصور المعتمدة</button>
         <span class="pending-selected-count" id="pendingSelectedCount">لم يتم تحديد أي طالب</span>
       </div>
       <div class="pending-photo-list" id="pendingPhotoList"><div class="hint" style="padding:24px">جاري تحميل الصور...</div></div>
@@ -6959,6 +7123,7 @@ async function openPendingStudentPhotos(){
   document.body.appendChild(modal);
   modal.querySelector('.pending-photo-close').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
+  $('pendingApprovedHistoryBtn').onclick=()=>renderApprovedStudentPhotosView(modal);
 
   try{
     const r=await cloudApi('list_pending_photos');
@@ -7068,6 +7233,7 @@ async function openPendingStudentPhotos(){
           const res=await cloudApi('approve_pending_photo',{id});
           const blob=dataURLToBlob(res.image_data||'');
           if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+          recordApprovedStudentPhoto(row,res);
           const idx=enriched.findIndex(x=>Number(x.id)===id);
           if(idx>=0) enriched.splice(idx,1);
           selected.delete(id);
@@ -7125,6 +7291,7 @@ async function openPendingStudentPhotos(){
           const res=await cloudApi('approve_pending_photo',{id:Number(row.id)});
           const blob=dataURLToBlob(res.image_data||'');
           if(blob) await saveStudentPhoto(`${res.idno}:face`,blob,true);
+          recordApprovedStudentPhoto(row,res);
           const idx=enriched.findIndex(x=>Number(x.id)===Number(row.id));
           if(idx>=0) enriched.splice(idx,1);
           selected.delete(Number(row.id));
