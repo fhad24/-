@@ -3643,12 +3643,7 @@
   <div class="add-student-modal-card">
     <button type="button" class="modal-close-x" id="closeAddStudentModal" aria-label="إغلاق">×</button>
     <h2 id="addStudentModalTitle">إضافة طالب/تعديل</h2>
-    <div class="lead">من هذه الصفحة يمكنك إضافة طالب جديد أو اختيار طالب موجود وتعديل بياناته. ويمكنك أيضًا التقاط صورة جديدة بالكاميرا عند الحاجة.</div>
-
-    <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap">
-      <button type="button" class="btn btn-primary" id="addStudentModeNew">➕ إضافة طالب جديد</button>
-      <button type="button" class="btn btn-outline" id="addStudentModeEdit">✏️ تعديل طالب موجود</button>
-    </div>
+    <div class="lead">الخانات فارغة لإضافة طالب جديد. ولتعديل طالب موجود ابحث عنه أو اضغط على اسمه، وستظهر بياناته في نفس الخانات للتعديل والحفظ.</div>
 
     <div id="existingStudentPickerBlock">
     <div class="student-picker-grid">
@@ -3682,8 +3677,6 @@
         <span class="student-select-arrow">⌄</span>
       </button>
       <div id="studentCardGrid" class="student-card-grid hidden"></div>
-    </div>
-
     </div>
 
     <div id="addEditStudentFields" style="margin:16px 0;padding:14px;border:1px solid #d5e2de;border-radius:14px;background:#fbfdfc">
@@ -11704,7 +11697,10 @@ async function renderStudentCards(list){
 
     card.append(photo,name,id);
     card.onclick=async()=>{
+      addStudentEntryMode='edit';
       addStudentSelectedId=String(s.idno);
+      addStudentOriginalId=String(s.idno);
+      fillAddEditStudentFields(s);
       $('addStudentName').value=String(s.idno);
       $('studentSelectTriggerText').textContent=s.name||'بدون اسم';
       grid.classList.add('hidden');
@@ -11857,7 +11853,7 @@ async function processNewStudentFace(file){
   addStudentNewFaceBlob=file;
   addStudentFaceVerified=false;
 
-  if(addStudentEntryMode==='new'){
+  if(addStudentEntryMode==='new' && !addStudentOriginalId){
     const newImg=$('newStudentFace');
     const newEmpty=$('newStudentFaceEmpty');
     const newUrl=URL.createObjectURL(file);
@@ -11981,36 +11977,33 @@ function fillAddEditStudentFields(student){
   $('addEditStudentClassroom').value=student?.classroom||'';
 }
 
-function setAddStudentEntryMode(mode){
-  addStudentEntryMode=mode==='edit'?'edit':'new';
-  const edit=addStudentEntryMode==='edit';
-  $('existingStudentPickerBlock').style.display=edit?'':'none';
-  $('addStudentModeNew').className='btn '+(!edit?'btn-primary':'btn-outline');
-  $('addStudentModeEdit').className='btn '+(edit?'btn-primary':'btn-outline');
-  $('addStudentModalTitle').textContent=edit?'تعديل بيانات طالب':'إضافة طالب جديد';
+function resetUnifiedAddEditStudentForm(){
+  addStudentEntryMode='new';
   addStudentOriginalId='';
   addStudentSelectedId='';
   addStudentNewFaceBlob=null;
   addStudentFaceVerified=false;
   addStudentNeedsApproval=false;
   fillAddEditStudentFields(null);
+  $('matchedStudentName').textContent='—';
+  $('matchedStudentId').textContent='—';
   $('matchedStudentInfo').classList.remove('show');
   $('oldStudentFace').classList.add('hidden');
   $('oldStudentFaceEmpty').classList.remove('hidden');
-  $('oldStudentFaceEmpty').textContent=edit?'اختر الطالب لعرض صورته السابقة':'لا توجد صورة سابقة لطالب جديد';
+  $('oldStudentFaceEmpty').textContent='اختر طالبًا موجودًا لعرض صورته السابقة';
   $('newStudentFace').classList.add('hidden');
   $('newStudentFaceEmpty').classList.remove('hidden');
   $('newStudentFaceEmpty').textContent='التقط صورة بالكاميرا عند الحاجة';
   $('faceMatchStatus').className='face-match-status wait';
-  $('faceMatchStatus').textContent=edit?'اختر طالبًا لتعديل بياناته':'أدخل بيانات الطالب الجديد';
+  $('faceMatchStatus').textContent='الخانات جاهزة لإضافة طالب جديد، أو اختر طالبًا موجودًا للتعديل';
   $('saveMatchedStudentBtn').disabled=false;
-  $('saveMatchedStudentBtn').textContent=edit?'حفظ التعديلات':'إضافة الطالب';
+  $('saveMatchedStudentBtn').textContent='حفظ';
 }
 
 function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
   ensureFaceModels().catch(()=>{});
-  setAddStudentEntryMode('new');
+  resetUnifiedAddEditStudentForm();
   $('addStudentGrade').value='';
   if($('addStudentSearch')) $('addStudentSearch').value='';
   $('addStudentClass').innerHTML='<option value="">الكل</option>';
@@ -12043,8 +12036,6 @@ function closeAddStudentModal(){
 }
 
 if($('addStudentBtn')) $('addStudentBtn').onclick=openAddStudentModal;
-if($('addStudentModeNew')) $('addStudentModeNew').onclick=()=>setAddStudentEntryMode('new');
-if($('addStudentModeEdit')) $('addStudentModeEdit').onclick=()=>setAddStudentEntryMode('edit');
 if($('closeAddStudentModal')) $('closeAddStudentModal').onclick=closeAddStudentModal;
 if($('cancelAddStudentBtn')) $('cancelAddStudentBtn').onclick=closeAddStudentModal;
 
@@ -12071,6 +12062,7 @@ if($('addStudentName')) $('addStudentName').onchange=async ()=>{
   addStudentSelectedId=$('addStudentName').value;
   const student=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(addStudentSelectedId));
   if(student){
+    addStudentEntryMode='edit';
     addStudentOriginalId=String(student.idno||'');
     fillAddEditStudentFields(student);
     $('matchedStudentName').textContent=student.name||'—';
@@ -12079,6 +12071,9 @@ if($('addStudentName')) $('addStudentName').onchange=async ()=>{
     $('saveMatchedStudentBtn').disabled=false;
     $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
   }else{
+    addStudentEntryMode='new';
+    addStudentOriginalId='';
+    fillAddEditStudentFields(null);
     $('matchedStudentInfo').classList.remove('show');
   }
   if(addStudentSelectedId) await loadSelectedOldStudentFace();
@@ -12248,7 +12243,8 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
   btn.textContent='جاري الحفظ...';
 
   try{
-    if(addStudentEntryMode==='new'){
+    const isEditing=!!normalizeCivilId(addStudentOriginalId||addStudentSelectedId);
+    if(!isEditing){
       if(students.some(s=>normalizeCivilId(s.idno)===idno)){
         alert('لا يمكن الإضافة: السجل المدني موجود مسبقًا. اختر وضع تعديل طالب موجود.');
         return;
@@ -12270,6 +12266,11 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
     }
 
     const oldId=normalizeCivilId(addStudentOriginalId||addStudentSelectedId);
+    const selectedExisting=students.find(s=>normalizeCivilId(s.idno)===oldId);
+    const studentLabel=selectedExisting?.name||name;
+    if(!confirm(`هل تريد حفظ التعديلات على بيانات الطالب: ${studentLabel}؟`)){
+      return;
+    }
     const idx=students.findIndex(s=>normalizeCivilId(s.idno)===oldId);
     if(idx<0){
       alert('اختر طالبًا موجودًا أولًا.');
@@ -12305,6 +12306,7 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 
     try{renderAdmin()}catch(e){}
     closeAddStudentModal();
+    alert('✅ تم حفظ تعديلات بيانات الطالب بنجاح');
     toast('تم تعديل بيانات الطالب بنجاح');
   }catch(e){
     console.error(e);
