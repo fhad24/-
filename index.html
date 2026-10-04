@@ -4857,13 +4857,27 @@ async function cloudLoginAndSync(username,password){
 
 async function cloudAutoLoginFromSavedProfile(){
   if(localStorage.getItem('cloudAdminToken')){
-    try{await cloudPullToLocal(); if(typeof renderAdmin==='function') renderAdmin(); return true}catch(e){
+    try{
+      await cloudPullToLocal();
+      if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
+        try{configureUserDashboard()}catch(e){}
+      }else if(typeof renderAdmin==='function'){
+        renderAdmin();
+      }
+      return true;
+    }catch(e){
       localStorage.removeItem('cloudAdminToken');
     }
   }
   const p=getAdminProfile();
   if(localStorage.getItem('adminLoggedIn')==='1' && p.username && p.password){
-    try{await cloudLoginAndSync(p.username,p.password); return true}catch(e){console.warn('cloud auto login',e)}
+    try{
+      await cloudLoginAndSync(p.username,p.password);
+      if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
+        try{configureUserDashboard()}catch(e){}
+      }
+      return true;
+    }catch(e){console.warn('cloud auto login',e)}
   }
   return false;
 }
@@ -12180,7 +12194,6 @@ function restoreLastAppLocation(){
   if(loggedIn){
     adminLoggedIn=true;
     setAdminMode(true);
-    setTimeout(()=>cloudAutoLoginFromSavedProfile().catch(()=>{}),100);
   }
 
   if(page==='admin'){
@@ -12189,15 +12202,32 @@ function restoreLastAppLocation(){
       $('adminLoginModal')?.classList.add('hidden');
       $('dashboard')?.classList.remove('hidden');
       setAdminMode(true);
-      try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
 
-      const view=localStorage.getItem('activeAdminView')||'data';
-      showAdminView(view);
-      renderAdmin();
+      const owner=typeof isCurrentOwner==='function' ? isCurrentOwner() : true;
+      if(owner){
+        document.body.classList.remove('user-permissions-only','user-attendance-only');
+        try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
+        const view=localStorage.getItem('activeAdminView')||'data';
+        showAdminView(view);
+        renderAdmin();
 
-      if(localStorage.getItem('adminSettingsOpen')==='1'){
-        setTimeout(()=>openAdminSettings(),0);
+        if(localStorage.getItem('adminSettingsOpen')==='1'){
+          setTimeout(()=>openAdminSettings(),0);
+        }
+      }else{
+        // المستخدم العادي: لا نشغّل أي عرض من عروض الإدارة بعد التحديث.
+        localStorage.setItem('adminSettingsOpen','0');
+        try{configureUserDashboard()}catch(e){}
       }
+
+      setTimeout(async()=>{
+        try{
+          await cloudAutoLoginFromSavedProfile();
+          if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
+            configureUserDashboard();
+          }
+        }catch(e){}
+      },100);
     }else{
       $('dashboard')?.classList.add('hidden');
       $('adminLoginModal')?.classList.remove('hidden');
@@ -12208,19 +12238,26 @@ function restoreLastAppLocation(){
 }
 setTimeout(restoreLastAppLocation,0);
 setTimeout(()=>ensureFaceModels().catch(()=>{}),150);
+function refreshCurrentDashboardAfterCloudPull(){
+  if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
+    try{configureUserDashboard()}catch(e){}
+  }else if(typeof renderAdmin==='function'){
+    renderAdmin();
+  }
+}
 let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
-    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+    cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
 },45000);
 window.addEventListener('focus',()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
-    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+    cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
 });
 document.addEventListener('visibilitychange',()=>{
   if(!cloudSyncBusy && document.visibilityState==='visible' && localStorage.getItem('cloudAdminToken')){
-    cloudPullToLocal().then(()=>{if(typeof renderAdmin==='function') renderAdmin()}).catch(()=>{});
+    cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
 });
 </script>
