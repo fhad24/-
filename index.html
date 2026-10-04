@@ -3643,52 +3643,17 @@
   <div class="add-student-modal-card">
     <button type="button" class="modal-close-x" id="closeAddStudentModal" aria-label="إغلاق">×</button>
     <h2 id="addStudentModalTitle">إضافة طالب/تعديل</h2>
-    <div class="lead">الخانات فارغة لإضافة طالب جديد. ولتعديل طالب موجود ابحث عنه أو اضغط على اسمه، وستظهر بياناته في نفس الخانات للتعديل والحفظ.</div>
-
-    <div id="existingStudentPickerBlock">
-    <div class="student-picker-grid">
-      <div>
-        <label>الصف الدراسي</label>
-        <select id="addStudentGrade">
-          <option value="">الكل</option>
-          <option>الأول الثانوي</option>
-          <option>الثاني الثانوي</option>
-          <option>الثالث الثانوي</option>
-        </select>
-      </div>
-      <div>
-        <label>الفصل</label>
-        <select id="addStudentClass">
-          <option value="">الكل</option>
-        </select>
-      </div>
-    </div>
-
-    <select id="addStudentName" class="hidden">
-      <option value="">اختر الطالب</option>
-    </select>
-
-    <div class="student-cards-title">اسم الطالب</div>
-    <input id="addStudentSearch" class="student-search-input" placeholder="ابحث باسم الطالب أو السجل المدني">
-    <div class="student-select-wrap" id="studentSelectWrap">
-      <button type="button" id="studentSelectTrigger" class="student-select-trigger">
-        <span id="studentSelectTriggerText">اختر اسم الطالب</span>
-        <span id="studentSelectCount"></span>
-        <span class="student-select-arrow">⌄</span>
-      </button>
-      <div id="studentCardGrid" class="student-card-grid hidden"></div>
-    </div>
+    <div class="lead">أدخل بيانات طالب جديد، أو ابحث باسم الطالب أو السجل المدني ثم اختر الطالب الموجود لتظهر بياناته في نفس الخانات.</div>
 
     <div id="addEditStudentFields" style="margin:16px 0;padding:14px;border:1px solid #d5e2de;border-radius:14px;background:#fbfdfc">
-      <div style="font-weight:900;margin-bottom:10px">بيانات الطالب</div>
       <div class="student-picker-grid">
         <div>
           <label>اسم الطالب</label>
-          <input id="addEditStudentFullName" placeholder="اسم الطالب الرباعي">
+          <input id="addEditStudentFullName" autocomplete="off" placeholder="اكتب اسم الطالب">
         </div>
         <div>
           <label>السجل المدني</label>
-          <input id="addEditStudentIdno" inputmode="numeric" maxlength="10" placeholder="رقم الهوية / الإقامة">
+          <input id="addEditStudentIdno" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="رقم الهوية / الإقامة">
         </div>
         <div>
           <label>رقم الجوال</label>
@@ -3708,6 +3673,10 @@
           <input id="addEditStudentClassroom" placeholder="مثال: 1">
         </div>
       </div>
+
+      <div class="student-cards-title" style="margin-top:14px">البحث عن طالب موجود للتعديل</div>
+      <input id="addStudentSearch" class="student-search-input" placeholder="ابحث باسم الطالب أو السجل المدني">
+      <div id="studentCardGrid" class="student-card-grid hidden"></div>
     </div>
 
     <div class="face-verify-box">
@@ -11740,15 +11709,13 @@ function refreshAddStudentNames(){
     sel.value=currentId;
   }else if(q){
     addStudentSelectedId='';
-    $('studentSelectTriggerText').textContent='اختر اسم الطالب';
-  }
+    }
 
   renderStudentCards(sorted);
   if(q) $('studentCardGrid')?.classList.remove('hidden');
 }
 
 function resetAddStudentFaceState(){
-  addStudentSelectedId=$('addStudentName')?.value||'';
   addStudentNewFaceBlob=null;
   addStudentFaceVerified=false;
   $('saveMatchedStudentBtn').disabled=true;
@@ -11759,7 +11726,6 @@ function resetAddStudentFaceState(){
 }
 
 async function loadSelectedOldStudentFace(){
-  addStudentSelectedId=$('addStudentName').value;
   addStudentFaceVerified=false;
   $('saveMatchedStudentBtn').disabled=true;
   const img=$('oldStudentFace');
@@ -11798,14 +11764,6 @@ async function loadSelectedOldStudentFace(){
 async function findBestStudentMatch(newBlob){
   let students=getStudents();
   if(!students.length) throw new Error('لا توجد بيانات طلاب في قاعدة البيانات.');
-
-  const grade=$('addStudentGrade')?.value||'';
-  const classroom=$('addStudentClass')?.value||'';
-  const filtered=students.filter(s=>
-    (!grade || studentGradeKey(s.grade)===grade) &&
-    (!classroom || studentClassKey(s.classroom)===String(classroom))
-  );
-  if(filtered.length) students=filtered;
 
   const models=await ensureFaceModels();
   if(!models) throw new Error('تعذر تحميل نظام التحقق بالوجه. تأكد من اتصال الإنترنت.');
@@ -11868,7 +11826,7 @@ async function processNewStudentFace(file){
     return;
   }
 
-  const selectedBefore=String(addStudentSelectedId||$('addStudentName')?.value||'');
+  const selectedBefore=String(addStudentSelectedId||addStudentSelectedId||'');
   const selectedStudent=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(selectedBefore));
 
   const newImg=$('newStudentFace');
@@ -11938,12 +11896,10 @@ async function processNewStudentFace(file){
     $('matchedStudentId').textContent=student.idno||'—';
     $('matchedStudentInfo').classList.add('show');
 
-    $('addStudentGrade').value=studentGradeKey(student.grade)||'';
-    refreshAddStudentClasses();
-    $('addStudentClass').value=studentClassKey(student.classroom);
-    refreshAddStudentNames();
-    $('addStudentName').value=String(student.idno);
-    $('studentSelectTriggerText').textContent=student.name||'بدون اسم';
+    addStudentEntryMode='edit';
+    addStudentOriginalId=String(student.idno||'');
+    fillAddEditStudentFields(student);
+    if($('addStudentSearch')) $('addStudentSearch').value=student.name||'';
     $('studentCardGrid').classList.add('hidden');
 
     const oldImg=$('oldStudentFace'), oldEmpty=$('oldStudentFaceEmpty');
@@ -11985,34 +11941,100 @@ function resetUnifiedAddEditStudentForm(){
   addStudentFaceVerified=false;
   addStudentNeedsApproval=false;
   fillAddEditStudentFields(null);
+  if($('addStudentSearch')) $('addStudentSearch').value='';
   $('matchedStudentName').textContent='—';
   $('matchedStudentId').textContent='—';
   $('matchedStudentInfo').classList.remove('show');
   $('oldStudentFace').classList.add('hidden');
   $('oldStudentFaceEmpty').classList.remove('hidden');
-  $('oldStudentFaceEmpty').textContent='اختر طالبًا موجودًا لعرض صورته السابقة';
+  $('oldStudentFaceEmpty').textContent='لا توجد صورة سابقة لطالب جديد';
   $('newStudentFace').classList.add('hidden');
   $('newStudentFaceEmpty').classList.remove('hidden');
   $('newStudentFaceEmpty').textContent='التقط صورة بالكاميرا عند الحاجة';
   $('faceMatchStatus').className='face-match-status wait';
-  $('faceMatchStatus').textContent='الخانات جاهزة لإضافة طالب جديد، أو اختر طالبًا موجودًا للتعديل';
+  $('faceMatchStatus').textContent='أدخل بيانات الطالب أو اختر طالبًا موجودًا للتعديل';
   $('saveMatchedStudentBtn').disabled=false;
   $('saveMatchedStudentBtn').textContent='حفظ';
+}
+
+async function selectExistingStudentForUnifiedForm(student){
+  if(!student) return;
+  addStudentEntryMode='edit';
+  addStudentOriginalId=String(student.idno||'');
+  addStudentSelectedId=String(student.idno||'');
+  fillAddEditStudentFields(student);
+  $('matchedStudentName').textContent=student.name||'—';
+  $('matchedStudentId').textContent=student.idno||'—';
+  $('matchedStudentInfo').classList.add('show');
+  $('studentCardGrid').classList.add('hidden');
+  if($('addStudentSearch')) $('addStudentSearch').value=student.name||'';
+  $('saveMatchedStudentBtn').disabled=false;
+  $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
+  await loadSelectedOldStudentFace();
+}
+
+function getUnifiedStudentMatches(query=''){
+  const q=normalizeStudentSearch(query);
+  if(!q) return [];
+  return dedupeStudents(getStudents()).filter(s=>{
+    const name=normalizeStudentSearch(s.name||'');
+    const id=normalizeStudentSearch(s.idno||'');
+    return name.includes(q)||id.includes(q);
+  }).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar')).slice(0,80);
+}
+
+async function renderUnifiedStudentSearchResults(query=''){
+  const grid=$('studentCardGrid');
+  if(!grid) return;
+  const list=getUnifiedStudentMatches(query);
+  grid.innerHTML='';
+  if(!String(query||'').trim()){
+    grid.classList.add('hidden');
+    return;
+  }
+  if(!list.length){
+    grid.innerHTML='<div class="hint" style="padding:14px">لا يوجد طالب مطابق — يمكنك إدخال البيانات كطالب جديد.</div>';
+    grid.classList.remove('hidden');
+    return;
+  }
+  for(const s of list){
+    const card=document.createElement('button');
+    card.type='button';
+    card.className='student-pick-card';
+    let photo=null;
+    try{photo=await getStudentPhoto(`${s.idno}:face`)}catch(e){}
+    if(photo){
+      const img=document.createElement('img');
+      img.className='student-pick-photo';
+      const url=URL.createObjectURL(photo);
+      img.src=url;
+      img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),2500);
+      card.appendChild(img);
+    }else{
+      const ph=document.createElement('div');
+      ph.className='student-pick-placeholder';
+      ph.textContent='👤';
+      card.appendChild(ph);
+    }
+    const name=document.createElement('div');
+    name.className='student-pick-name';
+    name.textContent=s.name||'بدون اسم';
+    const id=document.createElement('div');
+    id.className='student-pick-id';
+    id.textContent=s.idno||'—';
+    card.append(name,id);
+    card.onclick=()=>selectExistingStudentForUnifiedForm(s);
+    grid.appendChild(card);
+  }
+  grid.classList.remove('hidden');
 }
 
 function openAddStudentModal(){
   $('addStudentModal').classList.remove('hidden');
   ensureFaceModels().catch(()=>{});
   resetUnifiedAddEditStudentForm();
-  $('addStudentGrade').value='';
   if($('addStudentSearch')) $('addStudentSearch').value='';
-  $('addStudentClass').innerHTML='<option value="">الكل</option>';
-  getStudentClassesForGrade('').forEach(v=>$('addStudentClass').innerHTML+=`<option value="${v}">الفصل ${v}</option>`);
-  $('addStudentName').innerHTML='<option value="">اختر الطالب</option>';
-  dedupeStudents(getStudents()).forEach(s=>$('addStudentName').innerHTML+=`<option value="${s.idno}">${s.name} — ${s.idno}</option>`);
-  $('addStudentName').disabled=false;
-  $('studentSelectTriggerText').textContent='اختر اسم الطالب';
-  renderStudentCards(getStudents());
+  renderUnifiedStudentSearchResults('');
   $('studentCardGrid').classList.add('hidden');
 
   $('oldStudentFace').classList.add('hidden');
@@ -12039,45 +12061,25 @@ if($('addStudentBtn')) $('addStudentBtn').onclick=openAddStudentModal;
 if($('closeAddStudentModal')) $('closeAddStudentModal').onclick=closeAddStudentModal;
 if($('cancelAddStudentBtn')) $('cancelAddStudentBtn').onclick=closeAddStudentModal;
 
-if($('studentSelectTrigger')) $('studentSelectTrigger').onclick=()=>{
-  const grid=$('studentCardGrid');
-  grid.classList.toggle('hidden');
-  if(!grid.classList.contains('hidden')){
-    setTimeout(()=>grid.scrollIntoView({behavior:'smooth',block:'nearest'}),30);
-  }
-};
-document.addEventListener('click',e=>{
-  const wrap=$('studentSelectWrap');
-  const grid=$('studentCardGrid');
-  if(wrap && grid && !wrap.contains(e.target)) grid.classList.add('hidden');
-});
-
 if($('addStudentSearch')){
-  $('addStudentSearch').addEventListener('input',refreshAddStudentNames);
-  $('addStudentSearch').addEventListener('focus',()=>{$('studentCardGrid')?.classList.remove('hidden');refreshAddStudentNames();});
+  $('addStudentSearch').addEventListener('input',e=>renderUnifiedStudentSearchResults(e.target.value));
+  $('addStudentSearch').addEventListener('focus',e=>renderUnifiedStudentSearchResults(e.target.value));
 }
-if($('addStudentGrade')) $('addStudentGrade').onchange=refreshAddStudentClasses;
-if($('addStudentClass')) $('addStudentClass').onchange=refreshAddStudentNames;
-if($('addStudentName')) $('addStudentName').onchange=async ()=>{
-  addStudentSelectedId=$('addStudentName').value;
-  const student=getStudents().find(s=>normalizeCivilId(s.idno)===normalizeCivilId(addStudentSelectedId));
-  if(student){
-    addStudentEntryMode='edit';
-    addStudentOriginalId=String(student.idno||'');
-    fillAddEditStudentFields(student);
-    $('matchedStudentName').textContent=student.name||'—';
-    $('matchedStudentId').textContent=student.idno||'—';
-    $('matchedStudentInfo').classList.add('show');
-    $('saveMatchedStudentBtn').disabled=false;
-    $('saveMatchedStudentBtn').textContent='حفظ التعديلات';
-  }else{
-    addStudentEntryMode='new';
-    addStudentOriginalId='';
-    fillAddEditStudentFields(null);
-    $('matchedStudentInfo').classList.remove('show');
-  }
-  if(addStudentSelectedId) await loadSelectedOldStudentFace();
-};
+if($('addEditStudentFullName')){
+  $('addEditStudentFullName').addEventListener('input',e=>{
+    if(addStudentEntryMode==='new') renderUnifiedStudentSearchResults(e.target.value);
+  });
+}
+if($('addEditStudentIdno')){
+  $('addEditStudentIdno').addEventListener('input',e=>{
+    if(addStudentEntryMode==='new') renderUnifiedStudentSearchResults(e.target.value);
+  });
+}
+document.addEventListener('click',e=>{
+  const grid=$('studentCardGrid');
+  const search=$('addStudentSearch');
+  if(grid && search && e.target!==search && !grid.contains(e.target)) grid.classList.add('hidden');
+});
 
 let liveCameraStream=null;
 let currentCameraDeviceId='';
