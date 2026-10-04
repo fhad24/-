@@ -11754,7 +11754,7 @@ async function loadSelectedOldStudentFace(){
     empty.textContent='اختر الطالب لعرض صورته السابقة';
     return;
   }
-  const blob=await getStudentPhoto(`${addStudentSelectedId}:face`);
+  const blob=await fetchStudentFaceForAddEdit(addStudentSelectedId);
   if(!blob){
     addStudentNeedsApproval=true;
     empty.textContent='لا توجد صورة سابقة محفوظة لهذا الطالب';
@@ -12012,7 +12012,68 @@ async function renderAddStudentDatabaseList(){
       ? '<div class="hint" style="padding:18px;text-align:center">لا يوجد طلاب مطابقون للبحث أو الفلاتر الحالية.</div>'
       : '<div class="hint" style="padding:18px;text-align:center;color:#b42318;font-weight:800">لا توجد بيانات طلاب محمّلة. أعد فتح الصفحة بعد اكتمال المزامنة.</div>';
   }
-  if($('addStudentListCount')) $('addStudentListCount').textContent=`المعروض: ${prepared.length}`;
+  if($('addStudentListCount')) $('addStudentListCount').textContent=`إجمالي قاعدة الطلاب: ${getStudents().length} — المعروض: ${prepared.length}`;
+}
+
+async function loadStudentsForAddEdit(){
+  // المدير: استخدم الجلسة السحابية المعتادة.
+  if(isCurrentOwner() && localStorage.getItem('cloudAdminToken')){
+    try{
+      await cloudPullToLocal();
+      if(getStudents().length) return getStudents();
+    }catch(e){console.warn('owner student load',e)}
+  }
+
+  // المستخدمون: اجلب قاعدة الطلاب مباشرة بصلاحية إضافة طالب/تعديل.
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const username=String(u.username||u.civil_id||u.civilId||'').trim();
+  const password=String(u.civil_id||u.civilId||u.username||'').trim();
+  if(username && password){
+    try{
+      const data=await cloudApi('list_students_with_credentials',{username,password},false);
+      const students=(data.students||[]).map(s=>({
+        name:s.name||'',
+        idno:String(s.idno||''),
+        phone:s.phone||'',
+        grade:s.grade||'',
+        classroom:studentClassKey(s.classroom)||s.classroom||'',
+        calendar:s.calendar||'',
+        birth:s.birth||'',
+        verification:s.verification||'مؤكد',
+        registered:s.registered!==false,
+        hasFace:!!s.has_face,
+        hasId:!!s.has_id,
+        cropStatus:s.crop_status||'',
+        referenceNo:s.reference_no||'',
+        registrationDate:s.registration_date||''
+      }));
+      localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+      return students;
+    }catch(e){
+      console.error('credential student load',e);
+    }
+  }
+  return getStudents();
+}
+
+async function fetchStudentFaceForAddEdit(idno){
+  let blob=null;
+  try{blob=await getStudentPhoto(`${idno}:face`)}catch(e){}
+  if(blob) return blob;
+
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const username=String(u.username||u.civil_id||u.civilId||'').trim();
+  const password=String(u.civil_id||u.civilId||u.username||'').trim();
+  if(!username||!password||!idno) return null;
+  try{
+    const data=await cloudApi('get_student_face_with_credentials',{username,password,idno:String(idno)},false);
+    const b=dataURLToBlob(data.face_image||'');
+    if(b){
+      try{await saveStudentPhoto(`${idno}:face`,b,true)}catch(e){}
+      return b;
+    }
+  }catch(e){console.warn('student face credential load',e)}
+  return null;
 }
 
 async function openAddStudentModal(){
@@ -12027,9 +12088,7 @@ async function openAddStudentModal(){
   if(listHost) listHost.innerHTML='<div class="hint" style="padding:18px;text-align:center">جاري تحميل بيانات الطلاب...</div>';
 
   try{
-    if(localStorage.getItem('cloudAdminToken')){
-      await cloudPullToLocal();
-    }
+    await loadStudentsForAddEdit();
   }catch(e){
     console.warn('load students for add/edit',e);
   }
