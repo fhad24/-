@@ -2683,6 +2683,48 @@
       #landingLoginCard #landingLoginBtn{height:42px!important}
     }
 
+
+    /* متابعة المعلم داخل الفصل */
+    .teacher-class-page{max-width:1250px;margin:0 auto}
+    .teacher-class-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .teacher-class-grid .wide{grid-column:span 2}
+    .teacher-class-auto{
+      background:#eef8f5;border:1px solid #cfe4de;border-radius:12px;padding:10px 12px;
+      display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12px;color:#31554d
+    }
+    .teacher-class-auto b{color:#163f37;font-size:14px}
+    .teacher-photo-box{border:1px dashed #9fc9bf;border-radius:16px;padding:14px;text-align:center;background:#fbfefd}
+    .teacher-photo-preview{display:none;max-width:100%;max-height:360px;margin:12px auto 0;border-radius:14px;border:1px solid #d5e5e0}
+    .teacher-followup-history,.manager-followup-list{display:grid;gap:12px}
+    .teacher-followup-card,.manager-followup-card{
+      border:1px solid #d4e3df;border-radius:16px;background:#fff;padding:14px;box-shadow:0 3px 12px #00000008
+    }
+    .teacher-followup-card-head,.manager-followup-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .teacher-followup-meta,.manager-followup-meta{font-size:12px;color:#526d66;line-height:1.8}
+    .teacher-followup-meta b,.manager-followup-meta b{color:#173b34}
+    .teacher-followup-image,.manager-followup-image{
+      width:180px;max-width:100%;height:120px;object-fit:cover;border-radius:12px;border:1px solid #d5e3df;cursor:pointer
+    }
+    .teacher-manager-reply{
+      margin-top:10px;padding:10px 12px;border-radius:12px;background:#eaf7f3;border:1px solid #cfe8e1;
+      color:#19493f;font-size:12px;line-height:1.8
+    }
+    .teacher-manager-reply b{display:block;margin-bottom:3px}
+    .manager-thanks-box{margin-top:12px}
+    .manager-thanks-box textarea{min-height:90px}
+    .teacher-status-badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;background:#fff4d8;color:#8a5a00}
+    .teacher-status-badge.replied{background:#e5f6ef;color:#0f6f60}
+    @media(max-width:850px){
+      .teacher-class-grid{grid-template-columns:1fr 1fr}
+      .teacher-class-grid .wide{grid-column:1/-1}
+    }
+    @media(max-width:520px){
+      .teacher-class-grid{grid-template-columns:1fr}
+      .teacher-class-grid .wide{grid-column:1}
+      .teacher-followup-card-head,.manager-followup-card-head{display:block}
+      .teacher-followup-image,.manager-followup-image{width:100%;height:auto;margin-top:10px}
+    }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2712,6 +2754,8 @@
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
+    <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
+    <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
   </div>
@@ -3190,6 +3234,87 @@
           </table>
           <div class="followup-print-note">مدير المدرسة: <span id="followupManagerName"></span></div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section id="teacherClassFollowup" class="page hidden">
+  <div class="teacher-class-page">
+    <div class="card">
+      <h2 style="text-align:center;margin-bottom:6px">متابعة المعلم داخل الفصل</h2>
+      <div class="hint" style="font-size:12px;margin-bottom:16px">أدخل بيانات الحصة وأرفق صورة من السبورة بالجوال، وسيتم تسجيل اسم المعلم والتاريخ والوقت تلقائيًا.</div>
+
+      <div class="teacher-class-auto">
+        <div>اسم المعلم<br><b id="teacherClassTeacherName">—</b></div>
+        <div>التاريخ والوقت<br><b id="teacherClassDateTime">—</b></div>
+      </div>
+
+      <div class="teacher-class-grid" style="margin-top:14px">
+        <div>
+          <label>المادة</label>
+          <input id="teacherClassSubject" placeholder="مثال: الرياضيات">
+        </div>
+        <div>
+          <label>الصف</label>
+          <select id="teacherClassGrade"><option value="">اختر الصف</option></select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <select id="teacherClassClassroom"><option value="">اختر الفصل</option></select>
+        </div>
+        <div>
+          <label>الحصة</label>
+          <select id="teacherClassPeriod">
+            <option value="">اختر الحصة</option>
+            <option>الأولى</option><option>الثانية</option><option>الثالثة</option><option>الرابعة</option>
+            <option>الخامسة</option><option>السادسة</option><option>السابعة</option><option>الثامنة</option>
+          </select>
+        </div>
+        <div class="wide">
+          <label>ملاحظات المعلم (اختياري)</label>
+          <textarea id="teacherClassNotes" placeholder="أضف ملاحظاتك عن الدرس أو النشاط أو الطلاب..."></textarea>
+        </div>
+        <div class="wide">
+          <label>صورة من السبورة</label>
+          <div class="teacher-photo-box">
+            <button type="button" class="btn btn-primary" id="teacherClassCameraBtn">📷 تصوير السبورة بالجوال</button>
+            <button type="button" class="btn btn-soft" id="teacherClassUploadBtn">رفع صورة جاهزة</button>
+            <input id="teacherClassCameraInput" class="hidden" type="file" accept="image/*" capture="environment">
+            <input id="teacherClassFileInput" class="hidden" type="file" accept="image/*">
+            <img id="teacherClassPhotoPreview" class="teacher-photo-preview" alt="معاينة صورة السبورة">
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="teacherClassSubmitBtn" style="width:100%;margin-top:16px;height:54px">حفظ وإرسال المتابعة للمدير</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0">سجل متابعاتي</h2>
+        <button type="button" class="btn btn-soft" id="teacherClassRefreshMine">تحديث</button>
+      </div>
+      <div id="teacherClassMyHistory" class="teacher-followup-history" style="margin-top:12px">
+        <div class="hint">جاري تحميل المتابعات...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="teacherClassManager" class="page hidden">
+  <div class="teacher-class-page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0">متابعة المدير للمعلمين</h2>
+          <div class="hint" style="text-align:right;font-size:12px">تظهر هنا المتابعات المرسلة من المعلمين مع صورة السبورة والملاحظات، ويمكن إرسال رسالة شكر للمعلم.</div>
+        </div>
+        <button type="button" class="btn btn-soft" id="teacherClassManagerRefresh">تحديث المتابعات</button>
+      </div>
+      <div id="teacherClassManagerList" class="manager-followup-list" style="margin-top:14px">
+        <div class="hint">جاري تحميل المتابعات...</div>
       </div>
     </div>
   </div>
@@ -4273,17 +4398,14 @@ async function loadTeacherReferralReplies(){
   }
 }
 
-function getCurrentDeputyCredentials(){
+function getCurrentAppCredentials(){
   const current=getCurrentLoggedAdminUser();
   const username=String(current?.username||current?.civil_id||'').trim();
   if(!username) return {username:'',password:''};
 
   if(isCurrentOwner()){
     const p=getAdminProfile();
-    return {
-      username:String(p.username||username).trim(),
-      password:String(p.password||'').trim()
-    };
+    return {username:String(p.username||username).trim(),password:String(p.password||'').trim()};
   }
 
   const localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username);
@@ -4291,6 +4413,10 @@ function getCurrentDeputyCredentials(){
     username,
     password:String(localUser?.password||localUser?.civilId||localUser?.username||'').trim()
   };
+}
+
+function getCurrentDeputyCredentials(){
+  return getCurrentAppCredentials();
 }
 
 let deputyReferralsLoading=false;
@@ -4626,7 +4752,7 @@ async function cloudPushLocalData(){
     }
     await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
     const p=getAdminProfile();
-    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true},...getAdminUsers()];
+    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true},...getAdminUsers()];
     await cloudApi('sync_users',{users});
     await cloudApi('save_settings',{settings:getSchoolSettings()});
     localStorage.setItem('cloudInitialSyncDone','1');
@@ -5582,7 +5708,7 @@ function getCurrentLoggedAdminUser(){
     civil_id:p.username||'',
     name:p.displayName||'المدير',
     role:'مدير',
-    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],
+    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],
     is_owner:true
   };
 }
@@ -5661,6 +5787,8 @@ function configureUserDashboard(){
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['photos','تصوير الطلاب 📷','photos'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
+    ['teacherFollowup','متابعة المعلم داخل الفصل 📸','teacherFollowup'],
+    ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
     ['settings','الإعدادات ⚙️','settings']
@@ -5687,6 +5815,14 @@ function configureUserDashboard(){
     }
     if(action==='followupSheets'){
       openInternalPage('followup');
+      return;
+    }
+    if(action==='teacherFollowup'){
+      openInternalPage('teacherClassFollowup');
+      return;
+    }
+    if(action==='teacherFollowupManager'){
+      openInternalPage('teacherClassManager');
       return;
     }
     if(action==='referralSubmit'){
@@ -5928,6 +6064,191 @@ if($('followupClearBtn')) $('followupClearBtn').onclick=clearFollowupMarks;
   $(id)?.addEventListener('change',()=>{updateFollowupHeader(currentFollowupStudents());saveFollowupElectronic()});
   $(id)?.addEventListener('input',()=>updateFollowupHeader(currentFollowupStudents()));
 });
+if($('teacherClassGrade')) $('teacherClassGrade').onchange=populateTeacherClassClassrooms;
+if($('teacherClassCameraBtn')) $('teacherClassCameraBtn').onclick=()=>$('teacherClassCameraInput')?.click();
+if($('teacherClassUploadBtn')) $('teacherClassUploadBtn').onclick=()=>$('teacherClassFileInput')?.click();
+if($('teacherClassCameraInput')) $('teacherClassCameraInput').onchange=()=>handleTeacherClassPhoto($('teacherClassCameraInput'));
+if($('teacherClassFileInput')) $('teacherClassFileInput').onchange=()=>handleTeacherClassPhoto($('teacherClassFileInput'));
+if($('teacherClassSubmitBtn')) $('teacherClassSubmitBtn').onclick=submitTeacherClassFollowup;
+if($('teacherClassRefreshMine')) $('teacherClassRefreshMine').onclick=loadMyTeacherClassFollowups;
+if($('teacherClassManagerRefresh')) $('teacherClassManagerRefresh').onclick=loadTeacherClassManagerFollowups;
+
+
+
+let teacherClassImageData='';
+
+function teacherClassFormatDateTime(value){
+  const d=value?new Date(value):new Date();
+  try{
+    const greg=d.toLocaleString('ar-SA',{dateStyle:'full',timeStyle:'short'});
+    const hijri=d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'long',day:'numeric'});
+    return greg+' — '+hijri;
+  }catch(e){return d.toLocaleString('ar-SA')}
+}
+
+function populateTeacherClassGrades(){
+  const g=$('teacherClassGrade'); if(!g) return;
+  const current=g.value;
+  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  g.innerHTML='<option value="">اختر الصف</option>'+grades.map(x=>`<option value="${x}">${x}</option>`).join('');
+  if(grades.includes(current)) g.value=current;
+  populateTeacherClassClassrooms();
+}
+
+function populateTeacherClassClassrooms(){
+  const g=$('teacherClassGrade')?.value||'';
+  const csel=$('teacherClassClassroom'); if(!csel) return;
+  const current=csel.value;
+  const rooms=[...new Set(getStudents().filter(s=>!g||studentGradeKey(s.grade)===studentGradeKey(g)).map(s=>studentClassKey(s.classroom)).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  csel.innerHTML='<option value="">اختر الفصل</option>'+rooms.map(x=>`<option value="${x}">الفصل ${displayStudentClassroom?displayStudentClassroom(x):x}</option>`).join('');
+  if(rooms.includes(current)) csel.value=current;
+}
+
+async function resizeTeacherClassImage(file){
+  return await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        try{
+          const maxW=1200,maxH=900;
+          let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+          const scale=Math.min(1,maxW/w,maxH/h);
+          w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));
+          const canvas=document.createElement('canvas');
+          canvas.width=w;canvas.height=h;
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,w,h);
+          resolve(canvas.toDataURL('image/jpeg',0.75));
+        }catch(e){reject(e)}
+      };
+      img.onerror=reject;
+      img.src=String(reader.result||'');
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleTeacherClassPhoto(input){
+  const file=input.files?.[0]; if(!file) return;
+  try{
+    teacherClassImageData=await resizeTeacherClassImage(file);
+    const p=$('teacherClassPhotoPreview');
+    if(p){p.src=teacherClassImageData;p.style.display='block'}
+  }catch(e){
+    console.error(e);alert('تعذر تجهيز الصورة.');
+  }
+  input.value='';
+}
+
+async function loadMyTeacherClassFollowups(){
+  const host=$('teacherClassMyHistory'); if(!host) return;
+  host.innerHTML='<div class="hint">جاري تحميل المتابعات...</div>';
+  try{
+    const creds=getCurrentAppCredentials();
+    const res=await cloudApi('list_my_teacher_followups_with_credentials',creds,false);
+    const rows=Array.isArray(res?.rows)?res.rows:[];
+    if(!rows.length){host.innerHTML='<div class="hint">لا توجد متابعات مرسلة حتى الآن.</div>';return}
+    host.innerHTML=rows.map(r=>`
+      <div class="teacher-followup-card">
+        <div class="teacher-followup-card-head">
+          <div class="teacher-followup-meta">
+            <b>${r.subject||'—'} — ${r.grade||'—'} — الفصل ${r.classroom||'—'} — الحصة ${r.period||'—'}</b><br>
+            التاريخ والوقت: ${teacherClassFormatDateTime(r.submitted_at)}<br>
+            الملاحظات: ${r.notes||'لا توجد ملاحظات'}<br>
+            <span class="teacher-status-badge ${r.status==='replied'?'replied':''}">${r.status==='replied'?'تم رد المدير':'بانتظار رد المدير'}</span>
+          </div>
+          ${r.image_data?`<img class="teacher-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')">`:''}
+        </div>
+        ${r.manager_reply?`<div class="teacher-manager-reply"><b>رسالة مدير المدرسة:</b>${r.manager_reply}<br><span style="font-size:10px">— ${r.manager_name||'مدير المدرسة'} ${r.replied_at?' | '+teacherClassFormatDateTime(r.replied_at):''}</span></div>`:''}
+      </div>`).join('');
+  }catch(e){
+    console.error(e);host.innerHTML='<div class="hint">تعذر تحميل المتابعات الآن.</div>';
+  }
+}
+
+async function submitTeacherClassFollowup(){
+  const subject=String($('teacherClassSubject')?.value||'').trim();
+  const grade=String($('teacherClassGrade')?.value||'').trim();
+  const classroom=String($('teacherClassClassroom')?.value||'').trim();
+  const period=String($('teacherClassPeriod')?.value||'').trim();
+  const notes=String($('teacherClassNotes')?.value||'').trim();
+  if(!subject||!grade||!classroom||!period){alert('أكمل المادة والصف والفصل والحصة.');return}
+  if(!teacherClassImageData){alert('التقط صورة من السبورة أو ارفع صورة أولًا.');return}
+  const btn=$('teacherClassSubmitBtn');const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإرسال...';
+  try{
+    const creds=getCurrentAppCredentials();
+    await cloudApi('submit_teacher_followup_with_credentials',{...creds,subject,grade,classroom,period,notes,imageData:teacherClassImageData},false);
+    $('teacherClassSubject').value='';
+    $('teacherClassNotes').value='';
+    $('teacherClassPeriod').value='';
+    teacherClassImageData='';
+    const p=$('teacherClassPhotoPreview');if(p){p.removeAttribute('src');p.style.display='none'}
+    toast('تم إرسال متابعة الحصة للمدير');
+    await loadMyTeacherClassFollowups();
+  }catch(e){
+    console.error(e);alert('تعذر إرسال المتابعة الآن.');
+  }finally{btn.disabled=false;btn.textContent=old}
+}
+
+async function loadTeacherClassManagerFollowups(){
+  const host=$('teacherClassManagerList'); if(!host) return;
+  host.innerHTML='<div class="hint">جاري تحميل متابعات المعلمين...</div>';
+  try{
+    const creds=getCurrentAppCredentials();
+    const res=await cloudApi('list_teacher_followups_manager_with_credentials',creds,false);
+    const rows=Array.isArray(res?.rows)?res.rows:[];
+    if(!rows.length){host.innerHTML='<div class="hint">لا توجد متابعات مرسلة حتى الآن.</div>';return}
+    const school=getSchoolSettings();
+    host.innerHTML=rows.map(r=>{
+      const defaultMsg=`شكرًا لك أستاذ ${r.teacher_name||''} على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.`;
+      return `<div class="manager-followup-card" data-teacher-followup-id="${r.id}">
+        <div class="manager-followup-card-head">
+          <div class="manager-followup-meta">
+            <b>${r.teacher_name||'—'} — ${r.teacher_civil_id||''}</b><br>
+            المادة: ${r.subject||'—'} — الصف: ${r.grade||'—'} — الفصل: ${r.classroom||'—'} — الحصة: ${r.period||'—'}<br>
+            التاريخ والوقت: ${teacherClassFormatDateTime(r.submitted_at)}<br>
+            الملاحظات: ${r.notes||'لا توجد ملاحظات'}
+          </div>
+          ${r.image_data?`<img class="manager-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')">`:''}
+        </div>
+        <div class="manager-thanks-box">
+          <label>رسالة شكر للمعلم من مدير المدرسة</label>
+          <textarea class="manager-teacher-thanks">${r.manager_reply||defaultMsg}</textarea>
+          <button type="button" class="btn btn-primary manager-send-thanks" style="width:100%;margin-top:8px">${r.manager_reply?'تحديث رسالة الشكر':'إرسال رسالة الشكر للمعلم'}</button>
+          ${r.manager_reply?`<div class="teacher-manager-reply"><b>آخر رد:</b>${r.manager_reply}<br><span style="font-size:10px">— ${r.manager_name||school.manager||'مدير المدرسة'} ${r.replied_at?' | '+teacherClassFormatDateTime(r.replied_at):''}</span></div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    host.querySelectorAll('.manager-send-thanks').forEach(btn=>btn.onclick=async()=>{
+      const card=btn.closest('[data-teacher-followup-id]');
+      const id=Number(card?.dataset.teacherFollowupId||0);
+      const reply=String(card?.querySelector('.manager-teacher-thanks')?.value||'').trim();
+      if(!id||!reply){alert('اكتب رسالة الشكر أولًا.');return}
+      const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الحفظ...';
+      try{
+        const creds=getCurrentAppCredentials();
+        await cloudApi('reply_teacher_followup_manager_with_credentials',{...creds,id,reply},false);
+        toast('تم إرسال رسالة الشكر للمعلم');
+        await loadTeacherClassManagerFollowups();
+      }catch(e){console.error(e);alert('تعذر حفظ رسالة الشكر.')}
+      finally{btn.disabled=false;btn.textContent=old}
+    });
+  }catch(e){
+    console.error(e);host.innerHTML='<div class="hint">تعذر تحميل متابعات المعلمين الآن.</div>';
+  }
+}
+
+function initTeacherClassFollowupPage(){
+  const u=getCurrentLoggedAdminUser();
+  if($('teacherClassTeacherName')) $('teacherClassTeacherName').textContent=String(u?.name||u?.displayName||u?.username||'—');
+  if($('teacherClassDateTime')) $('teacherClassDateTime').textContent=teacherClassFormatDateTime();
+  populateTeacherClassGrades();
+  loadMyTeacherClassFollowups();
+}
 
 
 function openInternalPage(pageId){
@@ -5948,6 +6269,28 @@ function openInternalPage(pageId){
       return;
     }
     if(typeof initReferralPage==='function') setTimeout(initReferralPage,0);
+  }
+  if(pageId==='teacherClassFollowup'){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('teacherFollowup')){
+      $('teacherClassFollowup')?.classList.add('hidden');
+      alert('لا توجد لديك صلاحية متابعة المعلم داخل الفصل.');
+      openAdminDashboardInternal();
+      return;
+    }
+    if(typeof initTeacherClassFollowupPage==='function') setTimeout(initTeacherClassFollowupPage,0);
+  }
+  if(pageId==='teacherClassManager'){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('teacherFollowupManager')){
+      $('teacherClassManager')?.classList.add('hidden');
+      alert('لا توجد لديك صلاحية متابعة المدير للمعلمين.');
+      openAdminDashboardInternal();
+      return;
+    }
+    if(typeof loadTeacherClassManagerFollowups==='function') setTimeout(loadTeacherClassManagerFollowups,0);
   }
   if(pageId==='followup'){
     const u=getCurrentLoggedAdminUser();
@@ -6066,6 +6409,8 @@ if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>{
 if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
   if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
 };
+if($('headerTeacherClassFollowupBtn')) $('headerTeacherClassFollowupBtn').onclick=()=>openInternalPage('teacherClassFollowup');
+if($('headerTeacherClassManagerBtn')) $('headerTeacherClassManagerBtn').onclick=()=>openInternalPage('teacherClassManager');
 if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
   const u=getCurrentLoggedAdminUser();
   const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
@@ -6137,6 +6482,10 @@ function setAdminMode(on){
       if(deputyBtn) deputyBtn.style.display=(owner||perms.has('referralReview'))?'':'none';
       const followupBtn=$('headerFollowupBtn');
       if(followupBtn) followupBtn.style.display=(owner||perms.has('followupSheets'))?'':'none';
+      const teacherClassBtn=$('headerTeacherClassFollowupBtn');
+      if(teacherClassBtn) teacherClassBtn.style.display=(owner||perms.has('teacherFollowup'))?'':'none';
+      const teacherClassManagerBtn=$('headerTeacherClassManagerBtn');
+      if(teacherClassManagerBtn) teacherClassManagerBtn.style.display=(owner||perms.has('teacherFollowupManager'))?'':'none';
       const settingsBtn=$('headerSettingsBtn');
       if(settingsBtn) settingsBtn.style.display=(owner||perms.has('settings'))?'':'none';
       const schoolUsersBtn=$('headerSchoolUsersBtn');
@@ -6191,7 +6540,7 @@ $('adminLoginBtn').onclick=async()=>{
   if(user==='1015401902' && pass==='13111111'){
     localStorage.setItem('currentLocalAdminUser',JSON.stringify({
       username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
-      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true
+      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true
     }));
     localStorage.removeItem('cloudAdminUser');
     localStorage.setItem('adminLoggedIn','1');
@@ -6288,7 +6637,7 @@ $('adminLoginBtn').onclick=async()=>{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
         name:String(p.displayName||'المدير'),role:'مدير',
-        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'],is_owner:true
+        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true
       }));
       localStorage.removeItem('cloudAdminUser');
       localStorage.removeItem('cloudAdminToken');
@@ -6997,6 +7346,8 @@ function ensureAdminSettings(){
           <label class="admin-permission">تصوير الطلاب لإضافة الصور <input class="admin-new-perm" value="photos" type="checkbox" checked></label>
           <label class="admin-permission">كشوف متابعة الطلاب <input class="admin-new-perm" value="followupSheets" type="checkbox"></label>
           <label class="admin-permission">تحويل طالب لوكيل شؤون الطلاب <input class="admin-new-perm" value="referralSubmit" type="checkbox"></label>
+          <label class="admin-permission">متابعة المعلم داخل الفصل <input class="admin-new-perm" value="teacherFollowup" type="checkbox"></label>
+          <label class="admin-permission">متابعة المدير للمعلمين <input class="admin-new-perm" value="teacherFollowupManager" type="checkbox"></label>
           <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
         </div>
         <div id="newReferralGradePermissions" style="margin-top:12px;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
@@ -7421,7 +7772,7 @@ function ensureAdminSettings(){
         let permissions=['attendance'];
         if(permText){
           const t=permText.toLowerCase();
-          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','referralReview'];
+          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'];
           else{
             permissions=[];
             if(t.includes('تحضير')) permissions.push('attendance');
@@ -7588,6 +7939,8 @@ function renderAdminUsersSettings(){
     photos:'تصوير الطلاب لإضافة الصور',
     followupSheets:'كشوف متابعة الطلاب',
     referralSubmit:'تحويل طالب لوكيل شؤون الطلاب',
+    teacherFollowup:'متابعة المعلم داخل الفصل',
+    teacherFollowupManager:'متابعة المدير للمعلمين',
     referralReview:'ردود الوكلاء',
     'referralGrade:first':'ردود الوكلاء: الأول الثانوي',
     'referralGrade:second':'ردود الوكلاء: الثاني الثانوي',
@@ -7671,6 +8024,8 @@ function openUserPermissionEditor(username){
     ['photos','تصوير الطلاب لإضافة الصور'],
     ['followupSheets','كشوف متابعة الطلاب'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب'],
+    ['teacherFollowup','متابعة المعلم داخل الفصل'],
+    ['teacherFollowupManager','متابعة المدير للمعلمين'],
     ['referralReview','رد وكيل شؤون الطلاب على التحويلات']
   ];
   modal.innerHTML=`
