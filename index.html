@@ -4879,6 +4879,13 @@ async function cloudAutoLoginFromSavedProfile(){
   }
 
   if(savedIsNonOwner){
+    try{
+      const staleCloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
+      if(staleCloud && (staleCloud.is_owner || String(staleCloud.role||'')==='مدير')){
+        localStorage.removeItem('cloudAdminUser');
+        localStorage.removeItem('cloudAdminToken');
+      }
+    }catch(e){}
     // أعد جلسة المستخدم نفسه باستخدام السجل المدني ككلمة مرور افتراضية،
     // ولا تستخدم بيانات المدير كبديل في أي حال.
     try{
@@ -5813,13 +5820,15 @@ let adminLoggedIn = localStorage.getItem('adminLoggedIn')==='1';
 
 
 function getCurrentLoggedAdminUser(){
-  try{
-    const cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
-    if(cloud && cloud.username) return cloud;
-  }catch(e){}
+  // جلسة الدخول المحلية الحالية هي المصدر الأساسي للحقيقة.
+  // هذا يمنع جلسة سحابية قديمة (خصوصًا جلسة المدير) من الاستيلاء على الواجهة بعد F5.
   try{
     const local=JSON.parse(localStorage.getItem('currentLocalAdminUser')||'null');
     if(local && local.username) return local;
+  }catch(e){}
+  try{
+    const cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
+    if(cloud && cloud.username) return cloud;
   }catch(e){}
   const p=getAdminProfile();
   return {
