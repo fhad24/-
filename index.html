@@ -152,6 +152,13 @@
       padding:12px 18px;font-size:14px;font-weight:700;min-height:52px;cursor:pointer;white-space:nowrap;flex:0 0 auto
     }
     .admin-outline-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    body.user-permissions-only #dashboard .admin-shell > :not(#userPermissionPortal){display:none!important}
+    body.user-permissions-only #userPermissionPortal{display:block!important}
+    body.user-permissions-only .admin-toolbar,
+    body.user-permissions-only .admin-import-box,
+    body.user-permissions-only .admin-data-view,
+    body.user-permissions-only .admin-footer-card,
+    body.user-permissions-only #attendancePanel{display:none!important}
     body.user-attendance-only .admin-data-view{display:none!important}
     body.user-attendance-only .admin-summary-row,
     body.user-attendance-only .admin-mini-row,
@@ -5791,6 +5798,7 @@ function hideAllUserFeatureViews(){
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
   $('attendancePanel')?.classList.add('hidden');
   document.querySelector('.admin-toolbar')?.classList.add('hidden');
+  document.querySelector('.admin-import-box')?.classList.add('hidden');
   document.body.classList.remove('user-attendance-only');
 }
 
@@ -5840,7 +5848,7 @@ function configureUserDashboard(){
   const editTab=document.querySelector('.tab[data-page="edit"]');
 
   if(owner){
-    document.body.classList.remove('user-attendance-only');
+    document.body.classList.remove('user-attendance-only','user-permissions-only');
     portal.classList.add('hidden');
     registerTab?.classList.remove('hidden');
     editTab?.classList.remove('hidden');
@@ -5856,6 +5864,7 @@ function configureUserDashboard(){
   editTab?.classList.add('hidden');
 
   hideAllUserFeatureViews();
+  document.body.classList.add('user-permissions-only');
   portal.classList.remove('hidden');
 
   const name=String(u.name||u.displayName||u.username||'المستخدم');
@@ -5886,6 +5895,7 @@ function configureUserDashboard(){
 
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
     const action=btn.dataset.userAction;
+    document.body.classList.remove('user-permissions-only');
     if(action==='attendance'){
       applyUserAttendancePrivacy();
       $('attendancePanel')?.classList.remove('hidden');
@@ -6530,6 +6540,13 @@ function openAdminDashboardInternal(){
 
   try{renderAdmin()}catch(e){console.warn('render admin',e)}
   try{ensureAdminToolbarVisible()}catch(e){}
+  try{
+    if(!isCurrentOwner()){
+      hideAllUserFeatureViews();
+      document.body.classList.add('user-permissions-only');
+      $('userPermissionPortal')?.classList.remove('hidden');
+    }
+  }catch(e){}
   window.scrollTo(0,0);
 }
 
