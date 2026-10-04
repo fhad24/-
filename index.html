@@ -8887,14 +8887,23 @@ function saveAttendanceLog(rows){
 }
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
+function canUseAttendanceWhatsApp(){
+  if(isCurrentOwner()) return true;
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const role=String(u.role||'').trim();
+  return role.includes('وكيل') || role.includes('إداري') || role.includes('اداري');
+}
+
 async function renderAttendancePage(){
   if($('attendanceSelectAllRows')){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
     $('attendanceSelectAllRows').style.display='';
   }
-  if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').classList.toggle('hidden', !['late','absent'].includes(attendanceListView));
   if($('attendanceWhatsAppSelected')){
-    $('attendanceWhatsAppSelected').style.display=(attendanceListView==='late'||attendanceListView==='absent')?'':'none';
+    const canWhatsApp=canUseAttendanceWhatsApp();
+    const allowedView=(attendanceListView==='late'||attendanceListView==='absent');
+    $('attendanceWhatsAppSelected').classList.toggle('hidden', !(canWhatsApp&&allowedView));
+    $('attendanceWhatsAppSelected').style.display=(canWhatsApp&&allowedView)?'':'none';
   }
   const students=getStudents();
   const allLogs=getAttendanceLog();
@@ -9196,6 +9205,10 @@ if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
 };
 
 if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>{
+  if(!canUseAttendanceWhatsApp()){
+    alert('إرسال واتساب للمحدد متاح للوكلاء والإداريين فقط.');
+    return;
+  }
   if(attendanceListView!=='late' && attendanceListView!=='absent'){
     alert('رسائل الواتساب متاحة في التأخر والغياب فقط');
     return;
