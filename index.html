@@ -7652,23 +7652,43 @@ const BUILTIN_ADMIN_USERS=[{"username":"1096253859","name":"ابراهيم مح�
 function getAdminUsers(){
   try{
     let users=JSON.parse(localStorage.getItem('adminUsers')||'[]');
-    if(localStorage.getItem('adminUsersImportV2')!=='1'){
-      const byUser=new Map(users.map(u=>[String(u.username||''),u]));
-      for(const item of BUILTIN_ADMIN_USERS){
-        const key=String(item.username);
-        if(!byUser.has(key)){
-          users.push({...item});
-          byUser.set(key,item);
-        }else{
-          const i=users.findIndex(u=>String(u.username)===key);
-          users[i]={...item,...users[i],name:users[i].name||item.name,role:users[i].role||item.role,permissions:(users[i].permissions&&users[i].permissions.length)?users[i].permissions:item.permissions};
-        }
+    if(!Array.isArray(users)) users=[];
+
+    // ضمان بقاء جميع المستخدمين الأساسيين موجودين دائمًا حتى بعد أي مزامنة سحابية،
+    // مع الحفاظ على أي كلمة مرور أو صلاحيات أو اسم تم تعديله محليًا.
+    const byUser=new Map(users.map((u,i)=>[String(u.username||'').trim(),i]));
+    for(const item of BUILTIN_ADMIN_USERS){
+      const key=String(item.username||'').trim();
+      if(!key) continue;
+      if(!byUser.has(key)){
+        users.push({...item});
+        byUser.set(key,users.length-1);
+      }else{
+        const i=byUser.get(key);
+        const current=users[i]||{};
+        users[i]={
+          ...item,
+          ...current,
+          username:key,
+          civilId:String(current.civilId||item.civilId||key),
+          name:String(current.name||item.name||key),
+          role:String(current.role||item.role||'معلم'),
+          password:String(current.password??item.password??''),
+          permissions:(Array.isArray(current.permissions)&&current.permissions.length)
+            ? current.permissions
+            : (Array.isArray(item.permissions)?item.permissions:[])
+        };
       }
-      localStorage.setItem('adminUsers',JSON.stringify(users));
-      localStorage.setItem('adminUsersImportV2','1');
     }
+
+    localStorage.setItem('adminUsers',JSON.stringify(users));
+    localStorage.setItem('adminUsersImportV2','1');
     return users;
-  }catch(e){return BUILTIN_ADMIN_USERS.map(x=>({...x}))}
+  }catch(e){
+    const fallback=BUILTIN_ADMIN_USERS.map(x=>({...x,civilId:String(x.civilId||x.username||'')}));
+    try{localStorage.setItem('adminUsers',JSON.stringify(fallback))}catch(_){}
+    return fallback;
+  }
 }
 function saveAdminUsers(rows){localStorage.setItem('adminUsers',JSON.stringify(rows))}
 function applySchoolSettings(){
