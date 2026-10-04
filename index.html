@@ -7119,7 +7119,7 @@ function renderAdmin(){
 
 async function updatePendingStudentPhotosCount(){
   const el=$('pendingStudentPhotosCount');
-  if(!el || !localStorage.getItem('cloudAdminToken')) return;
+  if(!el || !isCurrentOwner() || !localStorage.getItem('cloudAdminToken')) return;
   try{
     const r=await cloudApi('list_pending_photos');
     el.textContent=r.rows?.length?`(${r.rows.length})`:'';
@@ -7285,6 +7285,9 @@ async function renderApprovedStudentPhotosView(modal){
 }
 
 async function openPendingStudentPhotos(){
+  if(!isCurrentOwner()){
+    return;
+  }
   if(!localStorage.getItem('cloudAdminToken')){
     alert('سجّل دخول الإدارة أولاً لاعتماد الصور');
     return;
@@ -7514,8 +7517,11 @@ async function openPendingStudentPhotos(){
   }
 }
 
-if($('pendingStudentPhotosBtn')) $('pendingStudentPhotosBtn').onclick=openPendingStudentPhotos;
-setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
+if($('pendingStudentPhotosBtn')){
+  $('pendingStudentPhotosBtn').style.display=isCurrentOwner()?'':'none';
+  if(isCurrentOwner()) $('pendingStudentPhotosBtn').onclick=openPendingStudentPhotos;
+}
+if(isCurrentOwner()) setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
@@ -12010,7 +12016,7 @@ async function renderAddStudentDatabaseList(){
     const total=getStudents().length;
     host.innerHTML=total
       ? '<div class="hint" style="padding:18px;text-align:center">لا يوجد طلاب مطابقون للبحث أو الفلاتر الحالية.</div>'
-      : '<div class="hint" style="padding:18px;text-align:center;color:#b42318;font-weight:800">لا توجد بيانات طلاب محمّلة. أعد فتح الصفحة بعد اكتمال المزامنة.</div>';
+      : '<div class="hint" style="padding:18px;text-align:center;color:#b42318;font-weight:800">تعذر تحميل بيانات الطلاب من السحابة. '+(window.__addEditStudentLoadError?('السبب: '+window.__addEditStudentLoadError):'')+'</div>';
   }
   if($('addStudentListCount')) $('addStudentListCount').textContent=`إجمالي قاعدة الطلاب: ${getStudents().length} — المعروض: ${prepared.length}`;
 }
@@ -12051,6 +12057,7 @@ async function loadStudentsForAddEdit(){
       return students;
     }catch(e){
       console.error('credential student load',e);
+      window.__addEditStudentLoadError=String(e?.message||e||'');
     }
   }
   return getStudents();
@@ -12081,7 +12088,10 @@ async function openAddStudentModal(){
   ensureFaceModels().catch(()=>{});
   addStudentListGrade=''; addStudentListClass=''; addStudentListSort='name';
   if($('addStudentSearch')) $('addStudentSearch').value='';
-  document.querySelectorAll('.add-student-grade-filter').forEach(b=>b.classList.toggle('active',!b.dataset.addGrade));
+  document.querySelectorAll('.add-student-grade-filter').forEach(b=>{
+    const isAll=String(b.dataset.addGrade||'')==='';
+    b.classList.toggle('active',isAll);
+  });
   document.querySelectorAll('.add-student-sort').forEach(b=>b.classList.toggle('active',b.dataset.addSort==='name'));
 
   const listHost=$('studentCardGrid');
