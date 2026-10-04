@@ -2694,7 +2694,11 @@
     }
     .teacher-class-auto b{color:#163f37;font-size:14px}
     .teacher-photo-box{border:1px dashed #9fc9bf;border-radius:16px;padding:14px;text-align:center;background:#fbfefd}
-    .teacher-photo-preview{display:none;max-width:100%;max-height:360px;margin:12px auto 0;border-radius:14px;border:1px solid #d5e5e0}
+    #teacherClassNotes{width:100%;min-height:170px;height:170px;resize:none;overflow:auto;box-sizing:border-box}
+    .teacher-camera-stage{display:none;margin-top:12px}
+    .teacher-camera-video{width:100%;max-height:420px;object-fit:cover;border-radius:14px;border:1px solid #d5e5e0;background:#111}
+    .teacher-camera-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+    .teacher-photo-preview{display:none;max-width:100%;max-height:420px;margin:12px auto 0;border-radius:14px;border:1px solid #d5e5e0}
     .teacher-followup-history,.manager-followup-list{display:grid;gap:12px}
     .teacher-followup-card,.manager-followup-card{
       border:1px solid #d4e3df;border-radius:16px;background:#fff;padding:14px;box-shadow:0 3px 12px #00000008
@@ -3254,7 +3258,28 @@
       <div class="teacher-class-grid" style="margin-top:14px">
         <div>
           <label>المادة</label>
-          <input id="teacherClassSubject" placeholder="مثال: الرياضيات">
+          <select id="teacherClassSubject">
+            <option value="">اختر المادة</option>
+            <option>الدراسات الإسلامية</option>
+            <option>اللغة العربية</option>
+            <option>اللغة الإنجليزية</option>
+            <option>الرياضيات</option>
+            <option>الأحياء</option>
+            <option>الكيمياء</option>
+            <option>الفيزياء</option>
+            <option>علوم الأرض والفضاء</option>
+            <option>التقنية الرقمية</option>
+            <option>المهارات الرقمية</option>
+            <option>التربية الصحية والبدنية</option>
+            <option>الدراسات الاجتماعية</option>
+            <option>التفكير الناقد</option>
+            <option>المهارات الحياتية</option>
+            <option>البحث ومصادر المعلومات</option>
+            <option>القرآن الكريم وتفسيره</option>
+            <option>الحديث</option>
+            <option>الفقه</option>
+            <option>التوحيد</option>
+          </select>
         </div>
         <div>
           <label>الصف</label>
@@ -3279,11 +3304,17 @@
         <div class="wide">
           <label>صورة من السبورة</label>
           <div class="teacher-photo-box">
-            <button type="button" class="btn btn-primary" id="teacherClassCameraBtn">📷 تصوير السبورة بالجوال</button>
-            <button type="button" class="btn btn-soft" id="teacherClassUploadBtn">رفع صورة جاهزة</button>
+            <button type="button" class="btn btn-primary" id="teacherClassCameraBtn">📷 تشغيل الكاميرا وتصوير السبورة</button>
+            <div id="teacherClassCameraStage" class="teacher-camera-stage">
+              <video id="teacherClassCameraVideo" class="teacher-camera-video" autoplay playsinline muted></video>
+              <div class="teacher-camera-actions">
+                <button type="button" class="btn btn-primary" id="teacherClassCaptureBtn">📸 التقاط الصورة</button>
+                <button type="button" class="btn btn-soft" id="teacherClassCloseCameraBtn">إغلاق الكاميرا</button>
+              </div>
+            </div>
             <input id="teacherClassCameraInput" class="hidden" type="file" accept="image/*" capture="environment">
-            <input id="teacherClassFileInput" class="hidden" type="file" accept="image/*">
             <img id="teacherClassPhotoPreview" class="teacher-photo-preview" alt="معاينة صورة السبورة">
+            <button type="button" class="btn btn-soft hidden" id="teacherClassRetakeBtn" style="margin-top:10px">إعادة التصوير</button>
           </div>
         </div>
       </div>
@@ -6065,10 +6096,11 @@ if($('followupClearBtn')) $('followupClearBtn').onclick=clearFollowupMarks;
   $(id)?.addEventListener('input',()=>updateFollowupHeader(currentFollowupStudents()));
 });
 if($('teacherClassGrade')) $('teacherClassGrade').onchange=populateTeacherClassClassrooms;
-if($('teacherClassCameraBtn')) $('teacherClassCameraBtn').onclick=()=>$('teacherClassCameraInput')?.click();
-if($('teacherClassUploadBtn')) $('teacherClassUploadBtn').onclick=()=>$('teacherClassFileInput')?.click();
+if($('teacherClassCameraBtn')) $('teacherClassCameraBtn').onclick=startTeacherClassCamera;
+if($('teacherClassCaptureBtn')) $('teacherClassCaptureBtn').onclick=captureTeacherClassCamera;
+if($('teacherClassCloseCameraBtn')) $('teacherClassCloseCameraBtn').onclick=stopTeacherClassCamera;
+if($('teacherClassRetakeBtn')) $('teacherClassRetakeBtn').onclick=startTeacherClassCamera;
 if($('teacherClassCameraInput')) $('teacherClassCameraInput').onchange=()=>handleTeacherClassPhoto($('teacherClassCameraInput'));
-if($('teacherClassFileInput')) $('teacherClassFileInput').onchange=()=>handleTeacherClassPhoto($('teacherClassFileInput'));
 if($('teacherClassSubmitBtn')) $('teacherClassSubmitBtn').onclick=submitTeacherClassFollowup;
 if($('teacherClassRefreshMine')) $('teacherClassRefreshMine').onclick=loadMyTeacherClassFollowups;
 if($('teacherClassManagerRefresh')) $('teacherClassManagerRefresh').onclick=loadTeacherClassManagerFollowups;
@@ -6076,6 +6108,71 @@ if($('teacherClassManagerRefresh')) $('teacherClassManagerRefresh').onclick=load
 
 
 let teacherClassImageData='';
+let teacherClassCameraStream=null;
+
+async function startTeacherClassCamera(){
+  stopTeacherClassCamera();
+  const stage=$('teacherClassCameraStage');
+  const video=$('teacherClassCameraVideo');
+  const preview=$('teacherClassPhotoPreview');
+  const retake=$('teacherClassRetakeBtn');
+  if(preview) preview.style.display='none';
+  if(retake) retake.classList.add('hidden');
+  if(stage) stage.style.display='block';
+  try{
+    if(!navigator.mediaDevices?.getUserMedia) throw new Error('camera_api_unavailable');
+    teacherClassCameraStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}},
+      audio:false
+    });
+    if(video){
+      video.srcObject=teacherClassCameraStream;
+      await video.play().catch(()=>{});
+    }
+  }catch(e){
+    console.error(e);
+    if(stage) stage.style.display='none';
+    const fallback=$('teacherClassCameraInput');
+    if(fallback){
+      fallback.value='';
+      fallback.click();
+    }else{
+      alert('تعذر تشغيل الكاميرا. تأكد من السماح للموقع باستخدام الكاميرا.');
+    }
+  }
+}
+
+function stopTeacherClassCamera(){
+  if(teacherClassCameraStream){
+    teacherClassCameraStream.getTracks().forEach(t=>t.stop());
+    teacherClassCameraStream=null;
+  }
+  const video=$('teacherClassCameraVideo');
+  if(video) video.srcObject=null;
+  const stage=$('teacherClassCameraStage');
+  if(stage) stage.style.display='none';
+}
+
+function captureTeacherClassCamera(){
+  const video=$('teacherClassCameraVideo');
+  if(!video || !video.videoWidth || !video.videoHeight){
+    alert('الكاميرا لم تجهز بعد. حاول مرة أخرى بعد ظهور الصورة.');
+    return;
+  }
+  const canvas=document.createElement('canvas');
+  const maxW=1400,maxH=1050;
+  const scale=Math.min(1,maxW/video.videoWidth,maxH/video.videoHeight);
+  canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+  canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  teacherClassImageData=canvas.toDataURL('image/jpeg',0.8);
+  stopTeacherClassCamera();
+  const preview=$('teacherClassPhotoPreview');
+  if(preview){preview.src=teacherClassImageData;preview.style.display='block'}
+  const retake=$('teacherClassRetakeBtn');
+  if(retake) retake.classList.remove('hidden');
+}
 
 function teacherClassFormatDateTime(value){
   const d=value?new Date(value):new Date();
@@ -6176,7 +6273,7 @@ async function submitTeacherClassFollowup(){
   const period=String($('teacherClassPeriod')?.value||'').trim();
   const notes=String($('teacherClassNotes')?.value||'').trim();
   if(!subject||!grade||!classroom||!period){alert('أكمل المادة والصف والفصل والحصة.');return}
-  if(!teacherClassImageData){alert('التقط صورة من السبورة أو ارفع صورة أولًا.');return}
+  if(!teacherClassImageData){alert('التقط صورة من السبورة بالكاميرا أولًا.');return}
   const btn=$('teacherClassSubmitBtn');const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإرسال...';
   try{
     const creds=getCurrentAppCredentials();
@@ -6185,7 +6282,9 @@ async function submitTeacherClassFollowup(){
     $('teacherClassNotes').value='';
     $('teacherClassPeriod').value='';
     teacherClassImageData='';
+    stopTeacherClassCamera();
     const p=$('teacherClassPhotoPreview');if(p){p.removeAttribute('src');p.style.display='none'}
+    $('teacherClassRetakeBtn')?.classList.add('hidden')
     toast('تم إرسال متابعة الحصة للمدير');
     await loadMyTeacherClassFollowups();
   }catch(e){
