@@ -4856,10 +4856,18 @@ async function cloudLoginAndSync(username,password){
 }
 
 async function cloudAutoLoginFromSavedProfile(){
+  // إذا كانت هناك جلسة مستخدم محلية، لا يجوز أبدًا استبدالها تلقائيًا بحساب المدير.
+  let savedLocal=null;
+  try{savedLocal=JSON.parse(localStorage.getItem('currentLocalAdminUser')||'null')}catch(e){}
+  const savedIsNonOwner=!!(savedLocal && savedLocal.username && !savedLocal.is_owner && String(savedLocal.role||'')!=='مدير');
+
   if(localStorage.getItem('cloudAdminToken')){
     try{
       await cloudPullToLocal();
-      if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
+      if(savedIsNonOwner){
+        localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
+        try{configureUserDashboard()}catch(e){}
+      }else if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
         try{configureUserDashboard()}catch(e){}
       }else if(typeof renderAdmin==='function'){
         renderAdmin();
@@ -4869,15 +4877,36 @@ async function cloudAutoLoginFromSavedProfile(){
       localStorage.removeItem('cloudAdminToken');
     }
   }
+
+  if(savedIsNonOwner){
+    // أعد جلسة المستخدم نفسه باستخدام السجل المدني ككلمة مرور افتراضية،
+    // ولا تستخدم بيانات المدير كبديل في أي حال.
+    try{
+      const username=String(savedLocal.username||savedLocal.civil_id||'').trim();
+      const password=String(savedLocal.civil_id||savedLocal.username||'').trim();
+      if(username && password){
+        const login=await cloudApi('login',{username,password},false);
+        if(login?.token){
+          localStorage.setItem('cloudAdminToken',login.token);
+          const merged={
+            ...(login.user||{}),
+            ...savedLocal,
+            username:String(savedLocal.username||username),
+            civil_id:String(savedLocal.civil_id||savedLocal.username||username),
+            is_owner:false
+          };
+          localStorage.setItem('cloudAdminUser',JSON.stringify(merged));
+          localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
+        }
+      }
+    }catch(e){console.warn('user cloud auto login',e)}
+    try{configureUserDashboard()}catch(e){}
+    return true;
+  }
+
   const p=getAdminProfile();
   if(localStorage.getItem('adminLoggedIn')==='1' && p.username && p.password){
-    try{
-      await cloudLoginAndSync(p.username,p.password);
-      if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
-        try{configureUserDashboard()}catch(e){}
-      }
-      return true;
-    }catch(e){console.warn('cloud auto login',e)}
+    try{await cloudLoginAndSync(p.username,p.password); return true}catch(e){console.warn('cloud auto login',e)}
   }
   return false;
 }
@@ -6780,8 +6809,11 @@ $('adminLoginBtn').onclick=async()=>{
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
-    try{renderAdmin()}catch(e){console.error('renderAdmin after login',e)}
-    try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
+    try{
+      if(isCurrentOwner()) renderAdmin();
+      configureUserDashboard();
+      ensureAdminToolbarVisible();
+    }catch(e){console.error('open dashboard after login',e)}
   };
 
   // مسار دخول مباشر وآمن للمستخدمين الأساسيين:
@@ -12204,6 +12236,10 @@ function restoreLastAppLocation(){
       setAdminMode(true);
 
       const owner=typeof isCurrentOwner==='function' ? isCurrentOwner() : true;
+      if(!owner){
+        document.body.classList.add('user-permissions-only');
+        document.body.classList.remove('user-attendance-only');
+      }
       if(owner){
         document.body.classList.remove('user-permissions-only','user-attendance-only');
         try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
