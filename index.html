@@ -159,6 +159,7 @@
     body.user-permissions-only .admin-data-view,
     body.user-permissions-only .admin-footer-card,
     body.user-permissions-only #attendancePanel{display:none!important}
+    body.user-attendance-only .attendance-body-grid{display:none!important}
     body.user-attendance-only .admin-data-view{display:none!important}
     body.user-attendance-only .admin-summary-row,
     body.user-attendance-only .admin-mini-row,
@@ -5808,6 +5809,8 @@ function applyUserAttendancePrivacy(){
     return;
   }
   document.body.classList.add('user-attendance-only');
+  const manualGrid=document.querySelector('.attendance-body-grid');
+  if(manualGrid) manualGrid.style.display='none';
   document.querySelectorAll('.admin-data-view').forEach(el=>{
     el.classList.add('hidden');
     el.style.display='none';
