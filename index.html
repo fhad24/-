@@ -3736,25 +3736,6 @@
           </div>
         </div>
 
-        <div class="attendance-body-grid">
-          <div class="card attendance-manual">
-            <h3>تسجيل يدوي عند الحاجة</h3>
-            <input id="attendanceSearch" placeholder="ابحث بالاسم أو الرقم...">
-            <div class="attendance-mode-row">
-              <button class="attendance-mode active">التأخر اليومي</button>
-              <button class="attendance-mode">تسجيل الحضور اليومي</button>
-              <button class="attendance-mode">الغياب اليومي</button>
-              <button class="attendance-mode">⚙ أوقات التحضير</button>
-            </div>
-            <button class="attendance-wide muted">تسجيل يدوي</button>
-            <button class="attendance-wide soft">تسجيل حسب الوقت الحالي</button>
-          </div>
-
-          <div class="attendance-note">
-            <b>التحقق اليدوي:</b> قارن وجه الطالب أمام الكاميرا بصورته المسجلة، ثم سجل حالته. يُحفظ الوقت والحالة في سجل اليوم.
-          </div>
-        </div>
-
         <div class="attendance-tabs">
           <button type="button" id="attendanceTabLate" class="active" data-att-view="late">⏰ التأخر اليومي (<span id="attLateTabCount">0</span>)</button>
           <button type="button" id="attendanceTabPresent" data-att-view="present">✓ الحضور اليومي (<span id="attPresentTabCount">0</span>)</button>
@@ -6189,8 +6170,6 @@ function applyUserAttendancePrivacy(){
   document.body.classList.add('user-attendance-only');
   const topLine=document.querySelector('.attendance-topline');
   if(topLine) topLine.style.display='none';
-  const manualGrid=document.querySelector('.attendance-body-grid');
-  if(manualGrid) manualGrid.style.display='none';
   document.querySelectorAll('.admin-data-view').forEach(el=>{
     el.classList.add('hidden');
     el.style.display='none';
@@ -11179,8 +11158,8 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
 
     closeAttendanceModal();
 
-    // بعد الحفظ ابقَ في صفحة التحضير واعرض قائمة الطلاب المتأخرين.
-    attendanceListView='late';
+    // بعد الحفظ ابقَ في صفحة التحضير وافتح التبويب المناسب للحالة التي تم حفظها.
+    attendanceListView = savedMode==='present' ? 'present' : (savedMode==='late' ? 'late' : (savedMode==='absent' ? 'absent' : attendanceListView));
     localStorage.setItem('activeAdminView','attendance');
     try{
       $('attendancePanel')?.classList.remove('hidden');
