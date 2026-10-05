@@ -10106,8 +10106,12 @@ async function renderAttendancePage(){
               ? ((x.hijriDate||x.date||'—') + ' — ' + (x.period?('الحصة '+x.period):'بدون حصة'))
               : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
           <div class="attendance-saved-actions">
-            ${x._autoAbsent
-              ? '<span style="font-weight:800;color:#b42318">✕ غائب تلقائيًا</span>'
+            ${isAbsentRow
+              ? `<button type="button" class="attendance-saved-edit" data-absent-to-present-id="${escapeFollowupHtml(x.idno||'')}">✓ تحويل إلى حاضر</button>
+                 ${x._autoAbsent
+                   ? '<span style="font-weight:800;color:#b42318">✕ غائب تلقائيًا</span>'
+                   : `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
+                      <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`}`
               : `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
                  <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`}
           </div>
@@ -10143,6 +10147,24 @@ async function renderAttendancePage(){
         const idx=Number(btn.dataset.editAttIndex);
         if(!Number.isFinite(idx)) return;
         openAttendanceEdit(idx);
+      };
+    });
+
+    // في تبويب الغياب: السماح بتحويل الطالب إلى حاضر.
+    document.querySelectorAll('[data-absent-to-present-id]').forEach(btn=>{
+      btn.onclick=()=>{
+        const id=String(btn.dataset.absentToPresentId||'');
+        const student=getStudents().find(x=>String(x.idno)===id);
+        if(!student){
+          alert('تعذر العثور على بيانات الطالب.');
+          return;
+        }
+        openAttendanceModal('present');
+        attendanceSelectedId=id;
+        attendancePresentSelectedIds.clear();
+        renderAttendanceStudentList();
+        showAttendanceSelectedStudent(student);
+        toast('اختر الحصة والمادة ثم اضغط حفظ لتحويل الطالب إلى حاضر');
       };
     });
   }
