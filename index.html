@@ -7137,8 +7137,10 @@ function renderAdmin(){
 
 async function updatePendingStudentPhotosCount(){
   const el=$('pendingStudentPhotosCount');
-  if(!el || !isCurrentOwner() || !localStorage.getItem('cloudAdminToken')) return;
+  if(!el || !isCurrentOwner()) return;
   try{
+    const ready=await ensureOwnerCloudSession();
+    if(!ready) return;
     const r=await cloudApi('list_pending_photos');
     el.textContent=r.rows?.length?`(${r.rows.length})`:'';
   }catch(e){el.textContent=''}
@@ -7302,10 +7304,59 @@ async function renderApprovedStudentPhotosView(modal){
   };
 }
 
+async function ensureOwnerCloudSession(){
+  if(!isCurrentOwner()) return false;
+
+  const tryCurrentToken=async()=>{
+    const token=localStorage.getItem('cloudAdminToken');
+    if(!token) return false;
+    try{
+      await cloudApi('list_all_student_photos');
+      return true;
+    }catch(e){
+      localStorage.removeItem('cloudAdminToken');
+      localStorage.removeItem('cloudAdminUser');
+      return false;
+    }
+  };
+
+  if(await tryCurrentToken()) return true;
+
+  const profile=getAdminProfile();
+  const current=getCurrentLoggedAdminUser?.()||{};
+  const username=String(
+    profile?.username ||
+    current?.username ||
+    current?.civil_id ||
+    ''
+  ).trim();
+  const password=String(profile?.password||'').trim();
+
+  if(!username || !password) return false;
+
+  try{
+    const login=await cloudApi('login',{username,password},false);
+    if(!login?.token) return false;
+    localStorage.setItem('cloudAdminToken',login.token);
+    localStorage.setItem('cloudAdminUser',JSON.stringify(login.user||{
+      username,
+      name:current?.name||profile?.displayName||'المدير',
+      role:'مدير',
+      is_owner:true
+    }));
+    return true;
+  }catch(e){
+    console.error('owner cloud relogin',e);
+    return false;
+  }
+}
+
 async function openPendingStudentPhotos(){
   if(!isCurrentOwner()) return;
-  if(!localStorage.getItem('cloudAdminToken')){
-    alert('سجّل دخول الإدارة أولاً لعرض كشف الصور واعتمادها');
+
+  const cloudReady=await ensureOwnerCloudSession();
+  if(!cloudReady){
+    alert('تعذر ربط جلسة المدير بالسحابة. أعد تسجيل دخول الإدارة مرة واحدة ثم افتح كشف الصور.');
     return;
   }
 
