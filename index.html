@@ -4066,6 +4066,9 @@
       </div>
     </div>
 
+    <div id="attendanceSaveSuccess" class="hidden" style="margin:12px 0 0;padding:12px 14px;border-radius:12px;background:#e7f7f1;border:1px solid #9fd8c8;color:#0f6f60;font-weight:900;text-align:center">
+      ✅ تم الحفظ بنجاح
+    </div>
     <div class="attendance-modal-footer">
       <button type="button" class="btn btn-primary" id="saveAttendanceStudentBtn">حفظ</button>
       <button type="button" class="btn btn-outline" id="cancelAttendanceStudentBtn">إلغاء</button>
@@ -10252,6 +10255,7 @@ function openAttendanceModal(mode){
   attendanceFaceVerified=false;
   attendanceFaceCompareResult='none';
   $('attendanceStudentModal').classList.remove('hidden');
+  if($('attendanceSaveSuccess')) $('attendanceSaveSuccess').classList.add('hidden');
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
@@ -10296,6 +10300,7 @@ async function openAttendanceEdit(index){
   attendanceFaceCompareResult='none';
 
   $('attendanceStudentModal').classList.remove('hidden');
+  if($('attendanceSaveSuccess')) $('attendanceSaveSuccess').classList.add('hidden');
   $('attendanceEditTimeWrap')?.classList.remove('hidden');
   setAttendanceTimeControls(row.time);
   fillAttendanceHijriControls(String(row.date||todayKey()),row.hijriDate||'');
@@ -10855,10 +10860,14 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const wasEditing=attendanceEditingIndex>=0;
     saveAttendanceLog(rows);
 
-    // إظهار رسالة النجاح فور اكتمال الحفظ وقبل إغلاق النافذة أو إعادة رسم الصفحة.
+    // إظهار نجاح الحفظ داخل نافذة الحضور نفسها قبل الإغلاق.
     if(savedMode==='present'){
-      alert('✅ تم الحفظ بنجاح');
+      const success=$('attendanceSaveSuccess');
+      if(success) success.classList.remove('hidden');
+      btn.textContent='✅ تم الحفظ بنجاح';
+      btn.disabled=true;
       toast('✅ تم الحفظ بنجاح');
+      await new Promise(resolve=>setTimeout(resolve,1200));
     }
 
     closeAttendanceModal();
