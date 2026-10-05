@@ -3770,7 +3770,9 @@
         <div class="admin-actions-grid">
           <input id="excelFileInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
           <input id="madrasatiExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+          <input id="studentRosterTxtInput" class="hidden" type="file" accept=".txt,text/plain">
           <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد الصفوف والفصول / قوائم Word 📥</button>
+          <button class="admin-outline-btn" id="importStudentRosterTxtBtn" type="button">استيراد قائمة TXT وربط الصفوف والفصول 📄</button>
           <button class="admin-outline-btn">الباركود (إضافة / عرض الأسماء) 🪪</button>
           <button class="admin-outline-btn">متابعة دخول منصة مدرستي 📶</button>
           <input id="studentPhotosExcelInput" class="hidden" type="file" accept=".xlsx">
@@ -5942,6 +5944,170 @@ function displayStudentClassroom(v){
   const key=studentClassKey(v);
   return key || String(v??'').trim() || '—';
 }
+
+function rosterNameNormalize(v){
+  return normalizeSearchText(v)
+    .replace(/\bبن\b/g,' ')
+    .replace(/\bابن\b/g,' ')
+    .replace(/\bآل\b/g,' ال ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function rosterNameScore(a,b){
+  const na=rosterNameNormalize(a), nb=rosterNameNormalize(b);
+  if(!na||!nb) return 0;
+  if(na===nb) return 1;
+  const A=[...new Set(na.split(' ').filter(x=>x.length>1))];
+  const B=[...new Set(nb.split(' ').filter(x=>x.length>1))];
+  const bs=new Set(B);
+  const common=A.filter(x=>bs.has(x)).length;
+  let score=(2*common)/Math.max(1,A.length+B.length);
+  if(A[0]&&B[0]&&A[0]===B[0]) score+=0.06;
+  if(A.at(-1)&&B.at(-1)&&A.at(-1)===B.at(-1)) score+=0.06;
+  return Math.min(1,score);
+}
+
+function parseStudentRosterTxt(text){
+  const out=[];
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    const parts=line.split('\t');
+    if(parts.length<2) return;
+    const cls=String(parts[0]||'').trim();
+    const name=String(parts[1]||'').trim();
+    const idno=normalizeDigitsText(String(parts[2]||'')).replace(/\D/g,'');
+    const m=cls.match(/^([23])ث\s*[-–—]\s*(.+)$/);
+    if(!m||!name) return;
+    const grade=m[1]==='2'?'الثاني الثانوي':'الثالث الثانوي';
+    const classroom=studentClassKey(m[2].trim())||m[2].trim();
+    out.push({idno,name,grade,classroom});
+  });
+  return out;
+}
+
+async function importStudentRosterTxt(file){
+  if(!file) return;
+  const raw=await file.text();
+  const roster=parseStudentRosterTxt(raw);
+  if(!roster.length){
+    alert('لم أتعرف على أسماء الطلاب. يجب أن يكون كل سطر بالشكل: 2ث - أ ثم اسم الطالب ثم السجل المدني.');
+    return;
+  }
+
+  const students=getStudents();
+  const byId=new Map(students.map((s,i)=>[String(s.idno||'').trim(),i]));
+  const changed=[];
+  let idMatched=0,fuzzyMatched=0,added=0,unmatched=0,unchanged=0;
+
+  const bestNameMatch=(name)=>{
+    let best=-1,bestScore=0,second=0;
+    students.forEach((s,i)=>{
+      const sc=rosterNameScore(name,s.name);
+      if(sc>bestScore){second=bestScore;bestScore=sc;best=i}
+      else if(sc>second){second=sc}
+    });
+    if(bestScore>=0.76 && (bestScore-second>=0.06 || bestScore>=0.92)){
+      return {index:best,score:bestScore};
+    }
+    return null;
+  };
+
+  for(const rec of roster){
+    let idx=rec.idno ? byId.get(rec.idno) : undefined;
+    if(idx!==undefined) idMatched++;
+
+    if(idx===undefined){
+      const approx=bestNameMatch(rec.name);
+      if(approx){
+        idx=approx.index;
+        fuzzyMatched++;
+      }
+    }
+
+    if(idx===undefined){
+      // لا نضيف طالبًا جديدًا إلا إذا كان لديه سجل مدني سعودي/إقامة من 10 أرقام صالح للاستخدام.
+      if(/^\d{10}$/.test(rec.idno||'') && !/^0+$/.test(rec.idno)){
+        const fresh={
+          name:rec.name,idno:rec.idno,phone:'',
+          grade:rec.grade,classroom:rec.classroom,
+          verification:'مؤكد',registered:false,
+          hasFace:false,hasId:false
+        };
+        students.push(fresh);
+        byId.set(rec.idno,students.length-1);
+        changed.push(fresh);
+        added++;
+      }else{
+        unmatched++;
+      }
+      continue;
+    }
+
+    const old=students[idx];
+    const next={
+      ...old,
+      name:rec.name||old.name,
+      grade:rec.grade||old.grade,
+      classroom:rec.classroom||old.classroom
+    };
+
+    if(String(old.name||'')===String(next.name||'') &&
+       String(old.grade||'')===String(next.grade||'') &&
+       String(studentClassKey(old.classroom)||old.classroom||'')===String(studentClassKey(next.classroom)||next.classroom||'')){
+      unchanged++;
+      continue;
+    }
+
+    students[idx]=next;
+    changed.push(next);
+  }
+
+  // حفظ محلي مباشر مع الإبقاء على مراجع الصور كما هي.
+  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+
+  // مزامنة السجلات المتغيرة فقط، مع إعادة إرفاق صورها الحالية كي لا تُمسح في السحابة.
+  if(localStorage.getItem('cloudAdminToken') && changed.length){
+    const cloudRows=[];
+    for(const s0 of changed){
+      const s={...s0};
+      try{
+        const fb=await getStudentPhoto(`${s.idno}:face`);
+        if(fb) s.faceImage=await blobToDataURL(fb);
+        const ib=await getStudentPhoto(`${s.idno}:id`);
+        if(ib) s.idImage=await blobToDataURL(ib);
+      }catch(e){}
+      cloudRows.push(s);
+    }
+    for(let i=0;i<cloudRows.length;i+=12){
+      await cloudApi('sync_students',{students:cloudRows.slice(i,i+12)});
+    }
+  }
+
+  try{renderAdmin()}catch(e){}
+  try{await hydrateAdminPhotos()}catch(e){}
+
+  alert(
+    '✅ تم ربط قائمة الطلاب بقاعدة البيانات\n\n'+
+    'إجمالي القائمة: '+roster.length+'\n'+
+    'مطابقة بالسجل المدني: '+idMatched+'\n'+
+    'مطابقة تقريبية بالاسم: '+fuzzyMatched+'\n'+
+    'طلاب جدد بسجل صالح: '+added+'\n'+
+    'بدون تغيير: '+unchanged+'\n'+
+    'تعذر ربطهم: '+unmatched+'\n\n'+
+    'لم يتم حذف أو تعديل صور الطلاب.'
+  );
+  toast('تم تحديث الصفوف والفصول بدون حذف الصور');
+}
+
+const studentRosterTxtInput=$('studentRosterTxtInput');
+if($('importStudentRosterTxtBtn')) $('importStudentRosterTxtBtn').onclick=()=>studentRosterTxtInput?.click();
+if(studentRosterTxtInput) studentRosterTxtInput.onchange=async e=>{
+  const file=e.target.files?.[0];
+  try{if(file) await importStudentRosterTxt(file)}
+  catch(err){console.error('TXT roster import',err);alert('تعذر استيراد القائمة الآن.')}
+  e.target.value='';
+};
 
 async function importMadrasatiPlacements(file){
   const status=$('madrasatiImportStatus');
