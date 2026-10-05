@@ -12319,7 +12319,8 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
 function getTodayPresentRows(){
   return getAttendanceLog()
     .map((row,index)=>({...row,_index:index}))
-    .filter(x=>x.date===todayKey() && x.status==='present');
+    .filter(x=>x.date===todayKey() && x.status==='present')
+    .filter(x=>isOwnerAdminSession() || attendanceRowBelongsToCurrentUser(x));
 }
 
 function getSelectedPresentIndexes(){
@@ -12348,7 +12349,7 @@ function buildPresentReportHtml(){
       <div style="text-align:center;margin-bottom:14px">
         <div style="font-size:12px">${escapeFollowupHtml(school.authority||'')}</div>
         <h2 style="margin:5px 0">${escapeFollowupHtml(school.school||'المدرسة')}</h2>
-        <h3 style="margin:5px 0">تقرير الحضور اليومي</h3>
+        <h3 style="margin:5px 0">تقرير الحضور اليومي${isOwnerAdminSession()?'':' — سجلات المستخدم فقط'}</h3>
         <div style="font-size:11px">${escapeFollowupHtml(dateLabel)}</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:10px">
@@ -12369,20 +12370,22 @@ function renderPresentStatistics(){
   const rows=getTodayPresentRows();
   const uniqueStudents=new Set(rows.map(x=>String(x.idno))).size;
   const byPeriod={};
-  const byGrade={};
+  const byCohort={};
   rows.forEach(x=>{
     const p=String(x.period||'بدون حصة');
     byPeriod[p]=(byPeriod[p]||0)+1;
-    const g=String(x.grade||'غير محدد');
-    byGrade[g]=(byGrade[g]||0)+1;
+    const cohort=(String(x.grade||'غير محدد')+' / '+String(displayStudentClassroom(x.classroom)||'—'));
+    byCohort[cohort]=(byCohort[cohort]||0)+1;
   });
   const topPeriod=Object.entries(byPeriod).sort((a,b)=>b[1]-a[1])[0];
-  const topGrade=Object.entries(byGrade).sort((a,b)=>b[1]-a[1])[0];
+  const topCohort=Object.entries(byCohort).sort((a,b)=>b[1]-a[1])[0];
+  const scopeLabel=isOwnerAdminSession()?'جميع المدرسة':'الفصل/الفصول التي قام المستخدم بتحضيرها';
   panel.innerHTML=`
+    <div style="grid-column:1/-1;text-align:center;font-weight:900;color:#0f6f60;margin-bottom:4px">نطاق الإحصائيات: ${scopeLabel}</div>
     <div class="statbox">إجمالي سجلات الحضور<b>${rows.length}</b></div>
     <div class="statbox">عدد الطلاب الحاضرين<b>${uniqueStudents}</b></div>
     <div class="statbox">أكثر حصة تسجيلًا<b>${topPeriod?('الحصة '+topPeriod[0]+' ('+topPeriod[1]+')'):'—'}</b></div>
-    <div class="statbox">أكثر صف حضورًا<b>${topGrade?(topGrade[0]+' ('+topGrade[1]+')'):'—'}</b></div>`;
+    <div class="statbox">الصف / الفصل الأكثر حضورًا<b>${topCohort?(topCohort[0]+' ('+topCohort[1]+')'):'—'}</b></div>`;
   panel.classList.remove('hidden');
 }
 
