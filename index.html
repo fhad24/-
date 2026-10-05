@@ -5894,6 +5894,17 @@ function isCurrentOwner(){
   return !!u?.is_owner || role==='مدير' || (!!username && !!ownerUsername && username===ownerUsername);
 }
 
+function getCurrentPhotoOperator(){
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const name=String(u.name||u.displayName||'').trim();
+  const id=String(u.civil_id||u.civilId||u.username||'').trim();
+  return {
+    name:name || id || 'مستخدم غير معروف',
+    id,
+    label:name && id ? `${name} — ${id}` : (name || id || 'مستخدم غير معروف')
+  };
+}
+
 function hideAllUserFeatureViews(){
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
   $('attendancePanel')?.classList.add('hidden');
@@ -7212,7 +7223,9 @@ async function renderApprovedStudentPhotosView(modal){
                 <td>${row.idno||'—'}</td>
                 <td>${row.grade||'—'}</td>
                 <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
-                <td>${row.submitted_by||'—'}</td>
+                <td>${row.submitted_by_name
+                ? (row.submitted_by_id ? `${row.submitted_by_name}<br><small style="color:#60736e">${row.submitted_by_id}</small>` : row.submitted_by_name)
+                : (row.submitted_by||'—')}</td>
                 <td>${row.approved_by||'الإدارة'}</td>
                 <td style="min-width:155px">${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA'):'—'}</td>
               </tr>`).join('')}
@@ -12566,7 +12579,16 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
             const ready=await ensureOwnerCloudSession();
             if(ready){
               const imageData=await blobToDataURL(addStudentNewFaceBlob);
-              await cloudApi('owner_save_student_photo',{idno,image_data:imageData});
+              {
+              const operator=getCurrentPhotoOperator();
+              await cloudApi('owner_save_student_photo',{
+                idno,
+                image_data:imageData,
+                submitted_by:operator.label,
+                submitted_by_name:operator.name,
+                submitted_by_id:operator.id
+              });
+            }
             }
           }catch(e){console.warn('owner direct photo save for new student',e)}
         }
@@ -12628,19 +12650,27 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
         const imageData=await blobToDataURL(addStudentNewFaceBlob);
         await Promise.all([
           localSavePromise,
-          cloudApi('owner_save_student_photo',{idno,image_data:imageData})
+          cloudApi('owner_save_student_photo',{
+            idno,
+            image_data:imageData,
+            submitted_by:getCurrentPhotoOperator().label,
+            submitted_by_name:getCurrentPhotoOperator().name,
+            submitted_by_id:getCurrentPhotoOperator().id
+          })
         ]);
         students[idx]={...students[idx],hasFace:true,verification:'مؤكد',registered:true,verifiedByFace:true,faceVerifiedAt:new Date().toISOString()};
         saveStudents(students);
         addStudentNeedsApproval=false;
       }else if(addStudentNeedsApproval){
-        const current=getCurrentLoggedAdminUser?.()||{};
+        const operator=getCurrentPhotoOperator();
         const imageData=await blobToDataURL(addStudentNewFaceBlob);
         await cloudApi('submit_pending_photo',{
           idno,
           student_name:name,
           image_data:imageData,
-          submitted_by:String(current.name||current.displayName||current.username||'مستخدم')
+          submitted_by:operator.label,
+          submitted_by_name:operator.name,
+          submitted_by_id:operator.id
         },false);
         closeAddStudentModal();
         alert('تم إرسال الصورة للإدارة لاعتمادها.');
