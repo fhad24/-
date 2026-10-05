@@ -2483,6 +2483,32 @@
     }
 
 
+    /* كشف الحضور والغياب الأسبوعي */
+    .weekly-att-page{max-width:1500px;margin:0 auto;padding:14px}
+    .weekly-att-controls{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;align-items:end}
+    .weekly-att-controls label{display:block;font-weight:900;margin-bottom:6px}
+    .weekly-att-controls select,.weekly-att-controls input{width:100%;height:46px;border:1px solid #cbdad6;border-radius:12px;padding:8px 10px;font-family:inherit;background:#fff}
+    .weekly-att-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+    .weekly-att-summary{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+    .weekly-att-summary .box{min-width:150px;background:#f3faf7;border:1px solid #cfe1db;border-radius:12px;padding:10px;text-align:center;font-weight:800}
+    .weekly-att-summary .box b{display:block;font-size:22px;color:#0f7665;margin-top:3px}
+    .weekly-att-sheet{background:#fff;border:1px solid #b8c8c3;border-radius:12px;padding:12px;overflow:auto}
+    .weekly-att-head{text-align:center;margin-bottom:10px;line-height:1.7}
+    .weekly-att-head h2{margin:0;font-size:20px}
+    .weekly-att-head .meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-weight:800;font-size:12px}
+    .weekly-att-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
+    .weekly-att-table th,.weekly-att-table td{border:1px solid #222;padding:5px 3px;text-align:center;vertical-align:middle}
+    .weekly-att-table th{background:#f0f0f0;font-weight:900}
+    .weekly-att-table .student-name{text-align:right;font-weight:800}
+    .weekly-att-table .civil{direction:ltr;font-family:Arial,sans-serif}
+    .weekly-att-table .status-mark{font-size:18px;font-weight:900;line-height:1}
+    .weekly-att-table .present-mark{color:#087f5b}
+    .weekly-att-table .absent-mark{color:#c92a2a}
+    .weekly-att-table .selected-day{background:#fff8d8!important}
+    .weekly-att-footer{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-weight:800;font-size:11px}
+    @media(max-width:900px){.weekly-att-controls{grid-template-columns:1fr 1fr}.weekly-att-table{min-width:950px}}
+    @media(max-width:520px){.weekly-att-controls{grid-template-columns:1fr}}
+
     /* واجهة دخول رسمية محسنة */
     body:not(.admin-mode){background:linear-gradient(180deg,#f7fbfa 0%,#eef7f4 100%)}
     body:not(.admin-mode) #register{max-width:980px;margin:0 auto;padding:18px 16px 34px}
@@ -3446,6 +3472,94 @@
 </section>
 
 
+<section id="weeklyAttendanceReport" class="page hidden">
+  <div class="weekly-att-page">
+    <div class="card">
+      <h2 style="text-align:center;margin:0 0 6px">كشف متابعة الحضور والغياب الأسبوعي</h2>
+      <div class="hint" style="text-align:center;margin-bottom:14px">✓ حاضر &nbsp;&nbsp; ✕ غائب &nbsp;&nbsp; والمتأخر يُحتسب حاضرًا مع توضيح الحالة.</div>
+
+      <div class="weekly-att-controls">
+        <div>
+          <label>الأسبوع الدراسي</label>
+          <select id="weeklyAttWeek">
+            <option value="1">الأسبوع 1</option><option value="2">الأسبوع 2</option><option value="3">الأسبوع 3</option><option value="4">الأسبوع 4</option><option value="5">الأسبوع 5</option><option value="6">الأسبوع 6</option><option value="7">الأسبوع 7</option><option value="8">الأسبوع 8</option><option value="9">الأسبوع 9</option><option value="10">الأسبوع 10</option><option value="11">الأسبوع 11</option><option value="12">الأسبوع 12</option><option value="13">الأسبوع 13</option><option value="14">الأسبوع 14</option><option value="15">الأسبوع 15</option><option value="16">الأسبوع 16</option><option value="17">الأسبوع 17</option><option value="18">الأسبوع 18</option><option value="19">الأسبوع 19</option><option value="20">الأسبوع 20</option>
+          </select>
+        </div>
+        <div>
+          <label>اليوم</label>
+          <select id="weeklyAttDay">
+            <option value="0">الأحد</option>
+            <option value="1">الاثنين</option>
+            <option value="2">الثلاثاء</option>
+            <option value="3">الأربعاء</option>
+            <option value="4">الخميس</option>
+          </select>
+        </div>
+        <div>
+          <label>التاريخ</label>
+          <input type="date" id="weeklyAttDate">
+        </div>
+        <div>
+          <label>الصف</label>
+          <select id="weeklyAttGrade"><option value="">اختر الصف</option></select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <select id="weeklyAttClass"><option value="">اختر الفصل</option></select>
+        </div>
+      </div>
+
+      <div class="weekly-att-actions">
+        <button type="button" class="btn btn-primary" id="weeklyAttShowBtn">عرض الكشف</button>
+        <button type="button" class="btn btn-outline" id="weeklyAttPrintBtn">طباعة الكشف</button>
+        <button type="button" class="btn btn-primary" id="weeklyAttPdfBtn">تصدير PDF</button>
+      </div>
+    </div>
+
+    <div class="weekly-att-summary">
+      <div class="box">عدد الطلاب<b id="weeklyAttStudentCount">0</b></div>
+      <div class="box">حاضر في اليوم المختار<b id="weeklyAttPresentCount">0</b></div>
+      <div class="box">غائب في اليوم المختار<b id="weeklyAttAbsentCount">0</b></div>
+      <div class="box">بدون تسجيل<b id="weeklyAttNoStatusCount">0</b></div>
+    </div>
+
+    <div class="weekly-att-sheet" id="weeklyAttSheet">
+      <div class="weekly-att-head">
+        <h2>كشف متابعة غياب وحضور الطلاب</h2>
+        <div class="meta">
+          <span id="weeklyAttHeadRight">الأسبوع: —</span>
+          <span id="weeklyAttHeadCenter">الفترة: —</span>
+          <span id="weeklyAttHeadLeft">الصف / الفصل: —</span>
+        </div>
+      </div>
+      <table class="weekly-att-table">
+        <thead>
+          <tr>
+            <th style="width:42px">م</th>
+            <th style="width:125px">السجل المدني</th>
+            <th style="width:260px">اسم الطالب</th>
+            <th style="width:95px">الفصل</th>
+            <th style="width:130px">رقم الجوال</th>
+            <th data-weekday="0">الأحد</th>
+            <th data-weekday="1">الاثنين</th>
+            <th data-weekday="2">الثلاثاء</th>
+            <th data-weekday="3">الأربعاء</th>
+            <th data-weekday="4">الخميس</th>
+          </tr>
+        </thead>
+        <tbody id="weeklyAttBody">
+          <tr><td colspan="10">اختر الصف والفصل لعرض الطلاب.</td></tr>
+        </tbody>
+      </table>
+      <div class="weekly-att-footer">
+        <span>مدير المدرسة: <b id="weeklyAttManager">—</b></span>
+        <span>✓ حاضر &nbsp;&nbsp; ✕ غائب</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <section id="teacherClassFollowup" class="page hidden">
   <div class="teacher-class-page">
     <div class="card">
@@ -3584,6 +3698,7 @@
         <div class="admin-top-tabs">
           <button class="admin-pill" id="adminAddStudentTab">إضافة طالب/تعديل ✏️➕</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
+          <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
           <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
@@ -7100,6 +7215,15 @@ function openInternalPage(pageId){
     }
     if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
+  if(pageId==='weeklyAttendanceReport'){
+    if(!isCurrentOwner()){
+      $('weeklyAttendanceReport')?.classList.add('hidden');
+      alert('هذه الصفحة مخصصة للأدمن.');
+      openAdminDashboardInternal();
+      return;
+    }
+    if(typeof initWeeklyAttendanceReport==='function') setTimeout(initWeeklyAttendanceReport,0);
+  }
 }
 if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>{
   if(!isOwnerAdminSession()) return;
@@ -7108,6 +7232,7 @@ if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>{
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminFollowupTab')) $('adminFollowupTab').onclick=()=>openInternalPage('followup');
+if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
@@ -9708,6 +9833,154 @@ async function getFreshAttendanceRowsForLateCheck(localRows){
     return rows;
   }
 }
+
+function weeklyAttDateKey(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function weeklyAttWeekDates(anchorValue){
+  const anchor=anchorValue?new Date(anchorValue+'T12:00:00'):new Date();
+  const jsDay=anchor.getDay();
+  const sunday=new Date(anchor);
+  sunday.setDate(anchor.getDate()-jsDay);
+  return Array.from({length:5},(_,i)=>{
+    const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;
+  });
+}
+function weeklyAttStatusForStudent(idno,dateKey){
+  const rows=getAttendanceLog().filter(x=>String(x.idno)===String(idno) && String(x.date)===String(dateKey));
+  if(rows.some(x=>x.status==='absent')) return {mark:'✕',cls:'absent-mark',label:'غائب'};
+  if(rows.some(x=>x.status==='present')) return {mark:'✓',cls:'present-mark',label:'حاضر'};
+  if(rows.some(x=>x.status==='late')) return {mark:'✓',cls:'present-mark',label:'حاضر — متأخر'};
+  return {mark:'',cls:'',label:'بدون تسجيل'};
+}
+function populateWeeklyAttendanceGrades(){
+  const el=$('weeklyAttGrade'); if(!el) return;
+  const current=el.value;
+  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+  el.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
+  if(grades.includes(current)) el.value=current;
+}
+function populateWeeklyAttendanceClasses(){
+  const el=$('weeklyAttClass'); if(!el) return;
+  const grade=String($('weeklyAttGrade')?.value||'');
+  const current=el.value;
+  const classes=[...new Set(getStudents().filter(s=>!grade||String(s.grade||'')===grade).map(s=>String(s.classroom||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+  el.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
+  if(classes.includes(current)) el.value=current;
+}
+function setWeeklyAttDayFromDate(){
+  const val=$('weeklyAttDate')?.value;if(!val)return;
+  const day=new Date(val+'T12:00:00').getDay();
+  if(day>=0&&day<=4&&$('weeklyAttDay')) $('weeklyAttDay').value=String(day);
+}
+function adjustWeeklyAttDateToDay(){
+  const dateEl=$('weeklyAttDate'); if(!dateEl)return;
+  const dates=weeklyAttWeekDates(dateEl.value);
+  const idx=Number($('weeklyAttDay')?.value||0);
+  dateEl.value=weeklyAttDateKey(dates[Math.max(0,Math.min(4,idx))]);
+  renderWeeklyAttendanceReport();
+}
+function renderWeeklyAttendanceReport(){
+  const grade=String($('weeklyAttGrade')?.value||'');
+  const classroom=String($('weeklyAttClass')?.value||'');
+  const week=String($('weeklyAttWeek')?.value||'1');
+  const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
+  const selectedDay=Number($('weeklyAttDay')?.value||0);
+  const dates=weeklyAttWeekDates(anchor);
+  const students=getStudents().filter(s=>(!grade||String(s.grade||'')===grade)&&(!classroom||String(s.classroom||'')===classroom))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
+  const body=$('weeklyAttBody');
+  if(!body)return;
+  if(!grade||!classroom){
+    body.innerHTML='<tr><td colspan="10">اختر الصف والفصل لعرض الطلاب.</td></tr>';
+  }else if(!students.length){
+    body.innerHTML='<tr><td colspan="10">لا يوجد طلاب في الصف والفصل المحددين.</td></tr>';
+  }else{
+    body.innerHTML=students.map((s,i)=>{
+      const marks=dates.map((d,di)=>{
+        const st=weeklyAttStatusForStudent(s.idno,weeklyAttDateKey(d));
+        return `<td class="${di===selectedDay?'selected-day ':''}" title="${escapeFollowupHtml(st.label)}"><span class="status-mark ${st.cls}">${st.mark}</span></td>`;
+      }).join('');
+      return `<tr>
+        <td>${i+1}</td>
+        <td class="civil">${escapeFollowupHtml(s.idno||'')}</td>
+        <td class="student-name">${escapeFollowupHtml(s.name||'')}</td>
+        <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
+        <td dir="ltr">${escapeFollowupHtml(s.phone||'')}</td>
+        ${marks}
+      </tr>`;
+    }).join('');
+  }
+
+  document.querySelectorAll('.weekly-att-table [data-weekday]').forEach(th=>{
+    th.classList.toggle('selected-day',Number(th.dataset.weekday)===selectedDay);
+    const d=dates[Number(th.dataset.weekday)];
+    if(d) th.innerHTML=`${['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][Number(th.dataset.weekday)]}<br><small>${weeklyAttDateKey(d)}</small>`;
+  });
+
+  const selectedDate=weeklyAttDateKey(dates[selectedDay]);
+  const statusRows=students.map(s=>weeklyAttStatusForStudent(s.idno,selectedDate));
+  $('weeklyAttStudentCount').textContent=String(students.length);
+  $('weeklyAttPresentCount').textContent=String(statusRows.filter(x=>x.mark==='✓').length);
+  $('weeklyAttAbsentCount').textContent=String(statusRows.filter(x=>x.mark==='✕').length);
+  $('weeklyAttNoStatusCount').textContent=String(statusRows.filter(x=>!x.mark).length);
+
+  $('weeklyAttHeadRight').textContent='الأسبوع الدراسي: '+week+' — اليوم: '+(['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][selectedDay]||'');
+  $('weeklyAttHeadCenter').textContent='من '+weeklyAttDateKey(dates[0])+' إلى '+weeklyAttDateKey(dates[4]);
+  $('weeklyAttHeadLeft').textContent='الصف / الفصل: '+(grade||'—')+' / '+(classroom?displayStudentClassroom(classroom):'—');
+  const settings=getSchoolSettings?.()||{};
+  if($('weeklyAttManager')) $('weeklyAttManager').textContent=settings.manager||'';
+}
+async function initWeeklyAttendanceReport(){
+  if($('weeklyAttDate') && !$('weeklyAttDate').value) $('weeklyAttDate').value=weeklyAttDateKey(new Date());
+  setWeeklyAttDayFromDate();
+  populateWeeklyAttendanceGrades();
+  populateWeeklyAttendanceClasses();
+  renderWeeklyAttendanceReport();
+  // تحديث السحابة في الخلفية ثم إعادة الرسم إذا وصلت بيانات أحدث.
+  setTimeout(async()=>{
+    try{
+      if(isCurrentOwner()){
+        const ready=await ensureOwnerCloudSession();
+        if(ready) await cloudPullToLocal();
+      }
+      populateWeeklyAttendanceGrades();
+      populateWeeklyAttendanceClasses();
+      renderWeeklyAttendanceReport();
+    }catch(e){console.warn('weekly attendance sync',e)}
+  },0);
+}
+function printWeeklyAttendanceReport(){
+  const sheet=$('weeklyAttSheet'); if(!sheet)return;
+  const w=window.open('','_blank','width=1200,height=800');
+  if(!w){alert('تعذر فتح نافذة الطباعة.');return}
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+    @page{size:A4 landscape;margin:8mm}body{font-family:Tahoma,Arial,sans-serif;margin:0}.weekly-att-sheet{padding:0}.weekly-att-head{text-align:center;line-height:1.7}.weekly-att-head .meta{display:flex;justify-content:space-between;font-size:11px;font-weight:800}.weekly-att-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}.weekly-att-table th,.weekly-att-table td{border:1px solid #111;padding:4px;text-align:center}.student-name{text-align:right!important;font-weight:800}.status-mark{font-size:16px;font-weight:900}.weekly-att-footer{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;font-weight:800}.selected-day{background:#fff8d8}
+  </style></head><body>${sheet.outerHTML}</body></html>`);
+  w.document.close();setTimeout(()=>{w.focus();w.print()},300);
+}
+async function exportWeeklyAttendancePdf(){
+  if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
+  const sheet=$('weeklyAttSheet'); if(!sheet)return;
+  const clone=sheet.cloneNode(true);
+  const stage=document.createElement('div');
+  stage.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;padding:12px;overflow:auto';
+  stage.appendChild(clone);document.body.appendChild(stage);
+  try{
+    await html2pdf().set({margin:5,filename:'كشف-الحضور-والغياب-الأسبوعي.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy']}}).from(clone).save();
+  }finally{stage.remove()}
+}
+if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendanceClasses();renderWeeklyAttendanceReport()};
+if($('weeklyAttClass')) $('weeklyAttClass').onchange=renderWeeklyAttendanceReport;
+if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=renderWeeklyAttendanceReport;
+if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{setWeeklyAttDayFromDate();renderWeeklyAttendanceReport()};
+if($('weeklyAttDay')) $('weeklyAttDay').onchange=adjustWeeklyAttDateToDay;
+if($('weeklyAttShowBtn')) $('weeklyAttShowBtn').onclick=renderWeeklyAttendanceReport;
+if($('weeklyAttPrintBtn')) $('weeklyAttPrintBtn').onclick=printWeeklyAttendanceReport;
+if($('weeklyAttPdfBtn')) $('weeklyAttPdfBtn').onclick=exportWeeklyAttendancePdf;
 
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
@@ -13648,6 +13921,9 @@ function restoreLastAppLocation(){
           setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup restore init',e)),0);
         }
       }catch(e){console.warn('restore followup page',e)}
+    }
+    if(page==='weeklyAttendanceReport' && loggedIn){
+      try{ if(typeof initWeeklyAttendanceReport==='function') setTimeout(initWeeklyAttendanceReport,0); }catch(e){}
     }
 
     if(page==='teacherClassFollowup' && loggedIn){
