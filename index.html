@@ -2868,6 +2868,7 @@
   </div>
   <nav id="mainPublicNav" class="hidden"></nav>
   <div id="loggedInHeaderNav" class="logged-in-header-nav">
+    <button type="button" id="headerOwnerHomeBtn" style="display:none">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
@@ -6925,6 +6926,10 @@ document.addEventListener('click',e=>{
   openAdminDashboardInternal();
 },true);
 if($('headerEditBtn')) $('headerEditBtn').onclick=()=>openInternalPage('edit');
+if($('headerOwnerHomeBtn')) $('headerOwnerHomeBtn').onclick=()=>{
+  if(!isCurrentOwner()) return;
+  openAdminDashboardInternal();
+};
 if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>{
   const u=getCurrentLoggedAdminUser();
   const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
@@ -7006,6 +7011,8 @@ function setAdminMode(on){
       const u=getCurrentLoggedAdminUser();
       const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
       const owner=isCurrentOwner();
+      const ownerHomeBtn=$('headerOwnerHomeBtn');
+      if(ownerHomeBtn) ownerHomeBtn.style.display=owner?'':'none';
       const referralBtn=$('headerReferralBtn');
       if(referralBtn) referralBtn.style.display=(owner||perms.has('referralSubmit'))?'':'none';
       const deputyBtn=$('headerDeputyRepliesBtn');
