@@ -12052,9 +12052,9 @@ async function processNewStudentFace(file){
     }
 
     try{
-      const result=await compareStudentFaces(oldBlob,file,`student:${selectedStudent.idno}`);
+      const ownerNow=isCurrentOwner();
       addStudentSelectedId=String(selectedStudent.idno);
-      addStudentNeedsApproval=false;
+      addStudentNeedsApproval=!ownerNow;
       $('matchedStudentName').textContent=selectedStudent.name||'—';
       $('matchedStudentId').textContent=selectedStudent.idno||'—';
       $('matchedStudentInfo').classList.add('show');
@@ -12062,9 +12062,22 @@ async function processNewStudentFace(file){
       const oldUrl=URL.createObjectURL(oldBlob);
       oldImg.src=oldUrl; oldImg.onload=()=>setTimeout(()=>URL.revokeObjectURL(oldUrl),3000);
       oldImg.classList.remove('hidden'); oldEmpty.classList.add('hidden');
+
+      // المدير/الأدمن اختار الطالب بنفسه: تُقبل الصورة الجديدة فورًا حتى لو كانت له صورة سابقة.
+      // هذا يزيل المقارنة الثقيلة التي كانت تؤخر الحفظ وقد تمنع استبدال الصورة القديمة.
+      if(ownerNow){
+        addStudentFaceVerified=true;
+        $('saveMatchedStudentBtn').disabled=false;
+        $('saveMatchedStudentBtn').textContent='حفظ الصورة الجديدة';
+        $('faceMatchStatus').className='face-match-status ok';
+        $('faceMatchStatus').textContent='الصورة الجديدة جاهزة — سيتم استبدال الصورة السابقة وحفظها مباشرة';
+        return;
+      }
+
+      const result=await compareStudentFaces(oldBlob,file,`student:${selectedStudent.idno}`);
       addStudentFaceVerified=!!result.match;
       $('saveMatchedStudentBtn').disabled=!result.match;
-      $('saveMatchedStudentBtn').textContent='حفظ الطالب';
+      $('saveMatchedStudentBtn').textContent='إرسال الصورة لاعتماد الإدارة';
       $('faceMatchStatus').className=result.match?'face-match-status ok':'face-match-status bad';
       $('faceMatchStatus').textContent=result.match
         ?`تم التحقق من ${selectedStudent.name} — نسبة التشابه ${result.similarity}%`
@@ -12449,8 +12462,12 @@ async function captureLiveStudentPhoto(){
   }
 
   const canvas=$('studentCaptureCanvas');
-  canvas.width=video.videoWidth;
-  canvas.height=video.videoHeight;
+  // تصغير صورة الكاميرا قبل الحفظ يقلل حجم الرفع بشكل كبير بدون فقد واضح للجودة.
+  const sourceW=video.videoWidth, sourceH=video.videoHeight;
+  const maxSide=1280;
+  const scale=Math.min(1,maxSide/Math.max(sourceW,sourceH));
+  canvas.width=Math.max(1,Math.round(sourceW*scale));
+  canvas.height=Math.max(1,Math.round(sourceH*scale));
   const ctx=canvas.getContext('2d');
 
   // Mirror the captured frame to match the live preview.
@@ -12460,7 +12477,7 @@ async function captureLiveStudentPhoto(){
   ctx.drawImage(video,0,0,canvas.width,canvas.height);
   ctx.restore();
 
-  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.92));
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.82));
   if(!blob){
     toast('تعذر التقاط الصورة');
     return;
@@ -12556,7 +12573,12 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
       }
       try{renderAdmin()}catch(e){}
       closeAddStudentModal();
-      toast('تمت إضافة الطالب بنجاح');
+      if(addStudentNewFaceBlob){
+        alert('✅ تمت إضافة الطالب وحفظ الصورة الجديدة بنجاح');
+        toast('تم حفظ الطالب والصورة بنجاح');
+      }else{
+        toast('تمت إضافة الطالب بنجاح');
+      }
       return;
     }
 
@@ -12601,9 +12623,13 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
           alert('تعذر ربط جلسة المدير بالسحابة. حاول تسجيل الدخول مرة أخرى.');
           return;
         }
+        // ابدأ الحفظ المحلي وتحويل الصورة بالتوازي لتسريع العملية.
+        const localSavePromise=saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
         const imageData=await blobToDataURL(addStudentNewFaceBlob);
-        await cloudApi('owner_save_student_photo',{idno,image_data:imageData});
-        await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
+        await Promise.all([
+          localSavePromise,
+          cloudApi('owner_save_student_photo',{idno,image_data:imageData})
+        ]);
         students[idx]={...students[idx],hasFace:true,verification:'مؤكد',registered:true,verifiedByFace:true,faceVerifiedAt:new Date().toISOString()};
         saveStudents(students);
         addStudentNeedsApproval=false;
@@ -12628,8 +12654,13 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
 
     try{renderAdmin()}catch(e){}
     closeAddStudentModal();
-    alert('✅ تم حفظ تعديلات بيانات الطالب بنجاح');
-    toast('تم تعديل بيانات الطالب بنجاح');
+    if(addStudentNewFaceBlob && isCurrentOwner()){
+      alert('✅ تم حفظ بيانات الطالب واستبدال الصورة السابقة بالصورة الجديدة بنجاح');
+      toast('تم حفظ الصورة الجديدة بنجاح');
+    }else{
+      alert('✅ تم حفظ تعديلات بيانات الطالب بنجاح');
+      toast('تم تعديل بيانات الطالب بنجاح');
+    }
   }catch(e){
     console.error(e);
     alert('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
