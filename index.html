@@ -3503,7 +3503,7 @@
         </div>
         <div>
           <label>التاريخ</label>
-          <input type="date" id="weeklyAttDate">
+          <select id="weeklyAttDate"><option value="">اختر التاريخ الهجري</option></select>
         </div>
         <div>
           <label>الصف</label>
@@ -10214,6 +10214,28 @@ function populateWeeklyAttendanceClasses(){
   el.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
   if(classes.includes(current)) el.value=current;
 }
+function weeklyAttHijriDateLabel(dateValue){
+  const d=dateValue instanceof Date?dateValue:new Date(String(dateValue)+'T12:00:00');
+  return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{
+    weekday:'long',day:'numeric',month:'long',year:'numeric'
+  }).format(d);
+}
+function populateWeeklyAttHijriDates(){
+  const el=$('weeklyAttDate'); if(!el)return;
+  const current=el.value||weeklyAttDateKey(new Date());
+  const today=new Date();
+  const dates=[];
+  for(let offset=-240;offset<=45;offset++){
+    const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+offset,12);
+    if(d.getDay()>=0 && d.getDay()<=4) dates.push(d);
+  }
+  el.innerHTML=dates.slice().reverse().map(d=>{
+    const key=weeklyAttDateKey(d);
+    return `<option value="${key}">${escapeFollowupHtml(weeklyAttHijriDateLabel(d))}</option>`;
+  }).join('');
+  if(dates.some(d=>weeklyAttDateKey(d)===current)) el.value=current;
+  else if(dates.length) el.value=weeklyAttDateKey(dates[dates.length-1]);
+}
 function setWeeklyAttDayFromDate(){
   const val=$('weeklyAttDate')?.value;if(!val)return;
   const day=new Date(val+'T12:00:00').getDay();
@@ -10508,7 +10530,7 @@ function switchWeeklyAttendanceTab(tab){
 }
 
 async function initWeeklyAttendanceReport(){
-  if($('weeklyAttDate') && !$('weeklyAttDate').value) $('weeklyAttDate').value=weeklyAttDateKey(new Date());
+  populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
   populateWeeklyAttendanceGrades();
   populateWeeklyAttendanceClasses();
@@ -10529,6 +10551,7 @@ async function initWeeklyAttendanceReport(){
       }
       populateWeeklyAttendanceGrades();
       populateWeeklyAttendanceClasses();
+      populateWeeklyAttHijriDates();
       populateWeeklyAttAnalyticsMonths();
       populateWeeklyAttAnalyticsStudents();
       renderWeeklyAttendanceReport();
