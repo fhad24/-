@@ -3770,7 +3770,7 @@
         <div class="admin-actions-grid">
           <input id="excelFileInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
           <input id="madrasatiExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
-          <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد من منصة مدرستي 📥</button>
+          <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد الصفوف والفصول / قوائم Word 📥</button>
           <button class="admin-outline-btn">الباركود (إضافة / عرض الأسماء) 🪪</button>
           <button class="admin-outline-btn">متابعة دخول منصة مدرستي 📶</button>
           <input id="studentPhotosExcelInput" class="hidden" type="file" accept=".xlsx">
@@ -5995,37 +5995,102 @@ async function importMadrasatiPlacements(file){
     const students=getStudents();
     const byId=new Map(students.map((s,i)=>[normalizeCivilId(s.idno),i]));
     const changed=[];
-    let matched=0, updated=0, unchanged=0, notFound=0, skipped=0;
+    let matched=0, updated=0, unchanged=0, notFound=0, skipped=0, fuzzyMatched=0, added=0;
+
+    const normalizeRosterName=(v)=>normalizeSearchText(v)
+      .replace(/\bبن\b/g,' ')
+      .replace(/\bابن\b/g,' ')
+      .replace(/\bآل\b/g,' ال ')
+      .replace(/\s+/g,' ')
+      .trim();
+
+    const nameTokens=(v)=>new Set(normalizeRosterName(v).split(' ').filter(x=>x.length>1));
+    const nameSimilarity=(a,b)=>{
+      const na=normalizeRosterName(a), nb=normalizeRosterName(b);
+      if(!na||!nb) return 0;
+      if(na===nb) return 1;
+      const A=nameTokens(na), B=nameTokens(nb);
+      const inter=[...A].filter(x=>B.has(x)).length;
+      const dice=(2*inter)/Math.max(1,A.size+B.size);
+      const aa=na.split(' '), bb=nb.split(' ');
+      let boost=0;
+      if(aa[0]&&bb[0]&&aa[0]===bb[0]) boost+=0.08;
+      if(aa.at(-1)&&bb.at(-1)&&aa.at(-1)===bb.at(-1)) boost+=0.08;
+      return Math.min(1,dice+boost);
+    };
+
+    const findBestNameIndex=(name)=>{
+      let best=-1,bestScore=0,second=0;
+      students.forEach((s,i)=>{
+        const score=nameSimilarity(name,s.name);
+        if(score>bestScore){second=bestScore;bestScore=score;best=i}
+        else if(score>second){second=score}
+      });
+      return bestScore>=0.72 && (bestScore-second>=0.04 || bestScore>=0.90) ? {index:best,score:bestScore} : null;
+    };
 
     for(const row of bestRows){
-      const idno=normalizeCivilId(pick(row,[
+      const rawId=normalizeDigitsText(pick(row,[
         'السجل المدني','رقم السجل المدني','رقم الهوية','الهوية','رقم الهوية/الإقامة',
         'هوية الطالب','رقم الطالب','رقم المستخدم','national id','id'
-      ]));
-      if(!idno){ skipped++; continue; }
+      ])).replace(/\D/g,'');
+      const validId=/^\d{10}$/.test(rawId) && !/^0+$/.test(rawId);
+      const name=normalizeMadrasatiText(pick(row,['اسم الطالب','الاسم','اسم','student name','name']));
+      const phone=normalizeMadrasatiText(pick(row,['رقم الجوال','الجوال','جوال','هاتف','phone','mobile']));
 
-      const idx=byId.get(idno);
-      if(idx===undefined){ notFound++; continue; }
-      matched++;
+      let idx=validId ? byId.get(rawId) : undefined;
+      let usedFuzzy=false;
+      if(idx===undefined && name){
+        const fuzzy=findBestNameIndex(name);
+        if(fuzzy){idx=fuzzy.index;usedFuzzy=true;fuzzyMatched++}
+      }
 
       const gradeRaw=pick(row,['الصف الدراسي','الصف','رقم الصف','المستوى','grade']);
       const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
-
-      const grade=gradeRaw!=='' ? normalizeMadrasatiText(gradeRaw) : '';
+      const grade=gradeRaw!=='' ? studentGradeKey(normalizeMadrasatiText(gradeRaw)) : '';
       const classroomRaw=classRaw!=='' ? normalizeMadrasatiText(classRaw) : '';
       const classroom=classroomRaw ? studentClassKey(classroomRaw) : '';
 
+      if(idx===undefined){
+        if(validId && name){
+          const rec={
+            name,
+            idno:rawId,
+            phone,
+            grade,
+            classroom,
+            verification:'مؤكد',
+            registered:false,
+            hasFace:false,
+            hasId:false
+          };
+          students.push(rec);
+          byId.set(rawId,students.length-1);
+          changed.push(rec);
+          added++;
+          continue;
+        }
+        notFound++;
+        continue;
+      }
+
+      matched++;
       const old=students[idx];
       const newGrade=grade || old.grade || '';
       const newClass=classroom || studentClassKey(old.classroom) || old.classroom || '';
+      const newName=name || old.name || '';
+      const newPhone=phone || old.phone || '';
 
-      if(String(old.grade||'')===String(newGrade) && String(old.classroom||'')===String(newClass)){
+      if(String(old.grade||'')===String(newGrade) &&
+         String(studentClassKey(old.classroom)||old.classroom||'')===String(newClass) &&
+         String(old.name||'')===String(newName) &&
+         String(old.phone||'')===String(newPhone)){
         unchanged++;
         continue;
       }
 
-      // مهم: نغيّر الصف والفصل فقط. الاسم والجوال والصور وباقي البيانات تبقى كما هي.
-      students[idx]={...old,grade:newGrade,classroom:newClass};
+      // نحافظ على كامل السجل والصور، ونحدث فقط البيانات المرجعية من الكشف.
+      students[idx]={...old,name:newName,phone:newPhone,grade:newGrade,classroom:newClass};
       changed.push(students[idx]);
       updated++;
     }
@@ -6056,19 +6121,22 @@ async function importMadrasatiPlacements(file){
     await hydrateAdminPhotos();
 
     status.innerHTML=
-      '<span style="color:#0f7665;font-weight:700">تم استيراد ملف مدرستي بنجاح.</span>'+
-      '<br>تمت المطابقة بالسجل المدني، وتحديث <b>'+updated+'</b> طالبًا في الصف/الفصل فقط.'+
-      '<br>مطابقون بدون تغيير: '+unchanged+' — غير موجودين في قاعدة البرنامج: '+notFound+' — صفوف متجاهلة: '+skipped+'.'+
-      '<br><span style="color:#0f7665;font-weight:700">صور الطلاب وبياناتهم الأخرى لم يتم حذفها أو استبدالها.</span>';
-    toast('تم تحديث الصفوف والفصول من مدرستي بدون حذف الصور');
+      '<span style="color:#0f7665;font-weight:700">تم استيراد كشف الطلاب وربطه بقاعدة البرنامج بنجاح.</span>'+
+      '<br>مطابقة بالسجل المدني/الهوية: '+matched+
+      ' — مطابقة تقريبية بالاسم: '+fuzzyMatched+
+      ' — طلاب جدد أضيفوا بالسجل: '+added+
+      ' — سجلات تم تحديثها: <b>'+updated+'</b>.'+
+      '<br>بدون تغيير: '+unchanged+' — تعذر ربطهم: '+notFound+' — صفوف متجاهلة: '+skipped+'.'+
+      '<br><span style="color:#0f7665;font-weight:700">صور الوجه وصور الهوية لم يتم حذفها أو تعديلها.</span>';
+    toast('تم ربط قوائم الطلاب بالقاعدة بدون حذف الصور');
     alert(
-      '✅ تم الانتهاء من استيراد ملف مدرستي بنجاح\n\n'+
-      'تمت المطابقة بالسجل المدني.\n'+
-      'تم تحديث الصف/الفصل لـ '+updated+' طالب.\n'+
-      'بدون تغيير: '+unchanged+'.\n'+
-      'غير موجودين في قاعدة البرنامج: '+notFound+'.\n'+
-      'صفوف متجاهلة: '+skipped+'.\n\n'+
-      'صور الطلاب وباقي البيانات لم يتم حذفها.'
+      '✅ تم ربط قوائم الطلاب بقاعدة البيانات\n\n'+
+      'مطابقة بالسجل: '+matched+'\n'+
+      'مطابقة تقريبية بالاسم: '+fuzzyMatched+'\n'+
+      'طلاب جدد: '+added+'\n'+
+      'تم تحديث البيانات: '+updated+'\n'+
+      'تعذر ربطهم: '+notFound+'\n\n'+
+      'صور الطلاب لم يتم حذفها أو تعديلها.'
     );
   }catch(err){
     console.error('Madrasati import',err);
