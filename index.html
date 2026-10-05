@@ -10255,8 +10255,8 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       if(duplicateLate){
         const who=duplicateLate.teacherName ? ` بواسطة ${duplicateLate.teacherName}` : '';
         const when=duplicateLate.time ? ` الساعة ${duplicateLate.time}` : '';
-        alert(`⚠️ الطالب ${record.name} مسجل «متأخر» مسبقًا في نفس اليوم والتاريخ${who}${when}.\nلا يمكن تسجيل التأخر للطالب أكثر من مرة في اليوم.`);
-        toast('الطالب مسجل متأخر مسبقًا اليوم');
+        alert(`⚠️ سبق رصد تأخر الطالب ${record.name} اليوم${who}${when}.\nلا يمكن تسجيل التأخر مرة أخرى في نفس اليوم.`);
+        toast('سبق رصد تأخر الطالب اليوم');
         return;
       }
 
