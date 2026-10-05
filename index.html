@@ -3573,6 +3573,14 @@
 
       <div class="weekly-att-controls">
         <div>
+          <label>الصف</label>
+          <select id="weeklyAttAnalyticsGrade"><option value="">جميع الصفوف</option></select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <select id="weeklyAttAnalyticsClass"><option value="">جميع الفصول</option></select>
+        </div>
+        <div>
           <label>الطالب</label>
           <select id="weeklyAttAnalyticsStudent"><option value="">جميع الطلاب</option></select>
         </div>
@@ -10357,11 +10365,30 @@ function weeklyAttRangeLabel(count=weeklyAttRangeCount()){
   return count===1?'غياب شهر واحد':count===2?'غياب شهرين':count===3?'غياب 3 أشهر':'غياب 4 أشهر';
 }
 function weeklyAttStudentsForFilters(){
-  const grade=String($('weeklyAttGrade')?.value||'');
-  const classroom=String($('weeklyAttClass')?.value||'');
+  const grade=String($('weeklyAttAnalyticsGrade')?.value||'');
+  const classroom=String($('weeklyAttAnalyticsClass')?.value||'');
   return getStudents()
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+}
+function populateWeeklyAttAnalyticsGrades(){
+  const el=$('weeklyAttAnalyticsGrade'); if(!el)return;
+  const current=el.value;
+  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+  el.innerHTML='<option value="">جميع الصفوف</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
+  if(grades.includes(current)) el.value=current;
+}
+function populateWeeklyAttAnalyticsClasses(){
+  const el=$('weeklyAttAnalyticsClass'); if(!el)return;
+  const grade=String($('weeklyAttAnalyticsGrade')?.value||'');
+  const current=el.value;
+  const classes=[...new Set(getStudents()
+    .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
+    .map(s=>String(s.classroom||'').trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+  el.innerHTML='<option value="">جميع الفصول</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
+  if(classes.includes(current)) el.value=current;
 }
 function populateWeeklyAttAnalyticsStudents(){
   const el=$('weeklyAttAnalyticsStudent'); if(!el)return;
@@ -10522,6 +10549,8 @@ function switchWeeklyAttendanceTab(tab){
     analyticsBtn.classList.toggle('btn-outline',!showAnalytics);
   }
   if(showAnalytics){
+    populateWeeklyAttAnalyticsGrades();
+    populateWeeklyAttAnalyticsClasses();
     populateWeeklyAttAnalyticsStudents();
     renderWeeklyAttAnalytics();
   }else{
@@ -10535,6 +10564,8 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttendanceGrades();
   populateWeeklyAttendanceClasses();
   populateWeeklyAttAnalyticsMonths();
+  populateWeeklyAttAnalyticsGrades();
+  populateWeeklyAttAnalyticsClasses();
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
@@ -10553,6 +10584,8 @@ async function initWeeklyAttendanceReport(){
       populateWeeklyAttendanceClasses();
       populateWeeklyAttHijriDates();
       populateWeeklyAttAnalyticsMonths();
+      populateWeeklyAttAnalyticsGrades();
+      populateWeeklyAttAnalyticsClasses();
       populateWeeklyAttAnalyticsStudents();
       renderWeeklyAttendanceReport();
       renderWeeklyAttAnalytics();
@@ -10589,6 +10622,15 @@ if($('weeklyAttDay')) $('weeklyAttDay').onchange=()=>{adjustWeeklyAttDateToDay()
 if($('weeklyAttShowBtn')) $('weeklyAttShowBtn').onclick=renderWeeklyAttendanceReport;
 if($('weeklyAttPrintBtn')) $('weeklyAttPrintBtn').onclick=printWeeklyAttendanceReport;
 if($('weeklyAttPdfBtn')) $('weeklyAttPdfBtn').onclick=exportWeeklyAttendancePdf;
+if($('weeklyAttAnalyticsGrade')) $('weeklyAttAnalyticsGrade').onchange=()=>{
+  populateWeeklyAttAnalyticsClasses();
+  populateWeeklyAttAnalyticsStudents();
+  renderWeeklyAttAnalytics();
+};
+if($('weeklyAttAnalyticsClass')) $('weeklyAttAnalyticsClass').onchange=()=>{
+  populateWeeklyAttAnalyticsStudents();
+  renderWeeklyAttAnalytics();
+};
 if($('weeklyAttAnalyticsStudent')) $('weeklyAttAnalyticsStudent').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsMonth')) $('weeklyAttAnalyticsMonth').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsRange')) $('weeklyAttAnalyticsRange').onchange=renderWeeklyAttAnalytics;
