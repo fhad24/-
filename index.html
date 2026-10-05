@@ -6684,38 +6684,13 @@ async function initStudentFollowupPage(){
   const teacherName=String(current.name||current.displayName||current.username||current.civil_id||'').trim();
   if($('followupTeacher')) $('followupTeacher').value=teacherName;
 
-  // جلب قاعدة الطلاب أولًا حتى تظهر الصفوف والفصول حتى عند فتح الصفحة مباشرة.
-  const loadBtn=$('followupLoadBtn');
-  const oldLoadText=loadBtn?.textContent;
-  try{
-    if(loadBtn){loadBtn.disabled=true;loadBtn.textContent='جاري تحميل الطلاب...';}
-    if(isCurrentOwner()){
-      try{
-        const ready=await ensureOwnerCloudSession();
-        if(ready) await cloudPullToLocal();
-        else await loadStudentsForAddEdit();
-      }catch(e){
-        console.warn('followup owner students load',e);
-        await loadStudentsForAddEdit().catch(()=>{});
-      }
-    }else{
-      await loadStudentsForAddEdit();
-    }
-  }catch(e){
-    console.warn('followup students load',e);
-  }finally{
-    if(loadBtn){loadBtn.disabled=false;loadBtn.textContent=oldLoadText||'تحميل الطلاب';}
-  }
-
+  // العرض الفوري: استخدم آخر قاعدة طلاب محفوظة محليًا بدون انتظار أي طلب شبكي.
   populateFollowupGrades();
-
   try{
     const last=JSON.parse(localStorage.getItem('followupLastMeta')||'{}');
     if(last.term && $('followupTerm')) $('followupTerm').value=last.term;
     if(last.year && $('followupYear')) $('followupYear').value=last.year;
     if(last.subject && $('followupSubject')) $('followupSubject').value=last.subject;
-
-    // اسم المستخدم الحالي هو المرجع دائمًا، ولا نستعيد اسم مستخدم سابق.
     if($('followupTeacher')) $('followupTeacher').value=teacherName;
 
     if(last.grade && $('followupGrade')){
@@ -6734,6 +6709,44 @@ async function initStudentFollowupPage(){
 
   renderFollowupTable();
   renderFollowupAnalysis();
+
+  // المزامنة مع السحابة تعمل في الخلفية ولا تعطل فتح الصفحة.
+  const syncInBackground=async()=>{
+    try{
+      const before=JSON.stringify(getStudents().map(s=>[String(s.idno||''),String(s.grade||''),String(s.classroom||'')]));
+      if(isCurrentOwner()){
+        try{
+          const ready=await ensureOwnerCloudSession();
+          if(ready) await cloudPullToLocal();
+          else await loadStudentsForAddEdit();
+        }catch(e){
+          console.warn('followup owner background load',e);
+          await loadStudentsForAddEdit().catch(()=>{});
+        }
+      }else{
+        await loadStudentsForAddEdit();
+      }
+
+      const after=JSON.stringify(getStudents().map(s=>[String(s.idno||''),String(s.grade||''),String(s.classroom||'')]));
+      if(after!==before && !$('followup')?.classList.contains('hidden')){
+        const selectedGrade=String($('followupGrade')?.value||'');
+        const selectedClass=String($('followupClass')?.value||'');
+        populateFollowupGrades();
+        if(selectedGrade && [...$('followupGrade').options].some(o=>String(o.value)===selectedGrade)){
+          $('followupGrade').value=selectedGrade;
+        }
+        populateFollowupClasses();
+        if(selectedClass && [...$('followupClass').options].some(o=>String(o.value)===selectedClass)){
+          $('followupClass').value=selectedClass;
+        }
+        renderFollowupTable();
+        renderFollowupAnalysis();
+      }
+    }catch(e){
+      console.warn('followup background sync',e);
+    }
+  };
+  setTimeout(syncInBackground,0);
 }
 
 if($('followupGrade')) $('followupGrade').onchange=()=>{populateFollowupClasses();renderFollowupTable();renderFollowupAnalysis()};
