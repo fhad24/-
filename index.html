@@ -494,17 +494,88 @@
     .attendance-monitoring-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .attendance-monitoring-pane{border:1px solid #d9e5e2;border-radius:14px;padding:12px;background:#fff;min-width:0}
     .attendance-monitoring-pane h4{margin:0 0 6px;font-size:16px}
-    .attendance-monitoring-table-wrap{overflow:auto;margin-top:10px}
-    .attendance-monitoring-table{width:100%;min-width:650px;border-collapse:collapse;font-size:11px}
-    .attendance-monitoring-table th,.attendance-monitoring-table td{border:1px solid #d8e2df;padding:8px;text-align:center}
+    .attendance-monitoring-table-wrap{
+      overflow:visible;
+      margin-top:10px;
+      width:100%;
+      max-width:100%;
+    }
+    .attendance-monitoring-table{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      border-collapse:collapse;
+      table-layout:fixed;
+      font-size:10px;
+    }
+    .attendance-monitoring-table th,.attendance-monitoring-table td{
+      border:1px solid #d8e2df;
+      padding:6px 4px;
+      text-align:center;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      line-height:1.45;
+      vertical-align:middle;
+    }
     .attendance-monitoring-table th{background:#eef7f4;font-weight:900}
     .attendance-monitoring-table td:nth-child(2){text-align:right;font-weight:800}
+    .attendance-monitoring-table th:nth-child(1),
+    .attendance-monitoring-table td:nth-child(1){width:5%}
+    #attendanceEscapeBody ~ *{}
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(2),
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(2){width:28%}
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(3),
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(3){width:17%}
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(4),
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(4){width:18%}
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(5),
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(5){width:16%}
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(6),
+    .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(6){width:16%}
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table th:nth-child(2),
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table td:nth-child(2){width:24%}
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table th:nth-child(3),
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table td:nth-child(3){width:25%}
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table th:nth-child(4),
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table td:nth-child(4){width:18%}
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table th:nth-child(5),
+    .attendance-monitoring-pane:last-child .attendance-monitoring-table td:nth-child(5){width:28%}
+    .attendance-period-badges{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+    .attendance-period-badge{
+      display:inline-block;
+      padding:2px 5px;
+      border-radius:999px;
+      background:#e7f5f1;
+      color:#0f6f60;
+      font-weight:900;
+      font-size:9px;
+      white-space:nowrap;
+    }
     .attendance-period-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
     .attendance-period-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#e7f5f1;color:#0f6f60;font-weight:900;font-size:10px}
     .attendance-period-badge.missing{background:#fdeceb;color:#b42318}
     @media(max-width:900px){
       .attendance-monitoring-grid{grid-template-columns:1fr}
       .attendance-monitoring-summary{grid-template-columns:1fr}
+      .attendance-monitoring-table{font-size:9px}
+      .attendance-monitoring-table th,.attendance-monitoring-table td{padding:5px 3px}
+      .attendance-period-badge{font-size:8px;padding:2px 4px}
+    }
+    @media(max-width:560px){
+      .attendance-monitoring-pane{padding:8px}
+      .attendance-monitoring-table{font-size:8px}
+      .attendance-monitoring-table th,.attendance-monitoring-table td{padding:4px 2px;line-height:1.3}
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(2),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(2){width:31%}
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(3),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(3){width:18%}
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(4),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(4){width:19%}
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(5),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(5),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table th:nth-child(6),
+      .attendance-monitoring-pane:first-child .attendance-monitoring-table td:nth-child(6){width:14%}
     }
     .attendance-modal-footer button{min-width:120px}
     @media(max-width:800px){
