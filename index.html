@@ -2390,18 +2390,18 @@
     .followup-sheet-meta{font-size:13px;font-weight:800;line-height:1.8}
     .followup-sheet-meta.left{text-align:left;direction:rtl}
     .followup-sheet-meta.right{text-align:right}
-    .followup-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}
+    .followup-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
     .followup-table th,.followup-table td{border:1px solid #111!important;padding:2px!important;text-align:center!important;vertical-align:middle!important;height:27px;overflow:hidden;word-break:break-word}
     .followup-table thead th{background:#f3f3f3;font-weight:900;line-height:1.15}
     .followup-table th:nth-child(1),.followup-table td:nth-child(1){width:7%}
     .followup-table th:nth-child(2),.followup-table td:nth-child(2){width:14%}
     .followup-table th:nth-child(3),.followup-table td:nth-child(3){width:4%}
-    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:4px!important;font-size:8px;line-height:1.25}
-    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:7px}
-    .followup-table .class-cell{font-weight:800;white-space:nowrap;font-size:8px}
+    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:4px!important;font-size:9px;line-height:1.25}
+    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:8px}
+    .followup-table .class-cell{font-weight:800;white-space:nowrap;font-size:9px}
     .followup-mark{
       width:100%!important;height:24px!important;min-width:0!important;border:0!important;border-radius:0!important;
-      background:transparent!important;text-align:center!important;padding:0!important;font-size:11px!important;box-shadow:none!important
+      background:transparent!important;text-align:center!important;padding:0!important;font-size:12px!important;box-shadow:none!important
     }
     .followup-mark:focus{outline:2px solid #0f7665!important;background:#f0fbf8!important}
     .followup-empty{padding:28px!important;font-size:14px;color:#667}
@@ -3360,7 +3360,7 @@
           <div class="followup-sheet-head">
             <div class="followup-sheet-meta right" id="followupHeadRight">المادة: —<br>معلم المادة: —</div>
             <div class="followup-sheet-title" id="followupHeadTitle">سجل متابعة الفصل الدراسي الأول لعام 1448 هـ</div>
-            <div class="followup-sheet-meta left" id="followupHeadLeft">الصف / الفصل: —<br>عدد الطلاب: 0</div>
+            <div class="followup-sheet-meta left" id="followupHeadLeft">الصف / الفصل: —<br>الأسبوع الدراسي: —</div>
           </div>
           <table class="followup-table">
             <thead>
@@ -3389,7 +3389,11 @@
               <tr><td colspan="26" class="followup-empty">اختر الصف والفصل ثم اضغط «تحميل الطلاب».</td></tr>
             </tbody>
           </table>
-          <div class="followup-print-note">مدير المدرسة: <span id="followupManagerName"></span></div>
+          <div class="followup-sheet-footer" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:7px;font-size:11px;font-weight:800">
+            <div>مدير المدرسة: <span id="followupManagerName"></span></div>
+            <div>عدد الطلاب: <span id="followupBottomStudentCount">0</span></div>
+          </div>
+          <div class="followup-print-note">مدير المدرسة: <span id="followupManagerNamePrint"></span> — عدد الطلاب: <span id="followupBottomStudentCountPrint">0</span></div>
         </div>
       </div>
     </div>
@@ -6259,9 +6263,12 @@ function updateFollowupHeader(students=[]){
   const week=String($('followupWeek')?.value||'1');
   if($('followupHeadTitle')) $('followupHeadTitle').textContent=`سجل متابعة الفصل الدراسي ${term} لعام ${year||'ــــ'} هـ — الأسبوع ${week}`;
   if($('followupHeadRight')) $('followupHeadRight').innerHTML=`المادة: ${subject}<br>معلم المادة: ${teacher}`;
-  if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':('الفصل '+classroom)}<br>عدد الطلاب: ${students.length}`;
+  if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':('الفصل '+classroom)}<br>الأسبوع الدراسي: ${week}`;
   const settings=getSchoolSettings?.()||{};
   if($('followupManagerName')) $('followupManagerName').textContent=settings.manager||'';
+  if($('followupManagerNamePrint')) $('followupManagerNamePrint').textContent=settings.manager||'';
+  if($('followupBottomStudentCount')) $('followupBottomStudentCount').textContent=String(students.length);
+  if($('followupBottomStudentCountPrint')) $('followupBottomStudentCountPrint').textContent=String(students.length);
 }
 
 function renderFollowupTable(){
