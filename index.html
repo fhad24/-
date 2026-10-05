@@ -3476,7 +3476,7 @@
   <div class="weekly-att-page">
     <div class="card">
       <h2 style="text-align:center;margin:0 0 6px">كشف متابعة الحضور والغياب الأسبوعي</h2>
-      <div class="hint" style="text-align:center;margin-bottom:14px">✓ حاضر &nbsp;&nbsp; ✕ غائب &nbsp;&nbsp; والمتأخر يُحتسب حاضرًا مع توضيح الحالة.</div>
+      <div class="hint" style="text-align:center;margin-bottom:14px">✓ حاضر &nbsp;&nbsp; ✕ غائب &nbsp;&nbsp; اليوم الذي لم يُسجل فيه تحضير للفصل يبقى فارغًا ولا يُحسب غيابًا، والمتأخر يُحتسب حاضرًا.</div>
 
       <div class="weekly-att-controls">
         <div>
@@ -3560,7 +3560,7 @@
 
     <div class="card" id="weeklyAttAnalyticsCard" style="margin-top:18px">
       <h2 style="text-align:center;margin:0 0 6px">إحصائيات الغياب الشهرية والفصلية</h2>
-      <div class="hint" style="text-align:center;margin-bottom:14px">الغياب يُحسب في أيام التحضير الفعلية: من لم يسجل حاضرًا أو متأخرًا يُحتسب غائبًا.</div>
+      <div class="hint" style="text-align:center;margin-bottom:14px">الغياب يُحسب فقط في أيام التحضير الفعلية لنفس الصف والفصل؛ اليوم بدون تحضير يبقى فارغًا ولا يدخل في الإحصاءات.</div>
 
       <div class="weekly-att-controls">
         <div>
@@ -10156,9 +10156,25 @@ function weeklyAttActiveDates(){
   )].sort();
 }
 function weeklyAttIsAbsentOnDate(idno,dateKey){
-  const active=new Set(weeklyAttActiveDates());
-  if(!active.has(String(dateKey))) return false;
-  const rows=getAttendanceLog().filter(x=>String(x.idno)===String(idno) && String(x.date)===String(dateKey));
+  const key=String(dateKey||'');
+  const allStudents=getStudents();
+  const student=allStudents.find(s=>String(s.idno)===String(idno));
+  if(!student) return false;
+
+  // لا نعتبر اليوم يوم تحضير لهذا الطالب إلا إذا تم تسجيل تحضير فعلي
+  // لطالب واحد على الأقل من نفس الصف والفصل. وبهذا تبقى الأيام التي
+  // لم يفتح فيها المستخدم تحضير الفصل فارغة ولا تظهر فيها علامة غياب.
+  const cohortIds=new Set(
+    allStudents
+      .filter(s=>studentGradeKey(s.grade)===studentGradeKey(student.grade) &&
+                 studentClassKey(s.classroom)===studentClassKey(student.classroom))
+      .map(s=>String(s.idno))
+  );
+  const dayRows=getAttendanceLog().filter(x=>String(x.date)===key);
+  const cohortAttendanceStarted=dayRows.some(x=>cohortIds.has(String(x.idno)));
+  if(!cohortAttendanceStarted) return false;
+
+  const rows=dayRows.filter(x=>String(x.idno)===String(idno));
   return !rows.some(x=>x.status==='present'||x.status==='late');
 }
 function weeklyAttStatusForStudent(idno,dateKey){
