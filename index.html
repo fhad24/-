@@ -12678,8 +12678,14 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
         }
       }
       try{renderAdmin()}catch(e){}
-      closeAddStudentModal();
-      if(addStudentNewFaceBlob){
+      // ابقَ داخل صفحة الإضافة/التعديل بعد الحفظ، وحوّل الطالب المضاف إلى وضع التعديل.
+      const savedStudent=getStudents().find(s=>normalizeCivilId(s.idno)===idno) || rec;
+      addStudentNewFaceBlob=null;
+      addStudentFaceVerified=false;
+      await selectExistingStudentForUnifiedForm(savedStudent);
+      refreshAddStudentClassFilter();
+      await renderAddStudentDatabaseList();
+      if(savedStudent?.hasFace){
         alert('✅ تمت إضافة الطالب وحفظ الصورة الجديدة بنجاح');
         toast('تم حفظ الطالب والصورة بنجاح');
       }else{
@@ -12756,8 +12762,16 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
           submitted_by_name:operator.name,
           submitted_by_id:operator.id
         },false);
-        closeAddStudentModal();
+        // لا تغلق صفحة الإضافة/التعديل بعد الإرسال.
+        addStudentNewFaceBlob=null;
+        addStudentFaceVerified=false;
+        const pendingStudent=getStudents().find(s=>normalizeCivilId(s.idno)===idno);
+        if(pendingStudent){
+          await selectExistingStudentForUnifiedForm(pendingStudent);
+          await renderAddStudentDatabaseList();
+        }
         alert('تم إرسال الصورة للإدارة لاعتمادها.');
+        toast('تم إرسال الصورة للاعتماد وبقيت الصفحة مفتوحة');
         return;
       }else{
         await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
@@ -12767,8 +12781,19 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
     }
 
     try{renderAdmin()}catch(e){}
-    closeAddStudentModal();
-    if(addStudentNewFaceBlob && isCurrentOwner()){
+    const hadNewFace=!!addStudentNewFaceBlob;
+    // ابقَ داخل نفس صفحة الإضافة/التعديل بعد حفظ التعديلات.
+    addStudentOriginalId=idno;
+    addStudentSelectedId=idno;
+    addStudentNewFaceBlob=null;
+    addStudentFaceVerified=false;
+    const updatedStudent=getStudents().find(s=>normalizeCivilId(s.idno)===idno);
+    if(updatedStudent){
+      await selectExistingStudentForUnifiedForm(updatedStudent);
+      refreshAddStudentClassFilter();
+      await renderAddStudentDatabaseList();
+    }
+    if(hadNewFace && isCurrentOwner()){
       alert('✅ تم حفظ بيانات الطالب واستبدال الصورة السابقة بالصورة الجديدة بنجاح');
       toast('تم حفظ الصورة الجديدة بنجاح');
     }else{
