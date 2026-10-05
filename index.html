@@ -3604,8 +3604,6 @@
         <div class="box">عدد الطلاب المعروضين<b id="weeklyAttAnalyticsStudentsCount">0</b></div>
       </div>
 
-      <div id="weeklyAttMonthlyChart" style="margin:18px 0;padding:14px;border:1px solid #dbe4ea;border-radius:14px;background:#fff"></div>
-
       <div style="overflow:auto">
         <table class="weekly-att-table" style="min-width:850px">
           <thead>
@@ -10420,27 +10418,6 @@ function weeklyAttAnalyticsData(){
     };
   });
 }
-function renderWeeklyAttMonthlyChart(data){
-  const host=$('weeklyAttMonthlyChart'); if(!host)return;
-  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
-  const rangeCount=weeklyAttRangeCount();
-  const months=weeklyAttHijriMonthWindow(month,rangeCount);
-  const totals=months.map(m=>data.reduce((sum,r)=>sum+(r.monthly.find(x=>x.month===m)?.count||0),0));
-  const max=Math.max(1,...totals);
-  const cols=Math.max(1,months.length);
-  host.innerHTML='<h3 style="margin:0 0 14px;text-align:center">الرسم البياني للغياب خلال '+(rangeCount===1?'شهر واحد':rangeCount===2?'شهرين':rangeCount+' أشهر')+'</h3>'+
-    '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(90px,1fr));gap:12px;align-items:end;min-height:220px">'+
-    months.map((m,i)=>{
-      const h=Math.max(8,Math.round((totals[i]/max)*150));
-      return `<div style="text-align:center">
-        <div style="font-weight:900;margin-bottom:6px">${totals[i]}</div>
-        <div style="height:160px;display:flex;align-items:flex-end;justify-content:center">
-          <div style="width:62%;height:${h}px;background:#b42318;border-radius:10px 10px 3px 3px"></div>
-        </div>
-        <div style="font-size:12px;font-weight:800;margin-top:7px">${escapeFollowupHtml(weeklyAttHijriMonthLabel(m))}</div>
-      </div>`;
-    }).join('')+'</div>';
-}
 function renderWeeklyAttAnalytics(){
   const body=$('weeklyAttAnalyticsBody'); if(!body)return;
   const data=weeklyAttAnalyticsData();
@@ -10454,7 +10431,6 @@ function renderWeeklyAttAnalytics(){
     $('weeklyAttAnalyticsMonthTotal').textContent='0';
     $('weeklyAttAnalyticsFourMonthsTotal').textContent='0';
     $('weeklyAttAnalyticsStudentsCount').textContent='0';
-    if($('weeklyAttMonthlyChart')) $('weeklyAttMonthlyChart').innerHTML='';
     return;
   }
   body.innerHTML=data.map(r=>`<tr>
@@ -10471,7 +10447,6 @@ function renderWeeklyAttAnalytics(){
   $('weeklyAttAnalyticsMonthTotal').textContent=String(data.reduce((s,r)=>s+r.month,0));
   $('weeklyAttAnalyticsFourMonthsTotal').textContent=String(data.reduce((s,r)=>s+r.four,0));
   $('weeklyAttAnalyticsStudentsCount').textContent=String(data.length);
-  renderWeeklyAttMonthlyChart(data);
 }
 function weeklyAttSummaryMessage(row){
   const school=getSchoolSettings()?.school||'المدرسة';
