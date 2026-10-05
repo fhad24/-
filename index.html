@@ -485,6 +485,21 @@
     .attendance-monitoring-card{margin-top:16px;padding:18px}
     .attendance-monitoring-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .attendance-monitoring-head h3{margin:4px 0 0;font-size:20px}
+    .attendance-monitoring-datebox{
+      display:grid;
+      grid-template-columns:auto minmax(160px,210px);
+      gap:5px 8px;
+      align-items:center;
+      padding:8px 10px;
+      border:1px solid #cfe0dc;
+      border-radius:12px;
+      background:#f8fbfa;
+      min-width:260px;
+    }
+    .attendance-monitoring-datebox label{font-size:11px;font-weight:900;margin:0}
+    .attendance-monitoring-datebox input{height:40px;margin:0;font-family:inherit}
+    .attendance-monitoring-day{grid-column:1/-1;text-align:center;font-weight:900;color:#0f7665;font-size:13px}
+    .attendance-monitoring-hijri{grid-column:1/-1;text-align:center;color:#60736e;font-size:11px}
     .attendance-monitoring-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
     .attendance-monitoring-stat{border:1px solid #cfe0dc;border-radius:14px;background:#f6fbfa;padding:14px;text-align:center}
     .attendance-monitoring-stat span{display:block;font-size:12px;font-weight:800;color:#5b706b;margin-bottom:5px}
@@ -4001,9 +4016,16 @@
         <div class="card attendance-monitoring-card" id="attendanceMonitoringCard">
           <div class="attendance-monitoring-head">
             <div>
-              <div class="attendance-kicker">متابعة آلية لليوم الحالي</div>
+              <div class="attendance-kicker">متابعة آلية حسب التاريخ المختار</div>
               <h3>🚨 متابعة الهروب والتحضير</h3>
             </div>
+            <div class="attendance-monitoring-datebox">
+              <label for="attendanceMonitoringDate">📅 التاريخ</label>
+              <input type="date" id="attendanceMonitoringDate">
+              <div id="attendanceMonitoringDay" class="attendance-monitoring-day">—</div>
+              <div id="attendanceMonitoringHijri" class="attendance-monitoring-hijri">—</div>
+            </div>
+            <button type="button" class="attendance-btn outline" id="attendanceMonitoringTodayBtn">اليوم</button>
             <button type="button" class="attendance-btn outline" id="attendanceMonitoringRefreshBtn">🔄 تحديث الكشف</button>
           </div>
 
@@ -4031,7 +4053,7 @@
               <div class="attendance-monitoring-table-wrap">
                 <table class="attendance-monitoring-table">
                   <thead><tr><th>م</th><th>الحصة</th><th>الصف</th><th>الفصل</th><th>الحالة</th></tr></thead>
-                  <tbody id="attendanceUnpreparedBody"><tr><td colspan="5">لم يبدأ تحضير أي حصة حتى الآن.</td></tr></tbody>
+                  <tbody id="attendanceUnpreparedBody"><tr><td colspan="5">لم يبدأ تحضير أي حصة في التاريخ المختار.</td></tr></tbody>
                 </table>
               </div>
             </div>
@@ -11066,9 +11088,34 @@ function attendanceCohortKey(grade,classroom){
 function attendancePeriodBadges(periods,missing=false){
   return '<div class="attendance-period-badges">'+periods.map(p=>'<span class="attendance-period-badge '+(missing?'missing':'')+'">'+escapeFollowupHtml(attendancePeriodLabel(p))+'</span>').join('')+'</div>';
 }
+function getAttendanceMonitoringDate(){
+  return String($('attendanceMonitoringDate')?.value||todayKey());
+}
+function formatAttendanceMonitoringDay(dateKey){
+  try{
+    const d=new Date(String(dateKey)+'T12:00:00');
+    return new Intl.DateTimeFormat('ar-SA',{weekday:'long'}).format(d);
+  }catch(e){return '—'}
+}
+function formatAttendanceMonitoringHijri(dateKey){
+  try{
+    const d=new Date(String(dateKey)+'T12:00:00');
+    return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{
+      day:'numeric',month:'long',year:'numeric'
+    }).format(d);
+  }catch(e){return '—'}
+}
+function syncAttendanceMonitoringDateDisplay(){
+  const key=getAttendanceMonitoringDate();
+  const day=$('attendanceMonitoringDay');
+  const hijri=$('attendanceMonitoringHijri');
+  if(day) day.textContent='اليوم: '+formatAttendanceMonitoringDay(key);
+  if(hijri) hijri.textContent='التاريخ الهجري: '+formatAttendanceMonitoringHijri(key);
+}
 function getAttendanceMonitoringData(){
   const students=getStudents();
-  const logs=getAttendanceLog().filter(r=>String(r.date||'')===todayKey());
+  const monitoringDate=getAttendanceMonitoringDate();
+  const logs=getAttendanceLog().filter(r=>String(r.date||'')===monitoringDate);
   const cohortMap=new Map();
   students.forEach(s=>{
     const key=attendanceCohortKey(s.grade,s.classroom);
@@ -11131,6 +11178,9 @@ function getAttendanceMonitoringData(){
 function renderAttendanceMonitoring(){
   const card=$('attendanceMonitoringCard');
   if(!card) return;
+  const dateInput=$('attendanceMonitoringDate');
+  if(dateInput && !dateInput.value) dateInput.value=todayKey();
+  syncAttendanceMonitoringDateDisplay();
 
   const owner=isOwnerAdminSession();
   card.classList.toggle('hidden',!owner);
@@ -11491,6 +11541,15 @@ function openAttendanceWhatsAppForRows(rows){
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
 }
 
+if($('attendanceMonitoringDate')) $('attendanceMonitoringDate').onchange=()=>{
+  syncAttendanceMonitoringDateDisplay();
+  renderAttendanceMonitoring();
+};
+if($('attendanceMonitoringTodayBtn')) $('attendanceMonitoringTodayBtn').onclick=()=>{
+  if($('attendanceMonitoringDate')) $('attendanceMonitoringDate').value=todayKey();
+  syncAttendanceMonitoringDateDisplay();
+  renderAttendanceMonitoring();
+};
 if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').onclick=()=>{
   renderAttendanceMonitoring();
   toast('تم تحديث كشف الهروب والتحضير');
