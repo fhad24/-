@@ -482,6 +482,30 @@
     .attendance-camera-buttons button.dark{background:#0b2436;color:#fff;border-color:#0b2436}
     .attendance-selected-name{font-size:11px;color:#6d7f7a;margin-top:8px}
     .attendance-modal-footer{display:flex;gap:10px;justify-content:center;margin-top:16px}
+    .attendance-monitoring-card{margin-top:16px;padding:18px}
+    .attendance-monitoring-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .attendance-monitoring-head h3{margin:4px 0 0;font-size:20px}
+    .attendance-monitoring-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+    .attendance-monitoring-stat{border:1px solid #cfe0dc;border-radius:14px;background:#f6fbfa;padding:14px;text-align:center}
+    .attendance-monitoring-stat span{display:block;font-size:12px;font-weight:800;color:#5b706b;margin-bottom:5px}
+    .attendance-monitoring-stat b{font-size:28px;color:#0f7665}
+    .attendance-monitoring-stat.danger b{color:#b42318}
+    .attendance-monitoring-stat.warning b{color:#b26a00}
+    .attendance-monitoring-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .attendance-monitoring-pane{border:1px solid #d9e5e2;border-radius:14px;padding:12px;background:#fff;min-width:0}
+    .attendance-monitoring-pane h4{margin:0 0 6px;font-size:16px}
+    .attendance-monitoring-table-wrap{overflow:auto;margin-top:10px}
+    .attendance-monitoring-table{width:100%;min-width:650px;border-collapse:collapse;font-size:11px}
+    .attendance-monitoring-table th,.attendance-monitoring-table td{border:1px solid #d8e2df;padding:8px;text-align:center}
+    .attendance-monitoring-table th{background:#eef7f4;font-weight:900}
+    .attendance-monitoring-table td:nth-child(2){text-align:right;font-weight:800}
+    .attendance-period-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+    .attendance-period-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#e7f5f1;color:#0f6f60;font-weight:900;font-size:10px}
+    .attendance-period-badge.missing{background:#fdeceb;color:#b42318}
+    @media(max-width:900px){
+      .attendance-monitoring-grid{grid-template-columns:1fr}
+      .attendance-monitoring-summary{grid-template-columns:1fr}
+    }
     .attendance-modal-footer button{min-width:120px}
     @media(max-width:800px){
       .attendance-stats{grid-template-columns:repeat(2,1fr)}
@@ -3902,6 +3926,46 @@
           </div>
           <div id="attendanceDailyList" class="attendance-daily-empty">لا يوجد طلاب متأخرون مسجلون اليوم.</div>
         </div>
+
+        <div class="card attendance-monitoring-card" id="attendanceMonitoringCard">
+          <div class="attendance-monitoring-head">
+            <div>
+              <div class="attendance-kicker">متابعة آلية لليوم الحالي</div>
+              <h3>🚨 متابعة الهروب والتحضير</h3>
+            </div>
+            <button type="button" class="attendance-btn outline" id="attendanceMonitoringRefreshBtn">🔄 تحديث الكشف</button>
+          </div>
+
+          <div class="attendance-monitoring-summary">
+            <div class="attendance-monitoring-stat danger"><span>الطلاب المحتمل هروبهم</span><b id="attendanceEscapeCount">0</b></div>
+            <div class="attendance-monitoring-stat"><span>الحصص التي بدأ تحضيرها</span><b id="attendancePreparedPeriodsCount">0</b></div>
+            <div class="attendance-monitoring-stat warning"><span>الفصول غير المحضرة</span><b id="attendanceUnpreparedCount">0</b></div>
+          </div>
+
+          <div class="attendance-monitoring-grid">
+            <div class="attendance-monitoring-pane">
+              <h4>🚨 كشف الطلاب الهاربين</h4>
+              <div class="hint">يظهر الطالب فقط إذا تم تحضير فصله في حصتين أو أكثر، وكان حاضرًا/متأخرًا في حصة ثم لم يُسجل حاضرًا أو متأخرًا في حصة أخرى تم تحضير نفس الفصل فيها.</div>
+              <div class="attendance-monitoring-table-wrap">
+                <table class="attendance-monitoring-table">
+                  <thead><tr><th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف / الفصل</th><th>حضر في</th><th>لم يسجل في</th></tr></thead>
+                  <tbody id="attendanceEscapeBody"><tr><td colspan="6">لا توجد حالات حتى الآن.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="attendance-monitoring-pane">
+              <h4>🏫 الصفوف والفصول غير المحضرة</h4>
+              <div class="hint">إذا بدأ تحضير حصة في المدرسة، يظهر هنا كل صف/فصل لم يُسجل له أي تحضير في الحصة نفسها.</div>
+              <div class="attendance-monitoring-table-wrap">
+                <table class="attendance-monitoring-table">
+                  <thead><tr><th>م</th><th>الحصة</th><th>الصف</th><th>الفصل</th><th>الحالة</th></tr></thead>
+                  <tbody id="attendanceUnpreparedBody"><tr><td colspan="5">لم يبدأ تحضير أي حصة حتى الآن.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="card admin-import-box admin-data-view">
@@ -6582,6 +6646,7 @@ function applyUserAttendancePrivacy(){
   document.body.classList.add('user-attendance-only');
   const topLine=document.querySelector('.attendance-topline');
   if(topLine) topLine.style.display='none';
+  $('attendanceMonitoringCard')?.classList.add('hidden');
   document.querySelectorAll('.admin-data-view').forEach(el=>{
     el.classList.add('hidden');
     el.style.display='none';
@@ -10908,6 +10973,130 @@ function canUseAttendanceWhatsApp(){
   return role.includes('وكيل') || role.includes('إداري') || role.includes('اداري');
 }
 
+function attendancePeriodNumber(value){
+  const s=String(value??'').trim();
+  const direct=Number(s);
+  if(Number.isFinite(direct) && direct>=1 && direct<=7) return direct;
+  const map={'الأولى':1,'الاولى':1,'الأولي':1,'الثانية':2,'الثالثة':3,'الرابعة':4,'الخامسة':5,'السادسة':6,'السابعة':7};
+  return map[s]||null;
+}
+function attendancePeriodLabel(p){
+  const names={1:'الأولى',2:'الثانية',3:'الثالثة',4:'الرابعة',5:'الخامسة',6:'السادسة',7:'السابعة'};
+  return names[p]?('الحصة '+names[p]):('الحصة '+p);
+}
+function attendanceCohortKey(grade,classroom){
+  return studentGradeKey(grade)+'|'+studentClassKey(classroom);
+}
+function attendancePeriodBadges(periods,missing=false){
+  return '<div class="attendance-period-badges">'+periods.map(p=>'<span class="attendance-period-badge '+(missing?'missing':'')+'">'+escapeFollowupHtml(attendancePeriodLabel(p))+'</span>').join('')+'</div>';
+}
+function getAttendanceMonitoringData(){
+  const students=getStudents();
+  const logs=getAttendanceLog().filter(r=>String(r.date||'')===todayKey());
+  const cohortMap=new Map();
+  students.forEach(s=>{
+    const key=attendanceCohortKey(s.grade,s.classroom);
+    if(!studentGradeKey(s.grade) || !studentClassKey(s.classroom)) return;
+    if(!cohortMap.has(key)) cohortMap.set(key,{key,grade:s.grade||'',classroom:s.classroom||'',students:[]});
+    cohortMap.get(key).students.push(s);
+  });
+
+  // الحصة تعتبر قد بدأ تحضيرها للفصل إذا وُجد أي تسجيل فعلي لطالب من الفصل في هذه الحصة.
+  const preparedByCohort=new Map();
+  const attendedByStudent=new Map();
+  const activePeriods=new Set();
+
+  logs.forEach(r=>{
+    const p=attendancePeriodNumber(r.period);
+    if(!p) return;
+    const key=attendanceCohortKey(r.grade,r.classroom);
+    if(!cohortMap.has(key)) return;
+    activePeriods.add(p);
+    if(!preparedByCohort.has(key)) preparedByCohort.set(key,new Set());
+    preparedByCohort.get(key).add(p);
+    if(r.status==='present'||r.status==='late'){
+      const id=String(r.idno||'');
+      if(!attendedByStudent.has(id)) attendedByStudent.set(id,new Set());
+      attendedByStudent.get(id).add(p);
+    }
+  });
+
+  const escapees=[];
+  cohortMap.forEach(cohort=>{
+    const prepared=[...(preparedByCohort.get(cohort.key)||new Set())].sort((a,b)=>a-b);
+    if(prepared.length<2) return;
+    cohort.students.forEach(s=>{
+      const attended=[...(attendedByStudent.get(String(s.idno))||new Set())].filter(p=>prepared.includes(p)).sort((a,b)=>a-b);
+      if(!attended.length) return;
+      const missing=prepared.filter(p=>!attended.includes(p));
+      if(!missing.length) return;
+      escapees.push({student:s,prepared,attended,missing});
+    });
+  });
+  escapees.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
+
+  const unprepared=[];
+  [...activePeriods].sort((a,b)=>a-b).forEach(period=>{
+    cohortMap.forEach(cohort=>{
+      const prepared=preparedByCohort.get(cohort.key)?.has(period);
+      if(!prepared){
+        unprepared.push({period,grade:cohort.grade,classroom:cohort.classroom,key:cohort.key});
+      }
+    });
+  });
+
+  return {
+    escapees,
+    unprepared,
+    activePeriods:[...activePeriods].sort((a,b)=>a-b),
+    preparedByCohort
+  };
+}
+function renderAttendanceMonitoring(){
+  const card=$('attendanceMonitoringCard');
+  if(!card) return;
+
+  const owner=isOwnerAdminSession();
+  card.classList.toggle('hidden',!owner);
+  if(!owner) return;
+
+  const data=getAttendanceMonitoringData();
+  if($('attendanceEscapeCount')) $('attendanceEscapeCount').textContent=String(data.escapees.length);
+  if($('attendancePreparedPeriodsCount')) $('attendancePreparedPeriodsCount').textContent=String(data.activePeriods.length);
+  if($('attendanceUnpreparedCount')) $('attendanceUnpreparedCount').textContent=String(data.unprepared.length);
+
+  const escapeBody=$('attendanceEscapeBody');
+  if(escapeBody){
+    escapeBody.innerHTML=data.escapees.length
+      ? data.escapees.map((r,i)=>`<tr>
+          <td>${i+1}</td>
+          <td>${escapeFollowupHtml(r.student.name||'')}</td>
+          <td>${escapeFollowupHtml(r.student.idno||'')}</td>
+          <td>${escapeFollowupHtml(r.student.grade||'')} / ${escapeFollowupHtml(displayStudentClassroom(r.student.classroom)||'')}</td>
+          <td>${attendancePeriodBadges(r.attended,false)}</td>
+          <td>${attendancePeriodBadges(r.missing,true)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="6">لا توجد حالات هروب مكتشفة حتى الآن.</td></tr>';
+  }
+
+  const unpreparedBody=$('attendanceUnpreparedBody');
+  if(unpreparedBody){
+    if(!data.activePeriods.length){
+      unpreparedBody.innerHTML='<tr><td colspan="5">لم يبدأ تحضير أي حصة حتى الآن.</td></tr>';
+    }else{
+      unpreparedBody.innerHTML=data.unprepared.length
+        ? data.unprepared.map((r,i)=>`<tr>
+            <td>${i+1}</td>
+            <td>${escapeFollowupHtml(attendancePeriodLabel(r.period))}</td>
+            <td>${escapeFollowupHtml(r.grade||'')}</td>
+            <td>${escapeFollowupHtml(displayStudentClassroom(r.classroom)||'')}</td>
+            <td><b style="color:#b42318">لم يتم التحضير</b></td>
+          </tr>`).join('')
+        : '<tr><td colspan="5">تم تحضير جميع الصفوف والفصول في الحصص التي بدأ تحضيرها اليوم ✅</td></tr>';
+    }
+  }
+}
+
 async function renderAttendancePage(){
   if($('attendanceSelectAllRows')){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
@@ -10949,6 +11138,8 @@ async function renderAttendancePage(){
   $('attLateTabCount').textContent=late;
   $('attPresentTabCount').textContent=present;
   $('attAbsentTabCount').textContent=absent;
+
+  renderAttendanceMonitoring();
 
   document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.attView===attendanceListView);
@@ -11223,6 +11414,11 @@ function openAttendanceWhatsAppForRows(rows){
   modal.querySelector('.wa-close').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
 }
+
+if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').onclick=()=>{
+  renderAttendanceMonitoring();
+  toast('تم تحديث كشف الهروب والتحضير');
+};
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
   const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-wa-select,.attendance-pending-select')];
