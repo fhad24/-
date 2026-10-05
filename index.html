@@ -4050,6 +4050,8 @@
           <input id="studentRosterTxtInput" class="hidden" type="file" accept=".txt,text/plain">
           <button class="admin-outline-btn" id="importMadrasatiBtn" type="button">استيراد الصفوف والفصول / قوائم Word 📥</button>
           <button class="admin-outline-btn" id="importStudentRosterTxtBtn" type="button">استيراد قائمة TXT وربط الصفوف والفصول 📄</button>
+          <button class="admin-outline-btn" id="exportStudentEditDatabaseBtn" type="button">📤 تصدير قاعدة الطلاب للتعديل</button>
+          <button class="admin-outline-btn" id="exportEmptyStudentTemplateBtn" type="button">📄 تصدير قالب فارغ للتعديل</button>
           <button class="admin-outline-btn">الباركود (إضافة / عرض الأسماء) 🪪</button>
           <button class="admin-outline-btn">متابعة دخول منصة مدرستي 📶</button>
           <input id="studentPhotosExcelInput" class="hidden" type="file" accept=".xlsx">
@@ -8904,6 +8906,9 @@ if($('pendingStudentPhotosBtn')){
 }
 if(isCurrentOwner()) setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>{}),600);
 
+if($('exportStudentEditDatabaseBtn')) $('exportStudentEditDatabaseBtn').onclick=()=>exportStudentEditDatabase(false);
+if($('exportEmptyStudentTemplateBtn')) $('exportEmptyStudentTemplateBtn').onclick=()=>exportStudentEditDatabase(true);
+
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 if($('referralNewBtn')) $('referralNewBtn').onclick=()=>{
@@ -12560,6 +12565,79 @@ function downloadBlob(blob,filename){
   a.click();
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function studentEditDatabaseHeaders(){
+  return ['السجل المدني','اسم الطالب','رقم الجوال','الصف','الفصل','نوع التقويم','تاريخ الميلاد','حالة التحقق','مسجل'];
+}
+function studentToEditDatabaseRow(s){
+  return [
+    String(s.idno||''),
+    String(s.name||''),
+    String(s.phone||''),
+    String(s.grade||''),
+    String(studentClassKey(s.classroom)||s.classroom||''),
+    String(s.calendar||''),
+    String(s.birth||''),
+    String(s.verification||'مؤكد'),
+    s.registered===false?'لا':'نعم'
+  ];
+}
+function exportStudentEditDatabase(empty=false){
+  if(!window.XLSX){
+    alert('تعذر تشغيل أداة Excel.');
+    return;
+  }
+  const headers=studentEditDatabaseHeaders();
+  const rows=empty?[]:getStudents()
+    .slice()
+    .sort((a,b)=>{
+      const ga=String(a.grade||'')+'|'+String(studentClassKey(a.classroom)||a.classroom||'')+'|'+String(a.name||'');
+      const gb=String(b.grade||'')+'|'+String(studentClassKey(b.classroom)||b.classroom||'')+'|'+String(b.name||'');
+      return ga.localeCompare(gb,'ar',{numeric:true,sensitivity:'base'});
+    })
+    .map(studentToEditDatabaseRow);
+
+  const aoa=[headers,...rows];
+  // في القالب الفارغ نضيف صفوفًا فارغة جاهزة للتعبئة.
+  if(empty){
+    for(let i=0;i<200;i++) aoa.push(['','','','','','','','','']);
+  }
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[
+    {wch:16},{wch:34},{wch:16},{wch:18},{wch:10},{wch:14},{wch:18},{wch:16},{wch:10}
+  ];
+
+  // إبقاء السجل المدني والجوال كنص حتى لا تضيع الأصفار الأولى.
+  const maxRow=aoa.length;
+  for(let r=2;r<=maxRow;r++){
+    ['A','C'].forEach(col=>{
+      const cell=ws[col+r];
+      if(cell){
+        cell.t='s';
+        cell.v=String(cell.v??'');
+      }
+    });
+  }
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'قاعدة الطلاب للتعديل');
+
+  const noteRows=[
+    ['تعليمات'],
+    ['السجل المدني هو مفتاح المطابقة الأساسي عند إعادة الاستيراد.'],
+    ['لا يحتوي هذا الملف على أي صور، ولا يجب حذف الصور الحالية عند تحديث بيانات الطالب.'],
+    ['عدّل الاسم والجوال والصف والفصل وبقية البيانات، ثم أعد استيراد الملف من لوحة الأدمن.'],
+    ['لإضافة طالب جديد استخدم سجلًا مدنيًا غير موجود في القاعدة.']
+  ];
+  const notes=XLSX.utils.aoa_to_sheet(noteRows);
+  notes['!cols']=[{wch:90}];
+  XLSX.utils.book_append_sheet(wb,notes,'تعليمات');
+
+  const fileName=empty?'قالب_قاعدة_الطلاب_للتعديل_بدون_صور.xlsx':'قاعدة_الطلاب_الحالية_للتعديل_بدون_صور.xlsx';
+  XLSX.writeFile(wb,fileName);
+  toast(empty?'تم تصدير القالب الفارغ للتعديل':'تم تصدير قاعدة الطلاب بدون صور');
 }
 
 function exportStudentsExcel(rows){
