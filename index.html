@@ -3740,7 +3740,6 @@
           <button type="button" id="attendanceTabLate" class="active" data-att-view="late">⏰ التأخر اليومي (<span id="attLateTabCount">0</span>)</button>
           <button type="button" id="attendanceTabPresent" data-att-view="present">✓ الحضور اليومي (<span id="attPresentTabCount">0</span>)</button>
           <button type="button" id="attendanceTabAbsent" data-att-view="absent">✕ الغياب اليومي (<span id="attAbsentTabCount">0</span>)</button>
-          <button type="button" id="attendanceTabPending" data-att-view="pending">بانتظار تحديد الاسم (<span id="attPendingNameCount">0</span>)</button>
         </div>
 
         <div class="card attendance-daily-card">
@@ -10006,11 +10005,12 @@ async function renderAttendancePage(){
   const today=allLogs.filter(x=>x.date===todayKey());
   const present=today.filter(x=>x.status==='present').length;
   const late=today.filter(x=>x.status==='late').length;
-  const absent=today.filter(x=>x.status==='absent').length;
+  const explicitAbsent=today.filter(x=>x.status==='absent').length;
+  const absent=students.filter(s=>!today.some(x=>String(x.idno)===String(s.idno) && (x.status==='present'||x.status==='late'))).length;
   const photoCount=students.filter(x=>x.hasFace).length;
-  const recordedIds=new Set(today.map(x=>String(x.idno)));
-  const pendingStudents=students.filter(s=>!recordedIds.has(String(s.idno)));
-  const waiting=pendingStudents.length;
+  const presentOrLateIds=new Set(today.filter(x=>x.status==='present'||x.status==='late').map(x=>String(x.idno)));
+  const autoAbsentStudents=students.filter(s=>!presentOrLateIds.has(String(s.idno)));
+  const waiting=autoAbsentStudents.length;
 
   $('attPresentCount').textContent=present;
   $('attLateCount').textContent=late;
@@ -10020,7 +10020,6 @@ async function renderAttendancePage(){
   $('attLateTabCount').textContent=late;
   $('attPresentTabCount').textContent=present;
   $('attAbsentTabCount').textContent=absent;
-  $('attPendingNameCount').textContent=pendingStudents.length;
 
   document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.attView===attendanceListView);
@@ -10029,71 +10028,36 @@ async function renderAttendancePage(){
   const labelMap={
     late:'التأخر اليومي',
     present:'الحضور اليومي',
-    absent:'الغياب اليومي',
-    pending:'بانتظار تحديد الاسم'
+    absent:'الغياب اليومي'
   };
   $('attendanceDayTitle').textContent=`${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
 
-  if(attendanceListView==='pending'){
-    if(!pendingStudents.length){
-      $('attendanceDailyList').innerHTML='لا يوجد طلاب بانتظار تحديد الحالة اليوم.';
-      return;
-    }
-
-    const rendered=await Promise.all(pendingStudents.map(async s=>{
-      let photoHTML='<div class="attendance-saved-avatar placeholder">👤</div>';
-      try{
-        const blob=await getStudentPhoto(`${s.idno}:face`);
-        if(blob){
-          const src=await makeSharpAttendanceThumb(blob,String(x?.idno||s?.idno||''));
-          photoHTML=`<img class="attendance-saved-avatar" src="${src}" alt="صورة الطالب">`;
-        }
-      }catch(e){}
-
-      return `
-        <div class="attendance-saved-row">
-          <div class="attendance-saved-student">
-            <div class="attendance-photo-select-wrap">
-              ${photoHTML}
-              <label class="attendance-row-check attendance-photo-check" title="تحديد"><input type="checkbox" class="attendance-pending-select" data-pending-id-check="${s.idno}"></label>
-            </div>
-            <div class="attendance-saved-name">${s.name||''}</div>
-          </div>
-          <div class="attendance-saved-id">${s.idno||'—'}</div>
-          <div class="attendance-saved-class-cell">${s.grade||'—'} / ${displayStudentClassroom(s.classroom)}</div>
-          <div class="attendance-saved-time">—</div>
-          <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-pending-id="${s.idno}">تسجيل حالة</button>
-          </div>
-        </div>`;
-    }));
-
-    $('attendanceDailyList').innerHTML=`
-      <div class="attendance-saved-table">
-        <div class="attendance-saved-head">
-          <div>الطالب</div>
-          <div>السجل المدني</div>
-          <div>الصف / الفصل</div>
-          <div style="text-align:center">الحصة</div>
-          <div style="text-align:center">إجراء</div>
-        </div>
-        ${rendered.join('')}
-      </div>`;
-
-    document.querySelectorAll('[data-pending-id]').forEach(btn=>{
-      btn.onclick=()=>{
-        openAttendanceModal('present');
-        attendanceSelectedId=String(btn.dataset.pendingId||'');
-        const s=getStudents().find(x=>String(x.idno)===attendanceSelectedId);
-        if(s){
-          renderAttendanceStudentList();
-          showAttendanceSelectedStudent(s);
-        }
-      };
-    });  }else{
-    const rows=allLogs
+  {
+    let rows=allLogs
       .map((row,index)=>({...row,_index:index}))
       .filter(x=>x.date===todayKey() && x.status===attendanceListView);
+
+    // في تبويب الغياب: أي طالب لم يسجل حاضرًا أو متأخرًا اليوم يظهر غائبًا تلقائيًا.
+    if(attendanceListView==='absent'){
+      const explicitAbsentIds=new Set(rows.map(x=>String(x.idno)));
+      const automaticRows=autoAbsentStudents
+        .filter(s=>!explicitAbsentIds.has(String(s.idno)))
+        .map(s=>({
+          _index:null,
+          _autoAbsent:true,
+          idno:s.idno,
+          name:s.name,
+          grade:s.grade||'',
+          classroom:s.classroom||'',
+          phone:s.phone||'',
+          date:todayKey(),
+          time:'تلقائي',
+          status:'absent',
+          subject:'',
+          period:null
+        }));
+      rows=[...rows,...automaticRows];
+    }
 
     if(!rows.length){
       $('attendanceDailyList').innerHTML=`لا توجد سجلات ${labelMap[attendanceListView]} اليوم.`;
@@ -10115,7 +10079,7 @@ async function renderAttendancePage(){
       const isAbsentRow=attendanceListView==='absent';
       const nameCheck=isPresentRow
         ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`
-        : (isLateRow||isAbsentRow)
+        : ((isLateRow||isAbsentRow) && !x._autoAbsent)
           ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
           : '';
       return `
@@ -10140,10 +10104,12 @@ async function renderAttendancePage(){
             ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
             : attendanceListView==='present'
               ? ((x.hijriDate||x.date||'—') + ' — ' + (x.period?('الحصة '+x.period):'بدون حصة'))
-              : (x.time||'—')}</div>
+              : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
           <div class="attendance-saved-actions">
-            <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
-            <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>
+            ${x._autoAbsent
+              ? '<span style="font-weight:800;color:#b42318">✕ غائب تلقائيًا</span>'
+              : `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
+                 <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`}
           </div>
         </div>`;
     }));
