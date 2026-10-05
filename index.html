@@ -10999,9 +10999,30 @@ async function exportPresentReportPdf(){
   }finally{host.remove()}
 }
 
-if($('attendancePresentSaveBtn')) $('attendancePresentSaveBtn').onclick=()=>{
-  saveAttendanceLog(getAttendanceLog());
-  toast('تم حفظ سجلات الحضور');
+if($('attendancePresentSaveBtn')) $('attendancePresentSaveBtn').onclick=async ()=>{
+  const btn=$('attendancePresentSaveBtn');
+  const oldText=btn.textContent;
+  try{
+    btn.disabled=true;
+    btn.textContent='جاري الحفظ...';
+    const rows=getAttendanceLog();
+    saveAttendanceLog(rows);
+
+    // تأكيد واضح داخل نفس تبويب حاضر.
+    btn.textContent='✅ تم الحفظ بنجاح';
+    alert('✅ تم الحفظ بنجاح');
+    toast('✅ تم الحفظ بنجاح');
+
+    setTimeout(()=>{
+      btn.textContent=oldText||'💾 حفظ';
+      btn.disabled=false;
+    },1500);
+  }catch(e){
+    console.error('present toolbar save',e);
+    btn.disabled=false;
+    btn.textContent=oldText||'💾 حفظ';
+    alert('تعذر الحفظ، حاول مرة أخرى.');
+  }
 };
 if($('attendancePresentEditBtn')) $('attendancePresentEditBtn').onclick=()=>{
   const selected=getSelectedPresentIndexes();
