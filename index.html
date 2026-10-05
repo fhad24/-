@@ -106,6 +106,8 @@
     .logged-in-header-nav{display:none;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:10px 14px 14px;background:#0f6f60}
     body.admin-mode .logged-in-header-nav{display:flex}
     #headerAdminDashboardBtn,#headerEditBtn{display:none!important}
+    #headerOwnerHomeBtn{display:none}
+    body.admin-mode #headerOwnerHomeBtn.owner-visible{display:inline-flex}
     .logged-in-header-nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:14px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
     .logged-in-header-nav button:hover{background:#fff;color:#0f6f60}
     @media(max-width:700px){.logged-in-header-nav{flex-direction:column}.logged-in-header-nav button{width:100%}}
@@ -6003,6 +6005,17 @@ function getCurrentPhotoOperator(){
   };
 }
 
+function refreshOwnerHomeButton(){
+  try{
+    const btn=$('headerOwnerHomeBtn');
+    if(!btn) return;
+    const owner=isCurrentOwner();
+    btn.style.display=owner?'inline-flex':'none';
+    btn.classList.toggle('hidden',!owner);
+    btn.classList.toggle('owner-visible',owner);
+  }catch(e){}
+}
+
 function hideAllUserFeatureViews(){
   document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
   $('attendancePanel')?.classList.add('hidden');
@@ -6810,6 +6823,7 @@ function initTeacherClassFollowupPage(){
 
 
 function openInternalPage(pageId){
+  refreshOwnerHomeButton();
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(pageId)?.classList.remove('hidden');
   localStorage.setItem('activeMainPage',pageId);
@@ -6869,6 +6883,7 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  refreshOwnerHomeButton();
   // هذا الزر يظهر فقط بعد تسجيل الدخول، لذلك افتح لوحة الإدارة مباشرة
   // بدون الاعتماد على حالة صفحة أو زر سابق.
   document.body.classList.add('admin-mode');
@@ -7040,15 +7055,24 @@ function ensureAdminToolbarVisible(){
 function setAdminMode(on){
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
+  if(!on){
+    const homeBtn=$('headerOwnerHomeBtn');
+    if(homeBtn) homeBtn.style.display='none';
+  }
 
   if(on){
+    refreshOwnerHomeButton();
     setTimeout(enforceSingleAdminReferralButton,0);
     try{
       const u=getCurrentLoggedAdminUser();
       const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
       const owner=isCurrentOwner();
       const ownerHomeBtn=$('headerOwnerHomeBtn');
-      if(ownerHomeBtn) ownerHomeBtn.style.display=owner?'':'none';
+      if(ownerHomeBtn){
+        ownerHomeBtn.style.display=owner?'inline-flex':'none';
+        ownerHomeBtn.classList.toggle('hidden',!owner);
+        ownerHomeBtn.classList.toggle('owner-visible',owner);
+      }
       const referralBtn=$('headerReferralBtn');
       if(referralBtn) referralBtn.style.display=(owner||perms.has('referralSubmit'))?'':'none';
       const deputyBtn=$('headerDeputyRepliesBtn');
