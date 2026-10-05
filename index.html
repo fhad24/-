@@ -3474,6 +3474,12 @@
 
 <section id="weeklyAttendanceReport" class="page hidden">
   <div class="weekly-att-page">
+    <div class="weekly-att-actions" id="weeklyAttTabs" style="margin:0 0 16px;justify-content:center">
+      <button type="button" class="btn btn-primary" id="weeklyAttTabReportBtn">📋 كشف الحضور والغياب الأسبوعي</button>
+      <button type="button" class="btn btn-outline" id="weeklyAttTabAnalyticsBtn">📊 الإحصائيات الشهرية والفصلية</button>
+    </div>
+
+    <div id="weeklyAttTabReportPanel">
     <div class="card">
       <h2 style="text-align:center;margin:0 0 6px">كشف متابعة الحضور والغياب الأسبوعي</h2>
       <div class="hint" style="text-align:center;margin-bottom:14px">✓ حاضر &nbsp;&nbsp; ✕ غائب &nbsp;&nbsp; اليوم الذي لم يُسجل فيه تحضير للفصل يبقى فارغًا ولا يُحسب غيابًا، والمتأخر يُحتسب حاضرًا.</div>
@@ -3558,7 +3564,10 @@
       </div>
     </div>
 
-    <div class="card" id="weeklyAttAnalyticsCard" style="margin-top:18px">
+    </div>
+
+    <div id="weeklyAttTabAnalyticsPanel" class="hidden">
+    <div class="card" id="weeklyAttAnalyticsCard" style="margin-top:0">
       <h2 style="text-align:center;margin:0 0 6px">إحصائيات الغياب الشهرية والفصلية</h2>
       <div class="hint" style="text-align:center;margin-bottom:14px">الغياب يُحسب فقط في أيام التحضير الفعلية لنفس الصف والفصل؛ اليوم بدون تحضير يبقى فارغًا ولا يدخل في الإحصاءات.</div>
 
@@ -3614,6 +3623,7 @@
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   </div>
 </section>
@@ -10405,6 +10415,30 @@ function openWeeklyAttSummaryWhatsApp(rows){
   modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});
 }
 
+function switchWeeklyAttendanceTab(tab){
+  const reportPanel=$('weeklyAttTabReportPanel');
+  const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
+  const reportBtn=$('weeklyAttTabReportBtn');
+  const analyticsBtn=$('weeklyAttTabAnalyticsBtn');
+  const showAnalytics=tab==='analytics';
+  if(reportPanel) reportPanel.classList.toggle('hidden',showAnalytics);
+  if(analyticsPanel) analyticsPanel.classList.toggle('hidden',!showAnalytics);
+  if(reportBtn){
+    reportBtn.classList.toggle('btn-primary',!showAnalytics);
+    reportBtn.classList.toggle('btn-outline',showAnalytics);
+  }
+  if(analyticsBtn){
+    analyticsBtn.classList.toggle('btn-primary',showAnalytics);
+    analyticsBtn.classList.toggle('btn-outline',!showAnalytics);
+  }
+  if(showAnalytics){
+    populateWeeklyAttAnalyticsStudents();
+    renderWeeklyAttAnalytics();
+  }else{
+    renderWeeklyAttendanceReport();
+  }
+}
+
 async function initWeeklyAttendanceReport(){
   if($('weeklyAttDate') && !$('weeklyAttDate').value) $('weeklyAttDate').value=weeklyAttDateKey(new Date());
   setWeeklyAttDayFromDate();
@@ -10414,6 +10448,7 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
+  switchWeeklyAttendanceTab('report');
   // تحديث السحابة في الخلفية ثم إعادة الرسم إذا وصلت بيانات أحدث.
   setTimeout(async()=>{
     try{
@@ -10449,6 +10484,8 @@ async function exportWeeklyAttendancePdf(){
     await html2pdf().set({margin:5,filename:'كشف-الحضور-والغياب-الأسبوعي.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy']}}).from(clone).save();
   }finally{stage.remove()}
 }
+if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeeklyAttendanceTab('report');
+if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendanceClasses();populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=renderWeeklyAttendanceReport;
