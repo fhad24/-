@@ -3540,12 +3540,12 @@
             <th style="width:260px">اسم الطالب</th>
             <th style="width:95px">الفصل</th>
             <th style="width:130px">رقم الجوال</th>
-            <th style="width:90px">الغياب حتى الآن</th>
             <th data-weekday="0">الأحد</th>
             <th data-weekday="1">الاثنين</th>
             <th data-weekday="2">الثلاثاء</th>
             <th data-weekday="3">الأربعاء</th>
             <th data-weekday="4">الخميس</th>
+            <th style="width:90px">الغياب حتى الآن</th>
           </tr>
         </thead>
         <tbody id="weeklyAttBody">
@@ -10243,8 +10243,8 @@ function renderWeeklyAttendanceReport(){
         <td class="student-name">${escapeFollowupHtml(s.name||'')}</td>
         <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
         <td dir="ltr">${escapeFollowupHtml(s.phone||'')}</td>
-        <td><b style="color:#b42318">${weeklyAttAbsenceCount(s.idno,'',weeklyAttDateKey(new Date()))}</b></td>
         ${marks}
+        <td><b style="color:#b42318">${weeklyAttAbsenceCount(s.idno,'',weeklyAttDateKey(new Date()))}</b></td>
       </tr>`;
     }).join('');
   }
