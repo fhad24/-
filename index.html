@@ -709,6 +709,13 @@
     .admin-sort-btn .sort-arrow{font-size:11px;opacity:.55}
     .admin-sort-btn.active .sort-arrow{opacity:1;color:var(--primary)}
   
+    .attendance-present-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;margin:0 0 12px}
+    .attendance-present-tools button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:10px 15px;font-family:inherit;font-weight:800;cursor:pointer}
+    .attendance-present-tools button:hover{background:#eaf7f3}
+    .attendance-present-stats-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 14px}
+    .attendance-present-stats-panel .statbox{background:#f5faf8;border:1px solid #d5e4df;border-radius:14px;padding:12px;text-align:center}
+    .attendance-present-stats-panel .statbox b{display:block;font-size:22px;color:#0f7665;margin-top:4px}
+    @media(max-width:700px){.attendance-present-stats-panel{grid-template-columns:1fr 1fr}}
     .attendance-bulk-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin:-4px 0 14px}
     .attendance-bulk-tools button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:9px 13px;font-family:inherit;font-weight:800;cursor:pointer}
     .attendance-bulk-tools .wa{background:#18a558;color:#fff;border-color:#18a558}
@@ -3642,6 +3649,14 @@
 
         <div class="card attendance-daily-card">
           <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+          <div id="attendancePresentTools" class="attendance-present-tools hidden">
+            <button type="button" id="attendancePresentSaveBtn">💾 حفظ</button>
+            <button type="button" id="attendancePresentEditBtn">✏️ تعديل المحدد</button>
+            <button type="button" id="attendancePresentPrintBtn">🖨️ طباعة</button>
+            <button type="button" id="attendancePresentPdfBtn">📄 تقرير PDF</button>
+            <button type="button" id="attendancePresentStatsBtn">📊 الإحصائيات</button>
+          </div>
+          <div id="attendancePresentStatsPanel" class="attendance-present-stats-panel hidden"></div>
           <div class="attendance-bulk-tools">
             <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
             <button type="button" id="attendanceBulkAbsent" class="absent">✕ تسجيل غياب للمحدد</button>
@@ -9690,6 +9705,12 @@ async function renderAttendancePage(){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
     $('attendanceSelectAllRows').style.display='';
   }
+  const presentTools=$('attendancePresentTools');
+  const presentStatsPanel=$('attendancePresentStatsPanel');
+  const isPresentView=attendanceListView==='present';
+  if(presentTools) presentTools.classList.toggle('hidden',!isPresentView);
+  if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
+
   if($('attendanceWhatsAppSelected')){
     const canWhatsApp=canUseAttendanceWhatsApp();
     const allowedView=(attendanceListView==='late'||attendanceListView==='absent');
@@ -10827,6 +10848,131 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
 };
 
 
+
+function getTodayPresentRows(){
+  return getAttendanceLog()
+    .map((row,index)=>({...row,_index:index}))
+    .filter(x=>x.date===todayKey() && x.status==='present');
+}
+
+function getSelectedPresentIndexes(){
+  return [...document.querySelectorAll('.attendance-present-select:checked')]
+    .map(x=>Number(x.dataset.attIndex))
+    .filter(Number.isFinite);
+}
+
+function buildPresentReportHtml(){
+  const rows=getTodayPresentRows();
+  const school=getSchoolSettings?.()||{};
+  const dateLabel=new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const bodyRows=rows.map((x,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${escapeFollowupHtml(x.name||'')}</td>
+      <td>${escapeFollowupHtml(x.idno||'')}</td>
+      <td>${escapeFollowupHtml(x.grade||'')}</td>
+      <td>${escapeFollowupHtml(displayStudentClassroom(x.classroom)||'')}</td>
+      <td>${escapeFollowupHtml(x.period?('الحصة '+x.period):'—')}</td>
+      <td>${escapeFollowupHtml(x.subject||'—')}</td>
+      <td>${escapeFollowupHtml(x.teacherName||x.teacherUsername||'—')}</td>
+    </tr>`).join('');
+  return `
+    <div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;color:#173b34;padding:18px;background:#fff">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:12px">${escapeFollowupHtml(school.authority||'')}</div>
+        <h2 style="margin:5px 0">${escapeFollowupHtml(school.school||'المدرسة')}</h2>
+        <h3 style="margin:5px 0">تقرير الحضور اليومي</h3>
+        <div style="font-size:11px">${escapeFollowupHtml(dateLabel)}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px">
+        <thead><tr style="background:#eaf6f2">
+          <th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف</th><th>الفصل</th><th>الحصة</th><th>المادة</th><th>المسجل</th>
+        </tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:11px;font-weight:700">
+        <span>عدد الحاضرين: ${rows.length}</span>
+        <span>مدير المدرسة: ${escapeFollowupHtml(school.manager||'')}</span>
+      </div>
+    </div>`;
+}
+
+function renderPresentStatistics(){
+  const panel=$('attendancePresentStatsPanel'); if(!panel) return;
+  const rows=getTodayPresentRows();
+  const uniqueStudents=new Set(rows.map(x=>String(x.idno))).size;
+  const byPeriod={};
+  const byGrade={};
+  rows.forEach(x=>{
+    const p=String(x.period||'بدون حصة');
+    byPeriod[p]=(byPeriod[p]||0)+1;
+    const g=String(x.grade||'غير محدد');
+    byGrade[g]=(byGrade[g]||0)+1;
+  });
+  const topPeriod=Object.entries(byPeriod).sort((a,b)=>b[1]-a[1])[0];
+  const topGrade=Object.entries(byGrade).sort((a,b)=>b[1]-a[1])[0];
+  panel.innerHTML=`
+    <div class="statbox">إجمالي سجلات الحضور<b>${rows.length}</b></div>
+    <div class="statbox">عدد الطلاب الحاضرين<b>${uniqueStudents}</b></div>
+    <div class="statbox">أكثر حصة تسجيلًا<b>${topPeriod?('الحصة '+topPeriod[0]+' ('+topPeriod[1]+')'):'—'}</b></div>
+    <div class="statbox">أكثر صف حضورًا<b>${topGrade?(topGrade[0]+' ('+topGrade[1]+')'):'—'}</b></div>`;
+  panel.classList.remove('hidden');
+}
+
+async function printPresentReport(){
+  const rows=getTodayPresentRows();
+  if(!rows.length){alert('لا توجد سجلات حضور اليوم للطباعة.');return}
+  const frame=document.createElement('iframe');
+  frame.style.cssText='position:fixed;width:1px;height:1px;opacity:0;border:0';
+  document.body.appendChild(frame);
+  const doc=frame.contentWindow.document;
+  doc.open();
+  doc.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+    @page{size:A4 landscape;margin:10mm}
+    body{margin:0;font-family:Tahoma,Arial,sans-serif}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:6px;text-align:center}
+    th{background:#eef5f3}
+  </style></head><body>${buildPresentReportHtml()}</body></html>`);
+  doc.close();
+  setTimeout(()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),3000)},300);
+}
+
+async function exportPresentReportPdf(){
+  if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
+  const rows=getTodayPresentRows();
+  if(!rows.length){alert('لا توجد سجلات حضور اليوم لتصديرها.');return}
+  const host=document.createElement('div');
+  host.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;padding:12px;overflow:auto';
+  host.innerHTML=buildPresentReportHtml();
+  host.querySelectorAll('th,td').forEach(el=>el.style.cssText='border:1px solid #777;padding:6px;text-align:center');
+  document.body.appendChild(host);
+  try{
+    await html2pdf().set({
+      margin:7,
+      filename:'تقرير-الحضور-اليومي.pdf',
+      image:{type:'jpeg',quality:.98},
+      html2canvas:{scale:1.6,useCORS:true,backgroundColor:'#fff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+      pagebreak:{mode:['avoid-all','css','legacy']}
+    }).from(host).save();
+  }finally{host.remove()}
+}
+
+if($('attendancePresentSaveBtn')) $('attendancePresentSaveBtn').onclick=()=>{
+  saveAttendanceLog(getAttendanceLog());
+  toast('تم حفظ سجلات الحضور');
+};
+if($('attendancePresentEditBtn')) $('attendancePresentEditBtn').onclick=()=>{
+  const selected=getSelectedPresentIndexes();
+  if(selected.length!==1){
+    alert(selected.length?'حدد طالبًا واحدًا فقط للتعديل.':'حدد طالبًا من قائمة حاضر ثم اضغط تعديل المحدد.');
+    return;
+  }
+  openAttendanceEdit(selected[0]);
+};
+if($('attendancePresentPrintBtn')) $('attendancePresentPrintBtn').onclick=printPresentReport;
+if($('attendancePresentPdfBtn')) $('attendancePresentPdfBtn').onclick=exportPresentReportPdf;
+if($('attendancePresentStatsBtn')) $('attendancePresentStatsBtn').onclick=renderPresentStatistics;
 
 function getSelectedStudentIds(){
   return [...document.querySelectorAll('.student-select:checked')].map(x=>String(x.dataset.id));
