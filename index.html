@@ -11017,6 +11017,20 @@ if($('attendanceCaptureBtn')) $('attendanceCaptureBtn').onclick=()=>{
   startLiveCamera();
 };
 
+function showAttendanceSavedMessage(message='✅ تم الحفظ بنجاح'){
+  let box=$('attendanceGlobalSaveMessage');
+  if(!box){
+    box=document.createElement('div');
+    box.id='attendanceGlobalSaveMessage';
+    box.style.cssText='position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:1000000;background:#087f5b;color:#fff;border-radius:16px;padding:16px 28px;font-family:inherit;font-size:19px;font-weight:900;box-shadow:0 12px 35px #0005;text-align:center;min-width:260px';
+    document.body.appendChild(box);
+  }
+  box.textContent=message;
+  box.style.display='block';
+  clearTimeout(window.__attendanceSavedTimer);
+  window.__attendanceSavedTimer=setTimeout(()=>{if(box) box.style.display='none'},2200);
+}
+
 if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (ev)=>{
   ev.preventDefault();
   ev.stopPropagation();
@@ -11026,8 +11040,11 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       ? [...attendancePresentSelectedIds]
       : [];
     if(!attendanceSelectedId && !selectedGroup.length){toast('اختر اسم الطالب أو حدد مجموعة طلاب أولاً');return}
-    const s=attendanceSelectedId ? getStudents().find(x=>String(x.idno)===String(attendanceSelectedId)) : null;
+    const studentsNow=getStudents();
+    const s=attendanceSelectedId ? studentsNow.find(x=>String(x.idno)===String(attendanceSelectedId)) : null;
+    const seedStudent=s || (selectedGroup.length ? studentsNow.find(x=>String(x.idno)===String(selectedGroup[0])) : null);
     if(attendanceSelectedId && !s){toast('تعذر العثور على الطالب');return}
+    if(!seedStudent){toast('تعذر العثور على بيانات الطالب');return}
 
     if(attendanceMode==='late'){
       const morningLate=!!$('attendanceMorningLate')?.checked;
@@ -11074,10 +11091,10 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       teacherName:recorder.name,
       teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
       teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
-      idno:s.idno,
-      name:s.name,
-      grade:s.grade||'',
-      classroom:s.classroom||'',
+      idno:seedStudent.idno,
+      name:seedStudent.name,
+      grade:seedStudent.grade||'',
+      classroom:seedStudent.classroom||'',
       status:attendanceMode,
       faceMatch:attendanceFaceCompareResult
     };
@@ -11119,9 +11136,8 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length){
       rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
     }else if(selectedGroup.length){
-      const students=getStudents();
       selectedGroup.forEach(id=>{
-        const student=students.find(x=>String(x.idno)===String(id));
+        const student=studentsNow.find(x=>String(x.idno)===String(id));
         if(!student) return;
         rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
         rows.push({
@@ -11149,14 +11165,16 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const wasEditing=attendanceEditingIndex>=0;
     saveAttendanceLog(rows);
 
-    // إظهار نجاح الحفظ داخل نافذة الحضور نفسها قبل الإغلاق.
+    // رسالة نجاح ثابتة وواضحة بعد الحفظ، للطالب الواحد أو المجموعة.
     if(savedMode==='present'){
       const success=$('attendanceSaveSuccess');
       if(success) success.classList.remove('hidden');
       btn.textContent='✅ تم الحفظ بنجاح';
       btn.disabled=true;
+      const savedCount=selectedGroup.length || 1;
+      showAttendanceSavedMessage(savedCount>1 ? ('✅ تم حفظ حضور '+savedCount+' طلاب بنجاح') : '✅ تم الحفظ بنجاح');
       toast('✅ تم الحفظ بنجاح');
-      await new Promise(resolve=>setTimeout(resolve,1200));
+      await new Promise(resolve=>setTimeout(resolve,700));
     }
 
     closeAttendanceModal();
