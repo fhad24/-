@@ -2408,6 +2408,19 @@
     .followup-print-note{display:none}
     .followup-sheet.blank-print .followup-mark{color:transparent!important;text-shadow:none!important}
     .followup-sheet.blank-print .followup-mark::placeholder{color:transparent!important}
+    .followup-pdf-root{position:fixed;left:-100000px;top:0;width:1120px;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl}
+    .followup-pdf-page{width:1120px;min-height:760px;padding:22px 24px 18px;background:#fff;box-sizing:border-box;page-break-after:always;break-after:page;display:flex;flex-direction:column}
+    .followup-pdf-page:last-child{page-break-after:auto;break-after:auto}
+    .followup-report-meta{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:8px;font-size:12px;font-weight:800;line-height:1.65}
+    .followup-report-meta .title{text-align:center;font-size:18px;font-weight:900}
+    .followup-report-meta .right{text-align:right}.followup-report-meta .left{text-align:left}
+    .followup-pdf-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
+    .followup-pdf-table th,.followup-pdf-table td{border:1px solid #111;padding:3px 2px;text-align:center;vertical-align:middle;height:27px;overflow:hidden;word-break:break-word}
+    .followup-pdf-table thead th{background:#f3f3f3;font-weight:900;line-height:1.15}
+    .followup-pdf-table .student-name{text-align:right;font-weight:800}
+    .followup-pdf-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:8px}
+    .followup-pdf-footer{margin-top:auto;padding-top:8px;display:flex;justify-content:space-between;gap:12px;font-size:11px;font-weight:800;border-top:1px solid #777}
+
     .followup-analysis{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
     .followup-analysis-card{background:#fff;border:1px solid #d4e2de;border-radius:16px;padding:14px}
     .followup-analysis-card h3{margin:0 0 10px;font-size:14px;color:#173b34}
@@ -6430,19 +6443,170 @@ function clearFollowupMarks(){
   toast('تم مسح خانات المتابعة');
 }
 
-function prepareFollowupPrint(blank=false){
-  const sheet=$('followupSheet');
-  if(!sheet) return;
-  if(blank) sheet.classList.add('blank-print');
-  document.body.classList.add('followup-printing');
-  const cleanup=()=>{
-    document.body.classList.remove('followup-printing');
-    sheet.classList.remove('blank-print');
-    window.removeEventListener('afterprint',cleanup);
+function escapeFollowupHtml(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[ch]));
+}
+
+function getFollowupReportMeta(){
+  const settings=getSchoolSettings?.()||{};
+  const students=currentFollowupStudents();
+  const term=String($('followupTerm')?.value||'الأول');
+  const year=String($('followupYear')?.value||'');
+  const subject=String($('followupSubject')?.value||'').trim()||'—';
+  const teacher=String($('followupTeacher')?.value||'').trim()||'—';
+  const grade=String($('followupGrade')?.value||'—');
+  const classroom=String($('followupClass')?.value||'—');
+  const week=String($('followupWeek')?.value||'1');
+  return {
+    students,term,year,subject,teacher,grade,classroom,week,
+    manager:String(settings.manager||''),
+    school:String(settings.school||'المدرسة'),
+    authority:String(settings.authority||'')
   };
-  window.addEventListener('afterprint',cleanup);
-  window.print();
-  setTimeout(cleanup,1500);
+}
+
+function getFollowupHeaderRowsHtml(){
+  const table=$('followupSheet')?.querySelector('.followup-table');
+  return table?.querySelector('thead')?.innerHTML||'';
+}
+
+function getFollowupPrintableRows(blank=false){
+  return [...document.querySelectorAll('#followupBody tr')].filter(tr=>!tr.querySelector('.followup-empty')).map(tr=>{
+    const clone=tr.cloneNode(true);
+    clone.querySelectorAll('input.followup-mark').forEach(inp=>{
+      const span=document.createElement('span');
+      span.textContent=blank?'':String(inp.value||'');
+      span.style.cssText='display:block;text-align:center;min-height:16px;font-size:9px';
+      inp.replaceWith(span);
+    });
+    return clone.outerHTML;
+  });
+}
+
+function buildFollowupMetaHtml(meta,pageNo,totalPages){
+  return `
+    <div class="followup-report-meta">
+      <div class="right">
+        <div>المادة: ${escapeFollowupHtml(meta.subject)}</div>
+        <div>معلم المادة: ${escapeFollowupHtml(meta.teacher)}</div>
+      </div>
+      <div class="title">
+        <div>${escapeFollowupHtml(meta.school)}</div>
+        <div>سجل متابعة الفصل الدراسي ${escapeFollowupHtml(meta.term)} لعام ${escapeFollowupHtml(meta.year||'ــــ')} هـ</div>
+      </div>
+      <div class="left">
+        <div>الصف / الفصل: ${escapeFollowupHtml(meta.grade)} / ${meta.classroom==='—'?'—':('الفصل '+escapeFollowupHtml(meta.classroom))}</div>
+        <div>الأسبوع الدراسي: ${escapeFollowupHtml(meta.week)}</div>
+        ${totalPages?'<div>الصفحة: '+pageNo+' من '+totalPages+'</div>':''}
+      </div>
+    </div>`;
+}
+
+function buildFollowupFooterHtml(meta){
+  return `
+    <div class="followup-pdf-footer">
+      <div>مدير المدرسة: ${escapeFollowupHtml(meta.manager)}</div>
+      <div>عدد الطلاب: ${meta.students.length}</div>
+    </div>`;
+}
+
+function buildFollowupPrintDocument(blank=false){
+  const meta=getFollowupReportMeta();
+  const rows=getFollowupPrintableRows(blank);
+  const headerRows=getFollowupHeaderRowsHtml();
+  const metaHtml=buildFollowupMetaHtml(meta,'','');
+  const footerHtml=buildFollowupFooterHtml(meta);
+  return `<!doctype html>
+  <html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <title>كشف متابعة الطلاب</title>
+    <style>
+      @page{size:A4 landscape;margin:8mm}
+      *{box-sizing:border-box}
+      html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl}
+      table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
+      th,td{border:1px solid #111;padding:3px 2px;text-align:center;vertical-align:middle;height:26px;overflow:hidden;word-break:break-word}
+      thead th{background:#f3f3f3;font-weight:900;line-height:1.15}
+      thead{display:table-header-group}
+      tfoot{display:table-footer-group}
+      tr{page-break-inside:avoid;break-inside:avoid}
+      .student-name{text-align:right!important;font-weight:800}
+      .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:8px}
+      .report-meta-cell{border:0!important;padding:0 0 8px!important;background:#fff!important}
+      .footer-cell{border:0!important;padding:8px 0 0!important;background:#fff!important}
+      .followup-report-meta{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;font-size:11px;font-weight:800;line-height:1.65}
+      .followup-report-meta .title{text-align:center;font-size:16px;font-weight:900}
+      .followup-report-meta .right{text-align:right}.followup-report-meta .left{text-align:left}
+      .followup-pdf-footer{display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:800;border-top:1px solid #777;padding-top:6px}
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr><th colspan="26" class="report-meta-cell">${metaHtml}</th></tr>
+        ${headerRows}
+      </thead>
+      <tbody>${rows.join('')}</tbody>
+      <tfoot>
+        <tr><td colspan="26" class="footer-cell">${footerHtml}</td></tr>
+      </tfoot>
+    </table>
+  </body>
+  </html>`;
+}
+
+function prepareFollowupPrint(blank=false){
+  const rows=getFollowupPrintableRows(blank);
+  if(!rows.length){
+    alert('لا توجد بيانات طلاب للطباعة. اختر الصف والفصل واضغط تحميل الطلاب أولًا.');
+    return;
+  }
+  const frame=document.createElement('iframe');
+  frame.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(frame);
+  const doc=frame.contentWindow.document;
+  doc.open();
+  doc.write(buildFollowupPrintDocument(blank));
+  doc.close();
+  const run=()=>{
+    try{
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }catch(e){
+      console.error('followup print',e);
+      alert('تعذر فتح نافذة الطباعة.');
+    }
+    setTimeout(()=>frame.remove(),4000);
+  };
+  if(doc.readyState==='complete') setTimeout(run,250);
+  else frame.onload=()=>setTimeout(run,250);
+}
+
+function buildFollowupPdfPages(blank=false){
+  const meta=getFollowupReportMeta();
+  const allRows=getFollowupPrintableRows(blank);
+  const headerRows=getFollowupHeaderRowsHtml();
+  const rowsPerPage=13;
+  const pages=[];
+  for(let i=0;i<allRows.length;i+=rowsPerPage) pages.push(allRows.slice(i,i+rowsPerPage));
+  if(!pages.length) pages.push([]);
+  const root=document.createElement('div');
+  root.className='followup-pdf-root';
+  root.dir='rtl';
+  root.innerHTML=pages.map((rows,index)=>`
+    <section class="followup-pdf-page">
+      ${buildFollowupMetaHtml(meta,index+1,pages.length)}
+      <table class="followup-pdf-table">
+        <thead>${headerRows}</thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+      ${buildFollowupFooterHtml(meta)}
+    </section>
+  `).join('');
+  return {root,meta,pages};
 }
 
 async function exportFollowupPdf(){
@@ -6450,8 +6614,6 @@ async function exportFollowupPdf(){
     alert('تعذر تشغيل أداة تصدير PDF.');
     return;
   }
-  const sheet=$('followupSheet');
-  if(!sheet) return;
   const grade=$('followupGrade')?.value||'الصف';
   const classroom=$('followupClass')?.value||'الفصل';
   const subject=$('followupSubject')?.value.trim()||'المادة';
@@ -6460,19 +6622,28 @@ async function exportFollowupPdf(){
   const btn=$('followupPdfBtn');
   const old=btn?.textContent;
   if(btn){btn.disabled=true;btn.textContent='جاري تجهيز PDF...'}
+  let root=null;
   try{
+    const built=buildFollowupPdfPages(false);
+    root=built.root;
+    if(!built.meta.students.length){
+      alert('لا توجد بيانات طلاب لتصديرها. اختر الصف والفصل واضغط تحميل الطلاب أولًا.');
+      return;
+    }
+    document.body.appendChild(root);
     await html2pdf().set({
-      margin:5,
+      margin:0,
       filename,
       image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      html2canvas:{scale:1.65,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0},
       jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-      pagebreak:{mode:['avoid-all','css','legacy']}
-    }).from(sheet).save();
+      pagebreak:{mode:['css','legacy'],before:'.followup-pdf-page:not(:first-child)'}
+    }).from(root).save();
   }catch(e){
     console.error('followup pdf',e);
     alert('تعذر تصدير PDF الآن.');
   }finally{
+    if(root) root.remove();
     if(btn){btn.disabled=false;btn.textContent=old}
   }
 }
