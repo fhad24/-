@@ -2372,27 +2372,31 @@
     .followup-page{max-width:1500px;margin:0 auto}
     .followup-controls{padding:18px}
     .followup-title{font-size:24px!important;text-align:center;margin:0 0 14px!important}
-    .followup-filter-grid{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;align-items:end}
+    .followup-filter-grid{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:10px;align-items:end}
     .followup-filter-grid label{font-size:13px;margin:0 0 6px}
     .followup-filter-grid input,.followup-filter-grid select{height:46px;font-size:13px;border-radius:10px}
     .followup-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
     .followup-actions button{min-height:46px;border-radius:11px;font-size:13px;padding:10px 16px}
-    .followup-sheet-wrap{overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+    .followup-autosave-note{margin-top:10px;text-align:center;font-size:12px;font-weight:800;color:#0f7665}
+    .followup-sheet-wrap{overflow:hidden;padding-bottom:6px;max-width:100%}
     .followup-sheet{
-      width:100%;min-width:1280px;background:#fff;border:1px solid #111;padding:8px;direction:rtl;color:#111;
-      font-family:Tahoma,Arial,sans-serif
+      width:100%;max-width:100%;min-width:0;background:#fff;border:1px solid #111;padding:8px;direction:rtl;color:#111;
+      font-family:Tahoma,Arial,sans-serif;overflow:hidden
     }
     .followup-sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:8px}
     .followup-sheet-title{font-size:18px;font-weight:900;text-align:center;line-height:1.6}
     .followup-sheet-meta{font-size:13px;font-weight:800;line-height:1.8}
     .followup-sheet-meta.left{text-align:left;direction:rtl}
     .followup-sheet-meta.right{text-align:right}
-    .followup-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
-    .followup-table th,.followup-table td{border:1px solid #111!important;padding:3px!important;text-align:center!important;vertical-align:middle!important;height:29px}
-    .followup-table thead th{background:#f3f3f3;font-weight:900;line-height:1.25}
-    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:6px!important}
-    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:10px}
-    .followup-table .class-cell{font-weight:800;white-space:nowrap}
+    .followup-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}
+    .followup-table th,.followup-table td{border:1px solid #111!important;padding:2px!important;text-align:center!important;vertical-align:middle!important;height:27px;overflow:hidden;word-break:break-word}
+    .followup-table thead th{background:#f3f3f3;font-weight:900;line-height:1.15}
+    .followup-table th:nth-child(1),.followup-table td:nth-child(1){width:7%}
+    .followup-table th:nth-child(2),.followup-table td:nth-child(2){width:14%}
+    .followup-table th:nth-child(3),.followup-table td:nth-child(3){width:4%}
+    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:4px!important;font-size:8px;line-height:1.25}
+    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:7px}
+    .followup-table .class-cell{font-weight:800;white-space:nowrap;font-size:8px}
     .followup-mark{
       width:100%!important;height:24px!important;min-width:0!important;border:0!important;border-radius:0!important;
       background:transparent!important;text-align:center!important;padding:0!important;font-size:11px!important;box-shadow:none!important
@@ -2402,6 +2406,29 @@
     .followup-print-note{display:none}
     .followup-sheet.blank-print .followup-mark{color:transparent!important;text-shadow:none!important}
     .followup-sheet.blank-print .followup-mark::placeholder{color:transparent!important}
+    .followup-analysis{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .followup-analysis-card{background:#fff;border:1px solid #d4e2de;border-radius:16px;padding:14px}
+    .followup-analysis-card h3{margin:0 0 10px;font-size:14px;color:#173b34}
+    .followup-kpi{font-size:25px;font-weight:900;color:#0f7665}
+    .followup-kpi-sub{font-size:11px;color:#6d7f7a;margin-top:4px}
+    .followup-chart-card{grid-column:span 2}
+    .followup-bars{display:flex;align-items:flex-end;gap:5px;height:155px;padding:8px 4px 24px;border-bottom:1px solid #dbe5e2;overflow:hidden}
+    .followup-bar-item{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;position:relative}
+    .followup-bar{width:70%;min-height:2px;background:#0f7665;border-radius:5px 5px 0 0}
+    .followup-bar-label{position:absolute;bottom:-20px;font-size:8px;white-space:nowrap;color:#60736e}
+    .followup-bar-value{font-size:8px;font-weight:800;color:#173b34}
+    .followup-category-bars{display:grid;gap:8px}
+    .followup-category-row{display:grid;grid-template-columns:82px 1fr 42px;gap:8px;align-items:center;font-size:10px}
+    .followup-category-track{height:10px;background:#edf3f1;border-radius:999px;overflow:hidden}
+    .followup-category-fill{height:100%;background:#0f7665;border-radius:999px}
+    @media(max-width:900px){
+      .followup-analysis{grid-template-columns:1fr 1fr}
+      .followup-chart-card{grid-column:span 2}
+    }
+    @media(max-width:600px){
+      .followup-analysis{grid-template-columns:1fr}
+      .followup-chart-card{grid-column:span 1}
+    }
     @media(max-width:900px){
       .followup-filter-grid{grid-template-columns:1fr 1fr}
       .followup-actions{display:grid;grid-template-columns:1fr 1fr}
@@ -3258,7 +3285,44 @@
         </div>
         <div>
           <label>المادة</label>
-          <input id="followupSubject" placeholder="مثال: الرياضيات">
+          <select id="followupSubject">
+            <option value="">اختر المادة</option>
+            <option value="الكفايات اللغوية">الكفايات اللغوية</option>
+            <option value="القرآن الكريم وتفسيره">القرآن الكريم وتفسيره</option>
+            <option value="الرياضيات">الرياضيات</option>
+            <option value="الكيمياء">الكيمياء</option>
+            <option value="الأحياء">الأحياء</option>
+            <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
+            <option value="التفكير الناقد">التفكير الناقد</option>
+            <option value="التقنية الرقمية">التقنية الرقمية</option>
+            <option value="التربية الصحية والبدنية">التربية الصحية والبدنية</option>
+            <option value="الفيزياء">الفيزياء</option>
+            <option value="التاريخ">التاريخ</option>
+            <option value="التوحيد">التوحيد</option>
+            <option value="الفنون">الفنون</option>
+            <option value="اللياقة">اللياقة</option>
+            <option value="الثقافة الصحية">الثقافة الصحية</option>
+            <option value="مواد متقدمة في البرمجة">مواد متقدمة في البرمجة</option>
+            <option value="هندسة البرمجيات">هندسة البرمجيات</option>
+            <option value="العلوم الطبية الحيوية">العلوم الطبية الحيوية</option>
+            <option value="الأحياء المتقدمة">الأحياء المتقدمة</option>
+            <option value="التشريح">التشريح</option>
+            <option value="الصحة العامة">الصحة العامة</option>
+            <option value="مبادئ الإدارة">مبادئ الإدارة</option>
+            <option value="الاقتصاد">الاقتصاد</option>
+            <option value="المحاسبة">المحاسبة</option>
+            <option value="التقنية الرقمية للأعمال">التقنية الرقمية للأعمال</option>
+            <option value="الفقه">الفقه</option>
+            <option value="التفسير">التفسير</option>
+            <option value="الحديث">الحديث</option>
+            <option value="الأصول">الأصول</option>
+          </select>
+        </div>
+        <div>
+          <label>الأسبوع الدراسي</label>
+          <select id="followupWeek">
+            <option value="1">الأسبوع 1</option><option value="2">الأسبوع 2</option><option value="3">الأسبوع 3</option><option value="4">الأسبوع 4</option><option value="5">الأسبوع 5</option><option value="6">الأسبوع 6</option><option value="7">الأسبوع 7</option><option value="8">الأسبوع 8</option><option value="9">الأسبوع 9</option><option value="10">الأسبوع 10</option><option value="11">الأسبوع 11</option><option value="12">الأسبوع 12</option><option value="13">الأسبوع 13</option><option value="14">الأسبوع 14</option><option value="15">الأسبوع 15</option><option value="16">الأسبوع 16</option><option value="17">الأسبوع 17</option><option value="18">الأسبوع 18</option><option value="19">الأسبوع 19</option><option value="20">الأسبوع 20</option>
+          </select>
         </div>
         <div>
           <label>معلم المادة</label>
@@ -3279,12 +3343,12 @@
       </div>
       <div class="followup-actions">
         <button type="button" class="btn btn-primary" id="followupLoadBtn">تحميل الطلاب</button>
-        <button type="button" class="btn btn-soft" id="followupSaveBtn">حفظ إلكتروني</button>
         <button type="button" class="btn btn-outline" id="followupPrintBlankBtn">طباعة فارغة</button>
         <button type="button" class="btn btn-outline" id="followupPrintFilledBtn">طباعة البيانات الحالية</button>
         <button type="button" class="btn btn-primary" id="followupPdfBtn">تصدير PDF</button>
         <button type="button" class="btn btn-soft" id="followupClearBtn">مسح الخانات</button>
       </div>
+      <div class="followup-autosave-note" id="followupAutosaveNote">✓ يتم حفظ بيانات الأسبوع المختار تلقائيًا عند الإدخال أو التعديل</div>
     </div>
 
     <div class="card" style="padding:10px">
@@ -3298,15 +3362,15 @@
           <table class="followup-table">
             <thead>
               <tr>
-                <th rowspan="2" style="width:90px">السجل المدني</th>
-                <th rowspan="2" style="width:180px">اسم الطالب</th>
-                <th rowspan="2" style="width:62px">الفصل</th>
+                <th rowspan="2">السجل المدني</th>
+                <th rowspan="2">اسم الطالب</th>
+                <th rowspan="2">الفصل</th>
                 <th colspan="4">غياب</th>
                 <th colspan="4">مشاركة</th>
                 <th colspan="4">واجبات</th>
                 <th colspan="4">أنشطة</th>
                 <th colspan="2">الاختبارات</th>
-                <th rowspan="2" style="width:74px">بحوث ومشاريع</th>
+                <th rowspan="2">بحوث ومشاريع</th>
                 <th colspan="4">أخرى</th>
               </tr>
               <tr>
@@ -3324,6 +3388,31 @@
           </table>
           <div class="followup-print-note">مدير المدرسة: <span id="followupManagerName"></span></div>
         </div>
+      </div>
+    </div>
+
+    <div id="followupAnalysis" class="followup-analysis">
+      <div class="followup-analysis-card">
+        <h3>الخانات المدخلة</h3>
+        <div class="followup-kpi" id="followupFilledCount">0</div>
+        <div class="followup-kpi-sub">في الأسبوع الحالي</div>
+      </div>
+      <div class="followup-analysis-card">
+        <h3>متوسط القيم الرقمية</h3>
+        <div class="followup-kpi" id="followupNumericAverage">0</div>
+        <div class="followup-kpi-sub">للقيم الرقمية المدخلة</div>
+      </div>
+      <div class="followup-analysis-card followup-chart-card">
+        <h3>تحليل فئات المتابعة — الأسبوع الحالي</h3>
+        <div class="followup-category-bars" id="followupCategoryAnalysis"></div>
+      </div>
+      <div class="followup-analysis-card followup-chart-card">
+        <h3>مقارنة الأسابيع المحفوظة</h3>
+        <div class="followup-bars" id="followupWeeksChart"></div>
+      </div>
+      <div class="followup-analysis-card followup-chart-card">
+        <h3>متوسط القيم الرقمية حسب الأسبوع</h3>
+        <div class="followup-bars" id="followupWeeksAverageChart"></div>
       </div>
     </div>
   </div>
@@ -6085,7 +6174,7 @@ function configureUserDashboard(){
 
 const FOLLOWUP_FIELDS=['absence1','absence2','absence3','absence4','participation1','participation2','participation3','participation4','homework1','homework2','homework3','homework4','activity1','activity2','activity3','activity4','midterm','final','projects','other1','other2','other3','other4'];
 
-function followupStorageKey(){
+function followupLegacyStorageKey(){
   const user=getCurrentLoggedAdminUser?.()||{};
   const username=String(user.username||user.civil_id||'user');
   const term=String($('followupTerm')?.value||'');
@@ -6096,8 +6185,23 @@ function followupStorageKey(){
   return ['studentFollowup',username,term,year,subject,grade,classroom].join('|');
 }
 
-function getFollowupSaved(){
-  try{return JSON.parse(localStorage.getItem(followupStorageKey())||'{}')||{}}catch(e){return {}}
+function followupStorageKey(weekValue){
+  const week=String(weekValue||$('followupWeek')?.value||'1');
+  return followupLegacyStorageKey()+'|week:'+week;
+}
+
+function getFollowupSaved(weekValue){
+  try{
+    const week=String(weekValue||$('followupWeek')?.value||'1');
+    const modern=localStorage.getItem(followupStorageKey(week));
+    if(modern) return JSON.parse(modern)||{};
+    // توافق مع البيانات القديمة: تظهر تلقائيًا في الأسبوع الأول فقط.
+    if(week==='1'){
+      const legacy=localStorage.getItem(followupLegacyStorageKey());
+      if(legacy) return JSON.parse(legacy)||{};
+    }
+    return {};
+  }catch(e){return {}}
 }
 
 function currentFollowupStudents(){
@@ -6138,7 +6242,8 @@ function updateFollowupHeader(students=[]){
   const teacher=$('followupTeacher')?.value.trim()||'—';
   const grade=$('followupGrade')?.value||'—';
   const classroom=$('followupClass')?.value||'—';
-  if($('followupHeadTitle')) $('followupHeadTitle').textContent=`سجل متابعة الفصل الدراسي ${term} لعام ${year||'ــــ'} هـ`;
+  const week=String($('followupWeek')?.value||'1');
+  if($('followupHeadTitle')) $('followupHeadTitle').textContent=`سجل متابعة الفصل الدراسي ${term} لعام ${year||'ــــ'} هـ — الأسبوع ${week}`;
   if($('followupHeadRight')) $('followupHeadRight').innerHTML=`المادة: ${subject}<br>معلم المادة: ${teacher}`;
   if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':('الفصل '+classroom)}<br>عدد الطلاب: ${students.length}`;
   const settings=getSchoolSettings?.()||{};
@@ -6201,9 +6306,100 @@ function saveFollowupElectronic(){
       subject:$('followupSubject')?.value||'',
       teacher:$('followupTeacher')?.value||'',
       grade:$('followupGrade')?.value||'',
-      classroom:$('followupClass')?.value||''
+      classroom:$('followupClass')?.value||'',
+      week:$('followupWeek')?.value||'1'
     }));
+    const note=$('followupAutosaveNote');
+    if(note){
+      note.textContent='✓ تم الحفظ تلقائيًا — الأسبوع '+String($('followupWeek')?.value||'1');
+      clearTimeout(window.__followupSaveNoteTimer);
+      window.__followupSaveNoteTimer=setTimeout(()=>{if(note) note.textContent='✓ يتم حفظ بيانات الأسبوع المختار تلقائيًا عند الإدخال أو التعديل'},1800);
+    }
   }catch(e){}
+  renderFollowupAnalysis();
+}
+
+function getFollowupAnalysisForWeek(week){
+  const saved=getFollowupSaved(String(week));
+  const fields=FOLLOWUP_FIELDS;
+  let filled=0,numericCount=0,numericSum=0;
+  const groups={
+    'غياب':['absence1','absence2','absence3','absence4'],
+    'مشاركة':['participation1','participation2','participation3','participation4'],
+    'واجبات':['homework1','homework2','homework3','homework4'],
+    'أنشطة':['activity1','activity2','activity3','activity4'],
+    'اختبارات':['midterm','final'],
+    'بحوث ومشاريع':['projects'],
+    'أخرى':['other1','other2','other3','other4']
+  };
+  const groupStats={};
+  Object.keys(groups).forEach(k=>groupStats[k]={filled:0,total:0,count:0});
+
+  Object.values(saved||{}).forEach(row=>{
+    fields.forEach(field=>{
+      const raw=String(row?.[field]??'').trim();
+      if(!raw) return;
+      filled++;
+      const n=Number(raw.replace(',','.'));
+      if(Number.isFinite(n)){numericCount++;numericSum+=n}
+    });
+    Object.entries(groups).forEach(([name,groupFields])=>{
+      groupFields.forEach(field=>{
+        const raw=String(row?.[field]??'').trim();
+        if(!raw) return;
+        groupStats[name].filled++;
+        const n=Number(raw.replace(',','.'));
+        if(Number.isFinite(n)){groupStats[name].total+=n;groupStats[name].count++}
+      });
+    });
+  });
+
+  return {
+    filled,
+    average:numericCount?numericSum/numericCount:0,
+    groups:groupStats
+  };
+}
+
+function renderFollowupBarChart(hostId,items,valueGetter){
+  const host=$(hostId); if(!host) return;
+  const values=items.map(valueGetter);
+  const max=Math.max(1,...values);
+  host.innerHTML=items.map((item,i)=>{
+    const val=values[i];
+    const h=Math.max(val>0?4:0,Math.round((val/max)*100));
+    return `<div class="followup-bar-item">
+      <div class="followup-bar-value">${val?Number(val).toFixed(val%1?1:0):'0'}</div>
+      <div class="followup-bar" style="height:${h}%"></div>
+      <div class="followup-bar-label">أ${item.week}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderFollowupAnalysis(){
+  const week=String($('followupWeek')?.value||'1');
+  const current=getFollowupAnalysisForWeek(week);
+  if($('followupFilledCount')) $('followupFilledCount').textContent=String(current.filled);
+  if($('followupNumericAverage')) $('followupNumericAverage').textContent=current.average?current.average.toFixed(2):'0';
+
+  const catHost=$('followupCategoryAnalysis');
+  if(catHost){
+    const entries=Object.entries(current.groups);
+    const max=Math.max(1,...entries.map(([,v])=>v.filled));
+    catHost.innerHTML=entries.map(([name,v])=>{
+      const width=Math.round((v.filled/max)*100);
+      const avg=v.count?(v.total/v.count):0;
+      return `<div class="followup-category-row">
+        <b>${name}</b>
+        <div class="followup-category-track"><div class="followup-category-fill" style="width:${width}%"></div></div>
+        <span>${v.filled} / ${avg?avg.toFixed(1):'0'}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const weeks=Array.from({length:20},(_,i)=>({week:i+1,...getFollowupAnalysisForWeek(i+1)}));
+  renderFollowupBarChart('followupWeeksChart',weeks,x=>x.filled);
+  renderFollowupBarChart('followupWeeksAverageChart',weeks,x=>x.average);
 }
 
 function clearFollowupMarks(){
@@ -6238,7 +6434,8 @@ async function exportFollowupPdf(){
   const grade=$('followupGrade')?.value||'الصف';
   const classroom=$('followupClass')?.value||'الفصل';
   const subject=$('followupSubject')?.value.trim()||'المادة';
-  const filename=`كشف متابعة - ${grade} - ${classroom} - ${subject}.pdf`;
+  const week=$('followupWeek')?.value||'1';
+  const filename=`كشف متابعة - ${grade} - ${classroom} - ${subject} - الأسبوع ${week}.pdf`;
   const btn=$('followupPdfBtn');
   const old=btn?.textContent;
   if(btn){btn.disabled=true;btn.textContent='جاري تجهيز PDF...'}
@@ -6274,21 +6471,29 @@ function initStudentFollowupPage(){
     if(last.grade && $('followupGrade')) $('followupGrade').value=last.grade;
     populateFollowupClasses();
     if(last.classroom && $('followupClass')) $('followupClass').value=last.classroom;
+    if(last.week && $('followupWeek')) $('followupWeek').value=String(last.week);
   }catch(e){populateFollowupClasses()}
   renderFollowupTable();
+  renderFollowupAnalysis();
 }
 
-if($('followupGrade')) $('followupGrade').onchange=()=>{populateFollowupClasses();renderFollowupTable()};
-if($('followupClass')) $('followupClass').onchange=renderFollowupTable;
-if($('followupLoadBtn')) $('followupLoadBtn').onclick=renderFollowupTable;
-if($('followupSaveBtn')) $('followupSaveBtn').onclick=()=>{saveFollowupElectronic();toast('تم حفظ الكشف إلكترونيًا')};
+if($('followupGrade')) $('followupGrade').onchange=()=>{populateFollowupClasses();renderFollowupTable();renderFollowupAnalysis()};
+if($('followupClass')) $('followupClass').onchange=()=>{renderFollowupTable();renderFollowupAnalysis()};
+if($('followupWeek')) $('followupWeek').onchange=()=>{renderFollowupTable();renderFollowupAnalysis();saveFollowupElectronic()};
+if($('followupLoadBtn')) $('followupLoadBtn').onclick=()=>{renderFollowupTable();renderFollowupAnalysis()};
 if($('followupPrintBlankBtn')) $('followupPrintBlankBtn').onclick=()=>prepareFollowupPrint(true);
 if($('followupPrintFilledBtn')) $('followupPrintFilledBtn').onclick=()=>prepareFollowupPrint(false);
 if($('followupPdfBtn')) $('followupPdfBtn').onclick=exportFollowupPdf;
 if($('followupClearBtn')) $('followupClearBtn').onclick=clearFollowupMarks;
-['followupTerm','followupYear','followupSubject','followupTeacher'].forEach(id=>{
-  $(id)?.addEventListener('change',()=>{updateFollowupHeader(currentFollowupStudents());saveFollowupElectronic()});
+['followupTerm','followupYear','followupTeacher'].forEach(id=>{
+  $(id)?.addEventListener('change',()=>{updateFollowupHeader(currentFollowupStudents());saveFollowupElectronic();renderFollowupAnalysis()});
   $(id)?.addEventListener('input',()=>updateFollowupHeader(currentFollowupStudents()));
+});
+if($('followupSubject')) $('followupSubject').addEventListener('change',()=>{
+  renderFollowupTable();
+  updateFollowupHeader(currentFollowupStudents());
+  renderFollowupAnalysis();
+  saveFollowupElectronic();
 });
 if($('teacherClassGrade')) $('teacherClassGrade').onchange=populateTeacherClassClassrooms;
 if($('teacherClassCameraBtn')) $('teacherClassCameraBtn').onclick=startTeacherClassCamera;
