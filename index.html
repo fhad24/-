@@ -13638,6 +13638,25 @@ function restoreLastAppLocation(){
     }
   }else{
     if(page==='edit' && typeof resetStudentEditLogin==='function') resetStudentEditLogin();
+
+    // عند تحديث المتصفح داخل صفحة كشوف متابعة الطلاب نعيد تهيئتها فورًا.
+    if(page==='followup' && loggedIn){
+      try{
+        if(typeof initStudentFollowupPage==='function'){
+          setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup restore init',e)),0);
+        }
+      }catch(e){console.warn('restore followup page',e)}
+    }
+
+    if(page==='teacherClassFollowup' && loggedIn){
+      try{ if(typeof initTeacherClassFollowupPage==='function') setTimeout(initTeacherClassFollowupPage,0); }catch(e){}
+    }
+    if(page==='teacherClassManager' && loggedIn){
+      try{ if(typeof loadTeacherClassManagerFollowups==='function') setTimeout(loadTeacherClassManagerFollowups,0); }catch(e){}
+    }
+    if(page==='deputyReferrals' && loggedIn){
+      try{ if(typeof loadDeputyReferrals==='function') setTimeout(()=>loadDeputyReferrals(false),0); }catch(e){}
+    }
   }
 }
 setTimeout(restoreLastAppLocation,0);
