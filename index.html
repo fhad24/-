@@ -109,7 +109,16 @@
     .logged-in-header-nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:14px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
     .logged-in-header-nav button:hover{background:#fff;color:#0f6f60}
     #headerHomeFixedBtn{display:none}
-    body.admin-mode #headerHomeFixedBtn{display:inline-flex!important;align-items:center;justify-content:center}
+    body.admin-mode #headerHomeFixedBtn{
+      display:inline-flex!important;
+      visibility:visible!important;
+      opacity:1!important;
+      align-items:center!important;
+      justify-content:center!important;
+      background:#fff!important;
+      color:#0f6f60!important;
+      border-color:#fff!important;
+    }
     @media(max-width:700px){.logged-in-header-nav{flex-direction:column}.logged-in-header-nav button{width:100%}}
     body:not(.admin-mode) #register{max-width:760px;margin:0 auto;padding-top:18px}
     body:not(.admin-mode) #register .notice{margin-top:0}
@@ -2940,6 +2949,7 @@
   </div>
   <nav id="mainPublicNav" class="hidden"></nav>
   <div id="loggedInHeaderNav" class="logged-in-header-nav">
+    <button type="button" id="headerHomeFixedBtn" class="header-home-fixed">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
@@ -2947,7 +2957,6 @@
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
-    <button type="button" id="headerHomeFixedBtn" class="header-home-fixed">🏠 الصفحة الرئيسية</button>
   </div>
 </header>
 
@@ -7686,6 +7695,14 @@ if($('headerHomeFixedBtn')) $('headerHomeFixedBtn').onclick=()=>{
   localStorage.setItem('activeMainPage','admin');
   openAdminDashboardInternal();
 };
+document.addEventListener('click',e=>{
+  const btn=e.target?.closest?.('#headerHomeFixedBtn');
+  if(!btn) return;
+  e.preventDefault();
+  localStorage.setItem('adminLoggedIn','1');
+  localStorage.setItem('activeMainPage','admin');
+  openAdminDashboardInternal();
+},true);
 
 if($('headerReferralBtn')) $('headerReferralBtn').onclick=()=>{
   const u=getCurrentLoggedAdminUser();
