@@ -10838,17 +10838,24 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         rows.push(record);
       }
     }
+    const savedMode=attendanceMode;
+    const wasEditing=attendanceEditingIndex>=0;
     saveAttendanceLog(rows);
 
+    // إظهار رسالة النجاح فور اكتمال الحفظ وقبل إغلاق النافذة أو إعادة رسم الصفحة.
+    if(savedMode==='present'){
+      alert('✅ تم الحفظ بنجاح');
+      toast('✅ تم الحفظ بنجاح');
+    }
+
     closeAttendanceModal();
-    renderAttendancePage();
-    renderAdmin();
-    if(attendanceEditingIndex>=0){
-      if(attendanceMode==='present') alert('✅ تم الحفظ بنجاح');
-      toast('تم حفظ تعديل الحالة والوقت بنجاح');
-    }else{
-      if(attendanceMode==='present') alert('✅ تم الحفظ بنجاح');
-      toast(selectedGroup.length ? ('تم حفظ حضور '+selectedGroup.length+' طلاب بنجاح') : (attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح'));
+    try{await renderAttendancePage()}catch(e){console.warn('render attendance after save',e)}
+    try{renderAdmin()}catch(e){console.warn('render admin after attendance save',e)}
+
+    if(wasEditing){
+      if(savedMode!=='present') toast('تم حفظ تعديل الحالة والوقت بنجاح');
+    }else if(savedMode!=='present'){
+      toast(selectedGroup.length ? ('تم حفظ حضور '+selectedGroup.length+' طلاب بنجاح') : (savedMode==='late'?'تم حفظ الطالب متأخراً بنجاح':savedMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح'));
     }
   }catch(err){
     console.error('attendance save failed',err);
