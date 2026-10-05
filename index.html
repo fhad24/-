@@ -7620,26 +7620,33 @@ $('adminLoginBtn').onclick=async()=>{
       }));
       localStorage.removeItem('cloudAdminUser');
       localStorage.removeItem('cloudAdminToken');
+
+      // افتح صلاحيات المستخدم فورًا من البيانات المحلية، والسحابة تعمل في الخلفية.
+      openDashboard();
       try{
-        const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
-        if(cloudLogin?.token){
-          localStorage.setItem('cloudAdminToken',cloudLogin.token);
-          if(cloudLogin.user){
-            const mergedUser={
-              ...cloudLogin.user,
-              username:String(extra.username||user),
-              civil_id:String(extra.civilId||extra.username||user),
-              name:String(extra.name||extra.username||user),
-              role:String(extra.role||cloudLogin.user.role||'مستخدم'),
-              permissions:Array.isArray(extra.permissions)?extra.permissions:(cloudLogin.user.permissions||[]),
-              is_owner:false
-            };
-            localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
+        cloudApi('login',{username:user,password:pass},false).then(cloudLogin=>{
+          if(cloudLogin?.token){
+            localStorage.setItem('cloudAdminToken',cloudLogin.token);
+            if(cloudLogin.user){
+              const mergedUser={
+                ...cloudLogin.user,
+                username:String(extra.username||user),
+                civil_id:String(extra.civilId||extra.username||user),
+                name:String(extra.name||extra.username||user),
+                role:String(extra.role||cloudLogin.user.role||'مستخدم'),
+                permissions:Array.isArray(extra.permissions)?extra.permissions:(cloudLogin.user.permissions||[]),
+                is_owner:false
+              };
+              localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
+            }
           }
-        }
+        }).catch(cloudErr=>console.warn('user cloud session login',cloudErr));
       }catch(cloudErr){
         console.warn('user cloud session login',cloudErr);
       }
+      btn.disabled=false;
+      btn.textContent=oldText;
+      return;
     }else{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
@@ -7648,15 +7655,22 @@ $('adminLoginBtn').onclick=async()=>{
       }));
       localStorage.removeItem('cloudAdminUser');
       localStorage.removeItem('cloudAdminToken');
+
+      // افتح لوحة المدير فورًا ثم أنشئ الجلسة السحابية في الخلفية.
+      openDashboard();
       try{
-        const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
-        if(cloudLogin?.token){
-          localStorage.setItem('cloudAdminToken',cloudLogin.token);
-          if(cloudLogin.user) localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
-        }
+        cloudApi('login',{username:user,password:pass},false).then(cloudLogin=>{
+          if(cloudLogin?.token){
+            localStorage.setItem('cloudAdminToken',cloudLogin.token);
+            if(cloudLogin.user) localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
+          }
+        }).catch(cloudErr=>console.warn('owner cloud session login',cloudErr));
       }catch(cloudErr){
         console.warn('owner cloud session login',cloudErr);
       }
+      btn.disabled=false;
+      btn.textContent=oldText;
+      return;
     }
     openDashboard();
     btn.disabled=false;
@@ -11146,8 +11160,15 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
 
     closeAttendanceModal();
-    try{await renderAttendancePage()}catch(e){console.warn('render attendance after save',e)}
-    try{renderAdmin()}catch(e){console.warn('render admin after attendance save',e)}
+
+    // بعد الحفظ ابقَ في صفحة التحضير واعرض قائمة الطلاب المتأخرين.
+    attendanceListView='late';
+    localStorage.setItem('activeAdminView','attendance');
+    try{
+      $('attendancePanel')?.classList.remove('hidden');
+      document.querySelectorAll('.admin-data-view').forEach(el=>el.classList.add('hidden'));
+      await renderAttendancePage();
+    }catch(e){console.warn('render attendance after save',e)}
 
     if(wasEditing){
       if(savedMode!=='present') toast('تم حفظ تعديل الحالة والوقت بنجاح');
