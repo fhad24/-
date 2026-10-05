@@ -9154,6 +9154,52 @@ function saveAttendanceLog(rows){
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
   if(localStorage.getItem('cloudAdminToken')) cloudApi('sync_attendance',{attendance:rows}).catch(e=>console.warn('cloud attendance',e));
 }
+
+function normalizeCloudAttendanceRow(x){
+  return {
+    idno:String(x?.idno||''),
+    name:String(x?.student_name||x?.name||''),
+    status:String(x?.status||''),
+    date:String(x?.date||''),
+    time:String(x?.time||''),
+    grade:String(x?.grade||''),
+    classroom:String(x?.classroom||''),
+    period:x?.period??'',
+    subject:String(x?.subject||''),
+    teacherName:String(x?.teacher_name||x?.teacherName||''),
+    teacherUsername:String(x?.teacher_username||x?.teacherUsername||''),
+    teacherCivilId:String(x?.teacher_civil_id||x?.teacherCivilId||''),
+    hijriDate:String(x?.hijri_date||x?.hijriDate||''),
+    weekday:String(x?.weekday||'')
+  };
+}
+
+function attendanceRecordKey(x){
+  return [
+    String(x?.date||''),
+    String(x?.idno||''),
+    String(x?.status||''),
+    String(x?.time||''),
+    String(x?.teacherCivilId||x?.teacher_civil_id||'')
+  ].join('|');
+}
+
+async function getFreshAttendanceRowsForLateCheck(localRows){
+  let rows=Array.isArray(localRows)?localRows.slice():[];
+  if(!localStorage.getItem('cloudAdminToken')) return rows;
+  try{
+    const remote=await cloudApi('pull_all');
+    const remoteRows=(Array.isArray(remote?.attendance)?remote.attendance:[]).map(normalizeCloudAttendanceRow);
+    const merged=new Map();
+    remoteRows.forEach(x=>merged.set(attendanceRecordKey(x),x));
+    rows.forEach(x=>merged.set(attendanceRecordKey(x),x));
+    return [...merged.values()];
+  }catch(e){
+    console.warn('fresh late duplicate check',e);
+    return rows;
+  }
+}
+
 function todayKey(){return new Date().toISOString().slice(0,10)}
 
 function canUseAttendanceWhatsApp(){
@@ -10185,6 +10231,39 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     };
 
     let rows=getAttendanceLog();
+
+    // التأخر يسجل مرة واحدة فقط للطالب في نفس اليوم، مهما كان المستخدم الذي أدخله.
+    // قبل الحفظ نراجع أحدث سجلات السحابة حتى لا يتكرر التسجيل من جهاز أو حساب آخر.
+    if(attendanceMode==='late'){
+      const freshRows=await getFreshAttendanceRowsForLateCheck(rows);
+      const duplicateLate=freshRows.find((x,idx)=>{
+        if(String(x?.status||'')!=='late') return false;
+        if(String(x?.date||'')!==String(record.date||'')) return false;
+        if(String(x?.idno||'')!==String(record.idno||'')) return false;
+
+        // عند تعديل نفس السجل محليًا لا نعتبره تكرارًا.
+        if(attendanceEditingIndex>=0 && idx===attendanceEditingIndex) return false;
+        const original=attendanceEditingOriginal||{};
+        if(attendanceEditingIndex>=0 &&
+           String(x?.date||'')===String(original.date||'') &&
+           String(x?.idno||'')===String(original.idno||'') &&
+           String(x?.status||'')===String(original.status||'') &&
+           String(x?.time||'')===String(original.time||'')) return false;
+        return true;
+      });
+
+      if(duplicateLate){
+        const who=duplicateLate.teacherName ? ` بواسطة ${duplicateLate.teacherName}` : '';
+        const when=duplicateLate.time ? ` الساعة ${duplicateLate.time}` : '';
+        alert(`⚠️ الطالب ${record.name} مسجل «متأخر» مسبقًا في نفس اليوم والتاريخ${who}${when}.\nلا يمكن تسجيل التأخر للطالب أكثر من مرة في اليوم.`);
+        toast('الطالب مسجل متأخر مسبقًا اليوم');
+        return;
+      }
+
+      // نحتفظ بأحدث سجلات بقية المستخدمين قبل إضافة السجل الجديد.
+      rows=freshRows;
+    }
+
     if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length){
       rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
     }else if(selectedGroup.length){
@@ -10204,10 +10283,15 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         });
       });
     }else{
-      rows=rows.filter(x=>!(
-        x.date===todayKey() && String(x.idno)===String(attendanceSelectedId)
-      ));
-      rows.push(record);
+      if(attendanceMode==='late'){
+        // لا نحذف سجل تأخر سابق؛ التكرار تم منعه أعلاه.
+        rows.push(record);
+      }else{
+        rows=rows.filter(x=>!(
+          x.date===todayKey() && String(x.idno)===String(attendanceSelectedId)
+        ));
+        rows.push(record);
+      }
     }
     saveAttendanceLog(rows);
 
