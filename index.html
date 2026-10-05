@@ -3327,7 +3327,7 @@
         </div>
         <div>
           <label>معلم المادة</label>
-          <input id="followupTeacher" placeholder="اسم المعلم">
+          <input id="followupTeacher" placeholder="اسم المستخدم" readonly title="يتم تعبئته تلقائيًا من المستخدم المسجل دخوله">
         </div>
         <div>
           <label>الصف</label>
@@ -6305,7 +6305,7 @@ function saveFollowupElectronic(){
       term:$('followupTerm')?.value||'',
       year:$('followupYear')?.value||'',
       subject:$('followupSubject')?.value||'',
-      teacher:$('followupTeacher')?.value||'',
+      teacher:String((getCurrentLoggedAdminUser?.()||{}).name||(getCurrentLoggedAdminUser?.()||{}).displayName||(getCurrentLoggedAdminUser?.()||{}).username||$('followupTeacher')?.value||''),
       grade:$('followupGrade')?.value||'',
       classroom:$('followupClass')?.value||'',
       week:$('followupWeek')?.value||'1'
@@ -6457,23 +6457,59 @@ async function exportFollowupPdf(){
   }
 }
 
-function initStudentFollowupPage(){
-  populateFollowupGrades();
+async function initStudentFollowupPage(){
   const current=getCurrentLoggedAdminUser?.()||{};
-  if($('followupTeacher') && !$('followupTeacher').value){
-    $('followupTeacher').value=String(current.name||current.username||'');
+  const teacherName=String(current.name||current.displayName||current.username||current.civil_id||'').trim();
+  if($('followupTeacher')) $('followupTeacher').value=teacherName;
+
+  // جلب قاعدة الطلاب أولًا حتى تظهر الصفوف والفصول حتى عند فتح الصفحة مباشرة.
+  const loadBtn=$('followupLoadBtn');
+  const oldLoadText=loadBtn?.textContent;
+  try{
+    if(loadBtn){loadBtn.disabled=true;loadBtn.textContent='جاري تحميل الطلاب...';}
+    if(isCurrentOwner()){
+      try{
+        const ready=await ensureOwnerCloudSession();
+        if(ready) await cloudPullToLocal();
+        else await loadStudentsForAddEdit();
+      }catch(e){
+        console.warn('followup owner students load',e);
+        await loadStudentsForAddEdit().catch(()=>{});
+      }
+    }else{
+      await loadStudentsForAddEdit();
+    }
+  }catch(e){
+    console.warn('followup students load',e);
+  }finally{
+    if(loadBtn){loadBtn.disabled=false;loadBtn.textContent=oldLoadText||'تحميل الطلاب';}
   }
+
+  populateFollowupGrades();
+
   try{
     const last=JSON.parse(localStorage.getItem('followupLastMeta')||'{}');
     if(last.term && $('followupTerm')) $('followupTerm').value=last.term;
     if(last.year && $('followupYear')) $('followupYear').value=last.year;
     if(last.subject && $('followupSubject')) $('followupSubject').value=last.subject;
-    if(last.teacher && $('followupTeacher')) $('followupTeacher').value=last.teacher;
-    if(last.grade && $('followupGrade')) $('followupGrade').value=last.grade;
+
+    // اسم المستخدم الحالي هو المرجع دائمًا، ولا نستعيد اسم مستخدم سابق.
+    if($('followupTeacher')) $('followupTeacher').value=teacherName;
+
+    if(last.grade && $('followupGrade')){
+      const gradeOptions=[...$('followupGrade').options].map(o=>String(o.value));
+      if(gradeOptions.includes(String(last.grade))) $('followupGrade').value=String(last.grade);
+    }
     populateFollowupClasses();
-    if(last.classroom && $('followupClass')) $('followupClass').value=last.classroom;
+    if(last.classroom && $('followupClass')){
+      const classOptions=[...$('followupClass').options].map(o=>String(o.value));
+      if(classOptions.includes(String(last.classroom))) $('followupClass').value=String(last.classroom);
+    }
     if(last.week && $('followupWeek')) $('followupWeek').value=String(last.week);
-  }catch(e){populateFollowupClasses()}
+  }catch(e){
+    populateFollowupClasses();
+  }
+
   renderFollowupTable();
   renderFollowupAnalysis();
 }
@@ -6823,7 +6859,7 @@ function openInternalPage(pageId){
       openAdminDashboardInternal();
       return;
     }
-    if(typeof initStudentFollowupPage==='function') setTimeout(initStudentFollowupPage,0);
+    if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
 }
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
