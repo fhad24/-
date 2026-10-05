@@ -2501,6 +2501,12 @@
     .weekly-hijri-footer{display:flex;justify-content:center;gap:8px;margin-top:10px}
     @media(max-width:640px){.weekly-hijri-popup{right:auto;left:0;width:min(340px,94vw)}}
 
+    .weekly-att-student-card{display:flex;align-items:center;gap:10px;min-width:250px;text-align:right;direction:rtl}
+    .weekly-att-student-photo{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid #c9ddd8;background:#f5f8f7;flex:0 0 46px}
+    .weekly-att-student-photo-placeholder{width:46px;height:46px;border-radius:50%;border:2px solid #c9ddd8;background:#f5f8f7;display:flex;align-items:center;justify-content:center;font-size:21px;flex:0 0 46px}
+    .weekly-att-student-details{min-width:0;line-height:1.65}
+    .weekly-att-student-details strong{display:block;font-size:13px}
+    .weekly-att-student-details span{display:block;font-size:11px;color:#5f736e;white-space:nowrap}
     /* كشف الحضور والغياب الأسبوعي */
     .weekly-att-page{max-width:1500px;margin:0 auto;padding:14px}
     .weekly-att-controls{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px;align-items:end}
@@ -3656,8 +3662,7 @@
           <thead>
             <tr>
               <th style="width:42px">تحديد</th>
-              <th>اسم الطالب</th>
-              <th style="width:125px">السجل المدني</th>
+              <th>بيانات الطالب</th>
               <th style="width:90px">الفصل</th>
               <th style="width:105px">غياب الأسبوع</th>
               <th style="width:105px">غياب الشهر</th>
@@ -3666,7 +3671,7 @@
             </tr>
           </thead>
           <tbody id="weeklyAttAnalyticsBody">
-            <tr><td colspan="8">اختر الصف والفصل لعرض الإحصائيات.</td></tr>
+            <tr><td colspan="7">اختر الصف والفصل لعرض الإحصائيات.</td></tr>
           </tbody>
         </table>
       </div>
@@ -10588,7 +10593,25 @@ function weeklyAttAnalyticsData(){
     };
   });
 }
-function renderWeeklyAttAnalytics(){
+async function weeklyAttStudentIdentityHtml(student){
+  let photoHtml='<div class="weekly-att-student-photo-placeholder">👤</div>';
+  try{
+    const blob=await getStudentPhoto(`${student.idno}:face`);
+    if(blob){
+      const src=await makeSharpAttendanceThumb(blob,'weekly-'+String(student.idno||''));
+      photoHtml=`<img class="weekly-att-student-photo" src="${src}" alt="صورة الطالب">`;
+    }
+  }catch(e){}
+  return `<div class="weekly-att-student-card">
+    ${photoHtml}
+    <div class="weekly-att-student-details">
+      <strong>${escapeFollowupHtml(student.name||'')}</strong>
+      <span>السجل المدني: ${escapeFollowupHtml(student.idno||'—')}</span>
+      <span>الجوال: ${escapeFollowupHtml(student.phone||'—')}</span>
+    </div>
+  </div>`;
+}
+async function renderWeeklyAttAnalytics(){
   const body=$('weeklyAttAnalyticsBody'); if(!body)return;
   const data=weeklyAttAnalyticsData();
   const rangeCount=weeklyAttRangeCount();
@@ -10596,17 +10619,17 @@ function renderWeeklyAttAnalytics(){
   if($('weeklyAttAnalyticsRangeLabel')) $('weeklyAttAnalyticsRangeLabel').textContent=rangeText;
   if($('weeklyAttAnalyticsRangeTh')) $('weeklyAttAnalyticsRangeTh').textContent=rangeText;
   if(!data.length){
-    body.innerHTML='<tr><td colspan="8">لا توجد بيانات للطلاب.</td></tr>';
+    body.innerHTML='<tr><td colspan="7">لا توجد بيانات للطلاب.</td></tr>';
     $('weeklyAttAnalyticsWeekTotal').textContent='0';
     $('weeklyAttAnalyticsMonthTotal').textContent='0';
     $('weeklyAttAnalyticsFourMonthsTotal').textContent='0';
     $('weeklyAttAnalyticsStudentsCount').textContent='0';
     return;
   }
-  body.innerHTML=data.map(r=>`<tr>
+  const identityHtml=await Promise.all(data.map(r=>weeklyAttStudentIdentityHtml(r.student)));
+  body.innerHTML=data.map((r,i)=>`<tr>
     <td><input type="checkbox" class="weekly-att-analytics-select" data-idno="${escapeFollowupHtml(r.student.idno||'')}"></td>
-    <td class="student-name">${escapeFollowupHtml(r.student.name||'')}</td>
-    <td class="civil">${escapeFollowupHtml(r.student.idno||'')}</td>
+    <td class="student-name">${identityHtml[i]}</td>
     <td>${escapeFollowupHtml(displayStudentClassroom(r.student.classroom)||'')}</td>
     <td><b>${r.week}</b></td>
     <td><b>${r.month}</b></td>
