@@ -3578,13 +3578,15 @@
         </div>
         <div>
           <label>الشهر المرجعي</label>
-          <input type="month" id="weeklyAttAnalyticsMonth">
+          <select id="weeklyAttAnalyticsMonth"><option value="">الشهر الهجري الحالي</option></select>
         </div>
         <div>
           <label>النطاق</label>
           <select id="weeklyAttAnalyticsRange">
-            <option value="month">شهر واحد</option>
-            <option value="4months">أربعة أشهر / الفصل</option>
+            <option value="1">شهر واحد</option>
+            <option value="2">شهران</option>
+            <option value="3">ثلاثة أشهر</option>
+            <option value="4" selected>أربعة أشهر</option>
           </select>
         </div>
       </div>
@@ -3598,7 +3600,7 @@
       <div class="weekly-att-summary" style="margin-top:12px">
         <div class="box">غياب الأسبوع<b id="weeklyAttAnalyticsWeekTotal">0</b></div>
         <div class="box">غياب الشهر<b id="weeklyAttAnalyticsMonthTotal">0</b></div>
-        <div class="box">غياب 4 أشهر<b id="weeklyAttAnalyticsFourMonthsTotal">0</b></div>
+        <div class="box"><span id="weeklyAttAnalyticsRangeLabel">غياب 4 أشهر</span><b id="weeklyAttAnalyticsFourMonthsTotal">0</b></div>
         <div class="box">عدد الطلاب المعروضين<b id="weeklyAttAnalyticsStudentsCount">0</b></div>
       </div>
 
@@ -3614,7 +3616,7 @@
               <th style="width:90px">الفصل</th>
               <th style="width:105px">غياب الأسبوع</th>
               <th style="width:105px">غياب الشهر</th>
-              <th style="width:115px">غياب 4 أشهر</th>
+              <th style="width:115px" id="weeklyAttAnalyticsRangeTh">غياب 4 أشهر</th>
               <th style="width:115px">الغياب حتى الآن</th>
             </tr>
           </thead>
@@ -10278,22 +10280,57 @@ function renderWeeklyAttendanceReport(){
   const settings=getSchoolSettings?.()||{};
   if($('weeklyAttManager')) $('weeklyAttManager').textContent=settings.manager||'';
 }
-function weeklyAttMonthKey(d){
-  const dt=d instanceof Date?d:new Date(String(d)+'-01T12:00:00');
-  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
-}
-function weeklyAttMonthWindow(monthKey,count=4){
-  const base=new Date((monthKey||weeklyAttMonthKey(new Date()))+'-01T12:00:00');
-  const out=[];
-  for(let i=count-1;i>=0;i--){
-    const d=new Date(base.getFullYear(),base.getMonth()-i,1,12);
-    out.push(weeklyAttMonthKey(d));
+function weeklyAttHijriMonthKey(dateValue){
+  let d;
+  if(dateValue instanceof Date) d=dateValue;
+  else {
+    const raw=String(dateValue||'');
+    d=/^\d{4}-\d{2}-\d{2}$/.test(raw)?new Date(raw+'T12:00:00'):new Date();
   }
-  return out;
+  const parts=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit'}).formatToParts(d);
+  const year=parts.find(p=>p.type==='year')?.value||'';
+  const month=parts.find(p=>p.type==='month')?.value||'';
+  return year+'-'+String(month).padStart(2,'0');
 }
-function weeklyAttMonthLabel(key){
-  const d=new Date(key+'-01T12:00:00');
-  return d.toLocaleDateString('ar-SA',{month:'long',year:'numeric'});
+function weeklyAttHijriMonthLabel(key){
+  const catalog=weeklyAttHijriMonthCatalog();
+  const item=catalog.find(x=>x.key===String(key));
+  const d=item?.date||new Date();
+  return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'}).format(d);
+}
+function weeklyAttHijriMonthCatalog(){
+  const today=new Date();
+  const seen=new Map();
+  for(let offset=-520;offset<=45;offset++){
+    const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+offset,12);
+    const key=weeklyAttHijriMonthKey(d);
+    if(!seen.has(key)) seen.set(key,new Date(d));
+  }
+  return [...seen.entries()]
+    .map(([key,date])=>({key,date}))
+    .sort((a,b)=>a.date-b.date);
+}
+function weeklyAttHijriMonthWindow(monthKey,count=4){
+  const catalog=weeklyAttHijriMonthCatalog();
+  const currentKey=monthKey||weeklyAttHijriMonthKey(new Date());
+  let idx=catalog.findIndex(x=>x.key===currentKey);
+  if(idx<0) idx=catalog.length-1;
+  return catalog.slice(Math.max(0,idx-Math.max(1,count)+1),idx+1).map(x=>x.key);
+}
+function populateWeeklyAttAnalyticsMonths(){
+  const el=$('weeklyAttAnalyticsMonth'); if(!el)return;
+  const current=el.value||weeklyAttHijriMonthKey(new Date());
+  const catalog=weeklyAttHijriMonthCatalog().filter(x=>x.date<=new Date(Date.now()+35*86400000)).slice(-16).reverse();
+  el.innerHTML=catalog.map(x=>`<option value="${x.key}">${escapeFollowupHtml(weeklyAttHijriMonthLabel(x.key))}</option>`).join('');
+  if(catalog.some(x=>x.key===current)) el.value=current;
+  else if(catalog.length) el.value=catalog[0].key;
+}
+function weeklyAttRangeCount(){
+  const n=Number($('weeklyAttAnalyticsRange')?.value||4);
+  return Math.max(1,Math.min(4,Number.isFinite(n)?n:4));
+}
+function weeklyAttRangeLabel(count=weeklyAttRangeCount()){
+  return count===1?'غياب شهر واحد':count===2?'غياب شهرين':count===3?'غياب 3 أشهر':'غياب 4 أشهر';
 }
 function weeklyAttStudentsForFilters(){
   const grade=String($('weeklyAttGrade')?.value||'');
@@ -10308,6 +10345,7 @@ function populateWeeklyAttAnalyticsStudents(){
   const students=weeklyAttStudentsForFilters();
   el.innerHTML='<option value="">جميع الطلاب</option>'+students.map(s=>`<option value="${escapeFollowupHtml(s.idno||'')}">${escapeFollowupHtml(s.name||'')}</option>`).join('');
   if(students.some(s=>String(s.idno)===String(current))) el.value=current;
+  else el.value='';
 }
 function weeklyAttCountForDates(idno,dates){
   return dates.reduce((n,d)=>n+(weeklyAttIsAbsentOnDate(idno,d)?1:0),0);
@@ -10316,20 +10354,24 @@ function weeklyAttAnalyticsData(){
   const all=weeklyAttStudentsForFilters();
   const selectedId=String($('weeklyAttAnalyticsStudent')?.value||'');
   const students=selectedId?all.filter(s=>String(s.idno)===selectedId):all;
-  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttMonthKey(new Date());
-  const months=weeklyAttMonthWindow(month,4);
+  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
+  const rangeCount=weeklyAttRangeCount();
+  const months=weeklyAttHijriMonthWindow(month,rangeCount);
   const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
   const weekDates=weeklyAttWeekDates(anchor).map(weeklyAttDateKey);
   const active=weeklyAttActiveDates();
   return students.map(s=>{
-    const monthDates=active.filter(d=>d.startsWith(month+'-'));
-    const fourDates=active.filter(d=>months.some(m=>d.startsWith(m+'-')));
-    const monthly=months.map(m=>({month:m,count:weeklyAttAbsenceCount(s.idno,m+'-01',m+'-31')}));
+    const monthDates=active.filter(d=>weeklyAttHijriMonthKey(d)===month);
+    const rangeDates=active.filter(d=>months.includes(weeklyAttHijriMonthKey(d)));
+    const monthly=months.map(m=>({
+      month:m,
+      count:weeklyAttCountForDates(s.idno,active.filter(d=>weeklyAttHijriMonthKey(d)===m))
+    }));
     return {
       student:s,
       week:weeklyAttCountForDates(s.idno,weekDates),
       month:weeklyAttCountForDates(s.idno,monthDates),
-      four:weeklyAttCountForDates(s.idno,fourDates),
+      four:weeklyAttCountForDates(s.idno,rangeDates),
       total:weeklyAttAbsenceCount(s.idno,'',weeklyAttDateKey(new Date())),
       monthly
     };
@@ -10337,12 +10379,14 @@ function weeklyAttAnalyticsData(){
 }
 function renderWeeklyAttMonthlyChart(data){
   const host=$('weeklyAttMonthlyChart'); if(!host)return;
-  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttMonthKey(new Date());
-  const months=weeklyAttMonthWindow(month,4);
+  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
+  const rangeCount=weeklyAttRangeCount();
+  const months=weeklyAttHijriMonthWindow(month,rangeCount);
   const totals=months.map(m=>data.reduce((sum,r)=>sum+(r.monthly.find(x=>x.month===m)?.count||0),0));
   const max=Math.max(1,...totals);
-  host.innerHTML='<h3 style="margin:0 0 14px;text-align:center">الرسم البياني للغياب خلال 4 أشهر</h3>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:12px;align-items:end;min-height:220px">'+
+  const cols=Math.max(1,months.length);
+  host.innerHTML='<h3 style="margin:0 0 14px;text-align:center">الرسم البياني للغياب خلال '+(rangeCount===1?'شهر واحد':rangeCount===2?'شهرين':rangeCount+' أشهر')+'</h3>'+
+    '<div style="display:grid;grid-template-columns:repeat('+cols+',minmax(90px,1fr));gap:12px;align-items:end;min-height:220px">'+
     months.map((m,i)=>{
       const h=Math.max(8,Math.round((totals[i]/max)*150));
       return `<div style="text-align:center">
@@ -10350,22 +10394,24 @@ function renderWeeklyAttMonthlyChart(data){
         <div style="height:160px;display:flex;align-items:flex-end;justify-content:center">
           <div style="width:62%;height:${h}px;background:#b42318;border-radius:10px 10px 3px 3px"></div>
         </div>
-        <div style="font-size:12px;font-weight:800;margin-top:7px">${escapeFollowupHtml(weeklyAttMonthLabel(m))}</div>
+        <div style="font-size:12px;font-weight:800;margin-top:7px">${escapeFollowupHtml(weeklyAttHijriMonthLabel(m))}</div>
       </div>`;
     }).join('')+'</div>';
 }
 function renderWeeklyAttAnalytics(){
   const body=$('weeklyAttAnalyticsBody'); if(!body)return;
-  const grade=$('weeklyAttGrade')?.value||'';
-  const classroom=$('weeklyAttClass')?.value||'';
-  if(!grade||!classroom){
-    body.innerHTML='<tr><td colspan="8">اختر الصف والفصل لعرض الإحصائيات.</td></tr>';
-    if($('weeklyAttMonthlyChart')) $('weeklyAttMonthlyChart').innerHTML='';
-    return;
-  }
   const data=weeklyAttAnalyticsData();
+  const rangeCount=weeklyAttRangeCount();
+  const rangeText=weeklyAttRangeLabel(rangeCount);
+  if($('weeklyAttAnalyticsRangeLabel')) $('weeklyAttAnalyticsRangeLabel').textContent=rangeText;
+  if($('weeklyAttAnalyticsRangeTh')) $('weeklyAttAnalyticsRangeTh').textContent=rangeText;
   if(!data.length){
-    body.innerHTML='<tr><td colspan="8">لا توجد بيانات للطلاب المحددين.</td></tr>';
+    body.innerHTML='<tr><td colspan="8">لا توجد بيانات للطلاب.</td></tr>';
+    $('weeklyAttAnalyticsWeekTotal').textContent='0';
+    $('weeklyAttAnalyticsMonthTotal').textContent='0';
+    $('weeklyAttAnalyticsFourMonthsTotal').textContent='0';
+    $('weeklyAttAnalyticsStudentsCount').textContent='0';
+    if($('weeklyAttMonthlyChart')) $('weeklyAttMonthlyChart').innerHTML='';
     return;
   }
   body.innerHTML=data.map(r=>`<tr>
@@ -10386,13 +10432,17 @@ function renderWeeklyAttAnalytics(){
 }
 function weeklyAttSummaryMessage(row){
   const school=getSchoolSettings()?.school||'المدرسة';
-  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttMonthKey(new Date());
-  const months=weeklyAttMonthWindow(month,4);
+  const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
+  const rangeCount=weeklyAttRangeCount();
+  const months=weeklyAttHijriMonthWindow(month,rangeCount);
+  const periodText=months.length>1
+    ?'من '+weeklyAttHijriMonthLabel(months[0])+' إلى '+weeklyAttHijriMonthLabel(months[months.length-1])
+    :weeklyAttHijriMonthLabel(month);
   return 'ولي أمر الطالب/ '+(row.student.name||'')+'\n'+
     'نحيطكم علمًا بملخص غياب ابنكم في '+school+':\n'+
     '• غياب هذا الأسبوع: '+row.week+' يوم.\n'+
-    '• غياب شهر '+weeklyAttMonthLabel(month)+': '+row.month+' يوم.\n'+
-    '• غياب خلال الفترة من '+weeklyAttMonthLabel(months[0])+' إلى '+weeklyAttMonthLabel(months[3])+': '+row.four+' يوم.\n'+
+    '• غياب شهر '+weeklyAttHijriMonthLabel(month)+': '+row.month+' يوم.\n'+
+    '• غياب خلال '+periodText+': '+row.four+' يوم.\n'+
     '• إجمالي الغياب حتى الآن: '+row.total+' يوم.\n'+
     'شاكرين لكم تعاونكم ومتابعتكم.';
 }
@@ -10444,7 +10494,7 @@ async function initWeeklyAttendanceReport(){
   setWeeklyAttDayFromDate();
   populateWeeklyAttendanceGrades();
   populateWeeklyAttendanceClasses();
-  if($('weeklyAttAnalyticsMonth') && !$('weeklyAttAnalyticsMonth').value) $('weeklyAttAnalyticsMonth').value=weeklyAttMonthKey(new Date());
+  populateWeeklyAttAnalyticsMonths();
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
@@ -10458,6 +10508,7 @@ async function initWeeklyAttendanceReport(){
       }
       populateWeeklyAttendanceGrades();
       populateWeeklyAttendanceClasses();
+      populateWeeklyAttAnalyticsMonths();
       populateWeeklyAttAnalyticsStudents();
       renderWeeklyAttendanceReport();
       renderWeeklyAttAnalytics();
