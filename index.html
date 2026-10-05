@@ -10733,6 +10733,16 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       }
     }
 
+    if(attendanceMode==='present'){
+      const periodSelected=String($('attendancePeriodSelect')?.value||'').trim();
+      const subjectSelected=String($('attendanceSubjectSelect')?.value||'').trim();
+      if(!periodSelected || !subjectSelected){
+        alert('⚠️ أرجو اختيار الحصة والمادة قبل حفظ الحضور.');
+        toast('أرجو اختيار الحصة والمادة');
+        return;
+      }
+    }
+
     btn.disabled=true;
     btn.textContent='جاري الحفظ...';
 
@@ -10834,8 +10844,10 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     renderAttendancePage();
     renderAdmin();
     if(attendanceEditingIndex>=0){
+      if(attendanceMode==='present') alert('✅ تم الحفظ بنجاح');
       toast('تم حفظ تعديل الحالة والوقت بنجاح');
     }else{
+      if(attendanceMode==='present') alert('✅ تم الحفظ بنجاح');
       toast(selectedGroup.length ? ('تم حفظ حضور '+selectedGroup.length+' طلاب بنجاح') : (attendanceMode==='late'?'تم حفظ الطالب متأخراً بنجاح':attendanceMode==='absent'?'تم حفظ الطالب غائباً بنجاح':'تم حفظ الطالب حاضراً بنجاح'));
     }
   }catch(err){
