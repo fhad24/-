@@ -108,6 +108,18 @@
     #headerAdminDashboardBtn,#headerEditBtn{display:none!important}
     .logged-in-header-nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:14px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
     .logged-in-header-nav button:hover{background:#fff;color:#0f6f60}
+    #headerAdminHomeBtn{display:none}
+    body.admin-mode #headerAdminHomeBtn{
+      display:inline-flex!important;
+      visibility:visible!important;
+      opacity:1!important;
+      align-items:center!important;
+      justify-content:center!important;
+      background:#fff!important;
+      color:#0f6f60!important;
+      border:1px solid #fff!important;
+      font-weight:900!important;
+    }
     #headerHomeFixedBtn{display:none}
     body.admin-mode #headerHomeFixedBtn{
       display:inline-flex!important;
@@ -2949,6 +2961,7 @@
   </div>
   <nav id="mainPublicNav" class="hidden"></nav>
   <div id="loggedInHeaderNav" class="logged-in-header-nav">
+    <button type="button" id="headerAdminHomeBtn" class="admin-home-btn">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerHomeFixedBtn" class="header-home-fixed">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
@@ -7690,6 +7703,21 @@ document.addEventListener('click',e=>{
   openAdminDashboardInternal();
 },true);
 if($('headerEditBtn')) $('headerEditBtn').onclick=()=>openInternalPage('edit');
+if($('headerAdminHomeBtn')) $('headerAdminHomeBtn').onclick=()=>{
+  localStorage.setItem('adminLoggedIn','1');
+  localStorage.setItem('activeMainPage','admin');
+  openAdminDashboardInternal();
+};
+document.addEventListener('click',e=>{
+  const btn=e.target?.closest?.('#headerAdminHomeBtn');
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  localStorage.setItem('adminLoggedIn','1');
+  localStorage.setItem('activeMainPage','admin');
+  openAdminDashboardInternal();
+},true);
+
 if($('headerHomeFixedBtn')) $('headerHomeFixedBtn').onclick=()=>{
   localStorage.setItem('adminLoggedIn','1');
   localStorage.setItem('activeMainPage','admin');
