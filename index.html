@@ -10160,6 +10160,21 @@ function getCurrentAttendanceRecorder(){
     civilId:String(cloud.civil_id||u.civilId||u.username||p.username||'')
   };
 }
+function attendanceRowBelongsToCurrentUser(row){
+  if(isCurrentOwner()) return true;
+  const recorder=getCurrentAttendanceRecorder();
+  const currentUser=String(recorder.username||'').trim();
+  const currentCivil=String(recorder.civilId||'').trim();
+  const rowUser=String(row?.teacherUsername||row?.teacher_username||'').trim();
+  const rowCivil=String(row?.teacherCivilId||row?.teacher_civil_id||'').trim();
+  if(currentUser && rowUser && currentUser===rowUser) return true;
+  if(currentCivil && rowCivil && currentCivil===rowCivil) return true;
+  return false;
+}
+function attendanceUserCanModifyRow(row){
+  if(isCurrentOwner()) return true;
+  return String(row?.date||'')===todayKey() && attendanceRowBelongsToCurrentUser(row);
+}
 
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
@@ -10857,15 +10872,19 @@ async function renderAttendancePage(){
   }
   const students=getStudents();
   const allLogs=getAttendanceLog();
-  const today=allLogs.filter(x=>x.date===todayKey());
+  const ownerView=isCurrentOwner();
+  const visibleLogs=ownerView?allLogs:allLogs.filter(attendanceRowBelongsToCurrentUser);
+  const today=visibleLogs.filter(x=>x.date===todayKey());
   const present=today.filter(x=>x.status==='present').length;
   const late=today.filter(x=>x.status==='late').length;
   const explicitAbsent=today.filter(x=>x.status==='absent').length;
-  const absent=students.filter(s=>!today.some(x=>String(x.idno)===String(s.idno) && (x.status==='present'||x.status==='late'))).length;
-  const photoCount=students.filter(x=>x.hasFace).length;
   const presentOrLateIds=new Set(today.filter(x=>x.status==='present'||x.status==='late').map(x=>String(x.idno)));
-  const autoAbsentStudents=students.filter(s=>!presentOrLateIds.has(String(s.idno)));
-  const waiting=autoAbsentStudents.length;
+  const autoAbsentStudents=ownerView?students.filter(s=>!presentOrLateIds.has(String(s.idno))):[];
+  const absent=ownerView
+    ? students.filter(s=>!today.some(x=>String(x.idno)===String(s.idno) && (x.status==='present'||x.status==='late'))).length
+    : explicitAbsent;
+  const photoCount=students.filter(x=>x.hasFace).length;
+  const waiting=ownerView?autoAbsentStudents.length:0;
 
   $('attPresentCount').textContent=present;
   $('attLateCount').textContent=late;
@@ -10890,10 +10909,10 @@ async function renderAttendancePage(){
   {
     let rows=allLogs
       .map((row,index)=>({...row,_index:index}))
-      .filter(x=>x.date===todayKey() && x.status===attendanceListView);
+      .filter(x=>(ownerView||attendanceRowBelongsToCurrentUser(x)) && x.date===todayKey() && x.status===attendanceListView);
 
     // في تبويب الغياب: أي طالب لم يسجل حاضرًا أو متأخرًا اليوم يظهر غائبًا تلقائيًا.
-    if(attendanceListView==='absent'){
+    if(attendanceListView==='absent' && ownerView){
       const explicitAbsentIds=new Set(rows.map(x=>String(x.idno)));
       const automaticRows=autoAbsentStudents
         .filter(s=>!explicitAbsentIds.has(String(s.idno)))
@@ -10932,8 +10951,9 @@ async function renderAttendancePage(){
       const isPresentRow=attendanceListView==='present';
       const isLateRow=attendanceListView==='late';
       const isAbsentRow=attendanceListView==='absent';
+      const canModify=x._autoAbsent?ownerView:attendanceUserCanModifyRow(x);
       const nameCheck=isPresentRow
-        ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`
+        ? (canModify?`<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`:'')
         : ((isLateRow||isAbsentRow) && !x._autoAbsent)
           ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
           : '';
@@ -10962,13 +10982,17 @@ async function renderAttendancePage(){
               : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
           <div class="attendance-saved-actions">
             ${isAbsentRow
-              ? `<button type="button" class="attendance-saved-edit" data-absent-to-present-id="${escapeFollowupHtml(x.idno||'')}">✓ تحويل إلى حاضر</button>
-                 ${x._autoAbsent
-                   ? '<span style="font-weight:800;color:#b42318">✕ غائب تلقائيًا</span>'
-                   : `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
-                      <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`}`
-              : `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
-                 <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`}
+              ? (x._autoAbsent
+                  ? '<span style="font-weight:800;color:#b42318">✕ غائب تلقائيًا</span>'
+                  : (canModify
+                      ? `<button type="button" class="attendance-saved-edit" data-absent-to-present-id="${escapeFollowupHtml(x.idno||'')}">✓ تحويل إلى حاضر</button>
+                         <button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
+                         <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`
+                      : '<span style="font-weight:800;color:#6b7d78">التعديل للأدمن فقط</span>'))
+              : (canModify
+                  ? `<button type="button" class="attendance-saved-edit" data-edit-att-index="${x._index}">🗓️🕒 تعديل</button>
+                     <button type="button" class="attendance-saved-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`
+                  : '<span style="font-weight:800;color:#6b7d78">التعديل للأدمن فقط</span>')}
           </div>
         </div>`;
     }));
@@ -10990,6 +11014,11 @@ async function renderAttendancePage(){
         const idx=Number(btn.dataset.deleteAttIndex);
         if(!Number.isFinite(idx)) return;
         const logs=getAttendanceLog();
+        const row=logs[idx];
+        if(!row || !attendanceUserCanModifyRow(row)){
+          alert('لا يمكن تعديل أو حذف هذا السجل. السجلات السابقة متاحة للتعديل من الأدمن فقط.');
+          return;
+        }
         logs.splice(idx,1);
         saveAttendanceLog(logs);
         renderAttendancePage();
@@ -11001,6 +11030,11 @@ async function renderAttendancePage(){
       btn.onclick=()=>{
         const idx=Number(btn.dataset.editAttIndex);
         if(!Number.isFinite(idx)) return;
+        const row=getAttendanceLog()[idx];
+        if(!row || !attendanceUserCanModifyRow(row)){
+          alert('هذا السجل لا يمكن تعديله إلا من الأدمن.');
+          return;
+        }
         openAttendanceEdit(idx);
       };
     });
@@ -11200,6 +11234,11 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
   if(!confirm('حذف '+indexes.length+' سجل محدد؟')) return;
 
   let rows=getAttendanceLog();
+  const blocked=indexes.some(i=>!rows[i] || !attendanceUserCanModifyRow(rows[i]));
+  if(blocked){
+    alert('بعض السجلات المحددة لا يمكن حذفها. سجلات الأيام السابقة أو سجلات مستخدم آخر يعدلها الأدمن فقط.');
+    return;
+  }
   const deleted=indexes.map(i=>rows[i]).filter(Boolean);
   indexes.forEach(i=>rows.splice(i,1));
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
