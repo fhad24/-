@@ -10280,6 +10280,9 @@ function renderWeeklyAttendanceReport(){
   const settings=getSchoolSettings?.()||{};
   if($('weeklyAttManager')) $('weeklyAttManager').textContent=settings.manager||'';
 }
+const weeklyAttHijriKeyFormatter=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit'});
+const weeklyAttHijriLabelFormatter=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'});
+let weeklyAttHijriCatalogCache=null;
 function weeklyAttHijriMonthKey(dateValue){
   let d;
   if(dateValue instanceof Date) d=dateValue;
@@ -10287,7 +10290,7 @@ function weeklyAttHijriMonthKey(dateValue){
     const raw=String(dateValue||'');
     d=/^\d{4}-\d{2}-\d{2}$/.test(raw)?new Date(raw+'T12:00:00'):new Date();
   }
-  const parts=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit'}).formatToParts(d);
+  const parts=weeklyAttHijriKeyFormatter.formatToParts(d);
   const year=parts.find(p=>p.type==='year')?.value||'';
   const month=parts.find(p=>p.type==='month')?.value||'';
   return year+'-'+String(month).padStart(2,'0');
@@ -10295,10 +10298,10 @@ function weeklyAttHijriMonthKey(dateValue){
 function weeklyAttHijriMonthLabel(key){
   const catalog=weeklyAttHijriMonthCatalog();
   const item=catalog.find(x=>x.key===String(key));
-  const d=item?.date||new Date();
-  return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'}).format(d);
+  return weeklyAttHijriLabelFormatter.format(item?.date||new Date());
 }
 function weeklyAttHijriMonthCatalog(){
+  if(weeklyAttHijriCatalogCache) return weeklyAttHijriCatalogCache;
   const today=new Date();
   const seen=new Map();
   for(let offset=-520;offset<=45;offset++){
@@ -10306,9 +10309,10 @@ function weeklyAttHijriMonthCatalog(){
     const key=weeklyAttHijriMonthKey(d);
     if(!seen.has(key)) seen.set(key,new Date(d));
   }
-  return [...seen.entries()]
+  weeklyAttHijriCatalogCache=[...seen.entries()]
     .map(([key,date])=>({key,date}))
     .sort((a,b)=>a.date-b.date);
+  return weeklyAttHijriCatalogCache;
 }
 function weeklyAttHijriMonthWindow(monthKey,count=4){
   const catalog=weeklyAttHijriMonthCatalog();
@@ -10357,23 +10361,62 @@ function weeklyAttAnalyticsData(){
   const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
   const rangeCount=weeklyAttRangeCount();
   const months=weeklyAttHijriMonthWindow(month,rangeCount);
+  const monthSet=new Set(months);
   const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
-  const weekDates=weeklyAttWeekDates(anchor).map(weeklyAttDateKey);
-  const active=weeklyAttActiveDates();
+  const weekSet=new Set(weeklyAttWeekDates(anchor).map(weeklyAttDateKey));
+  const today=weeklyAttDateKey(new Date());
+
+  const allStudents=getStudents();
+  const cohortById=new Map();
+  allStudents.forEach(s=>{
+    cohortById.set(String(s.idno),studentGradeKey(s.grade)+'|'+studentClassKey(s.classroom));
+  });
+
+  const dayCohorts=new Map();
+  const presentOrLate=new Set();
+  const activeDatesSet=new Set();
+  getAttendanceLog().forEach(r=>{
+    const date=String(r.date||'');
+    const id=String(r.idno||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return;
+    activeDatesSet.add(date);
+    const cohort=cohortById.get(id);
+    if(cohort){
+      if(!dayCohorts.has(date)) dayCohorts.set(date,new Set());
+      dayCohorts.get(date).add(cohort);
+    }
+    if(r.status==='present'||r.status==='late') presentOrLate.add(date+'|'+id);
+  });
+  const active=[...activeDatesSet].sort();
+  const hijriByDate=new Map(active.map(d=>[d,weeklyAttHijriMonthKey(d)]));
+
+  const isAbsent=(s,date)=>{
+    const id=String(s.idno||'');
+    const cohort=cohortById.get(id);
+    return !!cohort && !!dayCohorts.get(date)?.has(cohort) && !presentOrLate.has(date+'|'+id);
+  };
+
   return students.map(s=>{
-    const monthDates=active.filter(d=>weeklyAttHijriMonthKey(d)===month);
-    const rangeDates=active.filter(d=>months.includes(weeklyAttHijriMonthKey(d)));
-    const monthly=months.map(m=>({
-      month:m,
-      count:weeklyAttCountForDates(s.idno,active.filter(d=>weeklyAttHijriMonthKey(d)===m))
-    }));
+    let week=0,currentMonth=0,rangeTotal=0,total=0;
+    const monthCounts=new Map(months.map(m=>[m,0]));
+    active.forEach(date=>{
+      if(!isAbsent(s,date)) return;
+      total++;
+      if(weekSet.has(date)) week++;
+      const hm=hijriByDate.get(date);
+      if(hm===month) currentMonth++;
+      if(monthSet.has(hm)){
+        rangeTotal++;
+        monthCounts.set(hm,(monthCounts.get(hm)||0)+1);
+      }
+    });
     return {
       student:s,
-      week:weeklyAttCountForDates(s.idno,weekDates),
-      month:weeklyAttCountForDates(s.idno,monthDates),
-      four:weeklyAttCountForDates(s.idno,rangeDates),
-      total:weeklyAttAbsenceCount(s.idno,'',weeklyAttDateKey(new Date())),
-      monthly
+      week,
+      month:currentMonth,
+      four:rangeTotal,
+      total,
+      monthly:months.map(m=>({month:m,count:monthCounts.get(m)||0}))
     };
   });
 }
@@ -10498,7 +10541,10 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
-  switchWeeklyAttendanceTab('report');
+  const reportPanel=$('weeklyAttTabReportPanel');
+  const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
+  if(reportPanel) reportPanel.classList.remove('hidden');
+  if(analyticsPanel) analyticsPanel.classList.add('hidden');
   // تحديث السحابة في الخلفية ثم إعادة الرسم إذا وصلت بيانات أحدث.
   setTimeout(async()=>{
     try{
