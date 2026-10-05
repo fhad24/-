@@ -500,6 +500,23 @@
     .attendance-monitoring-datebox input{height:40px;margin:0;font-family:inherit}
     .attendance-monitoring-day{grid-column:1/-1;text-align:center;font-weight:900;color:#0f7665;font-size:13px}
     .attendance-monitoring-hijri{grid-column:1/-1;text-align:center;color:#60736e;font-size:11px}
+    .attendance-unprepared-date-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+    .attendance-hijri-monitor-picker{position:relative;min-width:260px;flex:1}
+    .attendance-hijri-monitor-field{width:100%;height:44px;border:1px solid #cbdad6;border-radius:12px;background:#fff;padding:8px 12px;font-family:inherit;font-weight:900;color:#173b34;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .attendance-hijri-monitor-popup{position:absolute;top:50px;right:0;z-index:1500;width:min(360px,92vw);background:#fff;border:1px solid #cbdad6;border-radius:14px;padding:10px;box-shadow:0 12px 30px #0002}
+    .attendance-hijri-monitor-nav{display:grid;grid-template-columns:40px 1fr 40px;gap:6px;align-items:center;margin-bottom:8px}
+    .attendance-hijri-monitor-nav strong{text-align:center;font-size:14px}
+    .attendance-hijri-monitor-nav button,.attendance-hijri-monitor-footer button{height:36px;border:1px solid #cbdad6;border-radius:9px;background:#f7fbfa;font-family:inherit;font-weight:900;cursor:pointer}
+    .attendance-hijri-monitor-weekdays,.attendance-hijri-monitor-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+    .attendance-hijri-monitor-weekdays{font-size:9px;font-weight:900;color:#60736e;margin-bottom:5px}
+    .attendance-hijri-monitor-days button{height:34px;border:0;border-radius:8px;background:#f6faf9;font-family:inherit;font-weight:900;cursor:pointer}
+    .attendance-hijri-monitor-days button.selected{background:#0f806f;color:#fff}
+    .attendance-hijri-monitor-days button.today{outline:2px solid #0f806f;outline-offset:-2px}
+    .attendance-hijri-monitor-days .blank{height:34px}
+    .attendance-hijri-monitor-footer{display:flex;justify-content:center;gap:6px;margin-top:8px}
+    .attendance-unprepared-day-info{min-width:150px;border:1px solid #d8e5e1;border-radius:12px;background:#f8fbfa;padding:7px 10px;text-align:center}
+    .attendance-unprepared-day-info b{display:block;color:#0f7665;font-size:12px}
+    .attendance-unprepared-day-info span{display:block;color:#60736e;font-size:10px;margin-top:2px}
     .attendance-monitoring-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
     .attendance-monitoring-stat{border:1px solid #cfe0dc;border-radius:14px;background:#f6fbfa;padding:14px;text-align:center}
     .attendance-monitoring-stat span{display:block;font-size:12px;font-weight:800;color:#5b706b;margin-bottom:5px}
@@ -4016,16 +4033,9 @@
         <div class="card attendance-monitoring-card" id="attendanceMonitoringCard">
           <div class="attendance-monitoring-head">
             <div>
-              <div class="attendance-kicker">متابعة آلية حسب التاريخ المختار</div>
+              <div class="attendance-kicker">متابعة آلية لليوم الحالي</div>
               <h3>🚨 متابعة الهروب والتحضير</h3>
             </div>
-            <div class="attendance-monitoring-datebox">
-              <label for="attendanceMonitoringDate">📅 التاريخ</label>
-              <input type="date" id="attendanceMonitoringDate">
-              <div id="attendanceMonitoringDay" class="attendance-monitoring-day">—</div>
-              <div id="attendanceMonitoringHijri" class="attendance-monitoring-hijri">—</div>
-            </div>
-            <button type="button" class="attendance-btn outline" id="attendanceMonitoringTodayBtn">اليوم</button>
             <button type="button" class="attendance-btn outline" id="attendanceMonitoringRefreshBtn">🔄 تحديث الكشف</button>
           </div>
 
@@ -4049,6 +4059,34 @@
 
             <div class="attendance-monitoring-pane">
               <h4>🏫 الصفوف والفصول غير المحضرة</h4>
+              <div class="attendance-unprepared-date-row">
+                <div class="attendance-hijri-monitor-picker">
+                  <button type="button" id="attendanceMonitoringHijriOpen" class="attendance-hijri-monitor-field">
+                    <span id="attendanceMonitoringHijriDisplay">اختر التاريخ الهجري</span>
+                    <span>📅</span>
+                  </button>
+                  <input type="hidden" id="attendanceMonitoringDate">
+                  <div id="attendanceMonitoringHijriPopup" class="attendance-hijri-monitor-popup hidden">
+                    <div class="attendance-hijri-monitor-nav">
+                      <button type="button" id="attendanceMonitoringHijriPrev">‹</button>
+                      <strong id="attendanceMonitoringHijriMonthTitle"></strong>
+                      <button type="button" id="attendanceMonitoringHijriNext">›</button>
+                    </div>
+                    <div class="attendance-hijri-monitor-weekdays">
+                      <span>أحد</span><span>اثنين</span><span>ثلاثاء</span><span>أربعاء</span><span>خميس</span><span>جمعة</span><span>سبت</span>
+                    </div>
+                    <div id="attendanceMonitoringHijriDays" class="attendance-hijri-monitor-days"></div>
+                    <div class="attendance-hijri-monitor-footer">
+                      <button type="button" id="attendanceMonitoringTodayBtn">اليوم</button>
+                      <button type="button" id="attendanceMonitoringHijriClose">إغلاق</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="attendance-unprepared-day-info">
+                  <b id="attendanceMonitoringDay">—</b>
+                  <span id="attendanceMonitoringHijri">—</span>
+                </div>
+              </div>
               <div class="hint">إذا بدأ تحضير حصة في المدرسة، يظهر هنا كل صف/فصل لم يُسجل له أي تحضير في الحصة نفسها.</div>
               <div class="attendance-monitoring-table-wrap">
                 <table class="attendance-monitoring-table">
@@ -11109,8 +11147,65 @@ function syncAttendanceMonitoringDateDisplay(){
   const key=getAttendanceMonitoringDate();
   const day=$('attendanceMonitoringDay');
   const hijri=$('attendanceMonitoringHijri');
+  const display=$('attendanceMonitoringHijriDisplay');
   if(day) day.textContent='اليوم: '+formatAttendanceMonitoringDay(key);
-  if(hijri) hijri.textContent='التاريخ الهجري: '+formatAttendanceMonitoringHijri(key);
+  if(hijri) hijri.textContent=formatAttendanceMonitoringHijri(key);
+  if(display) display.textContent=formatAttendanceMonitoringHijri(key);
+}
+let attendanceMonitoringHijriViewDate=null;
+function renderAttendanceMonitoringHijriCalendar(){
+  const host=$('attendanceMonitoringHijriDays');
+  const title=$('attendanceMonitoringHijriMonthTitle');
+  if(!host||!title)return;
+  const selectedKey=getAttendanceMonitoringDate();
+  const base=attendanceMonitoringHijriViewDate||(selectedKey?new Date(selectedKey+'T12:00:00'):new Date());
+  const dates=weeklyAttHijriDatesInMonth(base);
+  if(!dates.length)return;
+  title.textContent=weeklyAttHijriMonthTitleFormatter.format(dates[Math.floor(dates.length/2)]);
+  const firstDay=dates[0].getDay();
+  const today=todayKey();
+  let html='';
+  for(let i=0;i<firstDay;i++) html+='<span class="blank"></span>';
+  html+=dates.map(d=>{
+    const key=weeklyAttDateKey(d);
+    const parts=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{day:'numeric'}).formatToParts(d);
+    const hd=parts.find(p=>p.type==='day')?.value||'';
+    const classes=[key===selectedKey?'selected':'',key===today?'today':''].filter(Boolean).join(' ');
+    return `<button type="button" data-monitor-hijri-date="${key}" class="${classes}">${hd}</button>`;
+  }).join('');
+  host.innerHTML=html;
+  host.querySelectorAll('[data-monitor-hijri-date]').forEach(btn=>btn.onclick=()=>{
+    const input=$('attendanceMonitoringDate');
+    if(input) input.value=btn.dataset.monitorHijriDate||'';
+    syncAttendanceMonitoringDateDisplay();
+    renderAttendanceMonitoring();
+    closeAttendanceMonitoringHijriCalendar();
+  });
+}
+function openAttendanceMonitoringHijriCalendar(){
+  const popup=$('attendanceMonitoringHijriPopup');
+  if(!popup)return;
+  const key=getAttendanceMonitoringDate();
+  attendanceMonitoringHijriViewDate=key?new Date(key+'T12:00:00'):new Date();
+  popup.classList.remove('hidden');
+  renderAttendanceMonitoringHijriCalendar();
+}
+function closeAttendanceMonitoringHijriCalendar(){
+  $('attendanceMonitoringHijriPopup')?.classList.add('hidden');
+}
+function moveAttendanceMonitoringHijriMonth(delta){
+  const base=attendanceMonitoringHijriViewDate||new Date();
+  const currentKey=weeklyAttHijriMonthKey(base);
+  const d=new Date(base);
+  for(let i=0;i<45;i++){
+    d.setDate(d.getDate()+(delta>0?1:-1));
+    if(weeklyAttHijriMonthKey(d)!==currentKey){
+      for(let j=0;j<12;j++) d.setDate(d.getDate()+(delta>0?1:-1));
+      attendanceMonitoringHijriViewDate=new Date(d);
+      renderAttendanceMonitoringHijriCalendar();
+      return;
+    }
+  }
 }
 function getAttendanceMonitoringData(){
   const students=getStudents();
@@ -11541,14 +11636,20 @@ function openAttendanceWhatsAppForRows(rows){
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
 }
 
-if($('attendanceMonitoringDate')) $('attendanceMonitoringDate').onchange=()=>{
-  syncAttendanceMonitoringDateDisplay();
-  renderAttendanceMonitoring();
+if($('attendanceMonitoringHijriOpen')) $('attendanceMonitoringHijriOpen').onclick=()=>{
+  const popup=$('attendanceMonitoringHijriPopup');
+  if(popup?.classList.contains('hidden')) openAttendanceMonitoringHijriCalendar();
+  else closeAttendanceMonitoringHijriCalendar();
 };
+if($('attendanceMonitoringHijriPrev')) $('attendanceMonitoringHijriPrev').onclick=()=>moveAttendanceMonitoringHijriMonth(-1);
+if($('attendanceMonitoringHijriNext')) $('attendanceMonitoringHijriNext').onclick=()=>moveAttendanceMonitoringHijriMonth(1);
+if($('attendanceMonitoringHijriClose')) $('attendanceMonitoringHijriClose').onclick=closeAttendanceMonitoringHijriCalendar;
 if($('attendanceMonitoringTodayBtn')) $('attendanceMonitoringTodayBtn').onclick=()=>{
   if($('attendanceMonitoringDate')) $('attendanceMonitoringDate').value=todayKey();
+  attendanceMonitoringHijriViewDate=new Date();
   syncAttendanceMonitoringDateDisplay();
   renderAttendanceMonitoring();
+  closeAttendanceMonitoringHijriCalendar();
 };
 if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').onclick=()=>{
   renderAttendanceMonitoring();
