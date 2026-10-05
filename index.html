@@ -5902,11 +5902,12 @@ function normalizeDigitsText(v){
 }
 
 function studentGradeKey(v){
-  const s=normalizeDigitsText(v).trim().replace(/[أإآ]/g,'ا');
-  if(s.includes('الاول') || s.includes('اول ثانوي') || s==='1') return 'الأول الثانوي';
-  if(s.includes('الثاني') || s.includes('ثاني ثانوي') || s==='2') return 'الثاني الثانوي';
-  if(s.includes('الثالث') || s.includes('ثالث ثانوي') || s==='3') return 'الثالث الثانوي';
-  return String(v??'').trim();
+  const raw=normalizeDigitsText(v).trim();
+  const s=raw.replace(/[أإآ]/g,'ا').replace(/\s+/g,' ');
+  if(s.includes('الاول') || s.includes('اول ثانوي') || s==='1' || /^1\s*ث(?:\s|$|-|–|—)/.test(s) || s==='1ث') return 'الأول الثانوي';
+  if(s.includes('الثاني') || s.includes('ثاني ثانوي') || s==='2' || /^2\s*ث(?:\s|$|-|–|—)/.test(s) || s==='2ث') return 'الثاني الثانوي';
+  if(s.includes('الثالث') || s.includes('ثالث ثانوي') || s==='3' || /^3\s*ث(?:\s|$|-|–|—)/.test(s) || s==='3ث') return 'الثالث الثانوي';
+  return raw;
 }
 
 function classroomNumberToLetter(n){
@@ -6598,24 +6599,38 @@ function currentFollowupStudents(){
 function populateFollowupGrades(){
   const select=$('followupGrade');
   if(!select) return;
-  const current=select.value;
-  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b,'ar'));
+  const current=studentGradeKey(select.value||'');
+  const grades=[...new Set(getStudents().map(s=>studentGradeKey(s.grade)).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar'));
   select.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${g}">${g}</option>`).join('');
-  if(grades.includes(current)) select.value=current;
+  if(current && grades.includes(current)) select.value=current;
 }
 
 function populateFollowupClasses(){
-  const grade=$('followupGrade')?.value||'';
+  const gradeRaw=$('followupGrade')?.value||'';
+  const grade=studentGradeKey(gradeRaw);
   const select=$('followupClass');
   if(!select) return;
-  const current=select.value;
-  const classes=[...new Set(getStudents()
-    .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
-    .map(s=>studentClassKey(s.classroom)).filter(Boolean))]
-    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  const current=studentClassKey(select.value||'');
+  const students=getStudents();
+
+  let classes=[...new Set(students
+    .filter(s=>!grade||studentGradeKey(s.grade)===grade)
+    .map(s=>studentClassKey(s.classroom)).filter(Boolean))];
+
+  // حماية من بيانات قديمة بصيغ مختلفة: إذا لم نجد فصولًا للصف، نعيد بناء الصفوف ثم نجرب مرة أخرى.
+  if(grade && !classes.length){
+    const canonicalGrades=[...new Set(students.map(s=>studentGradeKey(s.grade)).filter(Boolean))];
+    if(canonicalGrades.includes(grade)){
+      classes=[...new Set(students
+        .filter(s=>studentGradeKey(s.grade)===grade)
+        .map(s=>studentClassKey(s.classroom)).filter(Boolean))];
+    }
+  }
+
+  classes.sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
   select.innerHTML='<option value="">اختر الفصل</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
-  if(classes.includes(current)) select.value=current;
+  if(current && classes.includes(current)) select.value=current;
 }
 
 function updateFollowupHeader(students=[]){
@@ -7024,8 +7039,9 @@ async function initStudentFollowupPage(){
     if($('followupTeacher')) $('followupTeacher').value=teacherName;
 
     if(last.grade && $('followupGrade')){
+      const wantedGrade=studentGradeKey(last.grade);
       const gradeOptions=[...$('followupGrade').options].map(o=>String(o.value));
-      if(gradeOptions.includes(String(last.grade))) $('followupGrade').value=String(last.grade);
+      if(gradeOptions.includes(wantedGrade)) $('followupGrade').value=wantedGrade;
     }
     populateFollowupClasses();
     if(last.classroom && $('followupClass')){
