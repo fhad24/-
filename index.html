@@ -3880,6 +3880,12 @@
 
 
     <div class="attendance-session-controls hidden">
+      <div class="attendance-session-field" id="attendanceMorningLateField" style="display:none;align-self:end">
+        <label for="attendanceMorningLate" style="cursor:pointer;display:flex;align-items:center;gap:9px;min-height:52px;padding:0 14px;border:1px solid #c9d8d4;border-radius:12px;background:#f7fbfa;font-weight:800">
+          <input id="attendanceMorningLate" type="checkbox" style="width:20px;height:20px;accent-color:#0f7665">
+          <span>⏰ تأخر عن الطابور الصباحي</span>
+        </label>
+      </div>
       <div class="attendance-session-field">
         <label for="attendancePeriodSelect">🕐 الحصة</label>
         <select id="attendancePeriodSelect">
@@ -4816,6 +4822,8 @@ async function cloudPullToLocal(){
   const attendance=(data.attendance||[]).map(x=>({
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
     date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+    subject:x.subject||'',
+    morningAssemblyLate:!!x.morning_assembly_late || String(x.subject||'')==='تأخر عن الطابور الصباحي',
     teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
     hijriDate:x.hijri_date||'', weekday:x.weekday||''
   }));
@@ -9166,6 +9174,7 @@ function normalizeCloudAttendanceRow(x){
     classroom:String(x?.classroom||''),
     period:x?.period??'',
     subject:String(x?.subject||''),
+    morningAssemblyLate:!!x?.morning_assembly_late || !!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي',
     teacherName:String(x?.teacher_name||x?.teacherName||''),
     teacherUsername:String(x?.teacher_username||x?.teacherUsername||''),
     teacherCivilId:String(x?.teacher_civil_id||x?.teacherCivilId||''),
@@ -9745,6 +9754,8 @@ function openAttendanceModal(mode){
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
+  if($('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
+  syncAttendanceLateTypeControls();
   fillAttendanceTeacherSelect();
   $('saveAttendanceStudentBtn').textContent='حفظ';
   attendanceEditingOriginal=null;
@@ -9792,8 +9803,11 @@ async function openAttendanceEdit(index){
     const suggested=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
     $('attendanceEditWeekday').value=allowedDays.includes(suggested)?suggested:'الأحد';
   }
-  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=String(row.period||'');
-  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=String(row.subject||'');
+  const isMorningLate=!!row.morningAssemblyLate || String(row.subject||'')==='تأخر عن الطابور الصباحي';
+  if($('attendanceMorningLate')) $('attendanceMorningLate').checked=isMorningLate;
+  if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=isMorningLate?'':String(row.period||'');
+  if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=isMorningLate?'':String(row.subject||'');
+  syncAttendanceLateTypeControls();
   fillAttendanceTeacherSelect(String(row.teacherUsername||row.teacherCivilId||''));
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
@@ -9831,10 +9845,31 @@ function setAttendanceMode(mode){
   $('attendanceLateTab').classList.toggle('active',late);
   $('attendancePresentTab').classList.toggle('active',present);
   const sessionControls=document.querySelector('.attendance-session-controls');
-  if(sessionControls) sessionControls.classList.toggle('hidden',!present);
+  if(sessionControls) sessionControls.classList.toggle('hidden',!(late||present));
+  const morningField=$('attendanceMorningLateField');
+  if(morningField) morningField.style.display=late?'':'none';
+  if(!late && $('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
+  syncAttendanceLateTypeControls();
   if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden')){
     renderAttendanceStudentList();
   }
+}
+
+function syncAttendanceLateTypeControls(){
+  const morning=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
+  const period=$('attendancePeriodSelect');
+  const subject=$('attendanceSubjectSelect');
+  if(period){
+    period.disabled=morning;
+    if(morning) period.value='';
+  }
+  if(subject){
+    subject.disabled=morning;
+    if(morning) subject.value='';
+  }
+}
+if($('attendanceMorningLate')){
+  $('attendanceMorningLate').addEventListener('change',syncAttendanceLateTypeControls);
 }
 
 function fillAttendanceClasses(){
@@ -10199,6 +10234,17 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const s=attendanceSelectedId ? getStudents().find(x=>String(x.idno)===String(attendanceSelectedId)) : null;
     if(attendanceSelectedId && !s){toast('تعذر العثور على الطالب');return}
 
+    if(attendanceMode==='late'){
+      const morningLate=!!$('attendanceMorningLate')?.checked;
+      const periodSelected=String($('attendancePeriodSelect')?.value||'').trim();
+      const subjectSelected=String($('attendanceSubjectSelect')?.value||'').trim();
+      if(!morningLate && (!periodSelected || !subjectSelected)){
+        alert('أرجو الاختيار لنوع التأخر: تأخر عن الطابور الصباحي، أو اختيار الحصة والمادة.');
+        toast('أرجو الاختيار لنوع التأخر');
+        return;
+      }
+    }
+
     btn.disabled=true;
     btn.textContent='جاري الحفظ...';
 
@@ -10215,8 +10261,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
-      period:$('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null,
-      subject:$('attendanceSubjectSelect')?.value||'',
+      period:(attendanceMode==='late' && $('attendanceMorningLate')?.checked) ? null : ($('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null),
+      subject:(attendanceMode==='late' && $('attendanceMorningLate')?.checked) ? 'تأخر عن الطابور الصباحي' : ($('attendanceSubjectSelect')?.value||''),
+      morningAssemblyLate:attendanceMode==='late' && !!$('attendanceMorningLate')?.checked,
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
       teacherName:recorder.name,
