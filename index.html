@@ -12259,9 +12259,12 @@ async function renderAttendancePage(){
     $('attendanceSelectAllRows').style.display='';
   }
   const presentTools=$('attendancePresentTools');
+  const presentHijriFilter=$('attendancePresentHijriFilter');
   const presentStatsPanel=$('attendancePresentStatsPanel');
   const isPresentView=attendanceListView==='present';
   if(presentTools) presentTools.classList.toggle('hidden',!isPresentView);
+  if(presentHijriFilter) presentHijriFilter.classList.toggle('hidden',!isPresentView);
+  if(isPresentView) setTimeout(initAttendancePresentHijriFilter,0);
   if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
 
   if($('attendanceWhatsAppSelected')){
