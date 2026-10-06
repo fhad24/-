@@ -4041,6 +4041,22 @@
             <button type="button" id="attendancePresentPdfBtn">📄 تصدير كشف الفصول PDF</button>
             <button type="button" id="attendancePresentStatsBtn">📊 الإحصائيات</button>
           </div>
+          <div id="attendancePresentHijriFilter" class="attendance-present-hijri-filter hidden">
+            <div class="attendance-present-hijri-title">📅 عرض يوم هجري محدد</div>
+            <div class="attendance-present-hijri-fields">
+              <label>اليوم<select id="attendancePresentHijriDay"></select></label>
+              <label>الشهر<select id="attendancePresentHijriMonth">
+                <option value="1">محرم</option><option value="2">صفر</option><option value="3">ربيع الأول</option>
+                <option value="4">ربيع الآخر</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option>
+                <option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option>
+                <option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option>
+              </select></label>
+              <label>السنة<select id="attendancePresentHijriYear"></select></label>
+              <button type="button" id="attendancePresentHijriApply">عرض اليوم</button>
+              <button type="button" id="attendancePresentHijriAll">عرض كل الأيام</button>
+            </div>
+            <div id="attendancePresentHijriSelected" class="attendance-present-hijri-selected">يعرض جميع الأيام المحفوظة</div>
+          </div>
           <div id="attendancePresentStatsPanel" class="attendance-present-stats-panel hidden"></div>
           <div class="attendance-bulk-tools">
             <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
@@ -12291,7 +12307,9 @@ async function renderAttendancePage(){
     absent:'الغياب اليومي'
   };
   $('attendanceDayTitle').textContent=attendanceListView==='present'
-    ? 'الحضور المحفوظ — جميع الفصول'
+    ? (attendancePresentFilterDate
+        ? 'الحضور المحفوظ — '+new Date(attendancePresentFilterDate+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})
+        : 'الحضور المحفوظ — جميع الفصول')
     : `${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
 
   {
@@ -12300,8 +12318,10 @@ async function renderAttendancePage(){
       .filter(x=>{
         const allowed=(ownerView||attendanceRowBelongsToCurrentUser(x));
         if(!allowed || x.status!==attendanceListView) return false;
-        // في تبويب حاضر: اعرض كل التحضيرات المحفوظة، وليس تحضير اليوم فقط.
-        if(attendanceListView==='present') return true;
+        // في تبويب حاضر: اعرض كل التحضيرات، أو يومًا هجريًا محددًا عند اختيار المستخدم.
+        if(attendanceListView==='present'){
+          return !attendancePresentFilterDate || String(x.date||'')===attendancePresentFilterDate;
+        }
         return x.date===todayKey();
       });
 
@@ -12914,6 +12934,7 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
 
 let attendanceMode='late';
 let attendanceListView='late';
+let attendancePresentFilterDate='';
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
 let attendanceStudentSortKey='name';
@@ -14000,6 +14021,60 @@ if($('attendancePresentEditBtn')) $('attendancePresentEditBtn').onclick=()=>{
 if($('attendancePresentPrintBtn')) $('attendancePresentPrintBtn').onclick=printPresentReport;
 if($('attendancePresentPdfBtn')) $('attendancePresentPdfBtn').onclick=exportPresentReportPdf;
 if($('attendancePresentStatsBtn')) $('attendancePresentStatsBtn').onclick=renderPresentStatistics;
+
+function initAttendancePresentHijriFilter(){
+  const day=$('attendancePresentHijriDay');
+  const month=$('attendancePresentHijriMonth');
+  const year=$('attendancePresentHijriYear');
+  if(!day||!month||!year) return;
+
+  if(!day.options.length){
+    for(let d=1;d<=30;d++) day.insertAdjacentHTML('beforeend','<option value="'+d+'">'+d+'</option>');
+  }
+
+  const base=attendancePresentFilterDate||todayKey();
+  const hp=gregorianToHijriParts(base);
+  if(!year.options.length){
+    for(let y=hp.year-4;y<=hp.year+4;y++) year.insertAdjacentHTML('beforeend','<option value="'+y+'">'+y+'</option>');
+  }
+  day.value=String(hp.day);
+  month.value=String(hp.month);
+  year.value=String(hp.year);
+  updateAttendancePresentHijriSelected();
+}
+
+function updateAttendancePresentHijriSelected(){
+  const box=$('attendancePresentHijriSelected');
+  if(!box) return;
+  if(!attendancePresentFilterDate){
+    box.textContent='يعرض جميع الأيام المحفوظة';
+    return;
+  }
+  const hp=gregorianToHijriParts(attendancePresentFilterDate);
+  box.textContent='اليوم المحدد: '+hp.day+' / '+hp.month+' / '+hp.year+' هـ';
+}
+
+function applyAttendancePresentHijriFilter(){
+  const day=Number($('attendancePresentHijriDay')?.value||0);
+  const month=Number($('attendancePresentHijriMonth')?.value||0);
+  const year=Number($('attendancePresentHijriYear')?.value||0);
+  const g=hijriToGregorian(year,month,day);
+  if(!g){
+    alert('تعذر تحويل التاريخ الهجري المحدد.');
+    return;
+  }
+  attendancePresentFilterDate=g;
+  updateAttendancePresentHijriSelected();
+  renderAttendancePage();
+}
+
+if($('attendancePresentHijriApply')) $('attendancePresentHijriApply').onclick=applyAttendancePresentHijriFilter;
+if($('attendancePresentHijriAll')) $('attendancePresentHijriAll').onclick=()=>{
+  attendancePresentFilterDate='';
+  updateAttendancePresentHijriSelected();
+  renderAttendancePage();
+};
+initAttendancePresentHijriFilter();
 
 function getSelectedStudentIds(){
   return [...document.querySelectorAll('.student-select:checked')].map(x=>String(x.dataset.id));
@@ -15879,6 +15954,100 @@ function printStudents(rows){
       min-width:34px!important;
       height:34px!important;
       font-size:17px!important;
+    }
+
+    /* تقويم هجري لتصفية الحضور */
+    .attendance-present-hijri-filter{
+      margin:14px 0 18px;
+      padding:16px 18px;
+      border:1px solid #cfe0da;
+      border-radius:16px;
+      background:#f8fbfa
+    }
+    .attendance-present-hijri-title{
+      font-size:23px;
+      font-weight:900;
+      color:#173f37;
+      margin-bottom:12px
+    }
+    .attendance-present-hijri-fields{
+      display:flex;
+      gap:12px;
+      align-items:end;
+      flex-wrap:wrap
+    }
+    .attendance-present-hijri-fields label{
+      font-size:18px;
+      font-weight:900;
+      color:#35574f
+    }
+    .attendance-present-hijri-fields select{
+      display:block;
+      margin-top:6px;
+      min-width:120px;
+      height:54px;
+      border:1px solid #bfd4ce;
+      border-radius:12px;
+      background:#fff;
+      font-family:inherit;
+      font-size:20px;
+      font-weight:800;
+      color:#173f37;
+      padding:0 12px
+    }
+    .attendance-present-hijri-fields button{
+      height:54px;
+      border-radius:12px;
+      padding:0 20px;
+      font-family:inherit;
+      font-size:19px;
+      font-weight:900;
+      cursor:pointer
+    }
+    #attendancePresentHijriApply{
+      border:1px solid #0f7665;
+      background:#0f7665;
+      color:#fff
+    }
+    #attendancePresentHijriAll{
+      border:1px solid #9db9b1;
+      background:#fff;
+      color:#173f37
+    }
+    .attendance-present-hijri-selected{
+      margin-top:10px;
+      font-size:18px;
+      font-weight:800;
+      color:#60766f
+    }
+
+    /* تكبير إضافي نهائي للجدول */
+    .attendance-present-groups-table th{
+      font-size:30px!important;
+      padding:26px 20px!important;
+    }
+    .attendance-present-groups-table td{
+      font-size:27px!important;
+      padding:26px 20px!important;
+    }
+    .apg-grade b,
+    .apg-date b,
+    .apg-teacher b,
+    .apg-subject{
+      font-size:28px!important;
+    }
+    .apg-classroom b{
+      min-width:68px!important;
+      height:68px!important;
+      font-size:32px!important;
+    }
+    .apg-date span,
+    .apg-teacher span{
+      font-size:23px!important;
+    }
+    .apg-show-students{
+      font-size:25px!important;
+      padding:17px 26px!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
