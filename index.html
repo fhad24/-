@@ -8004,12 +8004,53 @@ function updateStudentTransferSelectedCount(){
   if(el) el.textContent='المحدد: '+studentTransferMultiSelected.size;
 }
 
+function fillStudentTransferEditor(s){
+  if(!s) return;
+  studentTransferSelectedId=String(s.idno||'');
+  if($('studentTransferOldIdno')) $('studentTransferOldIdno').value=String(s.idno||'');
+  if($('studentTransferName')) $('studentTransferName').value=String(s.name||'');
+  if($('studentTransferIdno')) $('studentTransferIdno').value=String(s.idno||'');
+  if($('studentTransferPhone')) $('studentTransferPhone').value=String(s.phone||'');
+  if($('studentTransferGrade')) $('studentTransferGrade').value=String(s.grade||'');
+  if($('studentTransferClassroom')) $('studentTransferClassroom').value=studentClassKey(s.classroom)||String(s.classroom||'');
+  if($('studentTransferStatus')) $('studentTransferStatus').textContent=isCurrentOwner()
+    ? 'الأدمن: الحفظ يطبق مباشرة.'
+    : 'المستخدم: سيتم إرسال التعديل للإدارة ولن يطبق إلا بعد الاعتماد.';
+}
+
+function clearStudentTransferEditorOnly(){
+  studentTransferSelectedId='';
+  ['studentTransferOldIdno','studentTransferName','studentTransferIdno','studentTransferPhone'].forEach(id=>{
+    if($(id)) $(id).value='';
+  });
+  if($('studentTransferGrade')) $('studentTransferGrade').value='';
+  if($('studentTransferClassroom')) $('studentTransferClassroom').value='';
+}
+
+function syncStudentTransferEditorWithMultiSelection(){
+  const ids=[...studentTransferMultiSelected];
+  if(ids.length===1){
+    const s=getStudents().find(x=>normalizeCivilId(x.idno)===normalizeCivilId(ids[0]));
+    if(s){
+      fillStudentTransferEditor(s);
+      return;
+    }
+  }
+  clearStudentTransferEditorOnly();
+  if($('studentTransferStatus')){
+    $('studentTransferStatus').textContent=ids.length>1
+      ? 'تم تحديد أكثر من طالب؛ تم إخفاء البيانات الفردية.'
+      : 'اختر طالبًا من الجدول.';
+  }
+}
+
 function toggleStudentTransferMulti(id,checked){
   const key=String(id||'');
   if(!key) return;
   if(checked) studentTransferMultiSelected.add(key);
   else studentTransferMultiSelected.delete(key);
   updateStudentTransferSelectedCount();
+  syncStudentTransferEditorWithMultiSelection();
 }
 
 async function moveSelectedStudentsBetweenClasses(){
@@ -8058,27 +8099,20 @@ async function moveSelectedStudentsBetweenClasses(){
 }
 
 function clearStudentTransferSelection(){
-  studentTransferSelectedId='';
-  ['studentTransferOldIdno','studentTransferName','studentTransferIdno','studentTransferPhone'].forEach(id=>{if($(id))$(id).value=''});
-  if($('studentTransferGrade')) $('studentTransferGrade').value='';
-  if($('studentTransferClassroom')) $('studentTransferClassroom').value='';
+  studentTransferMultiSelected.clear();
+  clearStudentTransferEditorOnly();
+  updateStudentTransferSelectedCount();
   if($('studentTransferStatus')) $('studentTransferStatus').textContent='اختر طالبًا من الجدول.';
   renderStudentTransferStudents();
 }
 
 function selectStudentTransferStudent(idno){
   const s=getStudents().find(x=>normalizeCivilId(x.idno)===normalizeCivilId(idno));
-  if(!s)return;
-  studentTransferSelectedId=String(s.idno||'');
-  $('studentTransferOldIdno').value=String(s.idno||'');
-  $('studentTransferName').value=String(s.name||'');
-  $('studentTransferIdno').value=String(s.idno||'');
-  $('studentTransferPhone').value=String(s.phone||'');
-  $('studentTransferGrade').value=String(s.grade||'');
-  $('studentTransferClassroom').value=studentClassKey(s.classroom)||String(s.classroom||'');
-  $('studentTransferStatus').textContent=isCurrentOwner()
-    ? 'الأدمن: الحفظ يطبق مباشرة.'
-    : 'المستخدم: سيتم إرسال التعديل للإدارة ولن يطبق إلا بعد الاعتماد.';
+  if(!s) return;
+  studentTransferMultiSelected.clear();
+  studentTransferMultiSelected.add(String(s.idno||''));
+  updateStudentTransferSelectedCount();
+  fillStudentTransferEditor(s);
   renderStudentTransferStudents();
 }
 
