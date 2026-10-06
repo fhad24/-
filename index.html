@@ -12345,51 +12345,36 @@ async function renderAttendancePage(){
           : '';
       if(isPresentRow){
         const dateText=(x.hijriDate||x.date||'—');
-        const classText=(x.grade||'—')+' / '+displayStudentClassroom(x.classroom);
         const recorderText=(x.teacherName||x.teacherUsername)
           ? ((x.teacherName||x.teacherUsername)+' — '+(x.teacherCivilId||x.teacherUsername||''))
           : '—';
         return `
-          <div class="attendance-present-card">
-            <div class="attendance-present-card-main">
-              <div class="attendance-present-photo-wrap">${photoHTML}</div>
-              <div class="attendance-present-info">
-                <div class="attendance-present-title-row">
-                  ${nameCheck}
-                  <div class="attendance-present-student-name">${x.name||''}</div>
+          <tr class="attendance-present-table-row">
+            <td class="attendance-present-select-cell">${nameCheck}</td>
+            <td class="attendance-present-student-cell">
+              <div class="attendance-present-student-wrap">
+                <div class="attendance-present-photo-cell">${photoHTML}</div>
+                <div class="attendance-present-name-box">
+                  <b>${x.name||''}</b>
+                  ${x.subject?`<span>📘 ${x.subject}</span>`:''}
                 </div>
-                <div class="attendance-present-chips">
-                  <span class="attendance-present-chip id">🪪 ${x.idno||'—'}</span>
-                  <span class="attendance-present-chip class">🏫 ${classText}</span>
-                  <span class="attendance-present-chip period">🕘 ${x.period?('الحصة '+x.period):'بدون حصة'}</span>
-                  ${x.subject?`<span class="attendance-present-chip subject">📘 ${x.subject}</span>`:''}
-                </div>
-                <div class="attendance-present-recorder-line">سجلها: <b>${recorderText}</b></div>
               </div>
-            </div>
-
-            <div class="attendance-present-card-meta">
-              <div class="attendance-present-meta-box">
-                <span>التاريخ</span>
-                <b>${dateText}</b>
-              </div>
-              <div class="attendance-present-meta-box">
-                <span>الحصة</span>
-                <b>${x.period?('الحصة '+x.period):'بدون حصة'}</b>
-              </div>
-              <div class="attendance-present-meta-box status">
-                <span>الحالة</span>
-                <b>✓ حاضر</b>
-              </div>
-            </div>
-
-            <div class="attendance-present-card-actions">
+            </td>
+            <td class="attendance-present-id-cell">${x.idno||'—'}</td>
+            <td class="attendance-present-class-cell">${x.grade||'—'} / ${displayStudentClassroom(x.classroom)}</td>
+            <td class="attendance-present-date-cell">
+              <b>${dateText}</b>
+              <span>${x.period?('الحصة '+x.period):'بدون حصة'}</span>
+            </td>
+            <td class="attendance-present-recorder-cell">${recorderText}</td>
+            <td class="attendance-present-status-cell"><span>✓ حاضر</span></td>
+            <td class="attendance-present-actions-cell">
               ${canModify
-                ? `<button type="button" class="attendance-present-action edit" data-edit-att-index="${x._index}">✏️ تعديل</button>
-                   <button type="button" class="attendance-present-action delete" data-delete-att-index="${x._index}">🗑 حذف</button>`
-                : '<span class="attendance-present-readonly">التعديل للأدمن فقط</span>'}
-            </div>
-          </div>`;
+                ? `<button type="button" class="attendance-present-table-edit" data-edit-att-index="${x._index}">✏️ تعديل</button>
+                   <button type="button" class="attendance-present-table-delete" data-delete-att-index="${x._index}" title="حذف">🗑</button>`
+                : '<span class="attendance-present-readonly">للأدمن فقط</span>'}
+            </td>
+          </tr>`;
       }
 
       return `
@@ -12426,7 +12411,23 @@ async function renderAttendancePage(){
     }));
 
     $('attendanceDailyList').innerHTML=attendanceListView==='present'
-      ? `<div class="attendance-present-list">${rendered.join('')}</div>`
+      ? `<div class="attendance-present-table-wrap">
+          <table class="attendance-present-pro-table">
+            <thead>
+              <tr>
+                <th class="select-col">تحديد</th>
+                <th>الطالب</th>
+                <th>السجل المدني</th>
+                <th>الصف / الفصل</th>
+                <th>التاريخ / الحصة</th>
+                <th>المسجل</th>
+                <th>الحالة</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>${rendered.join('')}</tbody>
+          </table>
+        </div>`
       : `<div class="attendance-saved-table">
           <div class="attendance-saved-head">
             <div>الطالب</div>
@@ -15294,6 +15295,197 @@ function printStudents(rows){
       .attendance-present-card-meta{grid-template-columns:1fr}
       .attendance-present-meta-box.status{grid-column:auto}
       .attendance-present-card-actions{flex-direction:column}
+    }
+
+    /* جدول الحضور الاحترافي */
+    .attendance-present-table-wrap{
+      width:100%;
+      overflow-x:auto;
+      border:1px solid #d9e6e2;
+      border-radius:18px;
+      background:#fff;
+      box-shadow:0 8px 24px rgba(15,83,68,.06);
+      margin-top:12px
+    }
+    .attendance-present-pro-table{
+      width:100%;
+      min-width:1320px;
+      border-collapse:separate;
+      border-spacing:0;
+      direction:rtl;
+      font-family:inherit
+    }
+    .attendance-present-pro-table thead th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:linear-gradient(180deg,#f3faf7 0%,#eaf4f1 100%);
+      color:#183f37;
+      font-size:13px;
+      font-weight:900;
+      text-align:center;
+      padding:14px 10px;
+      border-bottom:1px solid #cfe0da;
+      white-space:nowrap
+    }
+    .attendance-present-pro-table thead th:first-child{border-top-right-radius:17px}
+    .attendance-present-pro-table thead th:last-child{border-top-left-radius:17px}
+    .attendance-present-pro-table tbody td{
+      padding:12px 10px;
+      border-bottom:1px solid #edf2f0;
+      vertical-align:middle;
+      text-align:center;
+      background:#fff;
+      color:#38524c;
+      font-size:13px
+    }
+    .attendance-present-pro-table tbody tr:last-child td{border-bottom:0}
+    .attendance-present-pro-table tbody tr:nth-child(even) td{background:#fbfdfc}
+    .attendance-present-pro-table tbody tr:hover td{background:#f1faf6}
+    .attendance-present-pro-table .select-col{width:68px}
+    .attendance-present-select-cell{width:68px}
+    .attendance-present-select-cell .attendance-name-check{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin:0
+    }
+    .attendance-present-select-cell input{
+      width:19px;
+      height:19px;
+      accent-color:#0f7665;
+      cursor:pointer
+    }
+    .attendance-present-student-cell{text-align:right!important;min-width:330px}
+    .attendance-present-student-wrap{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0
+    }
+    .attendance-present-photo-cell{
+      width:58px;
+      min-width:58px;
+      display:flex;
+      justify-content:center
+    }
+    .attendance-present-pro-table .attendance-saved-avatar{
+      width:54px!important;
+      height:54px!important;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #d6e8e2;
+      background:#eef5f3
+    }
+    .attendance-present-name-box{min-width:0}
+    .attendance-present-name-box b{
+      display:block;
+      color:#153f37;
+      font-size:15px;
+      font-weight:900;
+      line-height:1.45;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:300px
+    }
+    .attendance-present-name-box span{
+      display:inline-block;
+      margin-top:4px;
+      color:#7a8d87;
+      font-size:11px
+    }
+    .attendance-present-id-cell{
+      direction:ltr;
+      font-weight:800;
+      color:#4d6660!important;
+      min-width:135px
+    }
+    .attendance-present-class-cell{
+      min-width:170px;
+      font-weight:800!important;
+      color:#2f5149!important
+    }
+    .attendance-present-date-cell{
+      min-width:155px
+    }
+    .attendance-present-date-cell b{
+      display:block;
+      font-size:12px;
+      color:#445f58
+    }
+    .attendance-present-date-cell span{
+      display:inline-block;
+      margin-top:5px;
+      padding:4px 9px;
+      border-radius:999px;
+      background:#eef7ff;
+      color:#245f8f;
+      font-size:11px;
+      font-weight:800
+    }
+    .attendance-present-recorder-cell{
+      min-width:260px;
+      max-width:320px;
+      text-align:right!important;
+      line-height:1.65;
+      color:#5b716b!important;
+      font-size:12px!important
+    }
+    .attendance-present-status-cell{width:110px}
+    .attendance-present-status-cell span{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:76px;
+      padding:7px 11px;
+      border-radius:999px;
+      background:#e8f7ef;
+      color:#0a7658;
+      border:1px solid #c7e8d8;
+      font-weight:900;
+      font-size:12px
+    }
+    .attendance-present-actions-cell{
+      width:145px;
+      white-space:nowrap
+    }
+    .attendance-present-table-edit,
+    .attendance-present-table-delete{
+      height:38px;
+      border-radius:10px;
+      font-family:inherit;
+      font-weight:900;
+      cursor:pointer
+    }
+    .attendance-present-table-edit{
+      min-width:78px;
+      border:1px solid #0f7665;
+      background:#e8f5f1;
+      color:#0f7665;
+      margin-left:6px
+    }
+    .attendance-present-table-delete{
+      width:40px;
+      border:1px solid #efc2bf;
+      background:#fff1f1;
+      color:#c92c24
+    }
+    .attendance-present-table-edit:hover{background:#dff0eb}
+    .attendance-present-table-delete:hover{background:#ffe6e6}
+    .attendance-present-readonly{
+      font-size:11px;
+      color:#7c8b87;
+      font-weight:800
+    }
+    @media(max-width:900px){
+      .attendance-present-table-wrap{border-radius:14px}
+      .attendance-present-pro-table{min-width:1180px}
+      .attendance-present-pro-table thead th,
+      .attendance-present-pro-table tbody td{padding:10px 8px}
+      .attendance-present-name-box b{font-size:14px}
+      .attendance-present-pro-table .attendance-saved-avatar{width:48px!important;height:48px!important}
+      .attendance-present-photo-cell{width:52px;min-width:52px}
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
