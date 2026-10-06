@@ -220,6 +220,27 @@
     .admin-table{min-width:1150px;font-size:13px}
     .admin-table th{color:#6c807b;font-weight:700;padding:12px 8px;white-space:nowrap}
     .admin-table td{padding:12px 8px;white-space:nowrap}
+    .student-transfer-page{max-width:1400px;margin:0 auto;padding:14px}
+    .student-transfer-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .student-transfer-filters{display:grid;grid-template-columns:1fr 190px 160px;gap:10px;margin-bottom:12px}
+    .student-transfer-filters input,.student-transfer-filters select{height:48px;border-radius:12px}
+    .student-transfer-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+    .student-transfer-table th,.student-transfer-table td{border:1px solid #d8e2df;padding:9px;text-align:center;vertical-align:middle}
+    .student-transfer-table th{background:#eef7f4;font-weight:900}
+    .student-transfer-table td:nth-child(2){text-align:right;font-weight:800}
+    .student-transfer-photo{width:46px;height:46px;border-radius:50%;object-fit:cover;border:1px solid #ccdcd8;background:#f4f8f7}
+    .student-transfer-photo-fallback{width:46px;height:46px;border-radius:50%;display:inline-grid;place-items:center;background:#eef3f1;border:1px solid #ccdcd8}
+    .student-transfer-editor{margin-top:14px}
+    .student-transfer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .student-transfer-grid .wide{grid-column:1/-1}
+    .student-transfer-grid input,.student-transfer-grid select{height:48px;border-radius:12px}
+    .student-transfer-save-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+    .student-transfer-row-selected td{background:#edf8f5!important}
+    @media(max-width:760px){
+      .student-transfer-filters{grid-template-columns:1fr}
+      .student-transfer-grid{grid-template-columns:1fr}
+      .student-transfer-grid .wide{grid-column:auto}
+    }
     .tiny-btn{padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:12px;cursor:pointer}
     .student-thumb{width:52px;height:52px;object-fit:cover;border-radius:9px;border:1px solid var(--line);background:#f3f6f5}
     .student-thumb.id-card{width:82px;height:52px}
@@ -4223,6 +4244,89 @@
     </div>
   </div>
 </section>
+
+<section id="studentTransferManager" class="page hidden">
+  <div class="student-transfer-page">
+    <div class="card student-transfer-head">
+      <div>
+        <h2 style="margin:0">🔄 إدارة ونقل الطلاب بين الفصول</h2>
+        <div class="hint" id="studentTransferModeHint">استعراض الطلاب وتعديل بياناتهم ونقلهم بين الفصول.</div>
+      </div>
+      <button type="button" class="btn btn-outline" id="studentTransferBackBtn">العودة</button>
+    </div>
+
+    <div class="card">
+      <div class="student-transfer-filters">
+        <input id="studentTransferSearch" placeholder="بحث بالاسم أو السجل المدني أو الجوال">
+        <select id="studentTransferGradeFilter">
+          <option value="">جميع الصفوف</option>
+          <option>الأول الثانوي</option>
+          <option>الثاني الثانوي</option>
+          <option>الثالث الثانوي</option>
+        </select>
+        <select id="studentTransferClassFilter">
+          <option value="">جميع الفصول</option>
+          <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
+          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+        </select>
+      </div>
+      <div class="table-wrap student-transfer-table-wrap">
+        <table class="student-transfer-table">
+          <thead>
+            <tr>
+              <th>الصورة</th><th>اسم الطالب</th><th>السجل المدني</th><th>الجوال</th>
+              <th>الصف</th><th>الفصل</th><th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="studentTransferBody"><tr><td colspan="7">جاري تحميل الطلاب...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card student-transfer-editor">
+      <h3 style="margin-top:0">بيانات الطالب المحدد</h3>
+      <input type="hidden" id="studentTransferOldIdno">
+      <div class="student-transfer-grid">
+        <div class="wide"><label>اسم الطالب</label><input id="studentTransferName"></div>
+        <div><label>السجل المدني</label><input id="studentTransferIdno" inputmode="numeric" maxlength="10"></div>
+        <div><label>رقم الجوال</label><input id="studentTransferPhone" inputmode="tel"></div>
+        <div><label>الصف الدراسي</label>
+          <select id="studentTransferGrade">
+            <option value="">اختر الصف</option><option>الأول الثانوي</option><option>الثاني الثانوي</option><option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div><label>الفصل</label>
+          <select id="studentTransferClassroom">
+            <option value="">اختر الفصل</option>
+            <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
+            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+          </select>
+        </div>
+      </div>
+      <div class="student-transfer-save-row">
+        <button type="button" class="btn btn-primary" id="studentTransferSaveBtn">حفظ التعديل</button>
+        <button type="button" class="btn btn-outline" id="studentTransferClearBtn">تفريغ الاختيار</button>
+      </div>
+      <div id="studentTransferStatus" class="hint"></div>
+    </div>
+
+    <div class="card hidden" id="studentTransferApprovalsCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">✅ طلبات المستخدمين بانتظار اعتماد الأدمن</h3>
+          <div class="hint">لا يتم تطبيق أي تعديل أو نقل إلا بعد اعتماد الإدارة.</div>
+        </div>
+        <button type="button" class="btn btn-outline" id="studentTransferApprovalsRefresh">تحديث الطلبات</button>
+      </div>
+      <div class="table-wrap" style="margin-top:12px">
+        <table class="student-transfer-table" style="min-width:900px">
+          <thead><tr><th>الطالب</th><th>السجل الحالي</th><th>السجل الجديد</th><th>الصف</th><th>الفصل</th><th>مقدم الطلب</th><th>الإجراء</th></tr></thead>
+          <tbody id="studentTransferApprovalsBody"><tr><td colspan="7">لا توجد طلبات.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
 </main>
 
 <div class="footer" id="mainFooter">
@@ -6923,7 +7027,7 @@ function configureUserDashboard(){
       return;
     }
     if(action==='addStudent'){
-      if(typeof openAddStudentModal==='function') openAddStudentModal();
+      openInternalPage('studentTransferManager');
       return;
     }
     if(action==='followupSheets'){
@@ -7804,6 +7908,181 @@ function initTeacherClassFollowupPage(){
 }
 
 
+let studentTransferSelectedId='';
+
+async function studentTransferPhotoHtml(s){
+  try{
+    const blob=await getStudentPhoto(`${s.idno}:face`);
+    if(blob){
+      const src=await makeSharpAttendanceThumb(blob,'transfer-'+String(s.idno||''));
+      return `<img class="student-transfer-photo" src="${src}" alt="">`;
+    }
+  }catch(e){}
+  return '<span class="student-transfer-photo-fallback">👤</span>';
+}
+
+function studentTransferFilteredStudents(){
+  const q=String($('studentTransferSearch')?.value||'').trim().toLowerCase();
+  const grade=String($('studentTransferGradeFilter')?.value||'');
+  const classroom=String($('studentTransferClassFilter')?.value||'');
+  return getStudents().filter(s=>{
+    if(grade && studentGradeKey(s.grade)!==studentGradeKey(grade)) return false;
+    if(classroom && studentClassKey(s.classroom)!==studentClassKey(classroom)) return false;
+    if(q){
+      const hay=[s.name,s.idno,s.phone,s.grade,s.classroom].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    const g=String(a.grade||'').localeCompare(String(b.grade||''),'ar');
+    if(g) return g;
+    const cl=String(studentClassKey(a.classroom)||'').localeCompare(String(studentClassKey(b.classroom)||''),'ar');
+    if(cl) return cl;
+    return String(a.name||'').localeCompare(String(b.name||''),'ar');
+  });
+}
+
+async function renderStudentTransferStudents(){
+  const body=$('studentTransferBody'); if(!body) return;
+  const rows=studentTransferFilteredStudents();
+  if(!rows.length){body.innerHTML='<tr><td colspan="7">لا توجد نتائج.</td></tr>';return}
+  body.innerHTML=rows.map(s=>`<tr data-transfer-id="${escapeFollowupHtml(s.idno||'')}" class="${studentTransferSelectedId===String(s.idno||'')?'student-transfer-row-selected':''}">
+    <td class="transfer-photo-cell">👤</td>
+    <td>${escapeFollowupHtml(s.name||'')}</td>
+    <td>${escapeFollowupHtml(s.idno||'')}</td>
+    <td>${escapeFollowupHtml(s.phone||'—')}</td>
+    <td>${escapeFollowupHtml(s.grade||'')}</td>
+    <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
+    <td><button type="button" class="tiny-btn select-transfer-student" data-id="${escapeFollowupHtml(s.idno||'')}">اختيار / تعديل</button></td>
+  </tr>`).join('');
+  body.querySelectorAll('.select-transfer-student').forEach(btn=>btn.onclick=()=>selectStudentTransferStudent(btn.dataset.id));
+  rows.forEach(async s=>{
+    const cell=body.querySelector(`tr[data-transfer-id="${CSS.escape(String(s.idno||''))}"] .transfer-photo-cell`);
+    if(cell) cell.innerHTML=await studentTransferPhotoHtml(s);
+  });
+}
+
+function clearStudentTransferSelection(){
+  studentTransferSelectedId='';
+  ['studentTransferOldIdno','studentTransferName','studentTransferIdno','studentTransferPhone'].forEach(id=>{if($(id))$(id).value=''});
+  if($('studentTransferGrade')) $('studentTransferGrade').value='';
+  if($('studentTransferClassroom')) $('studentTransferClassroom').value='';
+  if($('studentTransferStatus')) $('studentTransferStatus').textContent='اختر طالبًا من الجدول.';
+  renderStudentTransferStudents();
+}
+
+function selectStudentTransferStudent(idno){
+  const s=getStudents().find(x=>normalizeCivilId(x.idno)===normalizeCivilId(idno));
+  if(!s)return;
+  studentTransferSelectedId=String(s.idno||'');
+  $('studentTransferOldIdno').value=String(s.idno||'');
+  $('studentTransferName').value=String(s.name||'');
+  $('studentTransferIdno').value=String(s.idno||'');
+  $('studentTransferPhone').value=String(s.phone||'');
+  $('studentTransferGrade').value=String(s.grade||'');
+  $('studentTransferClassroom').value=studentClassKey(s.classroom)||String(s.classroom||'');
+  $('studentTransferStatus').textContent=isCurrentOwner()
+    ? 'الأدمن: الحفظ يطبق مباشرة.'
+    : 'المستخدم: سيتم إرسال التعديل للإدارة ولن يطبق إلا بعد الاعتماد.';
+  renderStudentTransferStudents();
+}
+
+async function saveStudentTransferChange(){
+  const old_idno=normalizeCivilId($('studentTransferOldIdno')?.value||'');
+  const new_idno=normalizeCivilId($('studentTransferIdno')?.value||'');
+  const name=String($('studentTransferName')?.value||'').trim();
+  const phone=String($('studentTransferPhone')?.value||'').trim();
+  const grade=String($('studentTransferGrade')?.value||'').trim();
+  const classroom=String($('studentTransferClassroom')?.value||'').trim();
+  if(!old_idno){alert('اختر طالبًا أولًا.');return}
+  if(!new_idno||!name||!grade||!classroom){alert('أكمل الاسم والسجل المدني والصف والفصل.');return}
+  const btn=$('studentTransferSaveBtn'); const oldText=btn.textContent; btn.disabled=true;
+  try{
+    if(isCurrentOwner()){
+      btn.textContent='جاري الحفظ...';
+      await studentChangeApi('owner_update',{old_idno,new_idno,name,phone,grade,classroom});
+      await cloudPullToLocal();
+      studentTransferSelectedId=new_idno;
+      await renderStudentTransferStudents();
+      selectStudentTransferStudent(new_idno);
+      toast('تم تعديل بيانات الطالب ونقله بنجاح');
+      alert('✅ تم حفظ التعديل مباشرة.');
+      await loadStudentTransferApprovals();
+    }else{
+      btn.textContent='جاري إرسال الطلب...';
+      await studentChangeApi('submit',{old_idno,new_idno,name,phone,grade,classroom});
+      alert('✅ تم إرسال طلب التعديل/النقل للإدارة. لن يتم تغيير بيانات الطالب إلا بعد اعتماد الأدمن.');
+      $('studentTransferStatus').textContent='تم إرسال الطلب وبانتظار اعتماد الإدارة.';
+    }
+  }catch(e){
+    alert('تعذر تنفيذ العملية: '+(e?.message||e));
+  }finally{btn.disabled=false;btn.textContent=isCurrentOwner()?'حفظ التعديل':'إرسال للاعتماد'}
+}
+
+async function loadStudentTransferApprovals(){
+  const card=$('studentTransferApprovalsCard');
+  const body=$('studentTransferApprovalsBody');
+  if(!card||!body) return;
+  if(!isCurrentOwner()){card.classList.add('hidden');return}
+  card.classList.remove('hidden');
+  body.innerHTML='<tr><td colspan="7">جاري تحميل الطلبات...</td></tr>';
+  try{
+    const r=await studentChangeApi('list');
+    const rows=Array.isArray(r.rows)?r.rows:[];
+    body.innerHTML=rows.length?rows.map(x=>`<tr>
+      <td><b>${escapeFollowupHtml(x.name||'')}</b><br><small>${escapeFollowupHtml(x.phone||'')}</small></td>
+      <td>${escapeFollowupHtml(x.old_idno||'')}</td>
+      <td>${escapeFollowupHtml(x.new_idno||'')}</td>
+      <td>${escapeFollowupHtml(x.grade||'')}</td>
+      <td>${escapeFollowupHtml(displayStudentClassroom(x.classroom)||'')}</td>
+      <td>${escapeFollowupHtml(x.requested_by_name||x.requested_by_username||'')}</td>
+      <td>
+        <button type="button" class="tiny-btn transfer-approve" data-id="${x.id}">✅ اعتماد</button>
+        <button type="button" class="tiny-btn transfer-reject" data-id="${x.id}" style="color:#b42318">رفض</button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="7">لا توجد طلبات معلقة.</td></tr>';
+    body.querySelectorAll('.transfer-approve').forEach(btn=>btn.onclick=async()=>{
+      if(!confirm('اعتماد هذا التعديل وتطبيقه على الطالب؟'))return;
+      btn.disabled=true;
+      try{
+        await studentChangeApi('approve',{id:Number(btn.dataset.id)});
+        await cloudPullToLocal();
+        await renderStudentTransferStudents();
+        await loadStudentTransferApprovals();
+        toast('تم اعتماد طلب التعديل');
+      }catch(e){alert('تعذر الاعتماد: '+(e?.message||e));btn.disabled=false}
+    });
+    body.querySelectorAll('.transfer-reject').forEach(btn=>btn.onclick=async()=>{
+      if(!confirm('رفض هذا الطلب؟'))return;
+      btn.disabled=true;
+      try{
+        await studentChangeApi('reject',{id:Number(btn.dataset.id)});
+        await loadStudentTransferApprovals();
+        toast('تم رفض الطلب');
+      }catch(e){alert('تعذر رفض الطلب');btn.disabled=false}
+    });
+  }catch(e){body.innerHTML='<tr><td colspan="7">تعذر تحميل الطلبات.</td></tr>'}
+}
+
+async function initStudentTransferManager(){
+  const owner=isCurrentOwner();
+  if($('studentTransferModeHint')) $('studentTransferModeHint').textContent=owner
+    ? 'الأدمن يستطيع التعديل والنقل مباشرة ومراجعة طلبات المستخدمين.'
+    : 'يمكنك اقتراح تعديل أو نقل الطالب، ولن يتم تطبيقه إلا بعد اعتماد الأدمن.';
+  if($('studentTransferSaveBtn')) $('studentTransferSaveBtn').textContent=owner?'حفظ التعديل':'إرسال للاعتماد';
+  await renderStudentTransferStudents();
+  clearStudentTransferSelection();
+  await loadStudentTransferApprovals();
+}
+
+if($('studentTransferSearch')) $('studentTransferSearch').oninput=renderStudentTransferStudents;
+if($('studentTransferGradeFilter')) $('studentTransferGradeFilter').onchange=renderStudentTransferStudents;
+if($('studentTransferClassFilter')) $('studentTransferClassFilter').onchange=renderStudentTransferStudents;
+if($('studentTransferSaveBtn')) $('studentTransferSaveBtn').onclick=saveStudentTransferChange;
+if($('studentTransferClearBtn')) $('studentTransferClearBtn').onclick=clearStudentTransferSelection;
+if($('studentTransferApprovalsRefresh')) $('studentTransferApprovalsRefresh').onclick=loadStudentTransferApprovals;
+if($('studentTransferBackBtn')) $('studentTransferBackBtn').onclick=openAdminDashboardInternal;
+
 function openInternalPage(pageId){
   refreshOwnerHomeButton();
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
@@ -7857,6 +8136,17 @@ function openInternalPage(pageId){
     }
     if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
+  if(pageId==='studentTransferManager'){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('addStudent')){
+      $('studentTransferManager')?.classList.add('hidden');
+      alert('لا توجد لديك صلاحية إدارة ونقل الطلاب.');
+      openAdminDashboardInternal();
+      return;
+    }
+    if(typeof initStudentTransferManager==='function') setTimeout(initStudentTransferManager,0);
+  }
   if(pageId==='weeklyAttendanceReport'){
     if(!isCurrentOwner()){
       $('weeklyAttendanceReport')?.classList.add('hidden');
@@ -7867,10 +8157,7 @@ function openInternalPage(pageId){
     if(typeof initWeeklyAttendanceReport==='function') setTimeout(initWeeklyAttendanceReport,0);
   }
 }
-if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>{
-  if(!isOwnerAdminSession()) return;
-  if(typeof openAddStudentModal==='function') openAddStudentModal();
-};
+if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openInternalPage('studentTransferManager');
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminFollowupTab')) $('adminFollowupTab').onclick=()=>openInternalPage('followup');
@@ -9079,7 +9366,7 @@ async function openStudentChangeRequestsModal(){
     }catch(e){alert('تعذر رفض الطلب');btn.disabled=false}
   });
 }
-if($('studentTransferManageBtn')) $('studentTransferManageBtn').onclick=()=>openAddStudentModal();
+if($('studentTransferManageBtn')) $('studentTransferManageBtn').onclick=()=>openInternalPage('studentTransferManager');
 if($('studentChangeRequestsBtn')) $('studentChangeRequestsBtn').onclick=openStudentChangeRequestsModal;
 setTimeout(refreshStudentChangeRequestsCount,500);
 
