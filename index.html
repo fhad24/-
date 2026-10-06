@@ -7956,11 +7956,11 @@ function studentTransferFilteredStudents(){
 }
 
 async function renderStudentTransferStudents(){
+  removeStudentTransferSelectAll();
   const body=$('studentTransferBody'); if(!body) return;
   const rows=studentTransferFilteredStudents();
   if(!rows.length){
     body.innerHTML='<tr><td colspan="8">لا توجد نتائج.</td></tr>';
-    if($('studentTransferSelectAll')) $('studentTransferSelectAll').checked=false;
     updateStudentTransferSelectedCount();
     return;
   }
@@ -7986,6 +7986,21 @@ async function renderStudentTransferStudents(){
 
   const visibleIds=rows.map(s=>String(s.idno||''));
   updateStudentTransferSelectedCount();
+}
+
+function removeStudentTransferSelectAll(){
+  try{
+    const page=$('studentTransferManager');
+    if(!page) return;
+    page.querySelectorAll('#studentTransferSelectAll').forEach(el=>{
+      const label=el.closest('label');
+      if(label) label.remove(); else el.remove();
+    });
+    page.querySelectorAll('label').forEach(label=>{
+      const txt=String(label.textContent||'').replace(/\s+/g,' ').trim();
+      if(txt==='تحديد الكل' || txt.includes('تحديد الكل')) label.remove();
+    });
+  }catch(e){}
 }
 
 function updateStudentTransferSelectedCount(){
@@ -8149,6 +8164,9 @@ async function loadStudentTransferApprovals(){
 }
 
 async function initStudentTransferManager(){
+  removeStudentTransferSelectAll();
+  setTimeout(removeStudentTransferSelectAll,50);
+  setTimeout(removeStudentTransferSelectAll,500);
   const owner=isCurrentOwner();
   if($('studentTransferModeHint')) $('studentTransferModeHint').textContent=owner
     ? 'الأدمن يستطيع التعديل والنقل مباشرة ومراجعة طلبات المستخدمين.'
