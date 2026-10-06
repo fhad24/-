@@ -4665,7 +4665,8 @@ const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.
 function removeObsoleteNavButtons(){
   document.querySelectorAll('button').forEach(btn=>{
     const t=String(btn.textContent||'').replace(/\s+/g,' ').trim();
-    if(t.includes('الصفحة الرئيسية') || t.includes('تسجيل جديد')){
+    // لا تحذف زر الصفحة الرئيسية؛ المطلوب حذفه من الواجهة العامة فقط كان زر "تسجيل جديد".
+    if(t.includes('تسجيل جديد')){
       btn.remove();
     }
   });
