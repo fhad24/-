@@ -5469,6 +5469,23 @@ async function cloudApi(action,payload={},useToken=true){
   return data;
 }
 
+async function cloudPullAttendanceFast(){
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token) return [];
+  const data=await cloudApi('pull_attendance');
+  const attendance=(data.attendance||[]).map(x=>({
+    idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
+    date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+    subject:x.subject||'',
+    morningAssemblyLate:!!x.morning_assembly_late || String(x.subject||'')==='تأخر عن الطابور الصباحي',
+    teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
+    hijriDate:x.hijri_date||'', weekday:x.weekday||''
+  }));
+  localStorage.setItem('attendanceLog',JSON.stringify(attendance));
+  return attendance;
+}
+
+
 function blobToDataURL(blob){
   return new Promise((resolve,reject)=>{
     if(!blob){resolve('');return}
@@ -7098,14 +7115,14 @@ function configureUserDashboard(){
       applyUserAttendancePrivacy();
       $('attendancePanel')?.classList.remove('hidden');
       renderAttendancePage();
-      // اجلب أحدث سجلات الحضور من السحابة فور فتح الصفحة ثم أعد الرسم.
+      // اجلب سجلات الحضور فقط فورًا بدون تحميل صور وبيانات الطلاب الثقيلة.
       (async()=>{
         try{
           if(localStorage.getItem('cloudAdminToken')){
-            await cloudPullToLocal();
+            await cloudPullAttendanceFast();
             renderAttendancePage();
           }
-        }catch(e){console.warn('attendance cloud refresh',e)}
+        }catch(e){console.warn('attendance fast refresh',e)}
       })();
       return;
     }
@@ -11835,6 +11852,9 @@ function switchWeeklyAttendanceTab(tab){
 }
 
 async function initWeeklyAttendanceReport(){
+  try{
+    if(localStorage.getItem('cloudAdminToken')) await cloudPullAttendanceFast();
+  }catch(e){console.warn('weekly attendance fast refresh',e)}
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
   populateWeeklyAttendanceGrades();
