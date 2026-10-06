@@ -8851,6 +8851,7 @@ $('adminLoginBtn').onclick=async()=>{
     localStorage.setItem('activeSessionMode','owner');
     document.documentElement.classList.remove('user-session-home');
     localStorage.removeItem('cloudAdminUser');
+    localStorage.removeItem('cloudAdminToken');
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
     $('adminLoginModal').classList.add('hidden');
@@ -8858,6 +8859,21 @@ $('adminLoginBtn').onclick=async()=>{
     try{setAdminMode(true)}catch(e){}
     try{renderAdmin()}catch(e){console.error('renderAdmin direct login',e)}
     try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
+
+    // الأدمن يجب أن يحصل على جلسة سحابية أيضًا حتى يرى حضور جميع المستخدمين فورًا.
+    try{
+      const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
+      if(cloudLogin?.token){
+        localStorage.setItem('cloudAdminToken',cloudLogin.token);
+        localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user||{}));
+        await cloudPullToLocal();
+        try{renderAdmin()}catch(e){}
+        try{renderAttendancePage()}catch(e){}
+      }
+    }catch(e){
+      console.warn('owner cloud login/sync',e);
+    }
+
     btn.disabled=false;
     btn.textContent=oldText;
     return;
