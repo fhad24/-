@@ -12358,7 +12358,8 @@ async function renderAttendancePage(){
           <table class="attendance-present-groups-table">
             <thead>
               <tr>
-                <th>الصف / الفصل</th>
+                <th>الصف</th>
+                <th>الفصل</th>
                 <th>التاريخ / الحصة</th>
                 <th>المسجل</th>
                 <th>المادة</th>
@@ -12368,7 +12369,8 @@ async function renderAttendancePage(){
             <tbody>
               ${groups.map((g,i)=>`
                 <tr>
-                  <td class="apg-class"><b>${escapeFollowupHtml(g.grade||'—')}</b><span>${escapeFollowupHtml(g.classroom||'—')}</span></td>
+                  <td class="apg-grade"><b>${escapeFollowupHtml(g.grade||'—')}</b></td>
+                  <td class="apg-classroom"><b>${escapeFollowupHtml(g.classroom||'—')}</b></td>
                   <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b><span>${g.period?'الحصة '+escapeFollowupHtml(g.period):'بدون حصة'}</span></td>
                   <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
                   <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
@@ -15693,6 +15695,68 @@ function printStudents(rows){
     }
     .group-student-edit{border:1px solid #0f7665;background:#e9f6f2;color:#0f7665;padding:0 12px}
     .group-student-delete{border:1px solid #efc3c0;background:#fff0f0;color:#c92c24;width:42px;margin-right:5px}
+
+    /* تكبير وتحسين جدول حاضر المختصر */
+    .attendance-present-groups-table{min-width:1120px!important}
+    .attendance-present-groups-table th{
+      font-size:18px!important;
+      padding:18px 14px!important;
+      line-height:1.4!important
+    }
+    .attendance-present-groups-table td{
+      font-size:17px!important;
+      padding:18px 14px!important;
+      line-height:1.6!important
+    }
+    .apg-grade b,
+    .apg-classroom b,
+    .apg-date b,
+    .apg-teacher b{
+      font-size:18px!important;
+      font-weight:900!important;
+      color:#173f37!important
+    }
+    .apg-grade{min-width:170px}
+    .apg-classroom{min-width:90px}
+    .apg-classroom b{
+      display:inline-flex;
+      min-width:46px;
+      height:46px;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      background:#eef7f4;
+      border:1px solid #cfe5de;
+      color:#0f7665!important;
+      font-size:21px!important
+    }
+    .apg-date span,
+    .apg-teacher span{
+      font-size:15px!important;
+      margin-top:6px!important
+    }
+    .apg-subject{
+      font-size:18px!important;
+      font-weight:900!important
+    }
+    .apg-show-students{
+      font-size:17px!important;
+      padding:12px 18px!important;
+      border-radius:13px!important
+    }
+    .apg-show-students span{
+      min-width:30px!important;
+      height:30px!important;
+      font-size:14px!important
+    }
+    @media(max-width:900px){
+      .attendance-present-groups-table{min-width:1000px!important}
+      .attendance-present-groups-table th{font-size:16px!important;padding:15px 10px!important}
+      .attendance-present-groups-table td{font-size:15px!important;padding:15px 10px!important}
+      .apg-grade b,.apg-date b,.apg-teacher b,.apg-subject{font-size:16px!important}
+      .apg-classroom b{font-size:19px!important}
+      .apg-show-students{font-size:15px!important}
+    }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
