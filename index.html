@@ -7013,6 +7013,7 @@ function configureUserDashboard(){
   const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
+    ['weeklyAttendance','كشف الحضور والغياب الأسبوعي ✅✕','weeklyAttendance'],
     ['addStudent','إدارة الطلاب ونقل الفصول 🔄','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
@@ -7021,6 +7022,7 @@ function configureUserDashboard(){
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
+    ['backupZip','نسخة احتياطية ZIP 💾','backupZip'],
   ];
   const host=$('userPermissionButtons');
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
@@ -7035,6 +7037,10 @@ function configureUserDashboard(){
       applyUserAttendancePrivacy();
       $('attendancePanel')?.classList.remove('hidden');
       renderAttendancePage();
+      return;
+    }
+    if(action==='weeklyAttendance'){
+      openInternalPage('weeklyAttendanceReport');
       return;
     }
     if(action==='data'){
@@ -7083,6 +7089,10 @@ function configureUserDashboard(){
     }
     if(action==='import'){
       $('studentPhotosExcelInput')?.click();
+      return;
+    }
+    if(action==='backupZip'){
+      createAdminBackupZip();
       return;
     }
     if(action==='reports'){
@@ -8324,9 +8334,11 @@ function openInternalPage(pageId){
   },0);
 
   if(pageId==='weeklyAttendanceReport'){
-    if(!isCurrentOwner()){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('weeklyAttendance')){
       $('weeklyAttendanceReport')?.classList.add('hidden');
-      alert('هذه الصفحة مخصصة للأدمن.');
+      alert('لا توجد لديك صلاحية كشف الحضور والغياب الأسبوعي.');
       openAdminDashboardInternal();
       return;
     }
@@ -8544,7 +8556,19 @@ function setAdminMode(on){
       const owner=isOwnerAdminSession();
       refreshOwnerHomeButton();
       const addStudentAdminTab=$('adminAddStudentTab');
-      if(addStudentAdminTab) addStudentAdminTab.style.display=owner?'':'none';
+      if(addStudentAdminTab) addStudentAdminTab.style.display=(owner||perms.has('addStudent'))?'':'none';
+      const attendanceAdminTab=$('adminAttendanceTab');
+      if(attendanceAdminTab) attendanceAdminTab.style.display=(owner||perms.has('attendance'))?'':'none';
+      const weeklyAdminTab=$('adminWeeklyAttendanceTab');
+      if(weeklyAdminTab) weeklyAdminTab.style.display=(owner||perms.has('weeklyAttendance'))?'':'none';
+      const referralAdminTab=$('adminReferralTab');
+      if(referralAdminTab) referralAdminTab.style.display=(owner||perms.has('referralSubmit'))?'':'none';
+      const deputyAdminTab=$('adminDeputyReferralsTab');
+      if(deputyAdminTab) deputyAdminTab.style.display=(owner||perms.has('referralReview'))?'':'none';
+      const followupAdminTab=$('adminFollowupTab');
+      if(followupAdminTab) followupAdminTab.style.display=(owner||perms.has('followupSheets'))?'':'none';
+      const backupAdminTab=$('adminBackupZipBtn');
+      if(backupAdminTab) backupAdminTab.style.display=(owner||perms.has('backupZip'))?'':'none';
       const referralBtn=$('headerReferralBtn');
       if(referralBtn) referralBtn.style.display=(owner||perms.has('referralSubmit'))?'':'none';
       const deputyBtn=$('headerDeputyRepliesBtn');
@@ -9607,8 +9631,10 @@ if($('adminUnregisteredTab')) $('adminUnregisteredTab').onclick=()=>toast('سي�
 
 async function createAdminBackupZip(){
   const btn=$('adminBackupZipBtn');
-  if(!isCurrentOwner()){
-    alert('هذه الميزة متاحة للمدير فقط.');
+  const u=getCurrentLoggedAdminUser();
+  const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+  if(!isCurrentOwner() && !perms.has('backupZip')){
+    alert('لا توجد لديك صلاحية النسخة الاحتياطية ZIP.');
     return;
   }
   if(!window.JSZip){
@@ -10045,6 +10071,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">استيراد البيانات (Excel/صور/باركود) <input class="admin-new-perm" value="import" type="checkbox" checked></label>
           <label class="admin-permission">حذف الطلاب <input class="admin-new-perm" value="deleteStudents" type="checkbox" checked></label>
           <label class="admin-permission">تحضير الطلاب <input class="admin-new-perm" value="attendance" type="checkbox" checked></label>
+          <label class="admin-permission">كشف الحضور والغياب الأسبوعي <input class="admin-new-perm" value="weeklyAttendance" type="checkbox"></label>
           <label class="admin-permission">التقارير والتصدير <input class="admin-new-perm" value="reports" type="checkbox" checked></label>
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">كشوف متابعة الطلاب <input class="admin-new-perm" value="followupSheets" type="checkbox"></label>
@@ -10052,6 +10079,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">متابعة المعلم داخل الفصل <input class="admin-new-perm" value="teacherFollowup" type="checkbox"></label>
           <label class="admin-permission">متابعة المدير للمعلمين <input class="admin-new-perm" value="teacherFollowupManager" type="checkbox"></label>
           <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
+          <label class="admin-permission">نسخة احتياطية ZIP <input class="admin-new-perm" value="backupZip" type="checkbox"></label>
         </div>
         <div id="newReferralGradePermissions" style="margin-top:12px;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
           <div style="font-weight:900;margin-bottom:8px">تحديد الصفوف المسموح بها في ردود الوكلاء</div>
@@ -10475,7 +10503,7 @@ function ensureAdminSettings(){
         let permissions=['attendance'];
         if(permText){
           const t=permText.toLowerCase();
-          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'];
+          if(t.includes('كل')) permissions=['editStudents','addStudent','import','deleteStudents','attendance','weeklyAttendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','backupZip'];
           else{
             permissions=[];
             if(t.includes('تحضير')) permissions.push('attendance');
@@ -10636,6 +10664,7 @@ function renderAdminUsersSettings(){
     import:'استيراد البيانات',
     deleteStudents:'حذف الطلاب',
     attendance:'تحضير الطلاب',
+    weeklyAttendance:'كشف الحضور والغياب الأسبوعي',
     reports:'التقارير والتصدير',
     settings:'بيانات المدرسة والمستخدمون',
     madrasati:'متابعة دخول منصة مدرستي',
@@ -10645,6 +10674,7 @@ function renderAdminUsersSettings(){
     teacherFollowup:'متابعة المعلم داخل الفصل',
     teacherFollowupManager:'متابعة المدير للمعلمين',
     referralReview:'ردود الوكلاء',
+    backupZip:'نسخة احتياطية ZIP',
     'referralGrade:first':'ردود الوكلاء: الأول الثانوي',
     'referralGrade:second':'ردود الوكلاء: الثاني الثانوي',
     'referralGrade:third':'ردود الوكلاء: الثالث الثانوي'
@@ -10716,17 +10746,19 @@ function openUserPermissionEditor(username){
   modal.className='user-perm-modal';
   const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const permItems=[
-    ['addStudent','إضافة طالب/تعديل'],
+    ['addStudent','إدارة الطلاب ونقل الفصول'],
     ['import','استيراد البيانات (Excel/صور/باركود)'],
     ['deleteStudents','حذف الطلاب'],
     ['attendance','تحضير الطلاب'],
+    ['weeklyAttendance','كشف الحضور والغياب الأسبوعي'],
     ['reports','التقارير والتصدير'],
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
     ['followupSheets','كشوف متابعة الطلاب'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب'],
     ['teacherFollowup','متابعة المعلم داخل الفصل'],
     ['teacherFollowupManager','متابعة المدير للمعلمين'],
-    ['referralReview','رد وكيل شؤون الطلاب على التحويلات']
+    ['referralReview','رد وكيل شؤون الطلاب على التحويلات'],
+    ['backupZip','نسخة احتياطية ZIP']
   ];
   modal.innerHTML=`
     <div class="user-perm-card">
