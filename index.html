@@ -6920,8 +6920,11 @@ function hideAllUserFeatureViews(){
 }
 
 function applyUserAttendancePrivacy(){
-  if(isCurrentOwner()){
+  if(isAttendanceSupervisor()){
     document.body.classList.remove('user-attendance-only');
+    const topLine=document.querySelector('.attendance-topline');
+    if(topLine) topLine.style.display='';
+    $('attendanceMonitoringCard')?.classList.remove('hidden');
     return;
   }
   document.body.classList.add('user-attendance-only');
@@ -9619,7 +9622,7 @@ function showAdminView(view){
   if(view==='data') $('adminDataTab').classList.add('active');
   if(view==='attendance'){
     $('adminAttendanceTab').classList.add('active');
-    if(!isCurrentOwner()) applyUserAttendancePrivacy();
+    if(!isAttendanceSupervisor()) applyUserAttendancePrivacy();
     else document.body.classList.remove('user-attendance-only');
     renderAttendancePage();
   }
@@ -10775,6 +10778,7 @@ function openUserPermissionEditor(username){
         <select id="userPermRole">
           <option ${u.role==='معلم'?'selected':''}>معلم</option>
           <option ${u.role==='إداري'?'selected':''}>إداري</option>
+          <option ${u.role==='وكيل'?'selected':''}>وكيل</option>
           <option ${u.role==='مدير'?'selected':''}>مدير</option>
           <option ${u.role==='موظف'?'selected':''}>موظف</option>
         </select>
@@ -11024,8 +11028,15 @@ function getCurrentAttendanceRecorder(){
     civilId:String(cloud.civil_id||u.civilId||u.username||p.username||'')
   };
 }
-function attendanceRowBelongsToCurrentUser(row){
+function isAttendanceSupervisor(){
   if(isCurrentOwner()) return true;
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const role=String(u.role||'').trim();
+  return role.includes('وكيل') || role.includes('إداري') || role.includes('اداري') || role.includes('مدير');
+}
+
+function attendanceRowBelongsToCurrentUser(row){
+  if(isAttendanceSupervisor()) return true;
   const recorder=getCurrentAttendanceRecorder();
   const currentUser=String(recorder.username||'').trim();
   const currentCivil=String(recorder.civilId||'').trim();
@@ -11993,7 +12004,7 @@ async function renderAttendancePage(){
   }
   const students=getStudents();
   const allLogs=getAttendanceLog();
-  const ownerView=isCurrentOwner();
+  const ownerView=isAttendanceSupervisor();
   const visibleLogs=ownerView?allLogs:allLogs.filter(attendanceRowBelongsToCurrentUser);
   const today=visibleLogs.filter(x=>x.date===todayKey());
   const present=today.filter(x=>x.status==='present').length;
@@ -13212,7 +13223,7 @@ function getTodayPresentRows(){
   return getAttendanceLog()
     .map((row,index)=>({...row,_index:index}))
     .filter(x=>x.date===todayKey() && x.status==='present')
-    .filter(x=>isOwnerAdminSession() || attendanceRowBelongsToCurrentUser(x));
+    .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x));
 }
 
 function getSelectedPresentIndexes(){
@@ -13241,7 +13252,7 @@ function buildPresentReportHtml(){
       <div style="text-align:center;margin-bottom:14px">
         <div style="font-size:12px">${escapeFollowupHtml(school.authority||'')}</div>
         <h2 style="margin:5px 0">${escapeFollowupHtml(school.school||'المدرسة')}</h2>
-        <h3 style="margin:5px 0">تقرير الحضور اليومي${isOwnerAdminSession()?'':' — سجلات المستخدم فقط'}</h3>
+        <h3 style="margin:5px 0">تقرير الحضور اليومي${isAttendanceSupervisor()?'':' — سجلات المستخدم فقط'}</h3>
         <div style="font-size:11px">${escapeFollowupHtml(dateLabel)}</div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:10px">
