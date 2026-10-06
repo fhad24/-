@@ -183,16 +183,17 @@
       padding:12px 18px;font-size:14px;font-weight:700;min-height:52px;cursor:pointer;white-space:nowrap;flex:0 0 auto
     }
     .admin-outline-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-    html.user-session-home #dashboard .admin-shell > :not(#userPermissionPortal){display:none!important}
     html.user-session-home #userPermissionPortal{display:block!important}
     html.user-session-home #userPermissionPortal.hidden{display:block!important}
-    body.user-permissions-only #dashboard .admin-shell > :not(#userPermissionPortal){display:none!important}
     body.user-permissions-only #userPermissionPortal{display:block!important}
-    body.user-permissions-only .admin-toolbar,
     body.user-permissions-only .admin-import-box,
-    body.user-permissions-only .admin-data-view,
     body.user-permissions-only .admin-footer-card,
     body.user-permissions-only #attendancePanel{display:none!important}
+    body.user-permissions-only .admin-data-view,
+    body.user-permissions-only .admin-summary-row,
+    body.user-permissions-only .admin-mini-row,
+    body.user-permissions-only .admin-data-card,
+    body.user-permissions-only .admin-filters{display:block!important}
     body.user-attendance-only .attendance-topline{display:none!important}
     body.user-attendance-only .attendance-body-grid{display:none!important}
     body.user-attendance-only .admin-data-view{display:none!important}
@@ -7008,12 +7009,44 @@ function configureUserDashboard(){
   document.body.classList.add('user-permissions-only');
   portal.classList.remove('hidden');
 
+  // إظهار نفس بيانات لوحة الأدمن للمستخدمين (عرض فقط حسب صلاحياتهم)
+  document.querySelectorAll('.admin-data-view').forEach(el=>{
+    el.classList.remove('hidden');
+    el.style.display='';
+  });
+  document.querySelectorAll('.admin-summary-row,.admin-mini-row,.admin-data-card,.admin-filters').forEach(el=>{
+    el.classList.remove('hidden');
+    el.style.removeProperty('display');
+  });
+  const toolbar=document.querySelector('.admin-toolbar');
+  if(toolbar){
+    toolbar.classList.remove('hidden');
+    toolbar.style.display='block';
+  }
+  try{ showAdminView('data'); }catch(e){}
+
   const name=String(u.name||u.displayName||u.username||'المستخدم');
   const civil=String(u.civil_id||u.civilId||u.username||'—');
   $('userWelcomeName').textContent='أهلًا '+name;
   $('userWelcomeCivil').textContent='السجل المدني: '+civil;
 
   const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+
+  // نفس أزرار الأدمن لكن يظهر للمستخدم فقط ما لديه صلاحية به
+  const toolbarPermMap={
+    adminAddStudentTab:'addStudent',
+    adminAttendanceTab:'attendance',
+    adminWeeklyAttendanceTab:'weeklyAttendance',
+    adminReferralTab:'referralSubmit',
+    adminDeputyReferralsTab:'referralReview',
+    adminFollowupTab:'followupSheets',
+    adminBackupZipBtn:'backupZip'
+  };
+  Object.entries(toolbarPermMap).forEach(([id,perm])=>{
+    const el=$(id);
+    if(el) el.style.display=perms.has(perm)?'':'none';
+  });
+
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
     ['weeklyAttendance','كشف الحضور والغياب الأسبوعي ✅✕','weeklyAttendance'],
