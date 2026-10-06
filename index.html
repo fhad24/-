@@ -4077,8 +4077,15 @@
               </div>
             </div>
 
-            <div class="attendance-monitoring-pane">
-              <h4>🏫 الصفوف والفصول وحالة التحضير</h4>
+            <div class="attendance-monitoring-pane attendance-prep-rebuilt" id="attendancePrepRebuiltPane">
+              <div class="attendance-prep-rebuilt-head">
+                <div>
+                  <div class="attendance-kicker">قراءة مباشرة من الحضور المحفوظ</div>
+                  <h4>🏫 الصفوف والفصول وحالة التحضير</h4>
+                </div>
+                <span class="attendance-prep-live-badge">قاعدة البيانات</span>
+              </div>
+
               <div class="attendance-unprepared-date-row">
                 <div class="attendance-hijri-monitor-picker">
                   <button type="button" id="attendanceMonitoringHijriOpen" class="attendance-hijri-monitor-field">
@@ -4107,13 +4114,22 @@
                   <span id="attendanceMonitoringHijri">—</span>
                 </div>
               </div>
-              <div class="hint">يظهر هنا جميع الصفوف والفصول في الحصص التي بدأ تحضيرها: المحضَّر بالأخضر وغير المحضَّر بالأحمر.</div>
+
+              <div class="attendance-prep-info">
+                يعرض كل الفصول للحصص التي بدأ تحضيرها في التاريخ المختار؛
+                <b class="attendance-prep-green-text">المحضَّر بالأخضر</b>
+                و<b class="attendance-prep-red-text">غير المحضَّر بالأحمر</b>.
+              </div>
+
               <div class="attendance-monitoring-table-wrap">
-                <table class="attendance-monitoring-table">
+                <table class="attendance-monitoring-table attendance-prep-rebuilt-table">
                   <thead><tr><th>م</th><th>الحصة</th><th>الصف</th><th>الفصل</th><th>الحالة</th></tr></thead>
-                  <tbody id="attendanceUnpreparedBody"><tr><td colspan="5">لم يبدأ تحضير أي حصة في التاريخ المختار.</td></tr></tbody>
+                  <tbody id="attendanceUnpreparedBody">
+                    <tr><td colspan="5">جاري قراءة الحضور المحفوظ...</td></tr>
+                  </tbody>
                 </table>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -12070,31 +12086,44 @@ function moveAttendanceMonitoringHijriMonth(delta){
     }
   }
 }
+function getDefaultAttendanceMonitoringDate(){
+  const dates=[...new Set(getAttendanceLog()
+    .map(x=>String(x.date||''))
+    .filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x))
+  )].sort();
+  return dates.length?dates[dates.length-1]:todayKey();
+}
+
 function getAttendanceMonitoringData(){
   const students=getStudents();
   const monitoringDate=getAttendanceMonitoringDate();
   const logs=getAttendanceLog().filter(r=>String(r.date||'')===monitoringDate);
-  const cohortMap=new Map();
+
+  const cohorts=new Map();
   students.forEach(s=>{
-    const key=attendanceCohortKey(s.grade,s.classroom);
-    if(!studentGradeKey(s.grade) || !studentClassKey(s.classroom)) return;
-    if(!cohortMap.has(key)) cohortMap.set(key,{key,grade:s.grade||'',classroom:s.classroom||'',students:[]});
-    cohortMap.get(key).students.push(s);
+    const grade=studentGradeKey(s.grade);
+    const classroom=studentClassKey(s.classroom);
+    if(!grade||!classroom) return;
+    const key=attendanceCohortKey(grade,classroom);
+    if(!cohorts.has(key)) cohorts.set(key,{key,grade,classroom,students:[]});
+    cohorts.get(key).students.push(s);
   });
 
-  // الحصة تعتبر قد بدأ تحضيرها للفصل إذا وُجد أي تسجيل فعلي لطالب من الفصل في هذه الحصة.
+  const activePeriods=new Set();
   const preparedByCohort=new Map();
   const attendedByStudent=new Map();
-  const activePeriods=new Set();
 
+  // المصدر الوحيد للحالة هو سجل الحضور المحفوظ لهذا التاريخ.
   logs.forEach(r=>{
     const p=attendancePeriodNumber(r.period);
-    if(!p) return;
-    const key=attendanceCohortKey(r.grade,r.classroom);
-    if(!cohortMap.has(key)) return;
+    const grade=studentGradeKey(r.grade);
+    const classroom=studentClassKey(r.classroom);
+    if(!p||!grade||!classroom) return;
     activePeriods.add(p);
+    const key=attendanceCohortKey(grade,classroom);
     if(!preparedByCohort.has(key)) preparedByCohort.set(key,new Set());
     preparedByCohort.get(key).add(p);
+
     if(r.status==='present'||r.status==='late'){
       const id=String(r.idno||'');
       if(!attendedByStudent.has(id)) attendedByStudent.set(id,new Set());
@@ -12102,52 +12131,12 @@ function getAttendanceMonitoringData(){
     }
   });
 
-  const escapees=[];
-  cohortMap.forEach(cohort=>{
-    const prepared=[...(preparedByCohort.get(cohort.key)||new Set())].sort((a,b)=>a-b);
-    if(prepared.length<2) return;
-    cohort.students.forEach(s=>{
-      const attended=[...(attendedByStudent.get(String(s.idno))||new Set())].filter(p=>prepared.includes(p)).sort((a,b)=>a-b);
-      if(!attended.length) return;
-      const missing=prepared.filter(p=>!attended.includes(p));
-      if(!missing.length) return;
-      escapees.push({student:s,prepared,attended,missing});
-    });
-  });
-  escapees.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
-
-  const unprepared=[];
-  [...activePeriods].sort((a,b)=>a-b).forEach(period=>{
-    cohortMap.forEach(cohort=>{
-      const prepared=preparedByCohort.get(cohort.key)?.has(period);
-      if(!prepared){
-        unprepared.push({period,grade:cohort.grade,classroom:cohort.classroom,key:cohort.key});
-      }
-    });
-  });
-
-  // ترتيب كل حصة حسب الصف ثم الفصل: أ، ب، ج، د، هـ، و...
   const gradeOrder={'الأول الثانوي':1,'الثاني الثانوي':2,'الثالث الثانوي':3};
   const classOrder=['أ','ا','ب','ج','د','هـ','ه','و','ز','ح','ط','ي'];
-  unprepared.sort((a,b)=>{
-    if(a.period!==b.period) return a.period-b.period;
-    const ga=gradeOrder[String(a.grade||'').trim()]||99;
-    const gb=gradeOrder[String(b.grade||'').trim()]||99;
-    if(ga!==gb) return ga-gb;
-    const ca=String(displayStudentClassroom(a.classroom)||a.classroom||'').trim();
-    const cb=String(displayStudentClassroom(b.classroom)||b.classroom||'').trim();
-    const ia=classOrder.indexOf(ca), ib=classOrder.indexOf(cb);
-    if(ia!==ib){
-      if(ia<0) return 1;
-      if(ib<0) return -1;
-      return ia-ib;
-    }
-    return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
-  });
 
   const classStatuses=[];
   [...activePeriods].sort((a,b)=>a-b).forEach(period=>{
-    cohortMap.forEach(cohort=>{
+    cohorts.forEach(cohort=>{
       classStatuses.push({
         period,
         grade:cohort.grade,
@@ -12157,6 +12146,7 @@ function getAttendanceMonitoringData(){
       });
     });
   });
+
   classStatuses.sort((a,b)=>{
     if(a.period!==b.period) return a.period-b.period;
     const ga=gradeOrder[String(a.grade||'').trim()]||99;
@@ -12164,33 +12154,52 @@ function getAttendanceMonitoringData(){
     if(ga!==gb) return ga-gb;
     const ca=String(displayStudentClassroom(a.classroom)||a.classroom||'').trim();
     const cb=String(displayStudentClassroom(b.classroom)||b.classroom||'').trim();
-    const ia=classOrder.indexOf(ca), ib=classOrder.indexOf(cb);
+    const ia=classOrder.indexOf(ca),ib=classOrder.indexOf(cb);
     if(ia!==ib){
-      if(ia<0) return 1;
-      if(ib<0) return -1;
+      if(ia<0)return 1;
+      if(ib<0)return -1;
       return ia-ib;
     }
     return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
   });
 
-  return {
-    escapees,
-    unprepared,
-    classStatuses,
-    activePeriods:[...activePeriods].sort((a,b)=>a-b),
-    preparedByCohort
-  };
+  const unprepared=classStatuses.filter(x=>!x.prepared);
+
+  const escapees=[];
+  cohorts.forEach(cohort=>{
+    const prepared=[...(preparedByCohort.get(cohort.key)||new Set())].sort((a,b)=>a-b);
+    if(prepared.length<2)return;
+    cohort.students.forEach(s=>{
+      const attended=[...(attendedByStudent.get(String(s.idno))||new Set())]
+        .filter(p=>prepared.includes(p)).sort((a,b)=>a-b);
+      if(!attended.length)return;
+      const missing=prepared.filter(p=>!attended.includes(p));
+      if(missing.length) escapees.push({student:s,prepared,attended,missing});
+    });
+  });
+  escapees.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
+
+  return {escapees,unprepared,classStatuses,activePeriods:[...activePeriods].sort((a,b)=>a-b),preparedByCohort};
 }
-function renderAttendanceMonitoring(){
+
+async function renderAttendanceMonitoring(){
   const card=$('attendanceMonitoringCard');
-  if(!card) return;
-  const dateInput=$('attendanceMonitoringDate');
-  if(dateInput && !dateInput.value) dateInput.value=todayKey();
-  syncAttendanceMonitoringDateDisplay();
+  if(!card)return;
 
   const owner=isOwnerAdminSession();
   card.classList.toggle('hidden',!owner);
-  if(!owner) return;
+  if(!owner)return;
+
+  // اقرأ أحدث حضور من قاعدة البيانات قبل رسم اللوحة الجديدة.
+  if(localStorage.getItem('cloudAdminToken')){
+    try{await cloudPullAttendanceFast()}catch(e){console.warn('monitoring cloud attendance refresh',e)}
+  }
+
+  const dateInput=$('attendanceMonitoringDate');
+  if(dateInput && !dateInput.value){
+    dateInput.value=getDefaultAttendanceMonitoringDate();
+  }
+  syncAttendanceMonitoringDateDisplay();
 
   const data=getAttendanceMonitoringData();
   if($('attendanceEscapeCount')) $('attendanceEscapeCount').textContent=String(data.escapees.length);
@@ -12211,22 +12220,21 @@ function renderAttendanceMonitoring(){
       : '<tr><td colspan="6">لا توجد حالات هروب مكتشفة حتى الآن.</td></tr>';
   }
 
-  const unpreparedBody=$('attendanceUnpreparedBody');
-  if(unpreparedBody){
-    if(!data.activePeriods.length){
-      unpreparedBody.innerHTML='<tr><td colspan="5">لم يبدأ تحضير أي حصة حتى الآن.</td></tr>';
-    }else{
-      unpreparedBody.innerHTML=data.classStatuses.length
-        ? data.classStatuses.map((r,i)=>`<tr class="${r.prepared?'attendance-prepared-row':'attendance-unprepared-row'}">
-            <td>${i+1}</td>
-            <td>${escapeFollowupHtml(attendancePeriodLabel(r.period))}</td>
-            <td>${escapeFollowupHtml(r.grade||'')}</td>
-            <td>${escapeFollowupHtml(displayStudentClassroom(r.classroom)||'')}</td>
-            <td><b class="${r.prepared?'attendance-prepared-status':'attendance-unprepared-status'}">${r.prepared?'✓ تم التحضير':'✕ لم يتم التحضير'}</b></td>
-          </tr>`).join('')
-        : '<tr><td colspan="5">لا توجد فصول للعرض في التاريخ المختار.</td></tr>';
-    }
+  const body=$('attendanceUnpreparedBody');
+  if(!body)return;
+
+  if(!data.activePeriods.length){
+    body.innerHTML='<tr><td colspan="5">لا يوجد تحضير محفوظ في التاريخ المختار.</td></tr>';
+    return;
   }
+
+  body.innerHTML=data.classStatuses.map((r,i)=>`<tr class="${r.prepared?'attendance-prepared-row':'attendance-unprepared-row'}">
+    <td>${i+1}</td>
+    <td>${escapeFollowupHtml(attendancePeriodLabel(r.period))}</td>
+    <td>${escapeFollowupHtml(r.grade||'')}</td>
+    <td>${escapeFollowupHtml(displayStudentClassroom(r.classroom)||'')}</td>
+    <td><b class="${r.prepared?'attendance-prepared-status':'attendance-unprepared-status'}">${r.prepared?'✓ تم التحضير':'✕ لم يتم التحضير'}</b></td>
+  </tr>`).join('');
 }
 
 async function renderAttendancePage(){
@@ -12562,9 +12570,16 @@ if($('attendanceMonitoringTodayBtn')) $('attendanceMonitoringTodayBtn').onclick=
   renderAttendanceMonitoring();
   closeAttendanceMonitoringHijriCalendar();
 };
-if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').onclick=()=>{
-  renderAttendanceMonitoring();
-  toast('تم تحديث كشف الهروب والتحضير');
+if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').onclick=async()=>{
+  const btn=$('attendanceMonitoringRefreshBtn');
+  const old=btn?.textContent||'🔄 تحديث الكشف';
+  try{
+    if(btn){btn.disabled=true;btn.textContent='جاري التحديث...';}
+    await renderAttendanceMonitoring();
+    toast('✅ تم تحديث الكشف من قاعدة البيانات');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=old;}
+  }
 };
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
@@ -15160,6 +15175,17 @@ function printStudents(rows){
       order:1!important;
       min-width:0!important;
     }
+
+    .attendance-prep-rebuilt{border:1px solid #d6e3df;border-radius:16px;background:#fff;padding:16px}
+    .attendance-prep-rebuilt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .attendance-prep-rebuilt-head h4{margin:4px 0 0;font-size:18px}
+    .attendance-prep-live-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#e9f8f3;color:#0f7665;border:1px solid #bfe7da;padding:6px 10px;font-size:11px;font-weight:900}
+    .attendance-prep-info{margin:10px 0 12px;padding:10px 12px;border-radius:10px;background:#f8fbfa;border:1px solid #e0ebe8;font-size:12px;line-height:1.8;color:#526d66}
+    .attendance-prep-green-text{color:#087a58}.attendance-prep-red-text{color:#c52d2d}
+    .attendance-prep-rebuilt-table .attendance-prepared-row td{background:#effbf6!important}
+    .attendance-prep-rebuilt-table .attendance-unprepared-row td{background:#fff3f3!important}
+    .attendance-prep-rebuilt-table .attendance-prepared-status{display:inline-block;padding:5px 9px;border-radius:999px;background:#dff6eb;color:#087a58;font-weight:900}
+    .attendance-prep-rebuilt-table .attendance-unprepared-status{display:inline-block;padding:5px 9px;border-radius:999px;background:#fde2e2;color:#c52d2d;font-weight:900}
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
