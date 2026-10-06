@@ -11263,6 +11263,25 @@ function getAttendanceMonitoringData(){
     });
   });
 
+  // ترتيب كل حصة حسب الصف ثم الفصل: أ، ب، ج، د، هـ، و...
+  const gradeOrder={'الأول الثانوي':1,'الثاني الثانوي':2,'الثالث الثانوي':3};
+  const classOrder=['أ','ا','ب','ج','د','هـ','ه','و','ز','ح','ط','ي'];
+  unprepared.sort((a,b)=>{
+    if(a.period!==b.period) return a.period-b.period;
+    const ga=gradeOrder[String(a.grade||'').trim()]||99;
+    const gb=gradeOrder[String(b.grade||'').trim()]||99;
+    if(ga!==gb) return ga-gb;
+    const ca=String(displayStudentClassroom(a.classroom)||a.classroom||'').trim();
+    const cb=String(displayStudentClassroom(b.classroom)||b.classroom||'').trim();
+    const ia=classOrder.indexOf(ca), ib=classOrder.indexOf(cb);
+    if(ia!==ib){
+      if(ia<0) return 1;
+      if(ib<0) return -1;
+      return ia-ib;
+    }
+    return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
+  });
+
   return {
     escapees,
     unprepared,
