@@ -7449,48 +7449,68 @@ function buildFollowupFooterHtml(meta){
     </div>`;
 }
 
+function buildExactFollowupSheetClone(blank=false){
+  const source=$('followupSheet');
+  if(!source) return null;
+  const clone=source.cloneNode(true);
+  clone.id='followupSheetExactCopy';
+  clone.classList.remove('blank-print');
+
+  clone.querySelectorAll('input.followup-mark').forEach(inp=>{
+    const span=document.createElement('span');
+    span.className='followup-mark-print';
+    span.textContent=blank?'':String(inp.value||'');
+    span.style.cssText='display:flex;align-items:center;justify-content:center;width:100%;height:24px;font-size:12px;text-align:center';
+    inp.replaceWith(span);
+  });
+
+  clone.querySelectorAll('.followup-empty').forEach(x=>x.remove());
+  return clone;
+}
+
+function exactFollowupSheetCss(){
+  return `
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl}
+    .followup-sheet{width:100%;max-width:100%;min-width:0;background:#fff;border:1px solid #111;padding:8px;direction:rtl;color:#111;font-family:Tahoma,Arial,sans-serif;overflow:visible}
+    .followup-sheet-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:8px}
+    .followup-sheet-title{font-size:18px;font-weight:900;text-align:center;line-height:1.6}
+    .followup-sheet-meta{font-size:13px;font-weight:800;line-height:1.8}
+    .followup-sheet-meta.left{text-align:left;direction:rtl}
+    .followup-sheet-meta.right{text-align:right}
+    .followup-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
+    .followup-table th,.followup-table td{border:1px solid #111!important;padding:2px!important;text-align:center!important;vertical-align:middle!important;height:27px;overflow:hidden;word-break:break-word}
+    .followup-table thead th{background:#f3f3f3!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-weight:900;line-height:1.15}
+    .followup-table th:nth-child(1),.followup-table td:nth-child(1){width:7%}
+    .followup-table th:nth-child(2),.followup-table td:nth-child(2){width:14%}
+    .followup-table th:nth-child(3),.followup-table td:nth-child(3){width:4%}
+    .followup-table .student-name{font-weight:800;text-align:right!important;padding-right:4px!important;font-size:9px;line-height:1.25}
+    .followup-table .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:8px}
+    .followup-table .class-cell{font-weight:800;white-space:nowrap;font-size:9px}
+    .followup-mark-print{font-size:12px!important}
+    .followup-print-note{display:block!important;text-align:right;font-size:10px;font-weight:800;margin-top:5px}
+    .followup-bottom-summary{display:flex;justify-content:space-between;gap:12px}
+    tr{break-inside:avoid;page-break-inside:avoid}
+  `;
+}
+
 function buildFollowupPrintDocument(blank=false){
-  const meta=getFollowupReportMeta();
-  const rows=getFollowupPrintableRows(blank);
-  const headerRows=getFollowupHeaderRowsHtml();
-  const metaHtml=buildFollowupMetaHtml(meta,'','');
-  const footerHtml=buildFollowupFooterHtml(meta);
+  const clone=buildExactFollowupSheetClone(blank);
+  if(!clone) return '';
   return `<!doctype html>
   <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8">
     <title>كشف متابعة الطلاب</title>
     <style>
-      @page{size:A4 landscape;margin:8mm}
-      *{box-sizing:border-box}
-      html,body{margin:0;padding:0;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl}
-      table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}
-      th,td{border:1px solid #111;padding:3px 2px;text-align:center;vertical-align:middle;height:26px;overflow:hidden;word-break:break-word}
-      thead th{background:#f3f3f3;font-weight:900;line-height:1.15}
-      thead{display:table-header-group}
-      tfoot{display:table-footer-group}
-      tr{page-break-inside:avoid;break-inside:avoid}
-      .student-name{text-align:right!important;font-weight:800}
-      .civil-id{direction:ltr;font-family:Arial,sans-serif;font-size:8px}
-      .report-meta-cell{border:0!important;padding:0 0 8px!important;background:#fff!important}
-      .footer-cell{border:0!important;padding:8px 0 0!important;background:#fff!important}
-      .followup-report-meta{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;font-size:11px;font-weight:800;line-height:1.65}
-      .followup-report-meta .title{text-align:center;font-size:16px;font-weight:900}
-      .followup-report-meta .right{text-align:right}.followup-report-meta .left{text-align:left}
-      .followup-pdf-footer{display:flex;justify-content:space-between;gap:12px;font-size:10px;font-weight:800;border-top:1px solid #777;padding-top:6px}
+      @page{size:A4 landscape;margin:7mm}
+      ${exactFollowupSheetCss()}
+      body{padding:0}
+      #followupSheetExactCopy{width:100%!important;max-width:none!important;margin:0!important}
     </style>
   </head>
   <body>
-    <table>
-      <thead>
-        <tr><th colspan="26" class="report-meta-cell">${metaHtml}</th></tr>
-        ${headerRows}
-      </thead>
-      <tbody>${rows.join('')}</tbody>
-      <tfoot>
-        <tr><td colspan="26" class="footer-cell">${footerHtml}</td></tr>
-      </tfoot>
-    </table>
+    ${clone.outerHTML}
   </body>
   </html>`;
 }
@@ -7524,26 +7544,18 @@ function prepareFollowupPrint(blank=false){
 
 function buildFollowupPdfPages(blank=false){
   const meta=getFollowupReportMeta();
-  const allRows=getFollowupPrintableRows(blank);
-  const headerRows=getFollowupHeaderRowsHtml();
-  const rowsPerPage=13;
-  const pages=[];
-  for(let i=0;i<allRows.length;i+=rowsPerPage) pages.push(allRows.slice(i,i+rowsPerPage));
-  if(!pages.length) pages.push([]);
+  const clone=buildExactFollowupSheetClone(blank);
   const root=document.createElement('div');
-  root.className='followup-pdf-root';
+  root.className='followup-pdf-root exact-followup-pdf-root';
   root.dir='rtl';
-  root.innerHTML=pages.map((rows,index)=>`
-    <section class="followup-pdf-page">
-      ${buildFollowupMetaHtml(meta,index+1,pages.length)}
-      <table class="followup-pdf-table">
-        <thead>${headerRows}</thead>
-        <tbody>${rows.join('')}</tbody>
-      </table>
-      ${buildFollowupFooterHtml(meta)}
-    </section>
-  `).join('');
-  return {root,meta,pages};
+  root.style.cssText='width:1120px;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl;padding:0;margin:0';
+  if(clone){
+    clone.style.width='1120px';
+    clone.style.maxWidth='1120px';
+    clone.style.margin='0';
+    root.appendChild(clone);
+  }
+  return {root,meta,pages:[clone]};
 }
 
 async function exportFollowupPdf(){
@@ -7570,6 +7582,9 @@ async function exportFollowupPdf(){
     const stage=document.createElement('div');
     stage.id='followupPdfStage';
     stage.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px';
+    const style=document.createElement('style');
+    style.textContent=exactFollowupSheetCss()+' .exact-followup-pdf-root .followup-sheet{width:1120px!important;max-width:1120px!important}';
+    stage.appendChild(style);
     stage.appendChild(root);
     document.body.appendChild(stage);
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -7577,9 +7592,9 @@ async function exportFollowupPdf(){
       margin:0,
       filename,
       image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120},
       jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-      pagebreak:{mode:['css','legacy'],before:'.followup-pdf-page:not(:first-child)'}
+      pagebreak:{mode:['css','legacy'],avoid:['tr']}
     }).from(root).save();
     stage.remove();
     root=null;
