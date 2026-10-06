@@ -4282,6 +4282,22 @@
       <div id="studentTransferStatus" class="hint"></div>
     </div>
 
+    <div class="card hidden" id="studentTransferApprovalsCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">✅ طلبات المستخدمين بانتظار اعتماد الأدمن</h3>
+          <div class="hint">لا يتم تطبيق أي تعديل أو نقل إلا بعد اعتماد الإدارة.</div>
+        </div>
+        <button type="button" class="btn btn-outline" id="studentTransferApprovalsRefresh">تحديث الطلبات</button>
+      </div>
+      <div class="table-wrap" style="margin-top:12px">
+        <table class="student-transfer-table" style="min-width:900px">
+          <thead><tr><th>الطالب</th><th>السجل الحالي</th><th>السجل الجديد</th><th>الصف</th><th>الفصل</th><th>مقدم الطلب</th><th>الإجراء</th></tr></thead>
+          <tbody id="studentTransferApprovalsBody"><tr><td colspan="7">لا توجد طلبات.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="card">
       <div class="student-transfer-filters">
         <input id="studentTransferSearch" placeholder="بحث بالاسم أو السجل المدني أو الجوال">
@@ -4310,21 +4326,7 @@
       </div>
     </div>
 
-    <div class="card hidden" id="studentTransferApprovalsCard">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0">✅ طلبات المستخدمين بانتظار اعتماد الأدمن</h3>
-          <div class="hint">لا يتم تطبيق أي تعديل أو نقل إلا بعد اعتماد الإدارة.</div>
-        </div>
-        <button type="button" class="btn btn-outline" id="studentTransferApprovalsRefresh">تحديث الطلبات</button>
-      </div>
-      <div class="table-wrap" style="margin-top:12px">
-        <table class="student-transfer-table" style="min-width:900px">
-          <thead><tr><th>الطالب</th><th>السجل الحالي</th><th>السجل الجديد</th><th>الصف</th><th>الفصل</th><th>مقدم الطلب</th><th>الإجراء</th></tr></thead>
-          <tbody id="studentTransferApprovalsBody"><tr><td colspan="7">لا توجد طلبات.</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+
   </div>
 </section>
 </main>
