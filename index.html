@@ -4038,7 +4038,7 @@
             <button type="button" id="attendancePresentSaveBtn">💾 حفظ</button>
             <button type="button" id="attendancePresentEditBtn">✏️ تعديل المحدد</button>
             <button type="button" id="attendancePresentPrintBtn">🖨️ طباعة</button>
-            <button type="button" id="attendancePresentPdfBtn">📄 تقرير PDF</button>
+            <button type="button" id="attendancePresentPdfBtn">📄 تصدير كشف الفصول PDF</button>
             <button type="button" id="attendancePresentStatsBtn">📊 الإحصائيات</button>
           </div>
           <div id="attendancePresentStatsPanel" class="attendance-present-stats-panel hidden"></div>
@@ -13556,23 +13556,134 @@ async function printPresentReport(){
 
 async function exportPresentReportPdf(){
   if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
-  const rows=getTodayPresentRows();
-  if(!rows.length){alert('لا توجد سجلات حضور اليوم لتصديرها.');return}
-  const host=document.createElement('div');
-  host.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;padding:12px;overflow:auto';
-  host.innerHTML=buildPresentReportHtml();
-  host.querySelectorAll('th,td').forEach(el=>el.style.cssText='border:1px solid #777;padding:6px;text-align:center');
-  document.body.appendChild(host);
+
+  const btn=$('attendancePresentPdfBtn');
+  const oldText=btn?.textContent||'📄 تصدير كشف الفصول PDF';
   try{
+    if(btn){btn.disabled=true;btn.textContent='جاري تجهيز الكشف...';}
+    if(localStorage.getItem('cloudAdminToken')){
+      try{await cloudPullAttendanceFast()}catch(e){console.warn('pdf attendance refresh',e)}
+    }
+
+    const students=getStudents().slice();
+    const logs=getAttendanceLog().slice();
+    const meaningful=new Map();
+
+    // نعتبر التحضير فعليًا إذا كان للفصل 5 طلاب حاضرين أو أكثر في اليوم.
+    logs.forEach(x=>{
+      if(x.status!=='present') return;
+      const key=[String(x.date||''),studentGradeKey(x.grade),studentClassKey(x.classroom)].join('|');
+      if(!meaningful.has(key)) meaningful.set(key,{date:String(x.date||''),grade:studentGradeKey(x.grade),classroom:studentClassKey(x.classroom),present:0,rows:[]});
+      const rec=meaningful.get(key);
+      rec.present++;
+      rec.rows.push(x);
+    });
+
+    const latestByClass=new Map();
+    [...meaningful.values()].filter(x=>x.present>=5).forEach(s=>{
+      const key=[s.grade,s.classroom].join('|');
+      const old=latestByClass.get(key);
+      if(!old || s.date>old.date) latestByClass.set(key,s);
+    });
+
+    const sessions=[...latestByClass.values()].sort((a,b)=>{
+      const g=String(a.grade).localeCompare(String(b.grade),'ar');
+      if(g) return g;
+      return String(a.classroom).localeCompare(String(b.classroom),'ar',{numeric:true});
+    });
+
+    if(!sessions.length){
+      alert('لا توجد تحضيرات فعلية محفوظة لإنشاء الكشف.');
+      return;
+    }
+
+    const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const reportSections=sessions.map((s,sectionIndex)=>{
+      const classStudents=students
+        .filter(st=>studentGradeKey(st.grade)===s.grade && studentClassKey(st.classroom)===s.classroom)
+        .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+
+      const dayRows=logs.filter(x=>String(x.date||'')===s.date);
+      const sessionRows=dayRows.filter(x=>studentGradeKey(x.grade)===s.grade && studentClassKey(x.classroom)===s.classroom);
+      const teachers=[...new Set(sessionRows.map(x=>String(x.teacherName||x.teacher_name||'').trim()).filter(Boolean))];
+      const periods=[...new Set(sessionRows.map(x=>x.period).filter(x=>x!==null&&x!==undefined&&x!==''))];
+      const hijri=sessionRows.find(x=>x.hijriDate||x.hijri_date)?.hijriDate || sessionRows.find(x=>x.hijriDate||x.hijri_date)?.hijri_date || '';
+      const weekday=sessionRows.find(x=>x.weekday)?.weekday||'';
+
+      let p=0,l=0,a=0;
+      const body=classStudents.map((st,i)=>{
+        const rows=dayRows.filter(x=>String(x.idno)===String(st.idno));
+        let status='غائب';
+        if(rows.some(x=>x.status==='present')){status='حاضر';p++}
+        else if(rows.some(x=>x.status==='late')){status='حاضر - متأخر';l++}
+        else a++;
+        return '<tr><td>'+(i+1)+'</td><td>'+esc(st.idno||'')+'</td><td class="nm">'+esc(st.name||'')+'</td><td class="'+(status==='غائب'?'abs':'pre')+'">'+status+'</td></tr>';
+      }).join('');
+
+      return `<section class="class-sheet ${sectionIndex?'page-break':''}">
+        <div class="school">مدرسة شرحبيل بن حسنة الثانوية</div>
+        <h1>كشف الحضور والغياب</h1>
+        <h2>${esc(s.grade)} / الفصل ${esc(displayStudentClassroom(s.classroom))}</h2>
+        <div class="meta">
+          <span><b>اليوم:</b> ${esc(weekday||'—')}</span>
+          <span><b>التاريخ:</b> ${esc(s.date)}</span>
+          <span><b>الهجري:</b> ${esc(hijri||'—')}</span>
+          <span><b>الحصة:</b> ${esc(periods.join('، ')||'—')}</span>
+          <span class="wide"><b>المسجل:</b> ${esc(teachers.join('، ')||'—')}</span>
+        </div>
+        <div class="summary">
+          <span>عدد الطلاب: <b>${classStudents.length}</b></span>
+          <span>حاضر: <b>${p}</b></span>
+          <span>متأخر: <b>${l}</b></span>
+          <span>غائب: <b>${a}</b></span>
+        </div>
+        <table>
+          <thead><tr><th>م</th><th>السجل المدني</th><th>اسم الطالب</th><th>الحالة</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </section>`;
+    }).join('');
+
+    const host=document.createElement('div');
+    host.style.cssText='position:fixed;left:0;top:0;width:1100px;background:#fff;z-index:99999;padding:18px;direction:rtl';
+    host.innerHTML=`<style>
+      .class-sheet{font-family:Tahoma,Arial,sans-serif;direction:rtl;color:#111;padding:8px 10px;background:#fff}
+      .class-sheet.page-break{break-before:page;page-break-before:always}
+      .class-sheet .school{text-align:center;font-size:13px;font-weight:800;margin-bottom:3px}
+      .class-sheet h1{text-align:center;font-size:22px;margin:2px 0 4px}
+      .class-sheet h2{text-align:center;font-size:18px;margin:0 0 10px;color:#0f7665}
+      .class-sheet .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border:1px solid #9eb5af;border-radius:8px;padding:7px 10px;font-size:11px;margin-bottom:7px}
+      .class-sheet .meta .wide{grid-column:1/-1}
+      .class-sheet .summary{display:flex;justify-content:center;gap:28px;font-size:12px;font-weight:700;margin:7px 0}
+      .class-sheet table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}
+      .class-sheet th,.class-sheet td{border:1px solid #7e8f8b;padding:4px 5px;text-align:center;line-height:1.35}
+      .class-sheet th{background:#e8f3f0;font-weight:900}
+      .class-sheet th:nth-child(1),.class-sheet td:nth-child(1){width:6%}
+      .class-sheet th:nth-child(2),.class-sheet td:nth-child(2){width:22%}
+      .class-sheet th:nth-child(3),.class-sheet td:nth-child(3){width:52%}
+      .class-sheet th:nth-child(4),.class-sheet td:nth-child(4){width:20%}
+      .class-sheet td.nm{text-align:right;font-weight:700}
+      .class-sheet td.abs{font-weight:900}
+      .class-sheet td.pre{font-weight:800}
+    </style>${reportSections}`;
+    document.body.appendChild(host);
+
     await html2pdf().set({
-      margin:7,
-      filename:'تقرير-الحضور-اليومي.pdf',
+      margin:[5,5,5,5],
+      filename:'كشف-الحضور-والغياب-حسب-الفصول.pdf',
       image:{type:'jpeg',quality:.98},
-      html2canvas:{scale:1.6,useCORS:true,backgroundColor:'#fff'},
-      jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-      pagebreak:{mode:['avoid-all','css','legacy']}
+      html2canvas:{scale:1.35,useCORS:true,backgroundColor:'#fff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'],before:'.page-break'}
     }).from(host).save();
-  }finally{host.remove()}
+    host.remove();
+    toast('✅ تم تصدير كشف الفصول PDF');
+  }catch(e){
+    console.error('export class attendance pdf',e);
+    alert('تعذر إنشاء كشف PDF. حاول مرة أخرى.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
 }
 
 if($('attendancePresentSaveBtn')) $('attendancePresentSaveBtn').onclick=async ()=>{
