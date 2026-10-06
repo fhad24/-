@@ -12324,6 +12324,71 @@ async function renderAttendancePage(){
       return;
     }
 
+    if(attendanceListView==='present'){
+      const groupsMap=new Map();
+      rows.forEach(x=>{
+        const grade=String(x.grade||'');
+        const classroom=String(displayStudentClassroom(x.classroom)||x.classroom||'');
+        const date=String(x.hijriDate||x.date||'—');
+        const period=x.period?String(x.period):'';
+        const teacher=String(x.teacherName||x.teacherUsername||'—');
+        const teacherId=String(x.teacherCivilId||x.teacherUsername||'');
+        const subject=String(x.subject||'—');
+        const key=[grade,classroom,String(x.date||''),period,teacher,teacherId,subject].join('|');
+        if(!groupsMap.has(key)){
+          groupsMap.set(key,{
+            key,grade,classroom,date,period,teacher,teacherId,subject,rows:[]
+          });
+        }
+        groupsMap.get(key).rows.push(x);
+      });
+
+      const groups=[...groupsMap.values()].sort((a,b)=>{
+        const g=a.grade.localeCompare(b.grade,'ar');
+        if(g) return g;
+        const cl=a.classroom.localeCompare(b.classroom,'ar',{numeric:true});
+        if(cl) return cl;
+        return String(a.period).localeCompare(String(b.period),'ar',{numeric:true});
+      });
+
+      window.__attendancePresentGroups=groups;
+
+      $('attendanceDailyList').innerHTML=`
+        <div class="attendance-present-groups-wrap">
+          <table class="attendance-present-groups-table">
+            <thead>
+              <tr>
+                <th>الصف / الفصل</th>
+                <th>التاريخ / الحصة</th>
+                <th>المسجل</th>
+                <th>المادة</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${groups.map((g,i)=>`
+                <tr>
+                  <td class="apg-class"><b>${escapeFollowupHtml(g.grade||'—')}</b><span>${escapeFollowupHtml(g.classroom||'—')}</span></td>
+                  <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b><span>${g.period?'الحصة '+escapeFollowupHtml(g.period):'بدون حصة'}</span></td>
+                  <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
+                  <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
+                  <td class="apg-action"><button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+
+      document.querySelectorAll('[data-present-group-index]').forEach(btn=>{
+        btn.onclick=()=>{
+          const i=Number(btn.dataset.presentGroupIndex);
+          const g=window.__attendancePresentGroups?.[i];
+          if(g) openPresentAttendanceGroupModal(g);
+        };
+      });
+      return;
+    }
+
     const rendered = await Promise.all(rows.map(async x=>{
       let photoHTML='<div class="attendance-saved-avatar placeholder">👤</div>';
       try{
@@ -12490,6 +12555,88 @@ async function renderAttendancePage(){
 
   document.querySelectorAll('img[data-ephemeral-url]').forEach(img=>{
     img.onload=()=>setTimeout(()=>URL.revokeObjectURL(img.src),4000);
+  });
+}
+
+function openPresentAttendanceGroupModal(group){
+  if(!group) return;
+  document.getElementById('presentAttendanceGroupModal')?.remove();
+
+  const modal=document.createElement('div');
+  modal.id='presentAttendanceGroupModal';
+  modal.className='present-attendance-group-modal';
+
+  const rows=(group.rows||[]).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+  modal.innerHTML=`
+    <div class="present-attendance-group-card">
+      <div class="present-attendance-group-head">
+        <div>
+          <h3>طلاب الحضور — ${escapeFollowupHtml(group.grade||'')} / ${escapeFollowupHtml(group.classroom||'')}</h3>
+          <p>${escapeFollowupHtml(group.date||'—')} — ${group.period?'الحصة '+escapeFollowupHtml(group.period):'بدون حصة'} — ${escapeFollowupHtml(group.subject||'—')}</p>
+        </div>
+        <button type="button" class="present-attendance-group-close">×</button>
+      </div>
+
+      <div class="present-attendance-group-summary">
+        <span>المسجل: <b>${escapeFollowupHtml(group.teacher||'—')}</b></span>
+        <span>عدد الطلاب: <b>${rows.length}</b></span>
+      </div>
+
+      <div class="present-attendance-group-table-wrap">
+        <table class="present-attendance-group-table">
+          <thead>
+            <tr><th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الإجراء</th></tr>
+          </thead>
+          <tbody>
+            ${rows.map((x,i)=>`
+              <tr>
+                <td>${i+1}</td>
+                <td class="student-name">${escapeFollowupHtml(x.name||'')}</td>
+                <td class="student-id">${escapeFollowupHtml(x.idno||'—')}</td>
+                <td class="student-actions">
+                  <button type="button" class="group-student-edit" data-group-edit-index="${x._index}">✏️ تعديل</button>
+                  <button type="button" class="group-student-delete" data-group-delete-index="${x._index}">🗑 حذف</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.present-attendance-group-close').onclick=()=>modal.remove();
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});
+
+  modal.querySelectorAll('[data-group-edit-index]').forEach(btn=>{
+    btn.onclick=()=>{
+      const idx=Number(btn.dataset.groupEditIndex);
+      const row=getAttendanceLog()[idx];
+      if(!row || !attendanceUserCanModifyRow(row)){
+        alert('هذا السجل لا يمكن تعديله إلا من الأدمن.');
+        return;
+      }
+      modal.remove();
+      openAttendanceEdit(idx);
+    };
+  });
+
+  modal.querySelectorAll('[data-group-delete-index]').forEach(btn=>{
+    btn.onclick=()=>{
+      const idx=Number(btn.dataset.groupDeleteIndex);
+      const logs=getAttendanceLog();
+      const row=logs[idx];
+      if(!row || !attendanceUserCanModifyRow(row)){
+        alert('هذا السجل لا يمكن حذفه إلا من الأدمن.');
+        return;
+      }
+      if(!confirm('هل تريد حذف حضور هذا الطالب؟')) return;
+      logs.splice(idx,1);
+      saveAttendanceLog(logs);
+      modal.remove();
+      renderAttendancePage();
+      toast('تم حذف سجل الطالب');
+    };
   });
 }
 
@@ -15487,6 +15634,65 @@ function printStudents(rows){
       .attendance-present-pro-table .attendance-saved-avatar{width:48px!important;height:48px!important}
       .attendance-present-photo-cell{width:52px;min-width:52px}
     }
+
+    /* جدول حاضر المختصر حسب التحضير */
+    .attendance-present-groups-wrap{
+      width:100%;overflow-x:auto;border:1px solid #d9e6e2;border-radius:16px;background:#fff;
+      box-shadow:0 7px 22px rgba(15,83,68,.05);margin-top:12px
+    }
+    .attendance-present-groups-table{width:100%;min-width:980px;border-collapse:separate;border-spacing:0;direction:rtl}
+    .attendance-present-groups-table th{
+      background:#eef7f4;color:#173f37;font-size:14px;font-weight:900;padding:14px 12px;
+      text-align:center;border-bottom:1px solid #cfe0da
+    }
+    .attendance-present-groups-table td{
+      padding:14px 12px;border-bottom:1px solid #edf2f0;text-align:center;vertical-align:middle;
+      font-size:13px;color:#405c55;background:#fff
+    }
+    .attendance-present-groups-table tr:last-child td{border-bottom:0}
+    .attendance-present-groups-table tbody tr:nth-child(even) td{background:#fbfdfc}
+    .attendance-present-groups-table tbody tr:hover td{background:#f3faf7}
+    .apg-class b,.apg-date b,.apg-teacher b{display:block;color:#183f37;font-size:14px}
+    .apg-class span,.apg-date span,.apg-teacher span{display:block;margin-top:4px;color:#748781;font-size:11px}
+    .apg-subject{font-weight:800;color:#35574f!important}
+    .apg-show-students{
+      border:1px solid #0f7665;background:#e9f6f2;color:#0f7665;border-radius:11px;padding:9px 13px;
+      font-family:inherit;font-weight:900;cursor:pointer;white-space:nowrap
+    }
+    .apg-show-students span{
+      display:inline-flex;min-width:24px;height:24px;border-radius:999px;background:#0f7665;color:#fff;
+      align-items:center;justify-content:center;margin-right:5px;font-size:11px
+    }
+    .present-attendance-group-modal{
+      position:fixed;inset:0;z-index:5000;background:rgba(9,34,29,.42);display:flex;align-items:center;
+      justify-content:center;padding:20px;direction:rtl
+    }
+    .present-attendance-group-card{
+      width:min(920px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;
+      box-shadow:0 24px 70px rgba(0,0,0,.22);padding:20px
+    }
+    .present-attendance-group-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+    .present-attendance-group-head h3{margin:0;color:#173f37;font-size:21px}
+    .present-attendance-group-head p{margin:6px 0 0;color:#6c807a;font-size:13px}
+    .present-attendance-group-close{
+      width:42px;height:42px;border:0;border-radius:50%;background:#f2f6f5;color:#34534b;font-size:28px;cursor:pointer
+    }
+    .present-attendance-group-summary{
+      display:flex;gap:18px;flex-wrap:wrap;margin:16px 0;padding:10px 12px;border-radius:12px;
+      background:#f7faf9;border:1px solid #e1ebe8;font-size:13px;color:#536b65
+    }
+    .present-attendance-group-table-wrap{overflow-x:auto;border:1px solid #dfe9e6;border-radius:14px}
+    .present-attendance-group-table{width:100%;border-collapse:collapse;min-width:680px}
+    .present-attendance-group-table th{background:#eef7f4;padding:11px 10px;color:#183f37;font-weight:900}
+    .present-attendance-group-table td{padding:10px;border-top:1px solid #edf2f0;text-align:center}
+    .present-attendance-group-table .student-name{text-align:right;font-weight:800;color:#274941}
+    .present-attendance-group-table .student-id{direction:ltr;font-weight:700;color:#506962}
+    .student-actions{white-space:nowrap}
+    .group-student-edit,.group-student-delete{
+      height:36px;border-radius:9px;font-family:inherit;font-weight:900;cursor:pointer
+    }
+    .group-student-edit{border:1px solid #0f7665;background:#e9f6f2;color:#0f7665;padding:0 12px}
+    .group-student-delete{border:1px solid #efc3c0;background:#fff0f0;color:#c92c24;width:42px;margin-right:5px}
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
