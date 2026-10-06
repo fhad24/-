@@ -12452,7 +12452,8 @@ async function renderAttendancePage(){
               <tr>
                 <th>الصف</th>
                 <th>الفصل</th>
-                <th>التاريخ / الحصة</th>
+                <th>التاريخ</th>
+                <th>الحصة</th>
                 <th>المسجل</th>
                 <th>المادة</th>
                 <th>الإجراء</th>
@@ -12463,7 +12464,8 @@ async function renderAttendancePage(){
                 <tr>
                   <td class="apg-grade"><b>${escapeFollowupHtml(g.grade||'—')}</b></td>
                   <td class="apg-classroom"><b>${escapeFollowupHtml(displayStudentClassroom(g.classroom)||g.classroom||'—')}</b></td>
-                  <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b><span>${g.period?'الحصة '+escapeFollowupHtml(g.period):'بدون حصة'}</span></td>
+                  <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b></td>
+                  <td class="apg-period"><b>${g.period?('الحصة '+escapeFollowupHtml(g.period)):'بدون حصة'}</b></td>
                   <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
                   <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
                   <td class="apg-action"><button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button></td>
@@ -16385,6 +16387,22 @@ function printStudents(rows){
       background:#f6faf9!important;
       color:#234b42!important;
       border-color:#cfe2dc!important;
+    }
+
+    .apg-period b{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:120px;
+      min-height:54px;
+      padding:8px 16px;
+      border-radius:14px;
+      background:#eef7ff;
+      border:1px solid #cfe3f4;
+      color:#245f8f;
+      font-size:27px!important;
+      font-weight:900!important;
+      white-space:nowrap;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
