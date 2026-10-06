@@ -8084,6 +8084,11 @@ if($('studentTransferApprovalsRefresh')) $('studentTransferApprovalsRefresh').on
 if($('studentTransferBackBtn')) $('studentTransferBackBtn').onclick=openAdminDashboardInternal;
 
 function openInternalPage(pageId){
+  // إبقاء شريط التنقل وزر الصفحة الرئيسية ظاهرين داخل جميع صفحات المستخدم/الأدمن بعد تسجيل الدخول.
+  if(localStorage.getItem('adminLoggedIn')==='1'){
+    document.body.classList.add('admin-mode');
+  }
+  ensureHeaderAdminHomeButton();
   refreshOwnerHomeButton();
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(pageId)?.classList.remove('hidden');
@@ -8147,6 +8152,14 @@ function openInternalPage(pageId){
     }
     if(typeof initStudentTransferManager==='function') setTimeout(initStudentTransferManager,0);
   }
+  // إعادة تثبيت زر الصفحة الرئيسية بعد فتح أي صفحة داخلية حتى لا يختفي بسبب إعادة تهيئة الواجهة.
+  setTimeout(()=>{
+    try{
+      ensureHeaderAdminHomeButton();
+      refreshOwnerHomeButton();
+    }catch(e){}
+  },0);
+
   if(pageId==='weeklyAttendanceReport'){
     if(!isCurrentOwner()){
       $('weeklyAttendanceReport')?.classList.add('hidden');
