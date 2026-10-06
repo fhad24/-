@@ -3094,6 +3094,236 @@
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+
+<style id="presentHijriCalendarMainStyle">
+#attendancePresentHijriFilter{
+  margin:14px 0 18px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  display:flex!important;
+  justify-content:flex-start!important;
+}
+#attendancePresentHijriFilter.hidden{display:none!important}
+#attendancePresentHijriFilter .attendance-present-single-calendar{
+  position:relative!important;
+  width:360px!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#attendancePresentHijriOpen{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  width:100%!important;
+  min-height:72px!important;
+  display:grid!important;
+  grid-template-columns:54px 1fr 28px!important;
+  align-items:center!important;
+  gap:13px!important;
+  padding:9px 15px!important;
+  border:1px solid #c8ddd7!important;
+  border-radius:20px!important;
+  background:#fff!important;
+  box-shadow:0 8px 24px rgba(18,62,53,.10)!important;
+  font-family:inherit!important;
+  text-align:right!important;
+  color:#153f37!important;
+  cursor:pointer!important;
+  overflow:hidden!important;
+}
+#attendancePresentHijriOpen:hover{
+  border-color:#8fc6b7!important;
+  box-shadow:0 11px 30px rgba(18,62,53,.15)!important;
+  transform:translateY(-1px)!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-icon{
+  position:relative!important;
+  width:50px!important;
+  height:50px!important;
+  border-radius:15px!important;
+  display:block!important;
+  background:linear-gradient(180deg,#12836f,#0b6759)!important;
+  box-shadow:0 5px 12px rgba(15,118,101,.24)!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-icon:before{
+  content:''!important;
+  position:absolute!important;
+  left:11px!important;right:11px!important;top:13px!important;
+  height:25px!important;
+  background:#fff!important;
+  border-radius:5px!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-icon:after{
+  content:''!important;
+  position:absolute!important;
+  left:11px!important;right:11px!important;top:18px!important;
+  height:5px!important;
+  background:#d9f1ea!important;
+  border-radius:2px!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-icon i:before,
+#attendancePresentHijriOpen .attendance-present-hijri-icon i:after{
+  content:''!important;
+  position:absolute!important;
+  top:8px!important;
+  width:5px!important;
+  height:10px!important;
+  border-radius:3px!important;
+  background:#fff!important;
+  z-index:3!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-icon i:before{right:14px!important}
+#attendancePresentHijriOpen .attendance-present-hijri-icon i:after{left:14px!important}
+#attendancePresentHijriOpen .attendance-present-hijri-copy{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:3px!important;
+  min-width:0!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-copy small{
+  display:block!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  color:#758982!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-copy b{
+  display:block!important;
+  font-size:22px!important;
+  line-height:1.25!important;
+  font-weight:900!important;
+  color:#123e35!important;
+  white-space:nowrap!important;
+}
+#attendancePresentHijriOpen .attendance-present-hijri-chevron{
+  width:28px!important;
+  height:28px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:50%!important;
+  background:#edf7f4!important;
+  color:#0f7665!important;
+  font-size:19px!important;
+  font-weight:900!important;
+}
+#attendancePresentHijriPopup{
+  position:absolute!important;
+  top:82px!important;
+  right:0!important;
+  z-index:6000!important;
+  width:420px!important;
+  max-width:94vw!important;
+  padding:18px!important;
+  border:1px solid #cfe2dc!important;
+  border-radius:22px!important;
+  background:#fff!important;
+  box-shadow:0 22px 60px rgba(18,62,53,.22)!important;
+}
+#attendancePresentHijriPopup.hidden{display:none!important}
+#attendancePresentHijriPopup .attendance-present-hijri-header{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  margin-bottom:14px!important;
+  padding-bottom:12px!important;
+  border-bottom:1px solid #edf3f1!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-header small{
+  display:block!important;
+  font-size:13px!important;
+  font-weight:800!important;
+  color:#7b8f89!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-header strong{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:24px!important;
+  color:#143f37!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-nav{
+  display:flex!important;
+  gap:8px!important;
+  margin:0!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-nav button{
+  width:44px!important;height:44px!important;
+  border:1px solid #d4e8e2!important;
+  border-radius:12px!important;
+  background:#eef8f5!important;
+  color:#0f7665!important;
+  font-size:26px!important;
+  font-weight:900!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-weekdays,
+#attendancePresentHijriPopup .attendance-present-hijri-days{
+  display:grid!important;
+  grid-template-columns:repeat(7,1fr)!important;
+  gap:7px!important;
+  text-align:center!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-weekdays span{
+  padding:7px 0!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  color:#61766f!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-days button,
+#attendancePresentHijriPopup .attendance-present-hijri-days .empty{
+  height:46px!important;
+  border-radius:12px!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-days button{
+  border:1px solid #dceae5!important;
+  background:#fff!important;
+  color:#244c42!important;
+  font-family:inherit!important;
+  font-size:18px!important;
+  font-weight:900!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-days button:hover{
+  background:#edf8f4!important;
+  border-color:#b9dbd0!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-days button.selected{
+  background:#0f7665!important;
+  color:#fff!important;
+  border-color:#0f7665!important;
+  box-shadow:0 5px 14px rgba(15,118,101,.24)!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-footer{
+  display:flex!important;
+  gap:8px!important;
+  margin-top:14px!important;
+  padding-top:12px!important;
+  border-top:1px solid #edf3f1!important;
+}
+#attendancePresentHijriPopup .attendance-present-hijri-footer button{
+  flex:1!important;
+  height:48px!important;
+  border-radius:12px!important;
+  font-family:inherit!important;
+  font-size:17px!important;
+  font-weight:900!important;
+}
+#attendancePresentHijriToday{
+  background:#0f7665!important;
+  color:#fff!important;
+  border:1px solid #0f7665!important;
+}
+#attendancePresentHijriAll{
+  background:#f6faf9!important;
+  color:#234b42!important;
+  border:1px solid #cfe2dc!important;
+}
+@media(max-width:600px){
+  #attendancePresentHijriFilter .attendance-present-single-calendar{width:100%!important}
+  #attendancePresentHijriOpen{min-height:66px!important}
+  #attendancePresentHijriOpen .attendance-present-hijri-copy b{font-size:19px!important}
+}
+</style>
 </head>
 <body>
 <div class="app">
