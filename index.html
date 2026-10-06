@@ -4044,12 +4044,12 @@
           <div id="attendancePresentHijriFilter" class="attendance-present-hijri-filter hidden">
             <div class="attendance-present-single-calendar">
               <button type="button" id="attendancePresentHijriOpen" class="attendance-present-hijri-open">
-                <span class="attendance-present-hijri-icon">📅</span>
+                <span class="attendance-present-hijri-icon" aria-hidden="true"><i></i></span>
                 <span class="attendance-present-hijri-copy">
-                  <small>التاريخ الهجري</small>
+                  <small>اختر التاريخ الهجري</small>
                   <b id="attendancePresentHijriDisplay">اختر اليوم</b>
                 </span>
-                <span class="attendance-present-hijri-chevron">⌄</span>
+                <span class="attendance-present-hijri-chevron" aria-hidden="true">⌄</span>
               </button>
               <input type="hidden" id="attendancePresentFilterGregorianDate">
               <div id="attendancePresentHijriPopup" class="attendance-present-hijri-popup hidden">
@@ -16403,6 +16403,105 @@ function printStudents(rows){
       font-size:27px!important;
       font-weight:900!important;
       white-space:nowrap;
+    }
+
+    /* الشكل النهائي لزر التقويم الهجري */
+    .attendance-present-hijri-filter{
+      margin:12px 0 16px!important;
+      justify-content:flex-start!important;
+    }
+    .attendance-present-single-calendar{
+      width:360px!important;
+      max-width:100%!important;
+    }
+    .attendance-present-hijri-open{
+      min-height:68px!important;
+      grid-template-columns:52px 1fr 24px!important;
+      gap:12px!important;
+      padding:8px 14px!important;
+      border:1px solid #d4e6e0!important;
+      border-radius:18px!important;
+      background:#ffffff!important;
+      box-shadow:0 6px 18px rgba(20,63,55,.08)!important;
+      transition:.18s ease!important;
+    }
+    .attendance-present-hijri-open:hover{
+      border-color:#9fcfc1!important;
+      box-shadow:0 9px 24px rgba(20,63,55,.12)!important;
+      transform:translateY(-1px);
+    }
+    .attendance-present-hijri-icon{
+      position:relative!important;
+      width:48px!important;
+      height:48px!important;
+      border-radius:14px!important;
+      background:linear-gradient(180deg,#0f7665 0%,#0b6657 100%)!important;
+      box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)!important;
+      display:block!important;
+    }
+    .attendance-present-hijri-icon:before{
+      content:''!important;
+      position:absolute!important;
+      left:10px!important;
+      right:10px!important;
+      top:12px!important;
+      height:23px!important;
+      border-radius:5px!important;
+      background:#fff!important;
+      box-shadow:0 0 0 2px rgba(255,255,255,.28)!important;
+    }
+    .attendance-present-hijri-icon:after{
+      content:''!important;
+      position:absolute!important;
+      left:10px!important;
+      right:10px!important;
+      top:17px!important;
+      height:5px!important;
+      background:#dff3ed!important;
+      border-radius:2px!important;
+    }
+    .attendance-present-hijri-icon i:before,
+    .attendance-present-hijri-icon i:after{
+      content:''!important;
+      position:absolute!important;
+      top:7px!important;
+      width:5px!important;
+      height:10px!important;
+      border-radius:3px!important;
+      background:#fff!important;
+      z-index:2!important;
+    }
+    .attendance-present-hijri-icon i:before{right:14px!important}
+    .attendance-present-hijri-icon i:after{left:14px!important}
+    .attendance-present-hijri-copy{
+      gap:1px!important;
+      align-items:flex-start!important;
+    }
+    .attendance-present-hijri-copy small{
+      font-size:13px!important;
+      font-weight:800!important;
+      color:#778983!important;
+    }
+    .attendance-present-hijri-copy b{
+      font-size:21px!important;
+      color:#123e35!important;
+      line-height:1.25!important;
+    }
+    .attendance-present-hijri-chevron{
+      width:24px!important;
+      height:24px!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      border-radius:50%!important;
+      background:#eef7f4!important;
+      color:#0f7665!important;
+      font-size:18px!important;
+    }
+    @media(max-width:600px){
+      .attendance-present-single-calendar{width:100%!important}
+      .attendance-present-hijri-open{min-height:64px!important}
+      .attendance-present-hijri-copy b{font-size:19px!important}
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
