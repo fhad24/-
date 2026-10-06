@@ -7500,7 +7500,7 @@ function buildExactFollowupPagedClones(blank=false){
   }
 
   const pages=[];
-  const rowsPerPage=25;
+  const rowsPerPage=23;
 
   groups.forEach(group=>{
     const groupStudents=group.students.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
