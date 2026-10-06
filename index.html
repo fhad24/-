@@ -587,6 +587,10 @@
     .attendance-period-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
     .attendance-period-badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#e7f5f1;color:#0f6f60;font-weight:900;font-size:10px}
     .attendance-period-badge.missing{background:#fdeceb;color:#b42318}
+    .attendance-prepared-row td{background:#f0fbf6}
+    .attendance-unprepared-row td{background:#fff7f6}
+    .attendance-prepared-status{color:#087a55}
+    .attendance-unprepared-status{color:#b42318}
     @media(max-width:900px){
       .attendance-monitoring-grid{grid-template-columns:1fr}
       .attendance-monitoring-summary{grid-template-columns:1fr}
@@ -3965,7 +3969,7 @@
       </div>
       <div class="card admin-toolbar">
         <div class="admin-top-tabs">
-          <button class="admin-pill" id="adminAddStudentTab">إضافة طالب/تعديل ✏️➕</button>
+          <button class="admin-pill" id="adminAddStudentTab">إدارة الطلاب ونقل الفصول 🔄</button>
           <button class="admin-pill" id="adminAttendanceTab">تحضير الطلاب 🕘</button>
           <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
@@ -4057,7 +4061,7 @@
             </div>
 
             <div class="attendance-monitoring-pane">
-              <h4>🏫 الصفوف والفصول غير المحضرة</h4>
+              <h4>🏫 الصفوف والفصول وحالة التحضير</h4>
               <div class="attendance-unprepared-date-row">
                 <div class="attendance-hijri-monitor-picker">
                   <button type="button" id="attendanceMonitoringHijriOpen" class="attendance-hijri-monitor-field">
@@ -4086,7 +4090,7 @@
                   <span id="attendanceMonitoringHijri">—</span>
                 </div>
               </div>
-              <div class="hint">إذا بدأ تحضير حصة في المدرسة، يظهر هنا كل صف/فصل لم يُسجل له أي تحضير في الحصة نفسها.</div>
+              <div class="hint">يظهر هنا جميع الصفوف والفصول في الحصص التي بدأ تحضيرها: المحضَّر بالأخضر وغير المحضَّر بالأحمر.</div>
               <div class="attendance-monitoring-table-wrap">
                 <table class="attendance-monitoring-table">
                   <thead><tr><th>م</th><th>الحصة</th><th>الصف</th><th>الفصل</th><th>الحالة</th></tr></thead>
@@ -4163,6 +4167,10 @@
         </div>
 
         <button class="btn btn-primary add-student-btn" id="addStudentBtn">+ إضافة طالب/تعديل</button>
+        <div class="admin-bulk-actions" style="margin-top:-4px">
+          <button class="admin-outline-btn primary" id="studentTransferManageBtn" type="button">🔄 إدارة الطلاب ونقلهم بين الفصول</button>
+          <button class="admin-outline-btn" id="studentChangeRequestsBtn" type="button">✅ طلبات تعديل الطلاب <span id="studentChangeRequestsCount"></span></button>
+        </div>
         <button class="admin-outline-btn" id="pendingStudentPhotosBtn" type="button" style="width:100%;margin:-4px 0 14px">📷 صور الطلاب بانتظار اعتماد الإدارة <span id="pendingStudentPhotosCount"></span></button>
 
         <div class="admin-bulk-actions">
@@ -5354,6 +5362,25 @@ function dataURLToBlob(dataUrl){
     for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
     return new Blob([arr],{type:mime});
   }catch(e){return null}
+}
+
+const STUDENT_CHANGE_RPC_URL='https://mlfvjsfqdmantevamzqz.supabase.co/rest/v1/rpc/student_change_api';
+const STUDENT_CHANGE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZnZqc2ZxZG1hbnRldmFtenF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NTI2NTAsImV4cCI6MjEwNjUyODY1MH0.ewTJGr7GirUC659Tzfuc096S2jnGbtl3V3uh00N8FhQ';
+async function studentChangeApi(action,payload={}){
+  const token=localStorage.getItem('cloudAdminToken')||'';
+  if(!token) throw new Error('NO_CLOUD_SESSION');
+  const res=await fetch(STUDENT_CHANGE_RPC_URL,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':STUDENT_CHANGE_ANON_KEY,
+      'Authorization':'Bearer '+STUDENT_CHANGE_ANON_KEY
+    },
+    body:JSON.stringify({p_token:token,p_action:action,p_payload:payload})
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok || data?.error) throw new Error(data?.error||('HTTP '+res.status));
+  return data;
 }
 
 async function cloudPullToLocal(){
@@ -6853,7 +6880,7 @@ function configureUserDashboard(){
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
     ['reports','التقارير 📊','reports'],
-    ['addStudent','إضافة طالب/تعديل ✏️➕','addStudent'],
+    ['addStudent','إدارة الطلاب ونقل الفصول 🔄','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
@@ -8967,6 +8994,84 @@ if(isCurrentOwner()) setTimeout(()=>updatePendingStudentPhotosCount().catch(()=>
 
 if($('exportStudentEditDatabaseBtn')) $('exportStudentEditDatabaseBtn').onclick=()=>exportStudentEditDatabase(false);
 if($('exportEmptyStudentTemplateBtn')) $('exportEmptyStudentTemplateBtn').onclick=()=>exportStudentEditDatabase(true);
+
+async function refreshStudentChangeRequestsCount(){
+  const el=$('studentChangeRequestsCount');
+  if(!el || !isCurrentOwner()) return;
+  try{
+    const r=await studentChangeApi('list');
+    const rows=Array.isArray(r.rows)?r.rows:[];
+    el.textContent=rows.length?'('+rows.length+')':'';
+  }catch(e){ el.textContent=''; }
+}
+async function openStudentChangeRequestsModal(){
+  if(!isCurrentOwner()) return;
+  let rows=[];
+  try{
+    const r=await studentChangeApi('list');
+    rows=Array.isArray(r.rows)?r.rows:[];
+  }catch(e){
+    alert('تعذر تحميل طلبات تعديل الطلاب.');
+    return;
+  }
+  document.getElementById('studentChangeRequestsModal')?.remove();
+  const ov=document.createElement('div');
+  ov.id='studentChangeRequestsModal';
+  ov.className='modal-backdrop';
+  ov.innerHTML=`
+    <div class="modal-card" style="width:min(980px,96vw);max-height:88vh;overflow:auto">
+      <button type="button" class="modal-close-x" id="studentChangeRequestsClose">×</button>
+      <h2>طلبات تعديل ونقل الطلاب بانتظار اعتماد الأدمن</h2>
+      <div class="hint" style="margin-bottom:12px">لا يُطبق أي تعديل من المستخدمين إلا بعد موافقتك.</div>
+      <div class="table-wrap">
+        <table class="admin-table" style="min-width:900px">
+          <thead><tr><th>الطالب</th><th>السجل الحالي</th><th>السجل الجديد</th><th>الصف</th><th>الفصل</th><th>مقدم الطلب</th><th>الإجراء</th></tr></thead>
+          <tbody>
+          ${rows.length?rows.map(r=>`<tr>
+            <td><b>${escapeFollowupHtml(r.name||'')}</b><br><small>${escapeFollowupHtml(r.phone||'')}</small></td>
+            <td>${escapeFollowupHtml(r.old_idno||'')}</td>
+            <td>${escapeFollowupHtml(r.new_idno||'')}</td>
+            <td>${escapeFollowupHtml(r.grade||'')}</td>
+            <td>${escapeFollowupHtml(displayStudentClassroom(r.classroom)||'')}</td>
+            <td>${escapeFollowupHtml(r.requested_by_name||r.requested_by_username||'')}</td>
+            <td>
+              <button type="button" class="tiny-btn approve-student-change" data-id="${r.id}">✅ اعتماد</button>
+              <button type="button" class="tiny-btn reject-student-change" data-id="${r.id}" style="color:#b42318">رفض</button>
+            </td>
+          </tr>`).join(''):'<tr><td colspan="7">لا توجد طلبات معلقة.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  $('studentChangeRequestsClose').onclick=()=>ov.remove();
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+  ov.querySelectorAll('.approve-student-change').forEach(btn=>btn.onclick=async()=>{
+    if(!confirm('هل تريد اعتماد هذا التعديل وتطبيقه على الطالب؟'))return;
+    btn.disabled=true;
+    try{
+      await studentChangeApi('approve',{id:Number(btn.dataset.id)});
+      await cloudPullToLocal();
+      renderAdmin();
+      toast('تم اعتماد تعديل الطالب');
+      ov.remove();
+      refreshStudentChangeRequestsCount();
+    }catch(e){alert('تعذر الاعتماد: '+(e?.message||e));btn.disabled=false}
+  });
+  ov.querySelectorAll('.reject-student-change').forEach(btn=>btn.onclick=async()=>{
+    if(!confirm('هل تريد رفض هذا الطلب؟'))return;
+    btn.disabled=true;
+    try{
+      await studentChangeApi('reject',{id:Number(btn.dataset.id)});
+      toast('تم رفض الطلب');
+      ov.remove();
+      refreshStudentChangeRequestsCount();
+    }catch(e){alert('تعذر رفض الطلب');btn.disabled=false}
+  });
+}
+if($('studentTransferManageBtn')) $('studentTransferManageBtn').onclick=()=>openAddStudentModal();
+if($('studentChangeRequestsBtn')) $('studentChangeRequestsBtn').onclick=openStudentChangeRequestsModal;
+setTimeout(refreshStudentChangeRequestsCount,500);
 
 if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
@@ -11281,9 +11386,38 @@ function getAttendanceMonitoringData(){
     return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
   });
 
+  const classStatuses=[];
+  [...activePeriods].sort((a,b)=>a-b).forEach(period=>{
+    cohortMap.forEach(cohort=>{
+      classStatuses.push({
+        period,
+        grade:cohort.grade,
+        classroom:cohort.classroom,
+        key:cohort.key,
+        prepared:!!preparedByCohort.get(cohort.key)?.has(period)
+      });
+    });
+  });
+  classStatuses.sort((a,b)=>{
+    if(a.period!==b.period) return a.period-b.period;
+    const ga=gradeOrder[String(a.grade||'').trim()]||99;
+    const gb=gradeOrder[String(b.grade||'').trim()]||99;
+    if(ga!==gb) return ga-gb;
+    const ca=String(displayStudentClassroom(a.classroom)||a.classroom||'').trim();
+    const cb=String(displayStudentClassroom(b.classroom)||b.classroom||'').trim();
+    const ia=classOrder.indexOf(ca), ib=classOrder.indexOf(cb);
+    if(ia!==ib){
+      if(ia<0) return 1;
+      if(ib<0) return -1;
+      return ia-ib;
+    }
+    return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
+  });
+
   return {
     escapees,
     unprepared,
+    classStatuses,
     activePeriods:[...activePeriods].sort((a,b)=>a-b),
     preparedByCohort
   };
@@ -11323,15 +11457,15 @@ function renderAttendanceMonitoring(){
     if(!data.activePeriods.length){
       unpreparedBody.innerHTML='<tr><td colspan="5">لم يبدأ تحضير أي حصة حتى الآن.</td></tr>';
     }else{
-      unpreparedBody.innerHTML=data.unprepared.length
-        ? data.unprepared.map((r,i)=>`<tr>
+      unpreparedBody.innerHTML=data.classStatuses.length
+        ? data.classStatuses.map((r,i)=>`<tr class="${r.prepared?'attendance-prepared-row':'attendance-unprepared-row'}">
             <td>${i+1}</td>
             <td>${escapeFollowupHtml(attendancePeriodLabel(r.period))}</td>
             <td>${escapeFollowupHtml(r.grade||'')}</td>
             <td>${escapeFollowupHtml(displayStudentClassroom(r.classroom)||'')}</td>
-            <td><b style="color:#b42318">لم يتم التحضير</b></td>
+            <td><b class="${r.prepared?'attendance-prepared-status':'attendance-unprepared-status'}">${r.prepared?'✓ تم التحضير':'✕ لم يتم التحضير'}</b></td>
           </tr>`).join('')
-        : '<tr><td colspan="5">تم تحضير جميع الصفوف والفصول في الحصص التي بدأ تحضيرها اليوم ✅</td></tr>';
+        : '<tr><td colspan="5">لا توجد فصول للعرض في التاريخ المختار.</td></tr>';
     }
   }
 }
@@ -15121,6 +15255,10 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
   try{
     const isEditing=!!normalizeCivilId(addStudentOriginalId||addStudentSelectedId);
     if(!isEditing){
+      if(!isCurrentOwner()){
+        alert('إضافة طالب جديد من هذه الصفحة تحتاج اعتماد الإدارة. استخدم طالبًا موجودًا لإرسال طلب تعديل أو نقل.');
+        return;
+      }
       if(students.some(s=>normalizeCivilId(s.idno)===idno)){
         alert('لا يمكن الإضافة: السجل المدني موجود مسبقًا. اختر وضع تعديل طالب موجود.');
         return;
@@ -15189,8 +15327,22 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
     }
 
     const old={...students[idx]};
+
+    if(!isCurrentOwner()){
+      await studentChangeApi('submit',{
+        old_idno:oldId,new_idno:idno,name,phone,grade,classroom
+      });
+      alert('✅ تم إرسال طلب تعديل/نقل الطالب للإدارة. لن يتم تطبيق التغيير إلا بعد اعتماد الأدمن.');
+      toast('تم إرسال طلب التعديل للاعتماد');
+      await selectExistingStudentForUnifiedForm(old);
+      return;
+    }
+
+    await studentChangeApi('owner_update',{
+      old_idno:oldId,new_idno:idno,name,phone,grade,classroom
+    });
     students[idx]={...old,name,idno,phone,grade,classroom};
-    saveStudents(students);
+    localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
 
     if(idno!==oldId){
       try{
