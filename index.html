@@ -12343,17 +12343,61 @@ async function renderAttendancePage(){
         : ((isLateRow||isAbsentRow) && !x._autoAbsent)
           ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
           : '';
+      if(isPresentRow){
+        const dateText=(x.hijriDate||x.date||'—');
+        const classText=(x.grade||'—')+' / '+displayStudentClassroom(x.classroom);
+        const recorderText=(x.teacherName||x.teacherUsername)
+          ? ((x.teacherName||x.teacherUsername)+' — '+(x.teacherCivilId||x.teacherUsername||''))
+          : '—';
+        return `
+          <div class="attendance-present-card">
+            <div class="attendance-present-card-main">
+              <div class="attendance-present-photo-wrap">${photoHTML}</div>
+              <div class="attendance-present-info">
+                <div class="attendance-present-title-row">
+                  ${nameCheck}
+                  <div class="attendance-present-student-name">${x.name||''}</div>
+                </div>
+                <div class="attendance-present-chips">
+                  <span class="attendance-present-chip id">🪪 ${x.idno||'—'}</span>
+                  <span class="attendance-present-chip class">🏫 ${classText}</span>
+                  <span class="attendance-present-chip period">🕘 ${x.period?('الحصة '+x.period):'بدون حصة'}</span>
+                  ${x.subject?`<span class="attendance-present-chip subject">📘 ${x.subject}</span>`:''}
+                </div>
+                <div class="attendance-present-recorder-line">سجلها: <b>${recorderText}</b></div>
+              </div>
+            </div>
+
+            <div class="attendance-present-card-meta">
+              <div class="attendance-present-meta-box">
+                <span>التاريخ</span>
+                <b>${dateText}</b>
+              </div>
+              <div class="attendance-present-meta-box">
+                <span>الحصة</span>
+                <b>${x.period?('الحصة '+x.period):'بدون حصة'}</b>
+              </div>
+              <div class="attendance-present-meta-box status">
+                <span>الحالة</span>
+                <b>✓ حاضر</b>
+              </div>
+            </div>
+
+            <div class="attendance-present-card-actions">
+              ${canModify
+                ? `<button type="button" class="attendance-present-action edit" data-edit-att-index="${x._index}">✏️ تعديل</button>
+                   <button type="button" class="attendance-present-action delete" data-delete-att-index="${x._index}">🗑 حذف</button>`
+                : '<span class="attendance-present-readonly">التعديل للأدمن فقط</span>'}
+            </div>
+          </div>`;
+      }
+
       return `
         <div class="attendance-saved-row">
           <div class="attendance-saved-student">
-            <div class="attendance-photo-select-wrap">
-              ${photoHTML}
-            </div>
+            <div class="attendance-photo-select-wrap">${photoHTML}</div>
             <div>
-              <div class="attendance-saved-name-line">
-                ${nameCheck}
-                <div class="attendance-saved-name">${x.name||''}</div>
-              </div>
+              <div class="attendance-saved-name-line">${nameCheck}<div class="attendance-saved-name">${x.name||''}</div></div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
               ${x.subject?`<span class="attendance-period-chip">📘 ${x.subject}</span>`:''}
               ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
@@ -12363,9 +12407,7 @@ async function renderAttendancePage(){
           <div class="attendance-saved-class-cell">${x.grade||'—'} / ${displayStudentClassroom(x.classroom)}</div>
           <div class="attendance-saved-time">${attendanceListView==='late'
             ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
-            : attendanceListView==='present'
-              ? ((x.hijriDate||x.date||'—') + ' — ' + (x.period?('الحصة '+x.period):'بدون حصة'))
-              : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
+            : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
           <div class="attendance-saved-actions">
             ${isAbsentRow
               ? (x._autoAbsent
@@ -12383,17 +12425,18 @@ async function renderAttendancePage(){
         </div>`;
     }));
 
-    $('attendanceDailyList').innerHTML=`
-      <div class="attendance-saved-table">
-        <div class="attendance-saved-head">
-          <div>الطالب</div>
-          <div>السجل المدني</div>
-          <div>الصف / الفصل</div>
-          <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':attendanceListView==='present'?'التاريخ / الحصة':'وقت التسجيل'}</div>
-          <div style="text-align:center">إجراء</div>
-        </div>
-        ${rendered.join('')}
-      </div>`;
+    $('attendanceDailyList').innerHTML=attendanceListView==='present'
+      ? `<div class="attendance-present-list">${rendered.join('')}</div>`
+      : `<div class="attendance-saved-table">
+          <div class="attendance-saved-head">
+            <div>الطالب</div>
+            <div>السجل المدني</div>
+            <div>الصف / الفصل</div>
+            <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':'وقت التسجيل'}</div>
+            <div style="text-align:center">إجراء</div>
+          </div>
+          ${rendered.join('')}
+        </div>`;
 
     document.querySelectorAll('[data-delete-att-index]').forEach(btn=>{
       btn.onclick=()=>{
@@ -15204,6 +15247,54 @@ function printStudents(rows){
     .attendance-prep-rebuilt-table .attendance-unprepared-row td{background:#fff3f3!important}
     .attendance-prep-rebuilt-table .attendance-prepared-status{display:inline-block;padding:5px 9px;border-radius:999px;background:#dff6eb;color:#087a58;font-weight:900}
     .attendance-prep-rebuilt-table .attendance-unprepared-status{display:inline-block;padding:5px 9px;border-radius:999px;background:#fde2e2;color:#c52d2d;font-weight:900}
+
+    .attendance-present-list{display:flex;flex-direction:column;gap:14px;margin-top:12px}
+    .attendance-present-card{display:grid;grid-template-columns:minmax(0,1fr) 330px 135px;gap:16px;align-items:center;background:#fff;border:1px solid #d7e6e1;border-radius:20px;padding:16px 18px;box-shadow:0 7px 20px rgba(16,82,69,.06)}
+    .attendance-present-card:hover{box-shadow:0 10px 24px rgba(16,82,69,.09);transform:translateY(-1px)}
+    .attendance-present-card-main{display:flex;align-items:center;gap:14px;min-width:0}
+    .attendance-present-photo-wrap{width:78px;min-width:78px;display:flex;align-items:center;justify-content:center}
+    .attendance-present-card .attendance-saved-avatar{width:72px!important;height:72px!important;border-radius:50%;object-fit:cover;border:3px solid #e3f1ed;background:#f5f9f8}
+    .attendance-present-card .attendance-saved-avatar.placeholder{display:flex;align-items:center;justify-content:center;font-size:28px}
+    .attendance-present-info{min-width:0;flex:1}
+    .attendance-present-title-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .attendance-present-student-name{font-size:21px;font-weight:900;color:#163e37;line-height:1.35}
+    .attendance-present-title-row .attendance-name-check{margin:0;display:flex;align-items:center}
+    .attendance-present-title-row input{width:20px;height:20px;accent-color:#0f7665}
+    .attendance-present-chips{display:flex;flex-wrap:wrap;gap:7px}
+    .attendance-present-chip{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f5f8f7;border:1px solid #dde8e5;color:#465f59}
+    .attendance-present-chip.class{background:#eef8f5;color:#0f7665;border-color:#cfe7df}
+    .attendance-present-chip.period{background:#edf7ff;color:#245f8f;border-color:#d2e7f8}
+    .attendance-present-chip.subject{background:#fff8e8;color:#8a6500;border-color:#f1e3b8}
+    .attendance-present-recorder-line{margin-top:9px;font-size:12px;color:#6b7d78}
+    .attendance-present-recorder-line b{color:#465f59}
+    .attendance-present-card-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .attendance-present-meta-box{background:#f8fbfa;border:1px solid #e1ebe8;border-radius:13px;padding:10px 12px;min-width:0}
+    .attendance-present-meta-box span{display:block;font-size:11px;color:#7b8d88;margin-bottom:4px}
+    .attendance-present-meta-box b{display:block;font-size:13px;color:#2b4a43;white-space:normal}
+    .attendance-present-meta-box.status{grid-column:1/-1;background:#ecf9f3;border-color:#ccebdc}
+    .attendance-present-meta-box.status b{color:#0a7658}
+    .attendance-present-card-actions{display:flex;flex-direction:column;gap:8px}
+    .attendance-present-action{border:0;border-radius:12px;padding:11px 12px;font-family:inherit;font-weight:900;cursor:pointer}
+    .attendance-present-action.edit{background:#e9f7f3;color:#0f7665;border:1px solid #bfe2d8}
+    .attendance-present-action.delete{background:#fff0f0;color:#c92c24;border:1px solid #f2c5c2}
+    .attendance-present-readonly{font-size:12px;font-weight:800;color:#71817d;text-align:center}
+    @media(max-width:1050px){
+      .attendance-present-card{grid-template-columns:1fr}
+      .attendance-present-card-meta{grid-template-columns:repeat(3,1fr)}
+      .attendance-present-meta-box.status{grid-column:auto}
+      .attendance-present-card-actions{flex-direction:row}
+      .attendance-present-action{flex:1}
+    }
+    @media(max-width:650px){
+      .attendance-present-card{padding:14px;gap:12px}
+      .attendance-present-card-main{align-items:flex-start}
+      .attendance-present-photo-wrap{width:58px;min-width:58px}
+      .attendance-present-card .attendance-saved-avatar{width:54px!important;height:54px!important}
+      .attendance-present-student-name{font-size:17px}
+      .attendance-present-card-meta{grid-template-columns:1fr}
+      .attendance-present-meta-box.status{grid-column:auto}
+      .attendance-present-card-actions{flex-direction:column}
+    }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
