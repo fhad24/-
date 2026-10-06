@@ -12290,12 +12290,20 @@ async function renderAttendancePage(){
     present:'الحضور اليومي',
     absent:'الغياب اليومي'
   };
-  $('attendanceDayTitle').textContent=`${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+  $('attendanceDayTitle').textContent=attendanceListView==='present'
+    ? 'الحضور المحفوظ — جميع الفصول'
+    : `${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
 
   {
     let rows=allLogs
       .map((row,index)=>({...row,_index:index}))
-      .filter(x=>(ownerView||attendanceRowBelongsToCurrentUser(x)) && x.date===todayKey() && x.status===attendanceListView);
+      .filter(x=>{
+        const allowed=(ownerView||attendanceRowBelongsToCurrentUser(x));
+        if(!allowed || x.status!==attendanceListView) return false;
+        // في تبويب حاضر: اعرض كل التحضيرات المحفوظة، وليس تحضير اليوم فقط.
+        if(attendanceListView==='present') return true;
+        return x.date===todayKey();
+      });
 
     // في تبويب الغياب: أي طالب لم يسجل حاضرًا أو متأخرًا اليوم يظهر غائبًا تلقائيًا.
     if(attendanceListView==='absent' && ownerView){
@@ -12320,7 +12328,9 @@ async function renderAttendancePage(){
     }
 
     if(!rows.length){
-      $('attendanceDailyList').innerHTML=`لا توجد سجلات ${labelMap[attendanceListView]} اليوم.`;
+      $('attendanceDailyList').innerHTML=attendanceListView==='present'
+        ? 'لا توجد سجلات حضور محفوظة في قاعدة البيانات.'
+        : `لا توجد سجلات ${labelMap[attendanceListView]} اليوم.`;
       return;
     }
 
@@ -12344,6 +12354,9 @@ async function renderAttendancePage(){
       });
 
       const groups=[...groupsMap.values()].sort((a,b)=>{
+        const ad=(a.rows?.[0]?.date||'');
+        const bd=(b.rows?.[0]?.date||'');
+        if(ad!==bd) return bd.localeCompare(ad);
         const g=a.grade.localeCompare(b.grade,'ar');
         if(g) return g;
         const cl=a.classroom.localeCompare(b.classroom,'ar',{numeric:true});
@@ -15756,6 +15769,36 @@ function printStudents(rows){
       .apg-grade b,.apg-date b,.apg-teacher b,.apg-subject{font-size:16px!important}
       .apg-classroom b{font-size:19px!important}
       .apg-show-students{font-size:15px!important}
+    }
+
+    /* تكبير إضافي لجدول جميع الفصول المحضرة */
+    .attendance-present-groups-table th{
+      font-size:21px!important;
+      padding:20px 16px!important;
+    }
+    .attendance-present-groups-table td{
+      font-size:19px!important;
+      padding:20px 16px!important;
+    }
+    .apg-grade b,
+    .apg-classroom b,
+    .apg-date b,
+    .apg-teacher b,
+    .apg-subject{
+      font-size:20px!important;
+    }
+    .apg-date span,
+    .apg-teacher span{
+      font-size:17px!important;
+    }
+    .apg-classroom b{
+      min-width:52px!important;
+      height:52px!important;
+      font-size:23px!important;
+    }
+    .apg-show-students{
+      font-size:19px!important;
+      padding:13px 20px!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
