@@ -7098,6 +7098,15 @@ function configureUserDashboard(){
       applyUserAttendancePrivacy();
       $('attendancePanel')?.classList.remove('hidden');
       renderAttendancePage();
+      // اجلب أحدث سجلات الحضور من السحابة فور فتح الصفحة ثم أعد الرسم.
+      (async()=>{
+        try{
+          if(localStorage.getItem('cloudAdminToken')){
+            await cloudPullToLocal();
+            renderAttendancePage();
+          }
+        }catch(e){console.warn('attendance cloud refresh',e)}
+      })();
       return;
     }
     if(action==='weeklyAttendance'){
@@ -12276,7 +12285,7 @@ async function renderAttendancePage(){
       try{
         const blob=await getStudentPhoto(`${x.idno}:face`);
         if(blob){
-          const src=await makeSharpAttendanceThumb(blob,String(x?.idno||s?.idno||''));
+          const src=await makeSharpAttendanceThumb(blob,String(x?.idno||''));
           photoHTML=`<img class="attendance-saved-avatar" src="${src}" alt="صورة الطالب">`;
         }
       }catch(e){}
