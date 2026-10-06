@@ -3995,7 +3995,6 @@
           <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
-          <button class="admin-pill" id="adminReportsTab">التقارير 📊</button>
           <button class="admin-pill" id="adminFollowupTab">كشوف متابعة الطلاب 📋</button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
@@ -4004,9 +4003,6 @@
 
       <div id="attendancePanel" class="attendance-panel hidden">
         <div class="attendance-topline">
-          <div class="attendance-actions-top">
-            <button type="button" class="admin-outline-btn">التقارير</button>
-          </div>
         </div>
 
         <div class="attendance-stats">
@@ -9560,7 +9556,6 @@ function showAdminView(view){
 if($('adminDataTab')) $('adminDataTab').onclick=()=>showAdminView('data');
 if($('adminAttendanceTab')) $('adminAttendanceTab').onclick=()=>showAdminView('attendance');
 if($('adminUnregisteredTab')) $('adminUnregisteredTab').onclick=()=>toast('سيتم عرض الطلاب غير المسجلين هنا');
-if($('adminReportsTab')) $('adminReportsTab').onclick=()=>toast('سيتم عرض التقارير هنا');
 
 async function createAdminBackupZip(){
   const btn=$('adminBackupZipBtn');
