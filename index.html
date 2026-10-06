@@ -12335,33 +12335,72 @@ async function renderAttendancePage(){
     }
 
     if(attendanceListView==='present'){
-      const groupsMap=new Map();
+      const classMap=new Map();
+
       rows.forEach(x=>{
-        const grade=String(x.grade||'');
-        const classroom=String(displayStudentClassroom(x.classroom)||x.classroom||'');
-        const date=String(x.hijriDate||x.date||'—');
-        const period=x.period?String(x.period):'';
-        const teacher=String(x.teacherName||x.teacherUsername||'—');
-        const teacherId=String(x.teacherCivilId||x.teacherUsername||'');
-        const subject=String(x.subject||'—');
-        const key=[grade,classroom,String(x.date||''),period,teacher,teacherId,subject].join('|');
-        if(!groupsMap.has(key)){
-          groupsMap.set(key,{
-            key,grade,classroom,date,period,teacher,teacherId,subject,rows:[]
+        const grade=studentGradeKey(x.grade)||String(x.grade||'').trim();
+        const classroom=studentClassKey(x.classroom)||String(displayStudentClassroom(x.classroom)||x.classroom||'').trim();
+        if(!grade||!classroom) return;
+
+        const classKey=grade+'|'+classroom;
+        const dateKey=String(x.date||'');
+        const periodNum=attendancePeriodNumber(x.period)||0;
+
+        if(!classMap.has(classKey)){
+          classMap.set(classKey,{grade,classroom,sessions:new Map()});
+        }
+
+        const sessionKey=[dateKey,periodNum,String(x.teacherName||x.teacherUsername||''),String(x.subject||'')].join('|');
+        const cls=classMap.get(classKey);
+
+        if(!cls.sessions.has(sessionKey)){
+          cls.sessions.set(sessionKey,{
+            dateKey,
+            date:String(x.hijriDate||x.date||'—'),
+            period:periodNum,
+            teacher:String(x.teacherName||x.teacherUsername||'—'),
+            teacherId:String(x.teacherCivilId||x.teacherUsername||''),
+            subject:String(x.subject||'—'),
+            rows:[]
           });
         }
-        groupsMap.get(key).rows.push(x);
+        cls.sessions.get(sessionKey).rows.push(x);
       });
 
-      const groups=[...groupsMap.values()].sort((a,b)=>{
-        const ad=(a.rows?.[0]?.date||'');
-        const bd=(b.rows?.[0]?.date||'');
-        if(ad!==bd) return bd.localeCompare(ad);
-        const g=a.grade.localeCompare(b.grade,'ar');
-        if(g) return g;
-        const cl=a.classroom.localeCompare(b.classroom,'ar',{numeric:true});
-        if(cl) return cl;
-        return String(a.period).localeCompare(String(b.period),'ar',{numeric:true});
+      const gradeOrder={'الأول الثانوي':1,'الثاني الثانوي':2,'الثالث الثانوي':3};
+      const classOrder=['أ','ا','ب','ج','د','هـ','ه','و','ز','ح','ط','ي'];
+
+      const groups=[...classMap.values()].map(cls=>{
+        const latest=[...cls.sessions.values()].sort((a,b)=>{
+          if(a.dateKey!==b.dateKey) return b.dateKey.localeCompare(a.dateKey);
+          return (b.period||0)-(a.period||0);
+        })[0];
+        return {
+          grade:cls.grade,
+          classroom:cls.classroom,
+          date:latest?.date||'—',
+          dateKey:latest?.dateKey||'',
+          period:latest?.period||'',
+          teacher:latest?.teacher||'—',
+          teacherId:latest?.teacherId||'',
+          subject:latest?.subject||'—',
+          rows:latest?.rows||[]
+        };
+      }).sort((a,b)=>{
+        const ga=gradeOrder[a.grade]||99;
+        const gb=gradeOrder[b.grade]||99;
+        if(ga!==gb) return ga-gb;
+
+        const ca=String(displayStudentClassroom(a.classroom)||a.classroom||'').trim();
+        const cb=String(displayStudentClassroom(b.classroom)||b.classroom||'').trim();
+        const ia=classOrder.indexOf(ca);
+        const ib=classOrder.indexOf(cb);
+        if(ia!==ib){
+          if(ia<0) return 1;
+          if(ib<0) return -1;
+          return ia-ib;
+        }
+        return ca.localeCompare(cb,'ar',{numeric:true,sensitivity:'base'});
       });
 
       window.__attendancePresentGroups=groups;
@@ -12383,7 +12422,7 @@ async function renderAttendancePage(){
               ${groups.map((g,i)=>`
                 <tr>
                   <td class="apg-grade"><b>${escapeFollowupHtml(g.grade||'—')}</b></td>
-                  <td class="apg-classroom"><b>${escapeFollowupHtml(g.classroom||'—')}</b></td>
+                  <td class="apg-classroom"><b>${escapeFollowupHtml(displayStudentClassroom(g.classroom)||g.classroom||'—')}</b></td>
                   <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b><span>${g.period?'الحصة '+escapeFollowupHtml(g.period):'بدون حصة'}</span></td>
                   <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
                   <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
@@ -15799,6 +15838,47 @@ function printStudents(rows){
     .apg-show-students{
       font-size:19px!important;
       padding:13px 20px!important;
+    }
+
+    /* تكبير نهائي وترتيب واضح للفصول بدون تكرار */
+    .attendance-present-groups-table th{
+      font-size:25px!important;
+      padding:24px 18px!important;
+      font-weight:900!important;
+    }
+    .attendance-present-groups-table td{
+      font-size:23px!important;
+      padding:24px 18px!important;
+      line-height:1.7!important;
+    }
+    .apg-grade b,
+    .apg-date b,
+    .apg-teacher b,
+    .apg-subject{
+      font-size:24px!important;
+      font-weight:900!important;
+    }
+    .apg-classroom b{
+      min-width:60px!important;
+      height:60px!important;
+      font-size:28px!important;
+      border-radius:14px!important;
+    }
+    .apg-date span,
+    .apg-teacher span{
+      font-size:20px!important;
+      margin-top:8px!important;
+    }
+    .apg-show-students{
+      font-size:22px!important;
+      padding:16px 24px!important;
+      border-radius:14px!important;
+      font-weight:900!important;
+    }
+    .apg-show-students span{
+      min-width:34px!important;
+      height:34px!important;
+      font-size:17px!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
