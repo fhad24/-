@@ -7144,9 +7144,17 @@ function getFollowupSaved(weekValue){
 function currentFollowupStudents(){
   const grade=$('followupGrade')?.value||'';
   const classroom=$('followupClass')?.value||'';
+  const allGrades=grade==='__ALL__';
+  const allClasses=classroom==='__ALL__';
   return getStudents()
-    .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade)) && (!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
-    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    .filter(s=>(allGrades||!grade||studentGradeKey(s.grade)===studentGradeKey(grade)) && (allClasses||!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
+    .sort((a,b)=>{
+      const g=String(studentGradeKey(a.grade)||'').localeCompare(String(studentGradeKey(b.grade)||''),'ar');
+      if(g) return g;
+      const cl=String(studentClassKey(a.classroom)||'').localeCompare(String(studentClassKey(b.classroom)||''),'ar',{numeric:true});
+      if(cl) return cl;
+      return String(a.name||'').localeCompare(String(b.name||''),'ar');
+    });
 }
 
 function populateFollowupGrades(){
@@ -7155,13 +7163,17 @@ function populateFollowupGrades(){
   const current=studentGradeKey(select.value||'');
   const grades=[...new Set(getStudents().map(s=>studentGradeKey(s.grade)).filter(Boolean))]
     .sort((a,b)=>String(a).localeCompare(String(b),'ar'));
-  select.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${g}">${g}</option>`).join('');
-  if(current && grades.includes(current)) select.value=current;
+  select.innerHTML='<option value="">اختر الصف</option><option value="__ALL__">الكل</option>'+grades.map(g=>`<option value="${g}">${g}</option>`).join('');
+  if(select.dataset.keepAll==='1'){
+    select.value='__ALL__';
+    delete select.dataset.keepAll;
+  }else if(current && grades.includes(current)) select.value=current;
 }
 
 function populateFollowupClasses(){
   const gradeRaw=$('followupGrade')?.value||'';
-  const grade=studentGradeKey(gradeRaw);
+  const allGrades=gradeRaw==='__ALL__';
+  const grade=allGrades?'':studentGradeKey(gradeRaw);
   const select=$('followupClass');
   if(!select) return;
   const current=studentClassKey(select.value||'');
@@ -7182,8 +7194,9 @@ function populateFollowupClasses(){
   }
 
   classes.sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
-  select.innerHTML='<option value="">اختر الفصل</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
-  if(current && classes.includes(current)) select.value=current;
+  select.innerHTML='<option value="">اختر الفصل</option><option value="__ALL__">الكل</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
+  if($('followupGrade')?.value==='__ALL__') select.value='__ALL__';
+  else if(current && classes.includes(current)) select.value=current;
 }
 
 function updateFollowupHeader(students=[]){
@@ -7191,12 +7204,14 @@ function updateFollowupHeader(students=[]){
   const year=$('followupYear')?.value||'';
   const subject=$('followupSubject')?.value.trim()||'—';
   const teacher=$('followupTeacher')?.value.trim()||'—';
-  const grade=$('followupGrade')?.value||'—';
-  const classroom=$('followupClass')?.value||'—';
+  const gradeRaw=$('followupGrade')?.value||'';
+  const classroomRaw=$('followupClass')?.value||'';
+  const grade=gradeRaw==='__ALL__'?'الكل':(gradeRaw||'—');
+  const classroom=classroomRaw==='__ALL__'?'الكل':(classroomRaw||'—');
   const week=String($('followupWeek')?.value||'1');
   if($('followupHeadTitle')) $('followupHeadTitle').textContent=`سجل متابعة الفصل الدراسي ${term} لعام ${year||'ــــ'} هـ — الأسبوع ${week}`;
   if($('followupHeadRight')) $('followupHeadRight').innerHTML=`المادة: ${subject}<br>معلم المادة: ${teacher}`;
-  if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':('الفصل '+classroom)}<br>الأسبوع الدراسي: ${week}`;
+  if($('followupHeadLeft')) $('followupHeadLeft').innerHTML=`الصف / الفصل: ${grade} / ${classroom==='—'?'—':(classroom==='الكل'?'الكل':('الفصل '+classroom))}<br>الأسبوع الدراسي: ${week}`;
   const settings=getSchoolSettings?.()||{};
   if($('followupManagerName')) $('followupManagerName').textContent=settings.manager||'';
   if($('followupManagerNamePrint')) $('followupManagerNamePrint').textContent=settings.manager||'';
@@ -7210,7 +7225,7 @@ function renderFollowupTable(){
   const grade=$('followupGrade')?.value||'';
   const classroom=$('followupClass')?.value||'';
   if(!grade || !classroom){
-    body.innerHTML='<tr><td colspan="26" class="followup-empty">اختر الصف والفصل ثم اضغط «تحميل الطلاب».</td></tr>';
+    body.innerHTML='<tr><td colspan="26" class="followup-empty">اختر الصف والفصل أو اختر «الكل» ثم اضغط «تحميل الطلاب».</td></tr>';
     updateFollowupHeader([]);
     return;
   }
@@ -7376,8 +7391,10 @@ function getFollowupReportMeta(){
   const year=String($('followupYear')?.value||'');
   const subject=String($('followupSubject')?.value||'').trim()||'—';
   const teacher=String($('followupTeacher')?.value||'').trim()||'—';
-  const grade=String($('followupGrade')?.value||'—');
-  const classroom=String($('followupClass')?.value||'—');
+  const gradeValue=String($('followupGrade')?.value||'');
+  const classroomValue=String($('followupClass')?.value||'');
+  const grade=gradeValue==='__ALL__'?'الكل':(gradeValue||'—');
+  const classroom=classroomValue==='__ALL__'?'الكل':(classroomValue||'—');
   const week=String($('followupWeek')?.value||'1');
   return {
     students,term,year,subject,teacher,grade,classroom,week,
@@ -7417,7 +7434,7 @@ function buildFollowupMetaHtml(meta,pageNo,totalPages){
         <div>سجل متابعة الفصل الدراسي ${escapeFollowupHtml(meta.term)} لعام ${escapeFollowupHtml(meta.year||'ــــ')} هـ</div>
       </div>
       <div class="left">
-        <div>الصف / الفصل: ${escapeFollowupHtml(meta.grade)} / ${meta.classroom==='—'?'—':('الفصل '+escapeFollowupHtml(meta.classroom))}</div>
+        <div>الصف / الفصل: ${escapeFollowupHtml(meta.grade)} / ${meta.classroom==='—'?'—':(meta.classroom==='الكل'?'الكل':('الفصل '+escapeFollowupHtml(meta.classroom)))}</div>
         <div>الأسبوع الدراسي: ${escapeFollowupHtml(meta.week)}</div>
         ${totalPages?'<div>الصفحة: '+pageNo+' من '+totalPages+'</div>':''}
       </div>
@@ -7648,7 +7665,12 @@ async function initStudentFollowupPage(){
   setTimeout(syncInBackground,0);
 }
 
-if($('followupGrade')) $('followupGrade').onchange=()=>{populateFollowupClasses();renderFollowupTable();renderFollowupAnalysis()};
+if($('followupGrade')) $('followupGrade').onchange=()=>{
+  populateFollowupClasses();
+  if($('followupGrade').value==='__ALL__' && $('followupClass')) $('followupClass').value='__ALL__';
+  renderFollowupTable();
+  renderFollowupAnalysis();
+};
 if($('followupClass')) $('followupClass').onchange=()=>{renderFollowupTable();renderFollowupAnalysis()};
 if($('followupWeek')) $('followupWeek').onchange=()=>{renderFollowupTable();renderFollowupAnalysis();saveFollowupElectronic()};
 if($('followupLoadBtn')) $('followupLoadBtn').onclick=()=>{renderFollowupTable();renderFollowupAnalysis()};
