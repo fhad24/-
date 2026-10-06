@@ -7468,6 +7468,59 @@ function buildExactFollowupSheetClone(blank=false){
   return clone;
 }
 
+function buildExactFollowupGroupedClones(blank=false){
+  const base=buildExactFollowupSheetClone(blank);
+  if(!base) return [];
+
+  const gradeValue=String($('followupGrade')?.value||'');
+  const classValue=String($('followupClass')?.value||'');
+  const splitNeeded=gradeValue==='__ALL__' || classValue==='__ALL__';
+  if(!splitNeeded) return [{clone:base,grade:gradeValue,classroom:classValue}];
+
+  const students=currentFollowupStudents();
+  const groups=[];
+  const seen=new Set();
+  students.forEach(s=>{
+    const grade=studentGradeKey(s.grade)||String(s.grade||'');
+    const classroom=studentClassKey(s.classroom)||String(s.classroom||'');
+    const key=grade+'||'+classroom;
+    if(seen.has(key)) return;
+    seen.add(key);
+    groups.push({grade,classroom});
+  });
+  groups.sort((a,b)=>{
+    const g=String(a.grade).localeCompare(String(b.grade),'ar',{numeric:true});
+    if(g) return g;
+    return String(a.classroom).localeCompare(String(b.classroom),'ar',{numeric:true});
+  });
+
+  return groups.map((group,idx)=>{
+    const clone=idx===0?base:buildExactFollowupSheetClone(blank);
+    clone.id='followupSheetExactCopy_'+idx;
+    const ids=new Set(students
+      .filter(s=>(studentGradeKey(s.grade)||String(s.grade||''))===group.grade &&
+                 (studentClassKey(s.classroom)||String(s.classroom||''))===group.classroom)
+      .map(s=>String(s.idno||'')));
+
+    clone.querySelectorAll('tbody tr').forEach(tr=>{
+      const id=String(tr.querySelector('.civil-id')?.textContent||'').trim();
+      if(id && !ids.has(id)) tr.remove();
+    });
+
+    const week=String($('followupWeek')?.value||'1');
+    const left=clone.querySelector('#followupHeadLeft');
+    if(left){
+      left.innerHTML=`الصف / الفصل: ${group.grade||'—'} / الفصل ${displayStudentClassroom?displayStudentClassroom(group.classroom):group.classroom}<br>الأسبوع الدراسي: ${week}`;
+    }
+    const count=clone.querySelector('#followupBottomStudentCount');
+    if(count) count.textContent=String(ids.size);
+    const countPrint=clone.querySelector('#followupBottomStudentCountPrint');
+    if(countPrint) countPrint.textContent=String(ids.size);
+
+    return {clone,grade:group.grade,classroom:group.classroom};
+  });
+}
+
 function exactFollowupSheetCss(){
   return `
     *{box-sizing:border-box}
@@ -7495,8 +7548,9 @@ function exactFollowupSheetCss(){
 }
 
 function buildFollowupPrintDocument(blank=false){
-  const clone=buildExactFollowupSheetClone(blank);
-  if(!clone) return '';
+  const groups=buildExactFollowupGroupedClones(blank);
+  if(!groups.length) return '';
+  const sheets=groups.map((g,i)=>`<div class="followup-print-group ${i?'start-new-class':''}">${g.clone.outerHTML}</div>`).join('');
   return `<!doctype html>
   <html lang="ar" dir="rtl">
   <head>
@@ -7506,11 +7560,12 @@ function buildFollowupPrintDocument(blank=false){
       @page{size:A4 landscape;margin:7mm}
       ${exactFollowupSheetCss()}
       body{padding:0}
-      #followupSheetExactCopy{width:100%!important;max-width:none!important;margin:0!important}
+      #followupSheetExactCopy,.followup-print-group .followup-sheet{width:100%!important;max-width:none!important;margin:0!important}
+      .followup-print-group.start-new-class{break-before:page;page-break-before:always}
     </style>
   </head>
   <body>
-    ${clone.outerHTML}
+    ${sheets}
   </body>
   </html>`;
 }
@@ -7544,18 +7599,24 @@ function prepareFollowupPrint(blank=false){
 
 function buildFollowupPdfPages(blank=false){
   const meta=getFollowupReportMeta();
-  const clone=buildExactFollowupSheetClone(blank);
+  const groups=buildExactFollowupGroupedClones(blank);
   const root=document.createElement('div');
   root.className='followup-pdf-root exact-followup-pdf-root';
   root.dir='rtl';
   root.style.cssText='width:1120px;background:#fff;color:#111;font-family:Tahoma,Arial,sans-serif;direction:rtl;padding:0;margin:0';
-  if(clone){
-    clone.style.width='1120px';
-    clone.style.maxWidth='1120px';
-    clone.style.margin='0';
-    root.appendChild(clone);
-  }
-  return {root,meta,pages:[clone]};
+
+  groups.forEach((g,index)=>{
+    const wrap=document.createElement('section');
+    wrap.className='followup-pdf-class-group'+(index?' start-new-class':'');
+    wrap.style.cssText='width:1120px;background:#fff;margin:0;padding:0;';
+    g.clone.style.width='1120px';
+    g.clone.style.maxWidth='1120px';
+    g.clone.style.margin='0';
+    wrap.appendChild(g.clone);
+    root.appendChild(wrap);
+  });
+
+  return {root,meta,pages:groups};
 }
 
 async function exportFollowupPdf(){
@@ -7583,7 +7644,7 @@ async function exportFollowupPdf(){
     stage.id='followupPdfStage';
     stage.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px';
     const style=document.createElement('style');
-    style.textContent=exactFollowupSheetCss()+' .exact-followup-pdf-root .followup-sheet{width:1120px!important;max-width:1120px!important}';
+    style.textContent=exactFollowupSheetCss()+' .exact-followup-pdf-root .followup-sheet{width:1120px!important;max-width:1120px!important}.followup-pdf-class-group.start-new-class{break-before:page;page-break-before:always}';
     stage.appendChild(style);
     stage.appendChild(root);
     document.body.appendChild(stage);
@@ -7594,7 +7655,7 @@ async function exportFollowupPdf(){
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120},
       jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-      pagebreak:{mode:['css','legacy'],avoid:['tr']}
+      pagebreak:{mode:['css','legacy'],before:'.followup-pdf-class-group.start-new-class',avoid:['tr']}
     }).from(root).save();
     stage.remove();
     root=null;
