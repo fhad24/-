@@ -4314,9 +4314,6 @@
         </select>
       </div>
       <div class="student-transfer-bulk" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
-        <label style="display:flex;align-items:center;gap:7px;font-weight:800">
-          <input type="checkbox" id="studentTransferSelectAll" style="width:18px;height:18px"> تحديد الكل
-        </label>
         <span id="studentTransferSelectedCount" class="hint" style="margin:0">المحدد: 0</span>
         <select id="studentTransferBulkClass" style="min-width:160px">
           <option value="">اختر الفصل الجديد</option>
@@ -7988,10 +7985,6 @@ async function renderStudentTransferStudents(){
   });
 
   const visibleIds=rows.map(s=>String(s.idno||''));
-  if($('studentTransferSelectAll')){
-    $('studentTransferSelectAll').checked=visibleIds.length>0 && visibleIds.every(id=>studentTransferMultiSelected.has(id));
-    $('studentTransferSelectAll').indeterminate=visibleIds.some(id=>studentTransferMultiSelected.has(id)) && !visibleIds.every(id=>studentTransferMultiSelected.has(id));
-  }
   updateStudentTransferSelectedCount();
 }
 
@@ -8006,11 +7999,6 @@ function toggleStudentTransferMulti(id,checked){
   if(checked) studentTransferMultiSelected.add(key);
   else studentTransferMultiSelected.delete(key);
   updateStudentTransferSelectedCount();
-  const visible=studentTransferFilteredStudents().map(s=>String(s.idno||''));
-  if($('studentTransferSelectAll')){
-    $('studentTransferSelectAll').checked=visible.length>0 && visible.every(x=>studentTransferMultiSelected.has(x));
-    $('studentTransferSelectAll').indeterminate=visible.some(x=>studentTransferMultiSelected.has(x)) && !visible.every(x=>studentTransferMultiSelected.has(x));
-  }
 }
 
 async function moveSelectedStudentsBetweenClasses(){
@@ -8186,16 +8174,6 @@ document.addEventListener('change',e=>{
   }
 });
 
-if($('studentTransferSelectAll')) $('studentTransferSelectAll').onchange=()=>{
-  const rows=studentTransferFilteredStudents();
-  const checked=$('studentTransferSelectAll').checked;
-  rows.forEach(s=>{
-    const id=String(s.idno||'');
-    if(checked) studentTransferMultiSelected.add(id);
-    else studentTransferMultiSelected.delete(id);
-  });
-  renderStudentTransferStudents();
-};
 if($('studentTransferBulkMoveBtn')) $('studentTransferBulkMoveBtn').onclick=moveSelectedStudentsBetweenClasses;
 
 if($('studentTransferSearch')) $('studentTransferSearch').oninput=renderStudentTransferStudents;
