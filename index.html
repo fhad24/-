@@ -4044,17 +4044,27 @@
           <div id="attendancePresentHijriFilter" class="attendance-present-hijri-filter hidden">
             <div class="attendance-present-single-calendar">
               <button type="button" id="attendancePresentHijriOpen" class="attendance-present-hijri-open">
-                <span id="attendancePresentHijriDisplay">📅 اختر التاريخ الهجري</span>
+                <span class="attendance-present-hijri-icon">📅</span>
+                <span class="attendance-present-hijri-copy">
+                  <small>التاريخ الهجري</small>
+                  <b id="attendancePresentHijriDisplay">اختر اليوم</b>
+                </span>
+                <span class="attendance-present-hijri-chevron">⌄</span>
               </button>
               <input type="hidden" id="attendancePresentFilterGregorianDate">
               <div id="attendancePresentHijriPopup" class="attendance-present-hijri-popup hidden">
-                <div class="attendance-present-hijri-nav">
-                  <button type="button" id="attendancePresentHijriPrev">‹</button>
-                  <strong id="attendancePresentHijriMonthTitle"></strong>
-                  <button type="button" id="attendancePresentHijriNext">›</button>
+                <div class="attendance-present-hijri-header">
+                  <div>
+                    <small>التقويم الهجري</small>
+                    <strong id="attendancePresentHijriMonthTitle"></strong>
+                  </div>
+                  <div class="attendance-present-hijri-nav">
+                    <button type="button" id="attendancePresentHijriPrev" aria-label="الشهر السابق">‹</button>
+                    <button type="button" id="attendancePresentHijriNext" aria-label="الشهر التالي">›</button>
+                  </div>
                 </div>
                 <div class="attendance-present-hijri-weekdays">
-                  <span>أحد</span><span>اثنين</span><span>ثلاثاء</span><span>أربعاء</span><span>خميس</span><span>جمعة</span><span>سبت</span>
+                  <span>أحد</span><span>إثنين</span><span>ثلاثاء</span><span>أربعاء</span><span>خميس</span><span>جمعة</span><span>سبت</span>
                 </div>
                 <div id="attendancePresentHijriDays" class="attendance-present-hijri-days"></div>
                 <div class="attendance-present-hijri-footer">
@@ -14035,10 +14045,10 @@ if($('attendancePresentStatsBtn')) $('attendancePresentStatsBtn').onclick=render
 let attendancePresentHijriViewDate=new Date();
 
 function attendancePresentHijriLabel(dateStr){
-  if(!dateStr) return '📅 اختر التاريخ الهجري';
+  if(!dateStr) return 'اختر اليوم';
   const p=gregorianToHijriParts(dateStr);
   const months=['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
-  return '📅 '+p.day+' '+months[p.month-1]+' '+p.year+' هـ';
+  return p.day+' '+months[p.month-1]+' '+p.year+' هـ';
 }
 
 function renderAttendancePresentHijriCalendar(){
@@ -14120,7 +14130,7 @@ if($('attendancePresentHijriToday')) $('attendancePresentHijriToday').onclick=()
 if($('attendancePresentHijriAll')) $('attendancePresentHijriAll').onclick=()=>{
   attendancePresentFilterDate='';
   const display=$('attendancePresentHijriDisplay');
-  if(display) display.textContent='📅 اختر التاريخ الهجري';
+  if(display) display.textContent='اختر اليوم';
   $('attendancePresentHijriPopup')?.classList.add('hidden');
   renderAttendancePage();
 };
@@ -16212,6 +16222,169 @@ function printStudents(rows){
       font-size:16px;
       font-weight:900;
       cursor:pointer;
+    }
+
+    /* تصميم أنيق للتقويم الهجري في تبويب حاضر */
+    .attendance-present-hijri-filter{
+      display:flex!important;
+      justify-content:flex-start;
+      margin:16px 0 20px!important;
+    }
+    .attendance-present-hijri-filter.hidden{display:none!important}
+    .attendance-present-single-calendar{
+      position:relative;
+      width:min(430px,100%);
+    }
+    .attendance-present-hijri-open{
+      width:100%;
+      min-height:74px;
+      display:grid;
+      grid-template-columns:54px 1fr 28px;
+      align-items:center;
+      gap:12px;
+      border:1px solid #b8d5cc!important;
+      border-radius:18px!important;
+      background:linear-gradient(180deg,#ffffff 0%,#f4faf8 100%)!important;
+      box-shadow:0 8px 22px rgba(15,118,101,.08);
+      padding:10px 16px!important;
+      text-align:right!important;
+    }
+    .attendance-present-hijri-icon{
+      width:48px;
+      height:48px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:14px;
+      background:#e8f6f1;
+      font-size:26px;
+    }
+    .attendance-present-hijri-copy{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .attendance-present-hijri-copy small{
+      font-size:14px;
+      font-weight:800;
+      color:#6b817a;
+    }
+    .attendance-present-hijri-copy b{
+      font-size:23px;
+      font-weight:900;
+      color:#123f36;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .attendance-present-hijri-chevron{
+      font-size:24px;
+      color:#0f7665;
+      font-weight:900;
+    }
+
+    .attendance-present-hijri-popup{
+      top:84px!important;
+      right:0!important;
+      width:420px!important;
+      padding:18px!important;
+      border-radius:22px!important;
+      border:1px solid #cfe2dc!important;
+      box-shadow:0 22px 60px rgba(18,62,53,.22)!important;
+      background:#fff!important;
+    }
+    .attendance-present-hijri-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:14px;
+      padding-bottom:12px;
+      border-bottom:1px solid #edf3f1;
+    }
+    .attendance-present-hijri-header small{
+      display:block;
+      font-size:13px;
+      font-weight:800;
+      color:#7b8f89;
+      margin-bottom:3px;
+    }
+    .attendance-present-hijri-header strong{
+      font-size:24px!important;
+      color:#143f37!important;
+    }
+    .attendance-present-hijri-nav{
+      display:flex!important;
+      grid-template-columns:none!important;
+      gap:8px!important;
+      margin:0!important;
+    }
+    .attendance-present-hijri-nav button{
+      width:44px!important;
+      height:44px!important;
+      border-radius:12px!important;
+      background:#eef8f5!important;
+      border:1px solid #d4e8e2!important;
+      color:#0f7665!important;
+      font-size:26px!important;
+    }
+    .attendance-present-hijri-weekdays{
+      margin-bottom:8px;
+    }
+    .attendance-present-hijri-weekdays span{
+      font-size:14px!important;
+      font-weight:900!important;
+      color:#5f746e!important;
+      padding:7px 0!important;
+    }
+    .attendance-present-hijri-days{
+      gap:7px!important;
+    }
+    .attendance-present-hijri-days button,
+    .attendance-present-hijri-days .empty{
+      height:46px!important;
+      border-radius:12px!important;
+    }
+    .attendance-present-hijri-days button{
+      font-size:18px!important;
+      font-weight:900!important;
+      border:1px solid #dceae5!important;
+      background:#fff!important;
+      color:#244c42!important;
+      transition:.15s ease;
+    }
+    .attendance-present-hijri-days button:hover{
+      background:#edf8f4!important;
+      border-color:#b9dbd0!important;
+      transform:translateY(-1px);
+    }
+    .attendance-present-hijri-days button.selected{
+      background:#0f7665!important;
+      border-color:#0f7665!important;
+      color:#fff!important;
+      box-shadow:0 5px 14px rgba(15,118,101,.24);
+    }
+    .attendance-present-hijri-footer{
+      margin-top:14px!important;
+      padding-top:12px;
+      border-top:1px solid #edf3f1;
+    }
+    .attendance-present-hijri-footer button{
+      height:48px!important;
+      border-radius:12px!important;
+      font-size:17px!important;
+      font-weight:900!important;
+    }
+    #attendancePresentHijriToday{
+      background:#0f7665!important;
+      color:#fff!important;
+      border-color:#0f7665!important;
+    }
+    #attendancePresentHijriAll{
+      background:#f6faf9!important;
+      color:#234b42!important;
+      border-color:#cfe2dc!important;
     }
 </style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
