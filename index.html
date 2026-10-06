@@ -6958,7 +6958,19 @@ function getAllowedReferralGradePermissions(user){
   return perms.filter(x=>String(x).startsWith('referralGrade:'));
 }
 
+function removeVisibleReportButtons(){
+  try{
+    document.querySelectorAll('button').forEach(btn=>{
+      const txt=String(btn.textContent||'').replace(/\s+/g,' ').trim();
+      if(txt==='التقارير' || txt==='التقارير 📊' || txt.startsWith('📊 التقارير')){
+        btn.remove();
+      }
+    });
+  }catch(e){}
+}
+
 function configureUserDashboard(){
+  removeVisibleReportButtons();
   const portal=$('userPermissionPortal');
   if(!portal) return;
   const u=getCurrentLoggedAdminUser();
@@ -7001,7 +7013,6 @@ function configureUserDashboard(){
   const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const defs=[
     ['attendance','تحضير الطلاب 🕘','attendance'],
-    ['reports','التقارير 📊','reports'],
     ['addStudent','إدارة الطلاب ونقل الفصول 🔄','addStudent'],
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
@@ -7078,6 +7089,9 @@ function configureUserDashboard(){
       toast('التقارير');
     }
   });
+  removeVisibleReportButtons();
+  setTimeout(removeVisibleReportButtons,0);
+  setTimeout(removeVisibleReportButtons,300);
 }
 
 
@@ -15912,6 +15926,8 @@ function clearLoginFields(){
 window.addEventListener('pageshow',()=>setTimeout(clearLoginFields,50));
 window.addEventListener('load',()=>{
   setTimeout(clearLoginFields,80);
+  setTimeout(removeVisibleReportButtons,100);
+  setTimeout(removeVisibleReportButtons,700);
   setTimeout(()=>{
     if(localStorage.getItem('adminLoggedIn')==='1'){
       document.body.classList.add('admin-mode');
