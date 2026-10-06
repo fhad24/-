@@ -7675,7 +7675,7 @@ async function exportFollowupPdf(){
     }
     const stage=document.createElement('div');
     stage.id='followupPdfStage';
-    stage.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px';
+    stage.style.cssText='position:fixed;left:-20000px;top:0;width:1120px;background:#fff;overflow:visible;padding:0;margin:0;pointer-events:none';
     const style=document.createElement('style');
     style.textContent=exactFollowupSheetCss()+
       ' .exact-followup-pdf-root{display:block!important;width:1120px!important}' +
@@ -7691,13 +7691,13 @@ async function exportFollowupPdf(){
     stage.appendChild(style);
     stage.appendChild(root);
     document.body.appendChild(stage);
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    await new Promise(resolve=>requestAnimationFrame(resolve));
     await html2pdf().set({
       margin:0,
       filename,
-      image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120},
-      jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+      image:{type:'jpeg',quality:0.86},
+      html2canvas:{scale:1,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120,logging:false,imageTimeout:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:'landscape',compress:false},
       pagebreak:{mode:['css','legacy'],before:'.followup-pdf-page-explicit.start-new-page',avoid:['tr']}
     }).from(root).save();
     stage.remove();
