@@ -3332,6 +3332,16 @@
   line-height:1.5!important;
 }
 </style>
+
+<style id="attendanceMonitoringAboveCalendarStyle">
+#attendanceMonitoringAboveCalendarWrap{
+  margin:14px 0 18px;
+}
+#attendanceMonitoringAboveCalendarWrap.hidden{display:none!important}
+#attendanceMonitoringAboveCalendarWrap .attendance-monitoring-card{
+  margin:0!important;
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -4279,6 +4289,39 @@
             <button type="button" id="attendancePresentPdfBtn">📄 تصدير كشف الفصول PDF</button>
             <button type="button" id="attendancePresentStatsBtn">📊 الإحصائيات</button>
           </div>
+          <div id="attendanceMonitoringAboveCalendarWrap">
+<div class="card attendance-monitoring-card" id="attendanceMonitoringCard">
+          <div class="attendance-monitoring-head">
+            <div>
+              <div class="attendance-kicker">متابعة آلية لليوم الحالي</div>
+              <h3>🚨 متابعة الطلاب الهاربين</h3>
+            </div>
+            <button type="button" class="attendance-btn outline" id="attendanceMonitoringRefreshBtn">🔄 تحديث الكشف</button>
+          </div>
+
+          <div class="attendance-monitoring-summary">
+            <div class="attendance-monitoring-stat danger"><span>الطلاب المحتمل هروبهم</span><b id="attendanceEscapeCount">0</b></div>
+
+          </div>
+
+          <div class="attendance-monitoring-grid">
+            <div class="attendance-monitoring-pane">
+              <h4>🚨 كشف الطلاب الهاربين</h4>
+              <div class="hint">يظهر الطالب فقط إذا تم تحضير فصله في حصتين أو أكثر، وكان حاضرًا/متأخرًا في حصة ثم لم يُسجل حاضرًا أو متأخرًا في حصة أخرى تم تحضير نفس الفصل فيها.</div>
+              <div class="attendance-monitoring-table-wrap">
+                <table class="attendance-monitoring-table">
+                  <thead><tr><th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف / الفصل</th><th>حضر في</th><th>لم يسجل في</th></tr></thead>
+                  <tbody id="attendanceEscapeBody"><tr><td colspan="6">لا توجد حالات حتى الآن.</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+          </div>
           <div id="attendancePresentHijriFilter" class="attendance-present-hijri-filter hidden">
             <div class="attendance-present-single-calendar">
               <button type="button" id="attendancePresentHijriOpen" class="attendance-present-hijri-open">
@@ -4321,39 +4364,7 @@
           <div id="attendanceDailyList" class="attendance-daily-empty">لا يوجد طلاب متأخرون مسجلون اليوم.</div>
         </div>
 
-        <div class="card attendance-monitoring-card" id="attendanceMonitoringCard">
-          <div class="attendance-monitoring-head">
-            <div>
-              <div class="attendance-kicker">متابعة آلية لليوم الحالي</div>
-              <h3>🚨 متابعة الطلاب الهاربين</h3>
-            </div>
-            <button type="button" class="attendance-btn outline" id="attendanceMonitoringRefreshBtn">🔄 تحديث الكشف</button>
-          </div>
-
-          <div class="attendance-monitoring-summary">
-            <div class="attendance-monitoring-stat danger"><span>الطلاب المحتمل هروبهم</span><b id="attendanceEscapeCount">0</b></div>
-
-          </div>
-
-          <div class="attendance-monitoring-grid">
-            <div class="attendance-monitoring-pane">
-              <h4>🚨 كشف الطلاب الهاربين</h4>
-              <div class="hint">يظهر الطالب فقط إذا تم تحضير فصله في حصتين أو أكثر، وكان حاضرًا/متأخرًا في حصة ثم لم يُسجل حاضرًا أو متأخرًا في حصة أخرى تم تحضير نفس الفصل فيها.</div>
-              <div class="attendance-monitoring-table-wrap">
-                <table class="attendance-monitoring-table">
-                  <thead><tr><th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف / الفصل</th><th>حضر في</th><th>لم يسجل في</th></tr></thead>
-                  <tbody id="attendanceEscapeBody"><tr><td colspan="6">لا توجد حالات حتى الآن.</td></tr></tbody>
-                </table>
-              </div>
-            </div>
-
-
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card admin-import-box admin-data-view">
+              <div class="card admin-import-box admin-data-view">
         <div class="admin-import-head">
           <h3>مرجع الطلاب (كشف Excel)</h3>
           <p>ارفع كشف الطلاب (EL_StudentInfoReport) لاستخدامه كمرجع للتطبيق.</p>
@@ -12462,10 +12473,12 @@ async function renderAttendancePage(){
   }
   const presentTools=$('attendancePresentTools');
   const presentHijriFilter=$('attendancePresentHijriFilter');
+  const monitoringAboveCalendar=$('attendanceMonitoringAboveCalendarWrap');
   const presentStatsPanel=$('attendancePresentStatsPanel');
   const isPresentView=attendanceListView==='present';
   if(presentTools) presentTools.classList.toggle('hidden',!isPresentView);
   if(presentHijriFilter) presentHijriFilter.classList.toggle('hidden',!isPresentView);
+  if(monitoringAboveCalendar) monitoringAboveCalendar.classList.toggle('hidden',!isPresentView);
   if(isPresentView) setTimeout(initAttendancePresentHijriFilter,0);
   if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
 
@@ -13141,7 +13154,7 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
 
 let attendanceMode='late';
 let attendanceListView='late';
-let attendancePresentFilterDate='';
+let attendancePresentFilterDate=todayKey();
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
 let attendanceStudentSortKey='name';
@@ -14280,11 +14293,12 @@ function renderAttendancePresentHijriCalendar(){
 }
 
 function initAttendancePresentHijriFilter(){
+  if(!attendancePresentFilterDate) attendancePresentFilterDate=todayKey();
+  const hidden=$('attendancePresentFilterGregorianDate');
+  if(hidden) hidden.value=attendancePresentFilterDate;
   const display=$('attendancePresentHijriDisplay');
   if(display) display.textContent=attendancePresentHijriLabel(attendancePresentFilterDate);
-  if(attendancePresentFilterDate){
-    attendancePresentHijriViewDate=new Date(attendancePresentFilterDate+'T12:00:00');
-  }
+  attendancePresentHijriViewDate=new Date(attendancePresentFilterDate+'T12:00:00');
   renderAttendancePresentHijriCalendar();
 }
 
