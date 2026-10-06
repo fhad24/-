@@ -4313,15 +4313,27 @@
           <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
         </select>
       </div>
+      <div class="student-transfer-bulk" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
+        <label style="display:flex;align-items:center;gap:7px;font-weight:800">
+          <input type="checkbox" id="studentTransferSelectAll" style="width:18px;height:18px"> تحديد الكل
+        </label>
+        <span id="studentTransferSelectedCount" class="hint" style="margin:0">المحدد: 0</span>
+        <select id="studentTransferBulkClass" style="min-width:160px">
+          <option value="">اختر الفصل الجديد</option>
+          <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
+          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+        </select>
+        <button type="button" class="btn btn-primary" id="studentTransferBulkMoveBtn">نقل الطلاب المحددين</button>
+      </div>
       <div class="table-wrap student-transfer-table-wrap">
         <table class="student-transfer-table">
           <thead>
             <tr>
-              <th>الصورة</th><th>اسم الطالب</th><th>السجل المدني</th><th>الجوال</th>
+              <th>تحديد</th><th>الصورة</th><th>اسم الطالب</th><th>السجل المدني</th><th>الجوال</th>
               <th>الصف</th><th>الفصل</th><th>إجراء</th>
             </tr>
           </thead>
-          <tbody id="studentTransferBody"><tr><td colspan="7">جاري تحميل الطلاب...</td></tr></tbody>
+          <tbody id="studentTransferBody"><tr><td colspan="8">جاري تحميل الطلاب...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -7912,6 +7924,7 @@ function initTeacherClassFollowupPage(){
 
 
 let studentTransferSelectedId='';
+const studentTransferMultiSelected=new Set();
 
 async function studentTransferPhotoHtml(s){
   try{
@@ -7948,21 +7961,101 @@ function studentTransferFilteredStudents(){
 async function renderStudentTransferStudents(){
   const body=$('studentTransferBody'); if(!body) return;
   const rows=studentTransferFilteredStudents();
-  if(!rows.length){body.innerHTML='<tr><td colspan="7">لا توجد نتائج.</td></tr>';return}
-  body.innerHTML=rows.map(s=>`<tr data-transfer-id="${escapeFollowupHtml(s.idno||'')}" class="${studentTransferSelectedId===String(s.idno||'')?'student-transfer-row-selected':''}">
-    <td class="transfer-photo-cell">👤</td>
-    <td>${escapeFollowupHtml(s.name||'')}</td>
-    <td>${escapeFollowupHtml(s.idno||'')}</td>
-    <td>${escapeFollowupHtml(s.phone||'—')}</td>
-    <td>${escapeFollowupHtml(s.grade||'')}</td>
-    <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
-    <td><button type="button" class="tiny-btn select-transfer-student" data-id="${escapeFollowupHtml(s.idno||'')}">اختيار / تعديل</button></td>
-  </tr>`).join('');
-  body.querySelectorAll('.select-transfer-student').forEach(btn=>btn.onclick=()=>selectStudentTransferStudent(btn.dataset.id));
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="8">لا توجد نتائج.</td></tr>';
+    if($('studentTransferSelectAll')) $('studentTransferSelectAll').checked=false;
+    updateStudentTransferSelectedCount();
+    return;
+  }
+  body.innerHTML=rows.map(s=>{
+    const id=String(s.idno||'');
+    const checked=studentTransferMultiSelected.has(id)?'checked':'';
+    return `<tr data-transfer-id="${escapeFollowupHtml(id)}" class="${studentTransferSelectedId===id?'student-transfer-row-selected':''}">
+      <td><input type="checkbox" class="student-transfer-check" data-id="${escapeFollowupHtml(id)}" ${checked} style="width:18px;height:18px"></td>
+      <td class="transfer-photo-cell">👤</td>
+      <td>${escapeFollowupHtml(s.name||'')}</td>
+      <td>${escapeFollowupHtml(s.idno||'')}</td>
+      <td>${escapeFollowupHtml(s.phone||'—')}</td>
+      <td>${escapeFollowupHtml(s.grade||'')}</td>
+      <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
+      <td><button type="button" class="tiny-btn select-transfer-student" data-id="${escapeFollowupHtml(id)}">اختيار / تعديل</button></td>
+    </tr>`;
+  }).join('');
+
   rows.forEach(async s=>{
     const cell=body.querySelector(`tr[data-transfer-id="${CSS.escape(String(s.idno||''))}"] .transfer-photo-cell`);
     if(cell) cell.innerHTML=await studentTransferPhotoHtml(s);
   });
+
+  const visibleIds=rows.map(s=>String(s.idno||''));
+  if($('studentTransferSelectAll')){
+    $('studentTransferSelectAll').checked=visibleIds.length>0 && visibleIds.every(id=>studentTransferMultiSelected.has(id));
+    $('studentTransferSelectAll').indeterminate=visibleIds.some(id=>studentTransferMultiSelected.has(id)) && !visibleIds.every(id=>studentTransferMultiSelected.has(id));
+  }
+  updateStudentTransferSelectedCount();
+}
+
+function updateStudentTransferSelectedCount(){
+  const el=$('studentTransferSelectedCount');
+  if(el) el.textContent='المحدد: '+studentTransferMultiSelected.size;
+}
+
+function toggleStudentTransferMulti(id,checked){
+  const key=String(id||'');
+  if(!key) return;
+  if(checked) studentTransferMultiSelected.add(key);
+  else studentTransferMultiSelected.delete(key);
+  updateStudentTransferSelectedCount();
+  const visible=studentTransferFilteredStudents().map(s=>String(s.idno||''));
+  if($('studentTransferSelectAll')){
+    $('studentTransferSelectAll').checked=visible.length>0 && visible.every(x=>studentTransferMultiSelected.has(x));
+    $('studentTransferSelectAll').indeterminate=visible.some(x=>studentTransferMultiSelected.has(x)) && !visible.every(x=>studentTransferMultiSelected.has(x));
+  }
+}
+
+async function moveSelectedStudentsBetweenClasses(){
+  const targetClass=String($('studentTransferBulkClass')?.value||'').trim();
+  const ids=[...studentTransferMultiSelected];
+  if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return}
+  if(!targetClass){alert('اختر الفصل الجديد أولًا.');return}
+  if(!confirm(`سيتم نقل ${ids.length} طالب/طلاب إلى الفصل ${targetClass}. هل تريد المتابعة؟`)) return;
+
+  const btn=$('studentTransferBulkMoveBtn');
+  const oldText=btn?.textContent||'نقل الطلاب المحددين';
+  if(btn){btn.disabled=true;btn.textContent='جاري النقل...'}
+  let success=0,failed=0;
+  try{
+    for(const id of ids){
+      const s=getStudents().find(x=>String(x.idno||'')===String(id));
+      if(!s){failed++;continue}
+      const payload={
+        old_idno:normalizeCivilId(s.idno),
+        new_idno:normalizeCivilId(s.idno),
+        name:String(s.name||'').trim(),
+        phone:String(s.phone||'').trim(),
+        grade:String(s.grade||'').trim(),
+        classroom:targetClass
+      };
+      try{
+        if(isCurrentOwner()) await studentChangeApi('owner_update',payload);
+        else await studentChangeApi('submit',payload);
+        success++;
+      }catch(e){console.error('bulk student transfer',id,e);failed++}
+    }
+    if(isCurrentOwner()){
+      await cloudPullToLocal();
+      studentTransferMultiSelected.clear();
+      await renderStudentTransferStudents();
+      await loadStudentTransferApprovals();
+      alert(`✅ تم نقل ${success} طالب/طلاب مباشرة إلى الفصل ${targetClass}${failed?'، وتعذر نقل '+failed:''}.`);
+    }else{
+      studentTransferMultiSelected.clear();
+      await renderStudentTransferStudents();
+      alert(`✅ تم إرسال ${success} طلب نقل للاعتماد${failed?'، وتعذر إرسال '+failed:''}.`);
+    }
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText}
+  }
 }
 
 function clearStudentTransferSelection(){
@@ -8077,6 +8170,33 @@ async function initStudentTransferManager(){
   clearStudentTransferSelection();
   await loadStudentTransferApprovals();
 }
+
+document.addEventListener('click',e=>{
+  const btn=e.target?.closest?.('.select-transfer-student');
+  if(!btn || !btn.closest('#studentTransferBody')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  selectStudentTransferStudent(btn.dataset.id||'');
+});
+
+document.addEventListener('change',e=>{
+  const cb=e.target?.closest?.('.student-transfer-check');
+  if(cb && cb.closest('#studentTransferBody')){
+    toggleStudentTransferMulti(cb.dataset.id||'',!!cb.checked);
+  }
+});
+
+if($('studentTransferSelectAll')) $('studentTransferSelectAll').onchange=()=>{
+  const rows=studentTransferFilteredStudents();
+  const checked=$('studentTransferSelectAll').checked;
+  rows.forEach(s=>{
+    const id=String(s.idno||'');
+    if(checked) studentTransferMultiSelected.add(id);
+    else studentTransferMultiSelected.delete(id);
+  });
+  renderStudentTransferStudents();
+};
+if($('studentTransferBulkMoveBtn')) $('studentTransferBulkMoveBtn').onclick=moveSelectedStudentsBetweenClasses;
 
 if($('studentTransferSearch')) $('studentTransferSearch').oninput=renderStudentTransferStudents;
 if($('studentTransferGradeFilter')) $('studentTransferGradeFilter').onchange=renderStudentTransferStudents;
