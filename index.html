@@ -3324,6 +3324,36 @@
   #attendancePresentHijriOpen .attendance-present-hijri-copy b{font-size:19px!important}
 }
 </style>
+
+<style id="attendancePresentGroupSelectionStyle">
+.apg-action{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+}
+.apg-select-wrap{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-height:48px!important;
+  padding:0 12px!important;
+  border:1px solid #b9d8cf!important;
+  border-radius:12px!important;
+  background:#f7fbfa!important;
+  color:#1b5549!important;
+  font-size:16px!important;
+  font-weight:900!important;
+  cursor:pointer!important;
+}
+.apg-select-wrap input{
+  width:20px!important;
+  height:20px!important;
+  accent-color:#0f7665!important;
+  cursor:pointer!important;
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -12698,7 +12728,13 @@ async function renderAttendancePage(){
                   <td class="apg-period"><b>${g.period?('الحصة '+escapeFollowupHtml(g.period)):'بدون حصة'}</b></td>
                   <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
                   <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
-                  <td class="apg-action"><button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button></td>
+                  <td class="apg-action">
+                    <label class="apg-select-wrap" title="تحديد الفصل">
+                      <input type="checkbox" class="attendance-present-group-select" data-present-group-index="${i}">
+                      <span>تحديد</span>
+                    </label>
+                    <button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -13100,7 +13136,10 @@ if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').oncl
 };
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
-  const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-wa-select,.attendance-pending-select')];
+  const selector=attendanceListView==='present'
+    ? '.attendance-present-group-select'
+    : '.attendance-wa-select,.attendance-pending-select';
+  const boxes=[...document.querySelectorAll(selector)];
   if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
   const allChecked=boxes.every(x=>x.checked);
   boxes.forEach(x=>x.checked=!allChecked);
@@ -13158,6 +13197,48 @@ if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
 };
 
 if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=>{
+  if(attendanceListView==='present'){
+    const selected=[...document.querySelectorAll('.attendance-present-group-select:checked')]
+      .map(x=>Number(x.dataset.presentGroupIndex))
+      .filter(Number.isFinite);
+    if(!selected.length){alert('حدد فصلًا واحدًا أو أكثر أولًا');return}
+
+    const groups=window.__attendancePresentGroups||[];
+    const targetRows=[];
+    selected.forEach(i=>{
+      const g=groups[i];
+      if(g?.rows?.length) targetRows.push(...g.rows);
+    });
+    const uniqueIndexes=[...new Set(targetRows.map(r=>Number(r._index)).filter(Number.isFinite))].sort((a,b)=>b-a);
+    if(!uniqueIndexes.length){alert('لا توجد سجلات قابلة للحذف في الفصول المحددة');return}
+
+    let logs=getAttendanceLog();
+    const blocked=uniqueIndexes.some(i=>!logs[i] || !attendanceUserCanModifyRow(logs[i]));
+    if(blocked){
+      alert('بعض سجلات الفصول المحددة لا يمكن حذفها إلا من الأدمن.');
+      return;
+    }
+
+    if(!confirm('سيتم حذف تحضير '+selected.length+' فصل محدد، بعدد '+uniqueIndexes.length+' سجل طالب. هل تريد المتابعة؟')) return;
+
+    const deleted=uniqueIndexes.map(i=>logs[i]).filter(Boolean);
+    uniqueIndexes.forEach(i=>logs.splice(i,1));
+    localStorage.setItem('attendanceLog',JSON.stringify(logs));
+
+    try{
+      if(localStorage.getItem('cloudAdminToken')){
+        await cloudApi('delete_attendance_rows',{rows:deleted});
+      }
+    }catch(e){
+      console.warn('cloud grouped attendance delete',e);
+      alert('تم الحذف محليًا لكن تعذر مزامنته مع قاعدة البيانات. حدّث الصفحة وتحقق قبل إعادة المحاولة.');
+    }
+
+    renderAttendancePage();
+    toast('✅ تم حذف تحضير الفصول المحددة');
+    return;
+  }
+
   const indexes=[...document.querySelectorAll('.attendance-wa-select:checked')]
     .map(x=>Number(x.dataset.attIndex)).filter(Number.isFinite).sort((a,b)=>b-a);
   if(!indexes.length){alert('حدد سجلًا واحدًا أو مجموعة سجلات للحذف');return}
@@ -13997,9 +14078,10 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
 
 
 function getTodayPresentRows(){
+  const wantedDate=attendancePresentFilterDate||todayKey();
   return getAttendanceLog()
     .map((row,index)=>({...row,_index:index}))
-    .filter(x=>x.date===todayKey() && x.status==='present')
+    .filter(x=>String(x.date||'')===wantedDate && x.status==='present')
     .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x));
 }
 
