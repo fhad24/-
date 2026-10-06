@@ -13570,8 +13570,6 @@ async function printPresentReport(){
 }
 
 async function exportPresentReportPdf(){
-  if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
-
   const btn=$('attendancePresentPdfBtn');
   const oldText=btn?.textContent||'📄 تصدير كشف الفصول PDF';
   try{
@@ -13659,67 +13657,64 @@ async function exportPresentReportPdf(){
       </section>`;
     }).join('');
 
-    const host=document.createElement('div');
-    host.dataset.attendancePdfHost='1';
-    // لا نستخدم fixed هنا لأن html2canvas قد ينتج PDF أبيض مع العناصر المثبتة والتقارير الطويلة.
-    host.style.cssText='position:absolute;left:0;top:'+(Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+80)+'px;width:794px;background:#fff;z-index:1;padding:18px;direction:rtl;display:block;visibility:visible;opacity:1;box-sizing:border-box';
-    host.innerHTML=`<style>
-      .class-sheet{font-family:Tahoma,Arial,sans-serif;direction:rtl;color:#111;padding:8px 10px;background:#fff}
-      .class-sheet.page-break{break-before:page;page-break-before:always}
-      .class-sheet .school{text-align:center;font-size:13px;font-weight:800;margin-bottom:3px}
-      .class-sheet h1{text-align:center;font-size:22px;margin:2px 0 4px}
-      .class-sheet h2{text-align:center;font-size:18px;margin:0 0 10px;color:#0f7665}
-      .class-sheet .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border:1px solid #9eb5af;border-radius:8px;padding:7px 10px;font-size:11px;margin-bottom:7px}
-      .class-sheet .meta .wide{grid-column:1/-1}
-      .class-sheet .summary{display:flex;justify-content:center;gap:28px;font-size:12px;font-weight:700;margin:7px 0}
-      .class-sheet table{width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed}
-      .class-sheet th,.class-sheet td{border:1px solid #7e8f8b;padding:4px 5px;text-align:center;line-height:1.35}
-      .class-sheet th{background:#e8f3f0;font-weight:900}
-      .class-sheet th:nth-child(1),.class-sheet td:nth-child(1){width:6%}
-      .class-sheet th:nth-child(2),.class-sheet td:nth-child(2){width:22%}
-      .class-sheet th:nth-child(3),.class-sheet td:nth-child(3){width:52%}
-      .class-sheet th:nth-child(4),.class-sheet td:nth-child(4){width:20%}
-      .class-sheet td.nm{text-align:right;font-weight:700}
-      .class-sheet td.abs{font-weight:900}
-      .class-sheet td.pre{font-weight:800}
-    </style>${reportSections}`;
-    document.body.appendChild(host);
+    // تصدير بدون html2pdf/html2canvas: نستخدم طباعة HTML الأصلية لمنع الصفحات البيضاء.
+    const frame=document.createElement('iframe');
+    frame.setAttribute('aria-hidden','true');
+    frame.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+    document.body.appendChild(frame);
 
-    // انتظار اكتمال الخطوط والتخطيط قبل الالتقاط يمنع خروج صفحات بيضاء.
-    try{ if(document.fonts?.ready) await document.fonts.ready; }catch(e){}
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const printDoc=frame.contentWindow.document;
+    printDoc.open();
+    printDoc.write(`<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>كشف الحضور والغياب حسب الفصول</title>
+<style>
+  @page{size:A4 portrait;margin:8mm}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#fff;color:#111}
+  body{font-family:Tahoma,Arial,sans-serif;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .class-sheet{width:100%;padding:0;background:#fff;break-inside:auto;page-break-inside:auto}
+  .class-sheet.page-break{break-before:page;page-break-before:always}
+  .school{text-align:center;font-size:13px;font-weight:800;margin-bottom:3px}
+  h1{text-align:center;font-size:21px;margin:2px 0 4px}
+  h2{text-align:center;font-size:17px;margin:0 0 8px;color:#0f7665}
+  .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;border:1px solid #9eb5af;border-radius:7px;padding:6px 8px;font-size:10px;margin-bottom:6px}
+  .meta .wide{grid-column:1/-1}
+  .summary{display:flex;justify-content:center;gap:20px;font-size:11px;font-weight:700;margin:6px 0}
+  table{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed}
+  thead{display:table-header-group}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  th,td{border:1px solid #7e8f8b;padding:3px 4px;text-align:center;line-height:1.35}
+  th{background:#e8f3f0;font-weight:900}
+  th:nth-child(1),td:nth-child(1){width:6%}
+  th:nth-child(2),td:nth-child(2){width:22%}
+  th:nth-child(3),td:nth-child(3){width:52%}
+  th:nth-child(4),td:nth-child(4){width:20%}
+  td.nm{text-align:right;font-weight:700}
+  td.abs{font-weight:900}
+  td.pre{font-weight:800}
+</style>
+</head>
+<body>${reportSections}</body>
+</html>`);
+    printDoc.close();
 
-    const rect=host.getBoundingClientRect();
-    if(!rect.width || !host.scrollHeight){
-      throw new Error('PDF report element has no measurable size');
-    }
+    try{
+      if(frame.contentWindow.document.fonts?.ready) await frame.contentWindow.document.fonts.ready;
+    }catch(e){}
+    await new Promise(resolve=>setTimeout(resolve,350));
 
-    await html2pdf().set({
-      margin:[5,5,5,5],
-      filename:'كشف-الحضور-والغياب-حسب-الفصول.pdf',
-      image:{type:'jpeg',quality:0.98},
-      html2canvas:{
-        scale:1.5,
-        useCORS:true,
-        allowTaint:false,
-        backgroundColor:'#ffffff',
-        scrollX:0,
-        scrollY:0,
-        windowWidth:794,
-        logging:false
-      },
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
-      pagebreak:{mode:['css','legacy'],before:'.page-break'}
-    }).from(host).save();
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
 
-    toast('✅ تم تصدير كشف الفصول PDF');
+    setTimeout(()=>{try{frame.remove()}catch(e){}},5000);
+    toast('✅ افتح خيار «حفظ بتنسيق PDF» من نافذة الطباعة');
   }catch(e){
     console.error('export class attendance pdf',e);
     alert('تعذر إنشاء كشف PDF. حاول مرة أخرى.');
   }finally{
-    try{
-      document.querySelectorAll('[data-attendance-pdf-host="1"]').forEach(x=>x.remove());
-    }catch(e){}
     if(btn){btn.disabled=false;btn.textContent=oldText;}
   }
 }
