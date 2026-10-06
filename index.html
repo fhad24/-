@@ -186,7 +186,6 @@
     html.user-session-home #userPermissionPortal{display:block!important}
     html.user-session-home #userPermissionPortal.hidden{display:block!important}
     body.user-permissions-only #userPermissionPortal{display:block!important}
-    body.user-permissions-only .admin-import-box,
     body.user-permissions-only .admin-footer-card,
     body.user-permissions-only #attendancePanel{display:none!important}
     body.user-permissions-only .admin-data-view,
@@ -6995,6 +6994,10 @@ function configureUserDashboard(){
     const toolbar=document.querySelector('.admin-toolbar');
     toolbar?.classList.remove('hidden');
     if(toolbar) toolbar.style.display='block';
+    const importBox=document.querySelector('.admin-import-box');
+    if(importBox){ importBox.classList.remove('hidden'); importBox.style.display=''; }
+    if($('addStudentBtn')) $('addStudentBtn').style.display='';
+    ['importMadrasatiBtn','importStudentRosterTxtBtn','exportStudentEditDatabaseBtn','exportEmptyStudentTemplateBtn','importStudentPhotosBtn'].forEach(id=>{ if($(id)) $(id).style.display=''; });
     const view=localStorage.getItem('activeAdminView')||'data';
     showAdminView(view==='attendance'?'attendance':'data');
     return;
@@ -7045,6 +7048,28 @@ function configureUserDashboard(){
   Object.entries(toolbarPermMap).forEach(([id,perm])=>{
     const el=$(id);
     if(el) el.style.display=perms.has(perm)?'':'none';
+  });
+
+  // إعادة أزرار إضافة الطالب والاستيراد وإظهارها حسب الصلاحيات.
+  const addStudentBtn=$('addStudentBtn');
+  if(addStudentBtn) addStudentBtn.style.display=perms.has('addStudent')?'':'none';
+
+  const importBox=document.querySelector('.admin-import-box');
+  const canImport=perms.has('import') || perms.has('madrasati') || perms.has('photos');
+  if(importBox){
+    importBox.classList.toggle('hidden',!canImport);
+    importBox.style.display=canImport?'':'none';
+  }
+  const importMap={
+    importMadrasatiBtn:['import','madrasati'],
+    importStudentRosterTxtBtn:['import','madrasati'],
+    exportStudentEditDatabaseBtn:['import'],
+    exportEmptyStudentTemplateBtn:['import'],
+    importStudentPhotosBtn:['import','photos']
+  };
+  Object.entries(importMap).forEach(([id,allowed])=>{
+    const el=$(id);
+    if(el) el.style.display=allowed.some(p=>perms.has(p))?'':'none';
   });
 
   const defs=[
