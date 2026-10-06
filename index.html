@@ -6488,6 +6488,68 @@ async function importStudentPhotosExcel(file){
   }
 }
 
+function importStudentNameKey(v){
+  return normalizeSearchText(v)
+    .replace(/\bبن\b/g,' ')
+    .replace(/\bابن\b/g,' ')
+    .replace(/\bآل\b/g,' ال ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function findExistingStudentForImport(students, rawId, name){
+  const id=normalizeCivilId(rawId);
+  const nameKey=importStudentNameKey(name);
+
+  // 1) المطابقة بالسجل كما هو.
+  if(id){
+    const exact=students.findIndex(s=>normalizeCivilId(s.idno)===id);
+    if(exact>=0) return {index:exact,reason:'id'};
+  }
+
+  // 2) إذا حذف Excel أصفار بداية السجل، نبحث عن سجل ينتهي بنفس الرقم،
+  // لكن لا نعتمده إلا إذا كان الاسم مطابقًا/قريبًا لتفادي الربط الخاطئ.
+  if(id && id.length<10 && id.length>=6){
+    const suffixMatches=[];
+    students.forEach((s,i)=>{
+      const sid=normalizeCivilId(s.idno);
+      if(sid && sid.endsWith(id)) suffixMatches.push(i);
+    });
+    if(suffixMatches.length===1){
+      const i=suffixMatches[0];
+      const score=rosterNameScore(name,students[i]?.name||'');
+      if(!nameKey || score>=0.72) return {index:i,reason:'short_id'};
+    }else if(suffixMatches.length>1 && nameKey){
+      const exactName=suffixMatches.filter(i=>importStudentNameKey(students[i]?.name||'')===nameKey);
+      if(exactName.length===1) return {index:exactName[0],reason:'short_id_name'};
+    }
+  }
+
+  // 3) الاسم المطابق تمامًا — مهم لقوالب Excel التي أفسدت الأصفار الأولى.
+  if(nameKey){
+    const nameMatches=[];
+    students.forEach((s,i)=>{
+      if(importStudentNameKey(s.name||'')===nameKey) nameMatches.push(i);
+    });
+    if(nameMatches.length===1) return {index:nameMatches[0],reason:'name'};
+  }
+
+  // 4) مطابقة اسم تقريبية محافظة.
+  if(nameKey){
+    let best=-1,bestScore=0,second=0;
+    students.forEach((s,i)=>{
+      const score=rosterNameScore(name,s.name||'');
+      if(score>bestScore){second=bestScore;bestScore=score;best=i}
+      else if(score>second){second=score}
+    });
+    if(best>=0 && bestScore>=0.82 && (bestScore-second>=0.08 || bestScore>=0.94)){
+      return {index:best,reason:'fuzzy_name'};
+    }
+  }
+
+  return null;
+}
+
 function importExcelFile(file){
   if(!file) return;
   const status=$('excelImportStatus');
@@ -6578,13 +6640,24 @@ function importExcelFile(file){
         }
 
         rec.idno=normalizeCivilId(rec.idno);
-        if(byId.has(rec.idno)){
-          const idx=byId.get(rec.idno);
+        rec.grade=studentGradeKey(rec.grade||'');
+        rec.classroom=studentClassKey(rec.classroom||'');
+
+        const found=findExistingStudentForImport(students,rec.idno,rec.name);
+        if(found){
+          const idx=found.index;
           const old=students[idx];
+
+          // إذا كان رقم Excel ناقص الأصفار، لا نستبدل السجل الصحيح المخزن.
+          rec.idno=normalizeCivilId(old.idno)||rec.idno;
+
           students[idx]={
             ...old,
             ...rec,
-            // لا نمسح تاريخ الميلاد/التقويم المخزّن مسبقًا لأن نموذج سجل الصور لا يحتويهما.
+            idno:normalizeCivilId(old.idno)||rec.idno,
+            grade:rec.grade||old.grade||'',
+            classroom:rec.classroom||studentClassKey(old.classroom)||old.classroom||'',
+            // لا نمسح تاريخ الميلاد/التقويم أو الصور المخزنة مسبقًا.
             birth: rec.birth || old.birth || '',
             calendar: rec.calendar || old.calendar || '',
             hasFace: rec.hasFace || old.hasFace || false,
@@ -6592,6 +6665,11 @@ function importExcelFile(file){
           };
           updated++;
         }else{
+          // لا ننشئ سجلًا جديدًا من رقم قصير نتج عن حذف أصفار Excel.
+          if(rec.idno && rec.idno.length<10){
+            skipped++;
+            continue;
+          }
           students.push(rec);
           byId.set(rec.idno,students.length-1);
           added++;
@@ -6956,6 +7034,16 @@ async function importMadrasatiPlacements(file){
 
       let idx=validId ? byId.get(rawId) : undefined;
       let usedFuzzy=false;
+
+      if(idx===undefined){
+        const robust=findExistingStudentForImport(students,rawId,name);
+        if(robust){
+          idx=robust.index;
+          usedFuzzy=robust.reason!=='id';
+          if(usedFuzzy) fuzzyMatched++;
+        }
+      }
+
       if(idx===undefined && name){
         const fuzzy=findBestNameIndex(name);
         if(fuzzy){idx=fuzzy.index;usedFuzzy=true;fuzzyMatched++}
@@ -6992,8 +7080,8 @@ async function importMadrasatiPlacements(file){
 
       matched++;
       const old=students[idx];
-      const newGrade=grade || old.grade || '';
-      const newClass=classroom || studentClassKey(old.classroom) || old.classroom || '';
+      const newGrade=studentGradeKey(grade || old.grade || '');
+      const newClass=studentClassKey(classroom || old.classroom || '') || old.classroom || '';
       const newName=name || old.name || '';
       const newPhone=phone || old.phone || '';
 
