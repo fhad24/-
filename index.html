@@ -7589,6 +7589,12 @@ function buildFollowupPrintDocument(blank=false){
       .followup-print-page{width:100%;margin:0;padding:0;break-inside:avoid;page-break-inside:avoid}
       .followup-print-page.start-new-page{break-before:page!important;page-break-before:always!important}
       .followup-print-page .followup-sheet{width:100%!important;max-width:none!important;margin:0!important}
+      .followup-print-page .followup-sheet-head{margin-bottom:5px!important}
+      .followup-print-page .followup-sheet-title{font-size:16px!important;line-height:1.35!important}
+      .followup-print-page .followup-sheet-meta{font-size:11px!important;line-height:1.45!important}
+      .followup-print-page .followup-table{font-size:8px!important}
+      .followup-print-page .followup-table th,.followup-print-page .followup-table td{height:21px!important;padding:1px!important}
+      .followup-print-page .followup-mark-print{height:19px!important;font-size:10px!important}
     </style>
   </head>
   <body>
@@ -7635,7 +7641,7 @@ function buildFollowupPdfPages(blank=false){
   pages.forEach((p,index)=>{
     const wrap=document.createElement('section');
     wrap.className='followup-pdf-page-explicit'+(index?' start-new-page':'');
-    wrap.style.cssText='width:1120px;min-height:760px;background:#fff;margin:0;padding:0;box-sizing:border-box;break-after:page;page-break-after:always;overflow:hidden;';
+    wrap.style.cssText='width:1120px;height:760px;background:#fff;margin:0;padding:0;box-sizing:border-box;overflow:hidden;';
     p.clone.style.width='1120px';
     p.clone.style.maxWidth='1120px';
     p.clone.style.margin='0';
@@ -7671,7 +7677,17 @@ async function exportFollowupPdf(){
     stage.id='followupPdfStage';
     stage.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px';
     const style=document.createElement('style');
-    style.textContent=exactFollowupSheetCss()+' .exact-followup-pdf-root .followup-sheet{width:1120px!important;max-width:1120px!important}.followup-pdf-page-explicit{width:1120px!important;min-height:760px!important;break-after:page!important;page-break-after:always!important}.followup-pdf-page-explicit.start-new-page{break-before:page!important;page-break-before:always!important}';
+    style.textContent=exactFollowupSheetCss()+
+      ' .exact-followup-pdf-root{display:block!important;width:1120px!important}' +
+      ' .exact-followup-pdf-root .followup-sheet{width:1120px!important;max-width:1120px!important}' +
+      ' .followup-pdf-page-explicit{width:1120px!important;height:760px!important;min-height:0!important;overflow:hidden!important;display:block!important}' +
+      ' .followup-pdf-page-explicit.start-new-page{break-before:page!important;page-break-before:always!important}' +
+      ' .followup-pdf-page-explicit .followup-sheet-head{margin-bottom:5px!important}' +
+      ' .followup-pdf-page-explicit .followup-sheet-title{font-size:16px!important;line-height:1.35!important}' +
+      ' .followup-pdf-page-explicit .followup-sheet-meta{font-size:11px!important;line-height:1.45!important}' +
+      ' .followup-pdf-page-explicit .followup-table{font-size:8px!important}' +
+      ' .followup-pdf-page-explicit .followup-table th,.followup-pdf-page-explicit .followup-table td{height:21px!important;padding:1px!important}' +
+      ' .followup-pdf-page-explicit .followup-mark-print{height:19px!important;font-size:10px!important}';
     stage.appendChild(style);
     stage.appendChild(root);
     document.body.appendChild(stage);
@@ -7682,7 +7698,7 @@ async function exportFollowupPdf(){
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',scrollX:0,scrollY:0,windowWidth:1120},
       jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-      pagebreak:{mode:['css','legacy'],before:'.followup-pdf-page-explicit.start-new-page',after:'.followup-pdf-page-explicit',avoid:['tr']}
+      pagebreak:{mode:['css','legacy'],before:'.followup-pdf-page-explicit.start-new-page',avoid:['tr']}
     }).from(root).save();
     stage.remove();
     root=null;
