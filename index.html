@@ -13660,7 +13660,9 @@ async function exportPresentReportPdf(){
     }).join('');
 
     const host=document.createElement('div');
-    host.style.cssText='position:fixed;left:0;top:0;width:1100px;background:#fff;z-index:99999;padding:18px;direction:rtl';
+    host.dataset.attendancePdfHost='1';
+    // لا نستخدم fixed هنا لأن html2canvas قد ينتج PDF أبيض مع العناصر المثبتة والتقارير الطويلة.
+    host.style.cssText='position:absolute;left:0;top:'+(Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)+80)+'px;width:794px;background:#fff;z-index:1;padding:18px;direction:rtl;display:block;visibility:visible;opacity:1;box-sizing:border-box';
     host.innerHTML=`<style>
       .class-sheet{font-family:Tahoma,Arial,sans-serif;direction:rtl;color:#111;padding:8px 10px;background:#fff}
       .class-sheet.page-break{break-before:page;page-break-before:always}
@@ -13683,20 +13685,41 @@ async function exportPresentReportPdf(){
     </style>${reportSections}`;
     document.body.appendChild(host);
 
+    // انتظار اكتمال الخطوط والتخطيط قبل الالتقاط يمنع خروج صفحات بيضاء.
+    try{ if(document.fonts?.ready) await document.fonts.ready; }catch(e){}
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const rect=host.getBoundingClientRect();
+    if(!rect.width || !host.scrollHeight){
+      throw new Error('PDF report element has no measurable size');
+    }
+
     await html2pdf().set({
       margin:[5,5,5,5],
       filename:'كشف-الحضور-والغياب-حسب-الفصول.pdf',
-      image:{type:'jpeg',quality:.98},
-      html2canvas:{scale:1.35,useCORS:true,backgroundColor:'#fff'},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{
+        scale:1.5,
+        useCORS:true,
+        allowTaint:false,
+        backgroundColor:'#ffffff',
+        scrollX:0,
+        scrollY:0,
+        windowWidth:794,
+        logging:false
+      },
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
       pagebreak:{mode:['css','legacy'],before:'.page-break'}
     }).from(host).save();
-    host.remove();
+
     toast('✅ تم تصدير كشف الفصول PDF');
   }catch(e){
     console.error('export class attendance pdf',e);
     alert('تعذر إنشاء كشف PDF. حاول مرة أخرى.');
   }finally{
+    try{
+      document.querySelectorAll('[data-attendance-pdf-host="1"]').forEach(x=>x.remove());
+    }catch(e){}
     if(btn){btn.disabled=false;btn.textContent=oldText;}
   }
 }
