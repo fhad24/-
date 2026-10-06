@@ -5767,6 +5767,50 @@ async function studentChangeApi(action,payload={}){
   return data;
 }
 
+async function recoverLocalAttendance14480425(){
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token) return {restored:0,found:0};
+  let localRows=[];
+  try{ localRows=JSON.parse(localStorage.getItem('attendanceLog')||'[]'); }catch(e){ localRows=[]; }
+  const target=localRows.filter(x=>String(x?.date||'')==='2026-10-06' || String(x?.hijriDate||x?.hijri_date||'')==='1448-04-25');
+  if(!target.length) return {restored:0,found:0};
+
+  const remote=await cloudApi('pull_attendance');
+  const remoteRows=Array.isArray(remote?.attendance)?remote.attendance:[];
+  const existing=new Set(remoteRows.map(x=>[
+    String(x?.idno||'').replace(/\D/g,''),
+    String(x?.date||''),
+    String(x?.status||'')
+  ].join('|')));
+
+  // sync_attendance يحذف السجل لنفس الطالب/اليوم/الحالة قبل الإدخال؛
+  // لذلك نستعيد فقط الطلاب الذين لا يوجد لهم أي سجل مماثل في السحابة أصلًا.
+  const byKey=new Map();
+  for(const x of target){
+    const id=String(x?.idno||'').replace(/\D/g,'');
+    const date=String(x?.date||'');
+    const status=String(x?.status||'');
+    if(!id||!date||!status) continue;
+    const key=[id,date,status].join('|');
+    if(existing.has(key)) continue;
+    byKey.set(key,x);
+  }
+  const missing=[...byKey.values()];
+  if(!missing.length) return {restored:0,found:target.length};
+
+  await cloudApi('sync_attendance',{attendance:missing});
+  try{
+    const old=JSON.parse(localStorage.getItem('attendanceRecovery14480425')||'{}');
+    localStorage.setItem('attendanceRecovery14480425',JSON.stringify({
+      ...old,
+      recoveredAt:new Date().toISOString(),
+      restored:(Number(old.restored)||0)+missing.length,
+      found:target.length
+    }));
+  }catch(e){}
+  return {restored:missing.length,found:target.length};
+}
+
 async function cloudPullToLocal(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return null;
@@ -5876,6 +5920,7 @@ async function cloudLoginAndSync(username,password){
   if(remoteCount===0 && localCount>0){
     await cloudPushLocalData();
   }
+  try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
   await cloudPullToLocal();
   if(typeof renderAdmin==='function') renderAdmin();
   return login;
@@ -5889,6 +5934,7 @@ async function cloudAutoLoginFromSavedProfile(){
 
   if(localStorage.getItem('cloudAdminToken')){
     try{
+      try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
       await cloudPullToLocal();
       if(savedIsNonOwner){
         localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
@@ -5930,6 +5976,7 @@ async function cloudAutoLoginFromSavedProfile(){
           };
           localStorage.setItem('cloudAdminUser',JSON.stringify(merged));
           localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
+          try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
         }
       }
     }catch(e){console.warn('user cloud auto login',e)}
