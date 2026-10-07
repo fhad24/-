@@ -5266,7 +5266,6 @@ async function renderReferralSelectedStudents(){
             </span>
           </div>
         </div>
-        <button type="button" class="referral-selected-summary-remove" data-remove-selected-referral="${safeId}">حذف</button>
       </div>`;
     }));
     summary.innerHTML=`<div style="font-weight:800;margin-bottom:6px">الطلاب المحددون (${students.length})</div><div class="referral-selected-summary-list">${cards.join('')}</div>`;
@@ -5280,13 +5279,6 @@ async function renderReferralSelectedStudents(){
         }
         referralAlertLevels.set(id,required);
       });
-    });
-    summary.querySelectorAll('[data-remove-selected-referral]').forEach(btn=>btn.onclick=async()=>{
-      const id=String(btn.dataset.removeSelectedReferral||'');
-      referralSelectedIds.delete(id);
-      referralAlertLevels.delete(id);
-      await renderReferralSelectedStudents();
-      await renderReferralStudentResults($('referralStudentName')?.value||'');
     });
   }
 }
