@@ -14343,9 +14343,15 @@ if($('presentElectronicEntryBtn')) $('presentElectronicEntryBtn').onclick=()=>{$
 if($('presentPaperEntryBtn')) $('presentPaperEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');$('paperAttendanceModal')?.classList.remove('hidden');resetPaperAttendanceImport();};
 if($('closePaperAttendanceModal')) $('closePaperAttendanceModal').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
 if($('paperAttendanceCancelBtn')) $('paperAttendanceCancelBtn').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
-if($('paperAttendanceCameraBtn')) $('paperAttendanceCameraBtn').onclick=()=>{
+if($('paperAttendanceCameraBtn')) $('paperAttendanceCameraBtn').onclick=async()=>{
   cameraCaptureContext='paper-attendance';
-  startLiveCamera();
+  $('paperAttendanceModal')?.classList.add('hidden');
+  try{
+    await startLiveCamera();
+  }catch(e){
+    console.warn('paper attendance camera open',e);
+    $('paperAttendanceModal')?.classList.remove('hidden');
+  }
 };
 if($('paperAttendanceFileBtn')) $('paperAttendanceFileBtn').onclick=()=>$('paperAttendanceFileInput')?.click();
 
@@ -18308,6 +18314,7 @@ async function captureLiveStudentPhoto(){
     await processAttendanceNewPhoto(blob);
     cameraCaptureContext='student-add';
   }else if(cameraCaptureContext==='paper-attendance'){
+    $('paperAttendanceModal')?.classList.remove('hidden');
     const paperFile=new File([blob],'paper-attendance-camera.jpg',{type:'image/jpeg'});
     await readPaperAttendanceFile(paperFile);
     cameraCaptureContext='student-add';
@@ -18340,12 +18347,22 @@ if($('cameraDeviceSelect')) $('cameraDeviceSelect').onchange=e=>{
   startLiveCamera(currentCameraDeviceId);
 };
 if($('closeLiveCameraBtn')) $('closeLiveCameraBtn').onclick=async ()=>{
+  const returnToPaper=cameraCaptureContext==='paper-attendance';
   await stopLiveCamera();
   $('liveCameraModal').classList.add('hidden');
+  if(returnToPaper){
+    $('paperAttendanceModal')?.classList.remove('hidden');
+    cameraCaptureContext='student-add';
+  }
 };
 if($('cancelLiveCameraBtn')) $('cancelLiveCameraBtn').onclick=async ()=>{
+  const returnToPaper=cameraCaptureContext==='paper-attendance';
   await stopLiveCamera();
   $('liveCameraModal').classList.add('hidden');
+  if(returnToPaper){
+    $('paperAttendanceModal')?.classList.remove('hidden');
+    cameraCaptureContext='student-add';
+  }
 };
 
 if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
