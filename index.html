@@ -5373,7 +5373,9 @@ async function loadReferralHistory(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return;
   try{
-    const data=await cloudApi('list_my_referrals');
+    const creds=getCurrentDeputyCredentials();
+    if(!creds.username || !creds.password) throw new Error('MISSING_REFERRAL_HISTORY_CREDENTIALS');
+    const data=await cloudApi('list_referral_history_with_credentials',creds,false);
     const cloudRows=Array.isArray(data.rows)?data.rows:[];
     renderReferralHistoryRows(cloudRows);
   }catch(e){
