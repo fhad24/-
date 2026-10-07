@@ -2402,7 +2402,14 @@
     .referral-alert-box{margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
     .referral-alert-box label{font-size:11px;font-weight:800;color:#173b34;margin:0}
     .referral-alert-select{height:32px!important;width:auto!important;min-width:105px;border:1px solid #cbd9d6!important;border-radius:8px!important;padding:0 8px!important;font-size:11px!important;background:#fff!important}
+    .referral-alert-steps{display:inline-flex;gap:5px;align-items:center}
+    .referral-alert-step{width:34px;height:32px;border:1px solid #b8cbc6;border-radius:9px;background:#fff;color:#173b34;font-family:inherit;font-weight:900;cursor:pointer}
+    .referral-alert-step.active{background:#0f7665;color:#fff;border-color:#0f7665}
+    .referral-alert-step.done{background:#e6f5f0;color:#0f7665;border-color:#9ed1c4}
+    .referral-alert-step:disabled{cursor:not-allowed;opacity:.7}
     .referral-alert-history{display:inline-flex!important;align-items:center;gap:4px;background:#fff7e8;color:#9a5a00;border:1px solid #f0d8a8;border-radius:999px;padding:4px 7px;font-size:10px!important;font-weight:800}
+    .referral-alert-stage{display:inline-flex!important;align-items:center;background:#eef5f3;color:#365d55;border-radius:999px;padding:4px 7px;font-size:10px!important;font-weight:800}
+    .referral-alert-stage.ready{background:#e7f6f1;color:#0f7665;border:1px solid #9fd7c8}
     .referral-selected-summary-remove{border:0;background:#fff1ef;color:#b42318;border-radius:8px;padding:6px 8px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer}
     @media(max-width:720px){.referral-selected-summary-list{grid-template-columns:1fr}}
     .referral-reasons{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
@@ -5070,6 +5077,8 @@ function updateReferralDates(){
 let referralStudentPhotoUrls=[];
 let referralSelectedIds=new Set();
 let referralAlertLevels=new Map();
+let referralCloudHistoryRows=[];
+let referralCloudHistoryLoadedAt=0;
 
 function clearReferralStudentPhotoUrls(){
   referralStudentPhotoUrls.forEach(u=>{try{URL.revokeObjectURL(u)}catch(e){}});
@@ -5169,7 +5178,7 @@ async function renderReferralStudentResults(query=''){
     const id=String(e.target.value||'');
     if(e.target.checked){
       referralSelectedIds.add(id);
-      if(!referralAlertLevels.has(id)) referralAlertLevels.set(id,'1');
+      if(!referralAlertLevels.has(id)) referralAlertLevels.set(id,getRequiredReferralAlertLevel(id));
     }else{
       referralSelectedIds.delete(id);
       referralAlertLevels.delete(id);
@@ -5187,12 +5196,32 @@ function updateReferralSelectAllState(visibleStudents){
   check.checked=!!list.length && selectedCount===list.length;
   check.indeterminate=selectedCount>0 && selectedCount<list.length;
 }
+async function refreshReferralCloudHistory(force=false){
+  if(!localStorage.getItem('cloudAdminToken')) return referralCloudHistoryRows;
+  if(!force && referralCloudHistoryLoadedAt && (Date.now()-referralCloudHistoryLoadedAt)<8000) return referralCloudHistoryRows;
+  try{
+    const data=await cloudApi('list_my_referrals');
+    referralCloudHistoryRows=Array.isArray(data?.rows)?data.rows:[];
+    referralCloudHistoryLoadedAt=Date.now();
+  }catch(e){
+    console.warn('referral cloud history',e);
+  }
+  return referralCloudHistoryRows;
+}
 function getPreviousReferralAlertsCount(idno){
+  const target=String(idno||'');
+  if(referralCloudHistoryRows.length){
+    return referralCloudHistoryRows.filter(r=>String(r.student_civil_id??r.studentCivilId??'')===target).length;
+  }
   let rows=[];
   try{rows=JSON.parse(localStorage.getItem('studentReferrals')||'[]')}catch(e){rows=[]}
-  return rows.filter(r=>String(r.studentCivilId||'')===String(idno||'')).length;
+  return rows.filter(r=>String(r.student_civil_id??r.studentCivilId??'')===target).length;
+}
+function getRequiredReferralAlertLevel(idno){
+  return String(Math.min(getPreviousReferralAlertsCount(idno)+1,3));
 }
 async function renderReferralSelectedStudents(){
+  await refreshReferralCloudHistory();
   const summary=$('referralSelectedStudents');
   const count=$('referralSelectedCount');
   const triggerText=$('referralNoorTriggerText');
@@ -5213,7 +5242,8 @@ async function renderReferralSelectedStudents(){
       const safeId=String(s.idno||'');
       const safePhone=String(s.phone||'');
       const previousCount=getPreviousReferralAlertsCount(safeId);
-      const level=String(referralAlertLevels.get(safeId)||'1');
+      const requiredLevel=getRequiredReferralAlertLevel(safeId);
+      referralAlertLevels.set(safeId,requiredLevel);
       return `<div class="referral-selected-summary-card">
         ${photo?`<img src="${photo}" alt="">`:'<div class="fallback">👤</div>'}
         <div>
@@ -5221,21 +5251,35 @@ async function renderReferralSelectedStudents(){
           <span>السجل المدني: ${safeId||'—'}</span>
           <span>الجوال: ${safePhone||'—'}</span>
           <div class="referral-alert-box">
-            <label>التنبيه</label>
-            <select class="referral-alert-select" data-referral-alert-id="${safeId}">
-              <option value="1" ${level==='1'?'selected':''}>التنبيه 1</option>
-              <option value="2" ${level==='2'?'selected':''}>التنبيه 2</option>
-              <option value="3" ${level==='3'?'selected':''}>التنبيه 3</option>
-            </select>
+            <label>عدد التنبيهات</label>
+            <div class="referral-alert-steps" data-referral-alert-id="${safeId}">
+              ${[1,2,3].map(n=>{
+                const done=n<Number(requiredLevel);
+                const active=n===Number(requiredLevel);
+                const locked=n>Number(requiredLevel);
+                return `<button type="button" class="referral-alert-step ${done?'done':''} ${active?'active':''}" data-level="${n}" ${locked||done?'disabled':''}>${n}</button>`;
+              }).join('')}
+            </div>
             <span class="referral-alert-history">التنبيهات السابقة: ${previousCount}</span>
+            <span class="referral-alert-stage ${requiredLevel==='3'?'ready':''}">
+              ${requiredLevel==='3'?'التنبيه الثالث — بعد الحفظ يفتح للوكيل للاستدعاء والاستجواب':'المرحلة الحالية: التنبيه '+requiredLevel}
+            </span>
           </div>
         </div>
         <button type="button" class="referral-selected-summary-remove" data-remove-selected-referral="${safeId}">حذف</button>
       </div>`;
     }));
     summary.innerHTML=`<div style="font-weight:800;margin-bottom:6px">الطلاب المحددون (${students.length})</div><div class="referral-selected-summary-list">${cards.join('')}</div>`;
-    summary.querySelectorAll('[data-referral-alert-id]').forEach(sel=>sel.onchange=()=>{
-      referralAlertLevels.set(String(sel.dataset.referralAlertId||''),String(sel.value||'1'));
+    summary.querySelectorAll('.referral-alert-steps').forEach(group=>{
+      group.querySelectorAll('.referral-alert-step').forEach(btn=>btn.onclick=()=>{
+        const id=String(group.dataset.referralAlertId||'');
+        const required=getRequiredReferralAlertLevel(id);
+        if(String(btn.dataset.level||'')!==required){
+          alert('يجب الالتزام بالتسلسل: التنبيه 1 ثم 2 ثم 3.');
+          return;
+        }
+        referralAlertLevels.set(id,required);
+      });
     });
     summary.querySelectorAll('[data-remove-selected-referral]').forEach(btn=>btn.onclick=async()=>{
       const id=String(btn.dataset.removeSelectedReferral||'');
@@ -5252,7 +5296,7 @@ async function setVisibleReferralStudentsSelection(checked){
     const id=String(s.idno||'');
     if(checked){
       referralSelectedIds.add(id);
-      if(!referralAlertLevels.has(id)) referralAlertLevels.set(id,'1');
+      if(!referralAlertLevels.has(id)) referralAlertLevels.set(id,getRequiredReferralAlertLevel(id));
     }else{
       referralSelectedIds.delete(id);
       referralAlertLevels.delete(id);
@@ -5301,8 +5345,12 @@ function renderReferralHistoryRows(rows){
     return;
   }
   body.innerHTML=list.map((r,i)=>{
-    const replied=String(r.status||'')==='replied' || !!(r.deputy_reply||r.deputy_action);
-    const status=replied?'تم الرد':'بانتظار رد الوكيل';
+    const rowStatus=String(r.status||'');
+    const alertNum=Number(r.alert_level??r.alertLevel??1);
+    const replied=rowStatus==='replied' || !!(r.deputy_reply||r.deputy_action);
+    const status=replied
+      ? 'تم الرد'
+      : (alertNum<3 ? 'تم تسجيل التنبيه '+alertNum+' — لا يفتح للوكيل حتى التنبيه الثالث' : 'بانتظار استدعاء الطالب ورد الوكيل');
     const studentName=r.student_name??r.studentName??'—';
     const civil=r.student_civil_id??r.studentCivilId??'—';
     const grade=r.grade||'—';
@@ -5342,6 +5390,8 @@ async function loadReferralHistory(){
   }
 }
 function initReferralPage(){
+  referralCloudHistoryLoadedAt=0;
+  refreshReferralCloudHistory(true).then(()=>renderReferralSelectedStudents()).catch(()=>{});
   updateReferralDates();
   refreshReferralClasses();
   updateReferralStudentSelectorState();
@@ -5380,7 +5430,7 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     studentName:s.name||'',
     studentCivilId:String(s.idno||''),
     studentPhone:s.phone||'',
-    alertLevel:String(referralAlertLevels.get(String(s.idno||''))||'1'),
+    alertLevel:getRequiredReferralAlertLevel(String(s.idno||'')),
     previousAlerts:getPreviousReferralAlertsCount(String(s.idno||'')),
     grade:s.grade||base.grade,
     classroom:studentClassKey(s.classroom)||base.classroom
@@ -5395,7 +5445,7 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     reasons:base.reasons,
     otherReason:base.otherReason,
     problem:base.problem,
-    alertLevel:String(referralAlertLevels.get(String(s.idno||''))||'1'),
+    alertLevel:getRequiredReferralAlertLevel(String(s.idno||'')),
     previousAlerts:getPreviousReferralAlertsCount(String(s.idno||'')),
     teacherCivilId:base.teacherCivilId,
     teacher:base.teacher,
@@ -5407,12 +5457,26 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
   }));
 
   try{
-    await cloudApi('create_referrals',{rows:payload});
-    toast(`تم إرسال تحويل ${selectedStudents.length} طالب للوكيل`);
+    const result=await cloudApi('create_referrals',{rows:payload});
+    const sentToDeputy=(Array.isArray(result?.rows)?result.rows:[]).filter(r=>String(r.alert_level||'')==='3').length;
+    const recordedOnly=(Array.isArray(result?.rows)?result.rows:[]).length-sentToDeputy;
+    referralCloudHistoryLoadedAt=0;
+    await refreshReferralCloudHistory(true);
+    toast(sentToDeputy
+      ? `تم حفظ التنبيهات — ${sentToDeputy} وصل/وصلوا للتنبيه الثالث وتم تحويلهم للوكيل`
+      : `تم حفظ ${recordedOnly||selectedStudents.length} تنبيه — لا يظهر للوكيل حتى التنبيه الثالث`);
     await loadTeacherReferralReplies();
   }catch(err){
     console.warn('create referrals',err);
-    toast('تم حفظ التحويل محليًا وتعذر إرساله سحابيًا');
+    const msg=String(err?.message||err||'');
+    if(msg.includes('alert_sequence')){
+      referralCloudHistoryLoadedAt=0;
+      await refreshReferralCloudHistory(true);
+      await renderReferralSelectedStudents();
+      alert('لا يمكن تجاوز تسلسل التنبيهات. يجب إرسال التنبيه 1 ثم 2 ثم 3 بالترتيب.');
+    }else{
+      toast('تم حفظ التحويل محليًا وتعذر إرساله سحابيًا');
+    }
   }
   await loadReferralHistory();
 });
@@ -5491,7 +5555,7 @@ async function loadTeacherReferralReplies(){
               <td><b>${r.student_name||'—'}</b></td>
               <td>${r.subject||'—'}</td>
               <td>التنبيه ${r.alert_level||'1'}</td>
-              <td><span class="teacher-replies-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':'بانتظار رد الوكيل'}</span></td>
+              <td><span class="teacher-replies-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':(Number(r.alert_level||1)<3?'تم تسجيل التنبيه '+(r.alert_level||1):'بانتظار استدعاء الطالب ورد الوكيل')}</span></td>
               <td>${r.deputy_action||'—'}</td>
               <td>${r.deputy_reply||'—'}</td>
               <td>${r.deputy_name||'—'}</td>
@@ -5592,7 +5656,7 @@ async function loadDeputyReferrals(silent=false){
       scheduleDeputyAutoRetry(1200);
       return;
     }
-    let rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')!=='replied');
+    let rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')==='pending' && String(r.alert_level||'')==='3');
     if(!isCurrentOwner()){
       const currentUser=getCurrentLoggedAdminUser();
       const allowedGrades=getAllowedReferralGradePermissions(currentUser);
