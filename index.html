@@ -3138,13 +3138,11 @@
 
 
     .global-user-back{
-      position:sticky;top:8px;z-index:9999;
-      margin:10px 18px 6px auto;
-      min-height:46px;padding:10px 18px;border-radius:14px;
-      border:1px solid #0f6f60;background:#fff;color:#0f6f60;
-      font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;
-      box-shadow:0 4px 14px #00000014;
-      align-items:center;justify-content:center;gap:6px;
+      position:fixed!important;top:14px!important;left:14px!important;z-index:2147483647!important;
+      margin:0!important;min-height:48px!important;padding:10px 18px!important;border-radius:14px!important;
+      border:2px solid #0f6f60!important;background:#fff!important;color:#0f6f60!important;
+      font-family:inherit!important;font-size:15px!important;font-weight:900!important;cursor:pointer!important;
+      box-shadow:0 6px 20px #0003!important;align-items:center!important;justify-content:center!important;gap:6px!important;
     }
     .global-user-back.hidden{display:none!important}
   
@@ -5675,6 +5673,7 @@ async function loadDeputyReferrals(silent=false){
 
 async function openDeputyReferralsPage(){
   updateGlobalUserBackButton('deputyReferrals');
+  setTimeout(()=>updateGlobalUserBackButton('deputyReferrals'),0);
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('deputyReferrals')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','deputyReferrals');
@@ -7632,6 +7631,7 @@ function configureUserDashboard(){
       }
 
       renderAttendancePage();
+      setTimeout(()=>updateGlobalUserBackButton('attendance'),0);
 
       // اجلب سجلات الحضور فقط فورًا بدون تحميل صور وبيانات الطلاب الثقيلة.
       (async()=>{
@@ -9006,11 +9006,20 @@ if($('studentTransferBackBtn')) $('studentTransferBackBtn').onclick=openAdminDas
 function updateGlobalUserBackButton(pageId){
   const btn=$('globalUserBackToPages');
   if(!btn) return;
-  const owner=isCurrentOwner();
-  const internal=String(pageId||localStorage.getItem('activeMainPage')||'');
-  const shouldShow=!owner && internal && internal!=='admin' && internal!=='register';
+  let logged=false;
+  try{ logged=localStorage.getItem('adminLoggedIn')==='1' && !!localStorage.getItem('cloudAdminToken'); }catch(e){}
+  const owner=typeof isCurrentOwner==='function' ? isCurrentOwner() : false;
+  const current=String(pageId||localStorage.getItem('activeMainPage')||'');
+  const attendanceOpen=!!($('attendancePanel') && !$('attendancePanel').classList.contains('hidden'));
+  const internalPageOpen=[...document.querySelectorAll('.page')].some(p=>{
+    if(p.classList.contains('hidden')) return false;
+    return !['admin','register'].includes(String(p.id||''));
+  });
+  const portal=$('userPermissionPortal');
+  const portalIsHome=!!(portal && !portal.classList.contains('hidden') && current==='admin' && !attendanceOpen && !internalPageOpen);
+  const shouldShow=logged && !owner && !portalIsHome;
   btn.classList.toggle('hidden',!shouldShow);
-  btn.style.display=shouldShow?'inline-flex':'none';
+  btn.style.setProperty('display',shouldShow?'inline-flex':'none','important');
 }
 
 function returnUserToPermissionPages(){
@@ -9036,6 +9045,17 @@ function returnUserToPermissionPages(){
 
 if($('globalUserBackToPages')) $('globalUserBackToPages').onclick=returnUserToPermissionPages;
 
+const globalUserBackObserver=new MutationObserver(()=>{
+  try{updateGlobalUserBackButton()}catch(e){}
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    globalUserBackObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','style']});
+    updateGlobalUserBackButton();
+  }catch(e){}
+});
+setInterval(()=>{try{updateGlobalUserBackButton()}catch(e){}},1200);
+
 function openInternalPage(pageId){
   updateGlobalUserBackButton(pageId);
   // إبقاء شريط التنقل وزر الصفحة الرئيسية ظاهرين داخل جميع صفحات المستخدم/الأدمن بعد تسجيل الدخول.
@@ -9047,6 +9067,7 @@ function openInternalPage(pageId){
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(pageId)?.classList.remove('hidden');
   localStorage.setItem('activeMainPage',pageId);
+  setTimeout(()=>updateGlobalUserBackButton(pageId),0);
   if(pageId==='edit'){
     $('studentEditLogin')?.classList.remove('hidden');
     $('studentEditForm')?.classList.add('hidden');
