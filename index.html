@@ -12655,6 +12655,9 @@ async function renderAttendanceMonitoring(){
 }
 
 async function renderAttendancePage(){
+  if(attendanceListView==='present' && localStorage.getItem('cloudAdminToken')){
+    try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('present attendance cloud refresh',e); }
+  }
   if($('attendanceSelectAllRows')){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
     $('attendanceSelectAllRows').style.display='';
@@ -12723,12 +12726,17 @@ async function renderAttendancePage(){
     let rows=allLogs
       .map((row,index)=>({...row,_index:index}))
       .filter(x=>{
+        // الحضور اليومي: اعرض جميع سجلات المدرسة للتاريخ المختار،
+        // بغض النظر عن المستخدم الذي أدخل السجل.
+        if(attendanceListView==='present'){
+          if(x.status!=='present') return false;
+          if(!attendancePresentFilterDate) return true;
+          const hp=gregorianToHijriParts(attendancePresentFilterDate);
+          const targetHijri=hp.year+'-'+String(hp.month).padStart(2,'0')+'-'+String(hp.day).padStart(2,'0');
+          return String(x.date||'')===attendancePresentFilterDate || String(x.hijriDate||x.hijri_date||'')===targetHijri;
+        }
         const allowed=(ownerView||attendanceRowBelongsToCurrentUser(x));
         if(!allowed || x.status!==attendanceListView) return false;
-        // في تبويب حاضر: اعرض كل التحضيرات، أو يومًا هجريًا محددًا عند اختيار المستخدم.
-        if(attendanceListView==='present'){
-          return !attendancePresentFilterDate || String(x.date||'')===attendancePresentFilterDate;
-        }
         return x.date===todayKey();
       });
 
