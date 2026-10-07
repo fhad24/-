@@ -3618,6 +3618,7 @@
           <label>الصف</label>
           <select id="referralGrade" required>
             <option value="">اختر الصف</option>
+            <option value="__all__">الكل</option>
             <option>الأول الثانوي</option>
             <option>الثاني الثانوي</option>
             <option>الثالث الثانوي</option>
@@ -5106,8 +5107,8 @@ function getReferralFilteredStudents(query=''){
       String(s.name||'').toLowerCase().includes(q) ||
       String(s.idno||'').includes(q) ||
       String(s.phone||'').includes(q);
-    const matchesGrade=!grade || String(s.grade||'')===String(grade);
-    const matchesClass=!classroom || studentClassKey(s.classroom)===String(classroom);
+    const matchesGrade=!grade || grade==='__all__' || String(s.grade||'')===String(grade);
+    const matchesClass=!classroom || classroom==='__all__' || studentClassKey(s.classroom)===String(classroom);
     return matchesQuery && matchesGrade && matchesClass;
   });
 }
@@ -5117,12 +5118,12 @@ function refreshReferralClasses(){
   const grade=$('referralGrade')?.value||'';
   const current=sel.value;
   const classes=[...new Set(getStudents()
-    .filter(s=>!grade || String(s.grade||'')===String(grade))
+    .filter(s=>!grade || grade==='__all__' || String(s.grade||'')===String(grade))
     .map(s=>studentClassKey(s.classroom))
     .filter(Boolean)
   )].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
-  sel.innerHTML='<option value="">اختر الفصل</option>'+classes.map(v=>`<option value="${v}">الفصل ${v}</option>`).join('');
-  if(current && classes.includes(current)) sel.value=current;
+  sel.innerHTML='<option value="">اختر الفصل</option><option value="__all__">الكل</option>'+classes.map(v=>`<option value="${v}">الفصل ${v}</option>`).join('');
+  if(current==='__all__' || (current && classes.includes(current))) sel.value=current;
 }
 function updateReferralStudentSelectorState(){
   const classroom=$('referralClass')?.value||'';
