@@ -12066,9 +12066,41 @@ function attendanceUserCanModifyRow(row){
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
-function saveAttendanceLog(rows){
+async function saveAttendanceLog(rows){
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
-  if(localStorage.getItem('cloudAdminToken')) cloudApi('sync_attendance',{attendance:rows}).catch(e=>console.warn('cloud attendance',e));
+
+  let synced=false;
+  let lastError=null;
+
+  if(localStorage.getItem('cloudAdminToken')){
+    try{
+      await cloudApi('sync_attendance',{attendance:rows});
+      synced=true;
+    }catch(e){
+      lastError=e;
+      console.warn('cloud attendance token sync',e);
+    }
+  }
+
+  if(!synced){
+    try{
+      const current=getCurrentLoggedAdminUser?.()||{};
+      const username=String(current.username||current.civil_id||current.civilId||'').trim();
+      const password=String(current.password||current.civil_id||current.civilId||current.username||'').trim();
+      if(username && password){
+        await cloudApi('sync_attendance_with_credentials',{username,password,attendance:rows},false);
+        synced=true;
+      }
+    }catch(e){
+      lastError=e;
+      console.warn('cloud attendance credential sync',e);
+    }
+  }
+
+  if(!synced){
+    throw lastError || new Error('تعذر حفظ التحضير في السحابة');
+  }
+  return true;
 }
 
 function normalizeCloudAttendanceRow(x){
@@ -14464,9 +14496,10 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
     const savedMode=attendanceMode;
     const wasEditing=attendanceEditingIndex>=0;
-    saveAttendanceLog(rows);
+    await saveAttendanceLog(rows);
 
-    // رسالة نجاح ثابتة وواضحة بعد الحفظ، للطالب الواحد أو المجموعة.
+    // رسالة النجاح لا تظهر إلا بعد تأكيد الحفظ في السحابة.
+
     if(savedMode==='present'){
       const success=$('attendanceSaveSuccess');
       if(success) success.classList.remove('hidden');
@@ -14753,7 +14786,7 @@ if($('attendancePresentSaveBtn')) $('attendancePresentSaveBtn').onclick=async ()
     btn.disabled=true;
     btn.textContent='جاري الحفظ...';
     const rows=getAttendanceLog();
-    saveAttendanceLog(rows);
+    await saveAttendanceLog(rows);
 
     // تأكيد واضح داخل نفس تبويب حاضر.
     btn.textContent='✅ تم الحفظ بنجاح';
