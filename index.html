@@ -2134,6 +2134,8 @@
       }
     }
 
+    .attendance-class-row{display:block!important}
+    .attendance-class-row select{width:100%!important}
     .attendance-student-list-toolbar{
       display:grid;
       grid-template-columns:1.2fr .9fr .8fr .75fr auto;
@@ -2267,22 +2269,23 @@
     .attendance-student-list-toolbar .att-sort-btn[data-att-sort="photo"]{grid-column:3!important}
     .attendance-student-list-toolbar .att-sort-btn[data-att-sort="idno"]{grid-column:4!important}
     .attendance-student-list-toolbar #attendancePresentSelectAllWrap{grid-column:5!important;grid-row:1!important}
-    .attendance-student-list-toolbar #attendanceSelectWholeGradeBtn{
-      grid-column:1/-1!important;
-      grid-row:2!important;
+    .attendance-whole-class-btn{
       width:100%!important;
-      min-height:40px!important;
-      margin-top:4px!important;
-      font-size:13px!important;
+      min-height:44px!important;
+      margin-top:8px!important;
+      font-family:inherit!important;
+      font-size:14px!important;
+      font-weight:900!important;
       border:1px solid #0f7665!important;
       background:#e9f7f3!important;
       color:#0f7665!important;
       border-radius:10px!important;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      cursor:pointer!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
     }
-    .attendance-student-list-toolbar #attendanceSelectWholeGradeBtn.hidden{display:none!important}
+    .attendance-whole-class-btn.hidden{display:none!important}
 
     .att-student-main{grid-column:1!important;min-width:0!important}
     .att-student-class-cell{
@@ -4847,9 +4850,10 @@
           <button type="button" data-grade="الأول الثانوي" class="att-grade">الأول</button>
           <button type="button" data-grade="الثاني الثانوي" class="att-grade">الثاني</button>
           <button type="button" data-grade="الثالث الثانوي" class="att-grade">الثالث</button>
-        </div>        <div class="attendance-class-row">
+        </div>
+        <div class="attendance-class-row">
           <select id="attendanceClassFilter"><option value="">كل الفصول</option></select>
-
+          <button type="button" id="attendanceSelectWholeGradeBtn" class="attendance-whole-class-btn hidden">☑ تحديد الفصل كاملًا</button>
         </div>
         <div class="attendance-student-list-toolbar">
           <button type="button" class="att-sort-btn" data-att-sort="name">اسم الطالب</button>
@@ -4860,9 +4864,7 @@
             <input type="checkbox" id="attendancePresentSelectAll">
             <span>تحديد الكل</span>
           </label>
-          <button type="button" id="attendanceSelectWholeGradeBtn" class="att-select-all-wrap hidden" style="cursor:pointer;border:1px solid #0f7665;background:#e9f7f3;color:#0f7665;font-family:inherit;font-weight:900">
-            ☑ تحديد الفصل كاملًا
-          </button>
+
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -14346,11 +14348,14 @@ async function renderAttendanceStudentList(){
   if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
   const wholeGradeBtn=$('attendanceSelectWholeGradeBtn');
   if(wholeGradeBtn){
-    wholeGradeBtn.classList.toggle('hidden',attendanceMode!=='present');
     const cls=$('attendanceClassFilter')?.value||'';
+    wholeGradeBtn.classList.toggle('hidden',attendanceMode!=='present');
     wholeGradeBtn.textContent=cls
       ? '☑ تحديد الفصل '+cls+' كاملًا'
       : '☑ تحديد الفصل كاملًا';
+    wholeGradeBtn.title=isAttendanceSupervisor()
+      ? 'تحديد جميع طلاب الفصل للأدمن'
+      : 'تحديد جميع طلاب الفصل';
   }
 
   const rendered=await Promise.all(list.map(async s=>{
