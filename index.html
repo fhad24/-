@@ -3117,6 +3117,17 @@
       .teacher-followup-image,.manager-followup-image{width:100%;height:auto;margin-top:10px}
     }
 
+
+    html.user-session-home body.admin-mode #userPermissionButtons.user-permission-buttons{
+      gap:10px!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;
+    }
+    html.user-session-home body.admin-mode #userPermissionButtons .user-permission-btn{
+      min-height:52px!important;height:52px!important;border-radius:16px!important;
+      font-size:14px!important;padding:8px 18px!important;min-width:140px!important;
+      width:auto!important;line-height:1.2!important;
+    }
+    html.user-session-home body.admin-mode #attendanceWhatsAppSelected{display:none!important}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -7448,6 +7459,7 @@ function configureUserDashboard(){
   hideAllUserFeatureViews();
   document.body.classList.add('user-permissions-only');
   portal.classList.remove('hidden');
+  if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').style.setProperty('display','none','important');
 
   // إظهار نفس بيانات لوحة الأدمن للمستخدمين (عرض فقط حسب صلاحياتهم)
   document.querySelectorAll('.admin-data-view').forEach(el=>{
@@ -7524,7 +7536,7 @@ function configureUserDashboard(){
   ];
   const host=$('userPermissionButtons');
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
-    `<button type="button" class="user-permission-btn" data-user-action="${x[2]}">${x[1]}</button>`
+    `<button type="button" class="user-permission-btn" data-user-action="${x[2]}" style="min-height:52px!important;height:52px!important;border-radius:16px!important;font-size:14px!important;padding:8px 18px!important;min-width:140px!important;width:auto!important;line-height:1.2!important">${x[1]}</button>`
   ).join('') || '<div class="hint" style="padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
 
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
@@ -12659,7 +12671,8 @@ async function renderAttendancePage(){
   if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
 
   if($('attendanceWhatsAppSelected')){
-    const canWhatsApp=canUseAttendanceWhatsApp();
+    const normalUser=(typeof isCurrentOwner==='function' && !isCurrentOwner());
+    const canWhatsApp=!normalUser && canUseAttendanceWhatsApp();
     const allowedView=(attendanceListView==='late'||attendanceListView==='absent');
     $('attendanceWhatsAppSelected').classList.toggle('hidden', !(canWhatsApp&&allowedView));
     $('attendanceWhatsAppSelected').style.display=(canWhatsApp&&allowedView)?'':'none';
