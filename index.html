@@ -5373,11 +5373,9 @@ async function loadReferralHistory(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return;
   try{
-    const creds=getCurrentDeputyCredentials();
-    if(!creds.username || !creds.password) throw new Error('MISSING_DEPUTY_CREDENTIALS');
-    const data=await cloudApi('list_referrals_with_credentials',creds,false);
+    const data=await cloudApi('list_my_referrals');
     const cloudRows=Array.isArray(data.rows)?data.rows:[];
-    if(cloudRows.length) renderReferralHistoryRows(cloudRows);
+    renderReferralHistoryRows(cloudRows);
   }catch(e){
     console.warn('load referral history',e);
   }
@@ -5518,7 +5516,7 @@ async function loadTeacherReferralReplies(){
     return;
   }
   try{
-    const data=await cloudApi('list_referrals');
+    const data=await cloudApi('list_my_referrals');
     const rows=Array.isArray(data.rows)?data.rows:[];
     if(!rows.length){
       host.innerHTML='<table class="teacher-replies-table"><tbody><tr><td colspan="9" class="referral-history-empty">لا توجد تحويلات مرسلة حتى الآن.</td></tr></tbody></table>';
