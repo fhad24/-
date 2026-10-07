@@ -4843,6 +4843,9 @@
             <input type="checkbox" id="attendancePresentSelectAll">
             <span>تحديد الكل</span>
           </label>
+          <button type="button" id="attendanceSelectWholeGradeBtn" class="att-select-all-wrap hidden" style="cursor:pointer;border:1px solid #0f7665;background:#e9f7f3;color:#0f7665;font-family:inherit;font-weight:900">
+            ☑ تحديد الصف كاملًا
+          </button>
         </div>
         <div id="attendanceStudentList" class="attendance-student-list"></div>
         <div id="attendanceListCount" class="attendance-list-count">المعروض: 0</div>
@@ -14280,6 +14283,13 @@ async function renderAttendanceStudentList(){
   });
   const selectAllWrap=$('attendancePresentSelectAllWrap');
   if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
+  const wholeGradeBtn=$('attendanceSelectWholeGradeBtn');
+  if(wholeGradeBtn){
+    wholeGradeBtn.classList.toggle('hidden',attendanceMode!=='present');
+    wholeGradeBtn.textContent=attendanceGradeFilter
+      ? '☑ تحديد الصف '+attendanceGradeFilter.replace(' الثانوي','')+' كاملًا'
+      : '☑ تحديد جميع الطلاب';
+  }
 
   const rendered=await Promise.all(list.map(async s=>{
     const perf=getStudentAttendancePerformance(s.idno);
@@ -14455,6 +14465,26 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
     else attendancePresentSelectedIds.delete(id);
   });
   renderAttendanceStudentList();
+};
+
+if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclick=()=>{
+  if(attendanceMode!=='present') return;
+  const grade=attendanceGradeFilter||'';
+  const gradeStudents=getStudents().filter(s=>!grade || studentGradeKey(s.grade)===grade);
+  if(!gradeStudents.length){
+    alert('لا يوجد طلاب في الصف المحدد.');
+    return;
+  }
+  const ids=gradeStudents.map(s=>String(s.idno));
+  const allSelected=ids.every(id=>attendancePresentSelectedIds.has(id));
+  if(allSelected){
+    ids.forEach(id=>attendancePresentSelectedIds.delete(id));
+  }else{
+    ids.forEach(id=>attendancePresentSelectedIds.add(id));
+  }
+  renderAttendanceStudentList();
+  const label=grade ? grade : 'جميع الصفوف';
+  toast((allSelected?'تم إلغاء تحديد ':'تم تحديد ')+label+' — '+ids.length+' طالب');
 };
 document.querySelectorAll('.att-grade').forEach(btn=>btn.onclick=()=>{
   attendanceGradeFilter=btn.dataset.grade||'';
