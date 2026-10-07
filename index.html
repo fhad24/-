@@ -2447,6 +2447,8 @@
     .deputy-referral-reply{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
     .deputy-referral-reply textarea,.deputy-referral-reply select{width:100%;box-sizing:border-box;border:1px solid #cbd9d6;border-radius:10px;padding:10px;font-family:inherit;background:#fff}
     .deputy-referral-reply textarea{grid-column:1/-1;min-height:90px;resize:vertical}
+    .deputy-reply-text{pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;background:#fff!important;color:#173b34!important;opacity:1!important;cursor:text!important}
+    .deputy-action-select{pointer-events:auto!important;opacity:1!important;cursor:pointer!important}
     .deputy-referral-save{background:#0f7665;color:#fff;border:0;border-radius:10px;padding:11px 16px;font-family:inherit;font-weight:800;cursor:pointer}
     .deputy-status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}
     .deputy-status.pending{background:#fff4d6;color:#8a5a00}
@@ -5554,9 +5556,31 @@ function scheduleDeputyAutoRetry(delay=1500){
   },delay);
 }
 
+function deputyReplyEditingActive(){
+  const active=document.activeElement;
+  return !!(active && (
+    active.classList?.contains('deputy-reply-text') ||
+    active.classList?.contains('deputy-action-select')
+  ));
+}
+
+function captureDeputyReplyDrafts(){
+  const drafts={};
+  document.querySelectorAll('#deputyReferralList [data-referral-id]').forEach(card=>{
+    const id=String(card.dataset.referralId||'');
+    if(!id) return;
+    drafts[id]={
+      reply:String(card.querySelector('.deputy-reply-text')?.value||''),
+      action:String(card.querySelector('.deputy-action-select')?.value||'')
+    };
+  });
+  return drafts;
+}
 async function loadDeputyReferrals(silent=false){
   const host=$('deputyReferralList');
   if(!host || deputyReferralsLoading) return;
+  if(silent && deputyReplyEditingActive()) return;
+  const savedDrafts=captureDeputyReplyDrafts();
   deputyReferralsLoading=true;
   if(!silent || !host.querySelector('[data-referral-id]')){
     host.innerHTML='<div class="hint">جاري تحميل التحويلات...</div>';
@@ -5616,6 +5640,25 @@ async function loadDeputyReferrals(silent=false){
           <button type="button" class="deputy-referral-save">حفظ وإرسال الرد للمعلم</button>
         </div>
       </div>`).join('');
+
+    host.querySelectorAll('[data-referral-id]').forEach(card=>{
+      const id=String(card.dataset.referralId||'');
+      const draft=savedDrafts[id];
+      const ta=card.querySelector('.deputy-reply-text');
+      const sel=card.querySelector('.deputy-action-select');
+      if(ta){
+        ta.disabled=false;
+        ta.readOnly=false;
+        ta.style.pointerEvents='auto';
+        ta.style.userSelect='text';
+        if(draft && draft.reply) ta.value=draft.reply;
+      }
+      if(sel){
+        sel.disabled=false;
+        sel.style.pointerEvents='auto';
+        if(draft && draft.action) sel.value=draft.action;
+      }
+    });
 
     host.querySelectorAll('.deputy-referral-save').forEach(btn=>btn.onclick=async()=>{
       const card=btn.closest('[data-referral-id]');
@@ -5727,7 +5770,7 @@ async function openDeputyReferralsPage(){
   // محاولات تلقائية متتابعة عند فتح الصفحة؛ لا حاجة للضغط على تحديث.
   [500,1500,3000].forEach(ms=>setTimeout(()=>{
     const page=$('deputyReferrals');
-    if(page && !page.classList.contains('hidden')) loadDeputyReferrals(true);
+    if(page && !page.classList.contains('hidden') && !deputyReplyEditingActive()) loadDeputyReferrals(true);
   },ms));
 }
 if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyReferrals;
@@ -5736,7 +5779,7 @@ if($('refreshDeputyReferrals')) $('refreshDeputyReferrals').onclick=loadDeputyRe
 if(window.__deputyAutoRefreshTimer) clearInterval(window.__deputyAutoRefreshTimer);
 window.__deputyAutoRefreshTimer=setInterval(()=>{
   const page=$('deputyReferrals');
-  if(page && !page.classList.contains('hidden') && document.visibilityState==='visible'){
+  if(page && !page.classList.contains('hidden') && document.visibilityState==='visible' && !deputyReplyEditingActive()){
     loadDeputyReferrals(true);
   }
 },3000);
@@ -5748,7 +5791,7 @@ window.addEventListener('focus',()=>{
 
 document.addEventListener('visibilitychange',()=>{
   const page=$('deputyReferrals');
-  if(document.visibilityState==='visible' && page && !page.classList.contains('hidden')){
+  if(document.visibilityState==='visible' && page && !page.classList.contains('hidden') && !deputyReplyEditingActive()){
     loadDeputyReferrals(true);
   }
 });
