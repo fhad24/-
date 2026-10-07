@@ -10435,7 +10435,7 @@ async function createAdminBackupZip(){
       '</div><script>const DATA='+offlineJson+';'+
       'const esc=s=>String(s??"").replace(/[&<>"\x27]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\x27":"&#39;"}[m]));'+
       'document.getElementById("schoolName").textContent=(DATA.school&&DATA.school.school)||"نسخة احتياطية";'+
-      'document.getElementById("createdAt").textContent="تاريخ إنشاء النسخة: "+new Date(DATA.createdAt).toLocaleString('ar-SA-u-ca-islamic-umalqura');'+
+      'document.getElementById("createdAt").textContent="تاريخ إنشاء النسخة: "+new Date(DATA.createdAt).toLocaleString("ar-SA-u-ca-islamic-umalqura");'+
       'document.getElementById("stats").innerHTML=[["الطلاب",DATA.students.length],["سجلات الحضور",DATA.attendance.length],["التحويلات",DATA.referrals.length],["المستخدمون",DATA.users.length]].map(x=>"<div class=stat><div>"+x[0]+"</div><b>"+x[1]+"</b></div>").join("");'+
       'function render(q=""){q=q.trim().toLowerCase();'+
       'const sf=s=>(!q||[s.name,s.idno,s.phone,s.grade,s.classroom].some(v=>String(v||"").toLowerCase().includes(q)));'+
