@@ -18053,23 +18053,71 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
-if($('landingLoginBtn')) $('landingLoginBtn').onclick=()=>{
+if($('landingLoginBtn')) $('landingLoginBtn').onclick=async()=>{
   const user=String($('landingUser')?.value||'').trim();
   const pass=String($('landingPass')?.value||'').trim();
   if(!user || !pass){
     alert('أدخل اسم المستخدم وكلمة المرور');
     return;
   }
-  if($('adminUser')) $('adminUser').value=user;
-  if($('adminPass')) $('adminPass').value=pass;
-  if($('landingUser')) $('landingUser').value='';
-  if($('landingPass')) $('landingPass').value='';
-  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-  $('admin')?.classList.remove('hidden');
-  $('dashboard')?.classList.add('hidden');
-  $('adminLoginModal')?.classList.remove('hidden');
-  localStorage.setItem('activeMainPage','admin');
-  $('adminLoginBtn')?.click();
+
+  const btn=$('landingLoginBtn');
+  const oldText=btn?.textContent||'دخول';
+  if(btn){btn.disabled=true;btn.textContent='جاري الدخول...';}
+
+  try{
+    // الدخول الرئيسي يعتمد مباشرة على قاعدة البيانات السحابية حتى لا تتأثر
+    // جلسة المستخدم بأي بيانات محلية قديمة في المتصفح.
+    const login=await cloudApi('login',{username:user,password:pass},false);
+    if(!login?.token || !login?.user) throw new Error('LOGIN_FAILED');
+
+    const cu=login.user||{};
+    const owner=!!cu.is_owner || String(cu.role||'')==='مدير';
+    const sessionUser={
+      ...cu,
+      username:String(cu.username||user),
+      civil_id:String(cu.civil_id||cu.username||user),
+      name:String(cu.name||cu.username||user),
+      role:String(cu.role||(owner?'مدير':'مستخدم')),
+      permissions:Array.isArray(cu.permissions)?cu.permissions:[],
+      is_owner:owner
+    };
+
+    localStorage.setItem('cloudAdminToken',login.token);
+    localStorage.setItem('cloudAdminUser',JSON.stringify(sessionUser));
+    localStorage.setItem('currentLocalAdminUser',JSON.stringify(sessionUser));
+    localStorage.setItem('activeSessionMode',owner?'owner':'user');
+    localStorage.setItem('adminLoggedIn','1');
+    localStorage.setItem('activeMainPage','admin');
+
+    document.documentElement.classList.toggle('user-session-home',!owner);
+    document.body.classList.toggle('user-permissions-only',!owner);
+    document.body.classList.remove('user-attendance-only');
+
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    $('admin')?.classList.remove('hidden');
+    $('adminLoginModal')?.classList.add('hidden');
+    $('dashboard')?.classList.remove('hidden');
+    setAdminMode(true);
+
+    if(owner){
+      document.body.classList.remove('user-permissions-only','user-attendance-only');
+      try{await cloudPullToLocal()}catch(e){console.warn('owner cloud pull',e)}
+      try{renderAdmin()}catch(e){}
+      try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
+    }else{
+      try{configureUserDashboard()}catch(e){console.error('configure user dashboard',e)}
+      try{ensureAdminToolbarVisible()}catch(e){}
+    }
+
+    if($('landingUser')) $('landingUser').value='';
+    if($('landingPass')) $('landingPass').value='';
+  }catch(e){
+    console.error('landing direct login failed',e);
+    toast('اسم المستخدم أو كلمة المرور غير صحيحة');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
 };
 if($('landingPass')) $('landingPass').addEventListener('keydown',e=>{
   if(e.key==='Enter') $('landingLoginBtn')?.click();
