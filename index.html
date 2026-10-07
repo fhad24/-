@@ -6120,7 +6120,7 @@ async function cloudPullToLocal(){
   if(owner){
     const p=getAdminProfile();
     localStorage.setItem('adminProfile',JSON.stringify({
-      username:owner.username, displayName:owner.name||p.displayName||'المدير', password:p.password||''
+      username:owner.username, displayName:owner.name||p.displayName||'المدير'
     }));
   }
   const extras=cloudUsers.filter(u=>!u.is_owner).map(u=>({
@@ -6155,7 +6155,7 @@ async function cloudPushLocalData(){
     }
     await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
     const p=getAdminProfile();
-    const users=[{username:p.username,name:p.displayName,role:'مدير',password:p.password,permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true},...getAdminUsers()];
+    const users=[{username:p.username,name:p.displayName,role:'مدير',permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true},...getAdminUsers()];
     await cloudApi('sync_users',{users});
     await cloudApi('save_settings',{settings:getSchoolSettings()});
     localStorage.setItem('cloudInitialSyncDone','1');
@@ -6165,7 +6165,6 @@ async function cloudPushLocalData(){
 }
 
 async function cloudLoginAndSync(username,password){
-  await cloudApi('bootstrap_owner',{username,password,name:getAdminProfile().displayName||'المدير'},false).catch(()=>{});
   const login=await cloudApi('login',{username,password},false);
   localStorage.setItem('cloudAdminToken',login.token);
   localStorage.setItem('cloudAdminUser',JSON.stringify(login.user||{}));
@@ -6241,10 +6240,8 @@ async function cloudAutoLoginFromSavedProfile(){
     return true;
   }
 
-  const p=getAdminProfile();
-  if(localStorage.getItem('adminLoggedIn')==='1' && p.username && p.password){
-    try{await cloudLoginAndSync(p.username,p.password); return true}catch(e){console.warn('cloud auto login',e)}
-  }
+  // لا نسجل دخول المدير تلقائيًا من بيانات مخزنة في المتصفح.
+  // إذا انتهت جلسة المدير، يجب إدخال كلمة المرور والتحقق منها في الخادم من جديد.
   return false;
 }
 
@@ -9637,42 +9634,7 @@ $('adminLoginBtn').onclick=async()=>{
   const btn=$('adminLoginBtn');
   const oldText=btn.textContent;
 
-  // فحص مباشر لحساب المدير الأساسي قبل أي اتصال أو قراءة إعدادات.
-  if(user==='1015401902' && pass==='13111111'){
-    localStorage.setItem('currentLocalAdminUser',JSON.stringify({
-      username:user,civil_id:user,name:getAdminProfile().displayName||'المدير',role:'مدير',
-      permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true
-    }));
-    localStorage.setItem('activeSessionMode','owner');
-    document.documentElement.classList.remove('user-session-home');
-    localStorage.removeItem('cloudAdminUser');
-    localStorage.removeItem('cloudAdminToken');
-    localStorage.setItem('adminLoggedIn','1');
-    localStorage.setItem('activeMainPage','admin');
-    $('adminLoginModal').classList.add('hidden');
-    $('dashboard').classList.remove('hidden');
-    try{setAdminMode(true)}catch(e){}
-    try{renderAdmin()}catch(e){console.error('renderAdmin direct login',e)}
-    try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
-
-    // الأدمن يجب أن يحصل على جلسة سحابية أيضًا حتى يرى حضور جميع المستخدمين فورًا.
-    try{
-      const cloudLogin=await cloudApi('login',{username:user,password:pass},false);
-      if(cloudLogin?.token){
-        localStorage.setItem('cloudAdminToken',cloudLogin.token);
-        localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user||{}));
-        await cloudPullToLocal();
-        try{renderAdmin()}catch(e){}
-        try{renderAttendancePage()}catch(e){}
-      }
-    }catch(e){
-      console.warn('owner cloud login/sync',e);
-    }
-
-    btn.disabled=false;
-    btn.textContent=oldText;
-    return;
-  }
+  // جميع عمليات الدخول، بما فيها حساب المدير، يتم التحقق منها في الخادم فقط.
 
   const openDashboard=()=>{
     const ownerNow=isCurrentOwner();
@@ -10896,7 +10858,12 @@ function getSchoolSettings(){
   try{return {...defaults,...JSON.parse(localStorage.getItem('schoolSettings')||'{}')}}catch(e){return defaults}
 }
 function getAdminProfile(){
-  try{return {...{username:'1015401902',displayName:'المدير',password:'13111111'},...JSON.parse(localStorage.getItem('adminProfile')||'{}')}}catch(e){return {username:'1015401902',displayName:'المدير',password:'13111111'}}
+  try{
+    const saved=JSON.parse(localStorage.getItem('adminProfile')||'{}');
+    return {username:String(saved.username||'1015401902'),displayName:String(saved.displayName||'المدير')};
+  }catch(e){
+    return {username:'1015401902',displayName:'المدير'};
+  }
 }
 const BUILTIN_ADMIN_USERS=[{"username":"1096253859","name":"ابراهيم محمد علي عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1090839539","name":"احمد عبدالرحيم هادي عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1073436121","name":"احمد عبدالله بن محمد آل اسحاق","password":"","role":"معلم","permissions":["attendance"]},{"username":"298966791","name":"ادريس حسن جابر ودعاني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1059041861","name":"جابر بلغيث - الكيادي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1109565869","name":"حسن احمد علي الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1027041910","name":"حسين مسعود بن مهدي آل خريم","password":"","role":"معلم","permissions":["attendance"]},{"username":"1022052185","name":"حمد حسن حمد آل مردف","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082882521","name":"حمد محمد بن هادي ال مطيف","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111444319","name":"حمود علي سالم الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1080799446","name":"خالد محمد علان الجوفي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082314251","name":"خليل عمر خليل عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1085542957","name":"سالم عبدالله بن محمد ال شريه","password":"","role":"معلم","permissions":["attendance"]},{"username":"1080879685","name":"سعيد علي سعيد الشيخي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1086117049","name":"سلطان احمد محمد حمدي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111151989","name":"صالح محمد حسن الهمامي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1091870558","name":"عبدالعزيز منصور عويضه الجهني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1015259219","name":"علي بن صالح بن احمد القارح","password":"","role":"معلم","permissions":["attendance"]},{"username":"1090956598","name":"عمر عبد الله حسين لغبي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1094501929","name":"فهد هادي علي المحامض","password":"","role":"معلم","permissions":["attendance"]},{"username":"1032026435","name":"محمد بن ظافر بن علي ال عبيه","password":"","role":"معلم","permissions":["attendance"]},{"username":"1105067217","name":"محمد تركي مساعد الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1047775695","name":"محمد خلف محمد الشهراني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1057995316","name":"محمد غبيشي محمد الهلالي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082086743","name":"مستور عبدالله مستور الحسني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111530810","name":"ملفي علي سالم الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1055738809","name":"ناصر أحمد يحي ظامري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1117041382","name":"هادي احمد سليمان شقيقي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1077833299","name":"هاني عبدالرحيم شليويح الامير","password":"","role":"معلم","permissions":["attendance"]}];
 function getAdminUsers(){
@@ -11327,19 +11294,34 @@ function ensureAdminSettings(){
       btn.textContent=oldText;
     }
   };
-  document.getElementById('saveAdminAccount').onclick=()=>{
+  document.getElementById('saveAdminAccount').onclick=async()=>{
     const p=getAdminProfile();
+    const btn=document.getElementById('saveAdminAccount');
+    const oldText=btn.textContent;
     const pass=document.getElementById('settingsAdminPassword').value;
     const pass2=document.getElementById('settingsAdminPassword2').value;
     if(pass && pass!==pass2){toast('تأكيد كلمة المرور غير مطابق');return}
-    localStorage.setItem('adminProfile',JSON.stringify({
-      username:document.getElementById('settingsAdminUsername').value.trim()||p.username,
-      displayName:document.getElementById('settingsAdminDisplayName').value.trim()||p.displayName,
-      password:pass||p.password
-    }));
-    document.getElementById('settingsAdminPassword').value='';
-    document.getElementById('settingsAdminPassword2').value='';
-    toast('تم حفظ بيانات حساب الأدمن');
+    const username=document.getElementById('settingsAdminUsername').value.trim()||p.username;
+    const displayName=document.getElementById('settingsAdminDisplayName').value.trim()||p.displayName;
+    try{
+      btn.disabled=true;btn.textContent='جاري الحفظ...';
+      const out=await cloudApi('change_owner_account',{username,name:displayName,password:pass});
+      const savedUser=out?.user||{};
+      localStorage.setItem('adminProfile',JSON.stringify({
+        username:String(savedUser.username||username),
+        displayName:String(savedUser.name||displayName)
+      }));
+      const current=JSON.parse(localStorage.getItem('cloudAdminUser')||'{}');
+      localStorage.setItem('cloudAdminUser',JSON.stringify({...current,...savedUser,is_owner:true}));
+      document.getElementById('settingsAdminPassword').value='';
+      document.getElementById('settingsAdminPassword2').value='';
+      toast('تم حفظ حساب الأدمن في الخادم');
+    }catch(e){
+      console.error('save owner account',e);
+      alert('تعذر حفظ حساب الأدمن في الخادم. لم يتم تغيير كلمة المرور.');
+    }finally{
+      btn.disabled=false;btn.textContent=oldText;
+    }
   };
   document.getElementById('addAdminUser').onclick=()=>{
     const username=document.getElementById('newAdminUsername').value.trim();
@@ -11781,12 +11763,18 @@ function renderAdminUsersSettings(){
     saveAdminUsers(users); renderAdminUsersSettings(); alert('✅ تم حفظ بيانات المستخدم');
   });
 
-  document.querySelectorAll('[data-edit-owner-user]').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('[data-edit-owner-user]').forEach(btn=>btn.onclick=async()=>{
     const p=getAdminProfile();
     const name=prompt('الاسم المعروض',p.displayName||''); if(name===null) return;
     const pass=prompt('كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)','');
-    localStorage.setItem('adminProfile',JSON.stringify({...p,displayName:name.trim()||p.displayName,password:pass||p.password}));
-    renderAdminUsersSettings(); alert('✅ تم حفظ بيانات الأدمن');
+    try{
+      const out=await cloudApi('change_owner_account',{username:p.username,name:name.trim()||p.displayName,password:pass||''});
+      const u=out?.user||{};
+      localStorage.setItem('adminProfile',JSON.stringify({username:u.username||p.username,displayName:u.name||name.trim()||p.displayName}));
+      renderAdminUsersSettings(); alert('✅ تم حفظ بيانات الأدمن في الخادم');
+    }catch(e){
+      console.error(e);alert('تعذر حفظ بيانات الأدمن في الخادم.');
+    }
   });
 
   document.querySelectorAll('[data-perm-admin-user]').forEach(btn=>btn.onclick=()=>{
