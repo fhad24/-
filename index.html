@@ -4383,6 +4383,7 @@
           <div class="attendance-hero-buttons">
             <button type="button" class="attendance-btn late" id="addLateStudentBtn">+ إضافة متأخر</button>
             <button type="button" class="attendance-btn present" id="addPresentStudentBtn">+ إضافة حاضر</button>
+            <button type="button" class="attendance-btn present" id="adminWholeClassAttendanceBtn" style="background:#123f64;color:#fff">☑ تحديد الفصل كاملًا</button>
             <button type="button" class="attendance-btn outline">تحديث السجل</button>
             <button type="button" class="attendance-btn outline" id="attendanceAbsenceReportsBtn">📋 كشوف الغياب</button>
           </div>
@@ -4853,7 +4854,7 @@
         </div>
         <div class="attendance-class-row">
           <select id="attendanceClassFilter"><option value="">كل الفصول</option></select>
-          <button type="button" id="attendanceSelectWholeGradeBtn" class="attendance-whole-class-btn hidden">☑ تحديد الفصل كاملًا</button>
+          <button type="button" id="attendanceSelectWholeGradeBtn" class="attendance-whole-class-btn">☑ تحديد الفصل كاملًا</button>
         </div>
         <div class="attendance-student-list-toolbar">
           <button type="button" class="att-sort-btn" data-att-sort="name">اسم الطالب</button>
@@ -7601,7 +7602,15 @@ function hideAllUserFeatureViews(){
   document.body.classList.remove('user-attendance-only','attendance-supervisor-user');
 }
 
+function syncAdminWholeClassAttendanceButton(){
+  const btn=$('adminWholeClassAttendanceBtn');
+  if(!btn) return;
+  const show=isCurrentOwner() || isAttendanceSupervisor();
+  btn.style.display=show?'inline-flex':'none';
+}
+
 function applyUserAttendancePrivacy(){
+  syncAdminWholeClassAttendanceButton();
   const backBtn=$('attendanceBackToUserPages');
   if(backBtn){
     const showBack=!isCurrentOwner();
@@ -13132,6 +13141,7 @@ async function renderAttendanceMonitoring(){
 }
 
 async function renderAttendancePage(){
+  syncAdminWholeClassAttendanceButton();
   if(attendanceListView==='present' && localStorage.getItem('cloudAdminToken')){
     try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('present attendance cloud refresh',e); }
   }
@@ -14448,12 +14458,22 @@ document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
 
 if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
 if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>{
-  // الأدمن/الوكيل يدخل مباشرة إلى شاشة إضافة حاضر مع أدوات التحديد الجماعي.
   if(isCurrentOwner() || isAttendanceSupervisor()){
     openAttendanceModal('present');
     return;
   }
   $('presentEntryChoiceModal')?.classList.remove('hidden');
+};
+if($('adminWholeClassAttendanceBtn')) $('adminWholeClassAttendanceBtn').onclick=()=>{
+  openAttendanceModal('present');
+  setTimeout(()=>{
+    const btn=$('attendanceSelectWholeGradeBtn');
+    if(btn){
+      btn.classList.remove('hidden');
+      btn.style.setProperty('display','flex','important');
+      btn.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },0);
 };
 if($('closePresentEntryChoice')) $('closePresentEntryChoice').onclick=()=>$('presentEntryChoiceModal')?.classList.add('hidden');
 if($('presentElectronicEntryBtn')) $('presentElectronicEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');openAttendanceModal('present');};
