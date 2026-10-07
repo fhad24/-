@@ -13332,6 +13332,7 @@ async function renderAttendancePage(){
           <table class="attendance-present-groups-table">
             <thead>
               <tr>
+                ${ownerView?'<th class="apg-select-head">تحديد</th>':''}
                 <th>الصف</th>
                 <th>الفصل</th>
                 <th>التاريخ</th>
@@ -13344,13 +13345,22 @@ async function renderAttendancePage(){
             <tbody>
               ${groups.map((g,i)=>`
                 <tr>
+                  ${ownerView?`<td class="apg-select-cell">
+                    <label class="apg-select-label" title="تحديد الفصل كاملًا">
+                      <input type="checkbox" class="attendance-present-group-select" data-present-group-select="${i}">
+                      <span>تحديد الفصل</span>
+                    </label>
+                  </td>`:''}
                   <td class="apg-grade"><b>${escapeFollowupHtml(g.grade||'—')}</b></td>
                   <td class="apg-classroom"><b>${escapeFollowupHtml(displayStudentClassroom(g.classroom)||g.classroom||'—')}</b></td>
                   <td class="apg-date"><b>${escapeFollowupHtml(g.date||'—')}</b></td>
                   <td class="apg-period"><b>${g.period?('الحصة '+escapeFollowupHtml(g.period)):'بدون حصة'}</b></td>
                   <td class="apg-teacher"><b>${escapeFollowupHtml(g.teacher||'—')}</b>${g.teacherId?`<span>${escapeFollowupHtml(g.teacherId)}</span>`:''}</td>
                   <td class="apg-subject">${escapeFollowupHtml(g.subject||'—')}</td>
-                  <td class="apg-action"><button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button></td>
+                  <td class="apg-action">
+                    ${ownerView?`<button type="button" class="apg-select-whole-class" data-present-group-select-btn="${i}">☑ تحديد الفصل كاملًا</button>`:''}
+                    <button type="button" class="apg-show-students" data-present-group-index="${i}">👥 عرض الطلاب <span>${g.rows.length}</span></button>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -13362,6 +13372,20 @@ async function renderAttendancePage(){
           const i=Number(btn.dataset.presentGroupIndex);
           const g=window.__attendancePresentGroups?.[i];
           if(g) openPresentAttendanceGroupModal(g);
+        };
+      });
+      document.querySelectorAll('[data-present-group-select-btn]').forEach(btn=>{
+        btn.onclick=()=>{
+          const i=Number(btn.dataset.presentGroupSelectBtn);
+          const box=document.querySelector('.attendance-present-group-select[data-present-group-select="'+i+'"]');
+          if(!box) return;
+          box.checked=!box.checked;
+          btn.classList.toggle('selected',box.checked);
+          btn.textContent=box.checked?'☐ إلغاء تحديد الفصل':'☑ تحديد الفصل كاملًا';
+          const g=window.__attendancePresentGroups?.[i];
+          toast(box.checked
+            ? ('تم تحديد الفصل '+(displayStudentClassroom(g?.classroom)||g?.classroom||'')+' كاملًا — '+(g?.rows?.length||0)+' طالب')
+            : 'تم إلغاء تحديد الفصل');
         };
       });
       return;
@@ -13752,7 +13776,7 @@ if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').oncl
 };
 
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
-  const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-wa-select,.attendance-pending-select')];
+  const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-present-group-select,.attendance-wa-select,.attendance-pending-select')];
   if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
   const allChecked=boxes.every(x=>x.checked);
   boxes.forEach(x=>x.checked=!allChecked);
@@ -14878,9 +14902,20 @@ function getTodayPresentRows(){
 }
 
 function getSelectedPresentIndexes(){
-  return [...document.querySelectorAll('.attendance-present-select:checked')]
-    .map(x=>Number(x.dataset.attIndex))
-    .filter(Number.isFinite);
+  const out=new Set(
+    [...document.querySelectorAll('.attendance-present-select:checked')]
+      .map(x=>Number(x.dataset.attIndex))
+      .filter(Number.isFinite)
+  );
+  document.querySelectorAll('.attendance-present-group-select:checked').forEach(box=>{
+    const i=Number(box.dataset.presentGroupSelect);
+    const g=window.__attendancePresentGroups?.[i];
+    (g?.rows||[]).forEach(r=>{
+      const idx=Number(r?._index);
+      if(Number.isFinite(idx)) out.add(idx);
+    });
+  });
+  return [...out];
 }
 
 function buildPresentReportHtml(){
@@ -16955,7 +16990,14 @@ function printStudents(rows){
       width:100%;overflow-x:auto;border:1px solid #d9e6e2;border-radius:16px;background:#fff;
       box-shadow:0 7px 22px rgba(15,83,68,.05);margin-top:12px
     }
-    .attendance-present-groups-table{width:100%;min-width:980px;border-collapse:separate;border-spacing:0;direction:rtl}
+    .attendance-present-groups-table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0;direction:rtl}
+    .apg-select-head{width:145px!important}
+    .apg-select-cell{min-width:145px;text-align:center!important}
+    .apg-select-label{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:900;color:#0f6f60;cursor:pointer;white-space:nowrap}
+    .apg-select-label input{width:21px;height:21px;accent-color:#0f7665;cursor:pointer}
+    .apg-action{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .apg-select-whole-class{border:1px solid #0f7665;background:#e8f5f1;color:#0f7665;border-radius:9px;padding:8px 11px;font-family:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
+    .apg-select-whole-class.selected{background:#0f7665;color:#fff}
     .attendance-present-groups-table th{
       background:#eef7f4;color:#173f37;font-size:14px;font-weight:900;padding:14px 12px;
       text-align:center;border-bottom:1px solid #cfe0da
