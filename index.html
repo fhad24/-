@@ -10438,19 +10438,32 @@ if($('adminSearch')) $('adminSearch').addEventListener('input',renderAdmin);
 
 if($('referralNewBtn')) $('referralNewBtn').onclick=()=>{
   try{
+    // احتفظ بآخر ما تم حيال الطالب ورد الوكيل عند بدء تحويل جديد.
+    const keepAction=String($('referralActionTaken')?.value||'');
+    const keepDeputyStatus=String($('referralDeputyStatus')?.textContent||'');
+
     const form=$('studentReferralForm');
     if(form) form.reset();
+
     if(typeof referralSelectedIds!=='undefined') referralSelectedIds.clear();
     if(typeof referralAlertLevels!=='undefined') referralAlertLevels.clear();
-    if($('referralActionTaken')) $('referralActionTaken').value='';
-    if($('referralDeputyStatus')) $('referralDeputyStatus').textContent='لا يوجد رد من الوكيل حتى الآن.';
+
+    if($('referralActionTaken')) $('referralActionTaken').value=keepAction;
+    if($('referralDeputyStatus') && keepDeputyStatus) $('referralDeputyStatus').textContent=keepDeputyStatus;
+
     if($('referralStudentName')) $('referralStudentName').value='';
     if($('referralSelectedCount')) $('referralSelectedCount').textContent='(0)';
     if($('referralNoorTriggerText')) $('referralNoorTriggerText').textContent='اختر الفصل أولًا';
     if(typeof renderReferralSelectedStudents==='function') renderReferralSelectedStudents();
+
     openInternalPage('referral');
     setTimeout(()=>{
       if(typeof initReferralPage==='function') initReferralPage();
+
+      // initReferralPage قد يعيد تهيئة الحقول؛ أعد الرد المحفوظ بعدها أيضًا.
+      if($('referralActionTaken')) $('referralActionTaken').value=keepAction;
+      if($('referralDeputyStatus') && keepDeputyStatus) $('referralDeputyStatus').textContent=keepDeputyStatus;
+
       window.scrollTo(0,0);
     },0);
   }catch(e){
