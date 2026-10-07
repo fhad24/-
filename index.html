@@ -535,6 +535,27 @@
     .attendance-camera-side select{height:42px;margin-bottom:8px}
     .attendance-camera-preview{height:190px;border-radius:12px;background:#071923;color:#fff;display:grid;place-items:center;text-align:center;padding:22px;line-height:1.8;font-size:12px}
     .attendance-camera-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+    .present-entry-choice-card{max-width:560px!important;width:min(94vw,560px)!important;padding:22px!important}
+    .present-entry-choice-title{text-align:center;font-size:22px!important;margin:0 0 8px!important}
+    .present-entry-choice-sub{text-align:center;color:#687d77;font-size:13px;margin-bottom:18px}
+    .present-entry-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .present-entry-choice-btn{min-height:118px;border:2px solid #c9dad5;border-radius:18px;background:#fff;color:#173b34;font-family:inherit;font-weight:900;font-size:17px;cursor:pointer;padding:18px 14px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
+    .present-entry-choice-btn span{font-size:32px}.present-entry-choice-btn small{font-size:11px;color:#6c807a;font-weight:700;line-height:1.6}
+    .present-entry-choice-btn.electronic{border-color:#0f7665;background:#f3fbf8}
+    .paper-attendance-card{max-width:900px!important;width:min(96vw,900px)!important;max-height:92vh;overflow:auto;padding:20px!important}
+    .paper-attendance-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .paper-attendance-head h2{font-size:21px!important;margin:0!important}
+    .paper-attendance-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+    .paper-attendance-actions button{min-height:50px;border-radius:13px;padding:10px 16px;font-family:inherit;font-weight:900;cursor:pointer;border:1px solid #0f7665;background:#fff;color:#0f7665}
+    .paper-attendance-actions button.primary{background:#0f7665;color:#fff}
+    .paper-attendance-status{padding:12px;border-radius:12px;background:#f4f8f7;border:1px solid #d8e4e1;font-size:13px;font-weight:800;line-height:1.7;margin-bottom:12px}
+    .paper-attendance-preview{max-width:100%;max-height:300px;border-radius:12px;border:1px solid #d8e4e1;display:block;margin:10px auto;object-fit:contain}
+    .paper-match-list{display:grid;gap:8px;margin-top:10px}
+    .paper-match-row{display:grid;grid-template-columns:36px 1fr 130px 120px;gap:8px;align-items:center;border:1px solid #dce7e4;border-radius:12px;padding:10px;background:#fff}
+    .paper-match-row input{width:20px;height:20px}
+    .paper-match-row b{font-size:14px}.paper-match-row span{font-size:12px;color:#637772}
+    .paper-match-empty{padding:18px;text-align:center;color:#70827e;background:#f8fbfa;border-radius:12px}
+    @media(max-width:700px){.present-entry-choice-grid{grid-template-columns:1fr}.paper-match-row{grid-template-columns:32px 1fr}.paper-match-row .paper-meta{grid-column:2}}
     .attendance-camera-buttons button{height:45px;border:1px solid #16b6a2;border-radius:7px;background:#fff;color:#0f7665;font-family:inherit;font-weight:800}
     .attendance-camera-buttons button.dark{background:#0b2436;color:#fff;border-color:#0b2436}
     .attendance-selected-name{font-size:11px;color:#6d7f7a;margin-top:8px}
@@ -4751,6 +4772,39 @@
           <button type="button" class="btn btn-outline" id="cancelAddStudentBtn">إلغاء</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="presentEntryChoiceModal" class="modal-backdrop hidden">
+  <div class="modal-card present-entry-choice-card">
+    <button type="button" class="attendance-modal-close" id="closePresentEntryChoice">×</button>
+    <h2 class="present-entry-choice-title">إضافة حاضر</h2>
+    <div class="present-entry-choice-sub">اختر طريقة إدخال الحضور</div>
+    <div class="present-entry-choice-grid">
+      <button type="button" id="presentElectronicEntryBtn" class="present-entry-choice-btn electronic"><span>💻</span>إدخال إلكتروني<small>نفس الطريقة السابقة لاختيار الطلاب من قاعدة البيانات.</small></button>
+      <button type="button" id="presentPaperEntryBtn" class="present-entry-choice-btn"><span>📄</span>إدخال ورقي<small>تصوير الكشف بالكاميرا أو استيراد ملف ثم قراءته ومطابقة الطلاب.</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="paperAttendanceModal" class="modal-backdrop hidden">
+  <div class="modal-card paper-attendance-card">
+    <div class="paper-attendance-head"><h2>📄 إدخال الحضور من كشف ورقي</h2><button type="button" class="attendance-modal-close" id="closePaperAttendanceModal">×</button></div>
+    <div class="hint" style="font-size:12px;text-align:right;margin-bottom:10px">صوّر الكشف بوضوح أو استورد صورة / PDF / Excel / CSV / TXT. سيقرأ النظام السجل أو الاسم ويطابقه مع قاعدة الطلاب.</div>
+    <div class="paper-attendance-actions">
+      <button type="button" class="primary" id="paperAttendanceCameraBtn">📷 تصوير بالكاميرا</button>
+      <button type="button" id="paperAttendanceFileBtn">📁 استيراد ملف</button>
+      <button type="button" id="paperAttendanceSelectAllBtn">☑ تحديد الكل</button>
+    </div>
+    <input id="paperAttendanceCameraInput" class="hidden" type="file" accept="image/*" capture="environment">
+    <input id="paperAttendanceFileInput" class="hidden" type="file" accept="image/*,.pdf,.xlsx,.xls,.csv,.txt">
+    <img id="paperAttendancePreview" class="paper-attendance-preview hidden" alt="معاينة الكشف">
+    <div id="paperAttendanceStatus" class="paper-attendance-status">اختر تصوير الكشف أو استيراد ملف للبدء.</div>
+    <div id="paperAttendanceMatches" class="paper-match-list"><div class="paper-match-empty">لم تتم قراءة أي كشف بعد.</div></div>
+    <div class="paper-attendance-actions" style="justify-content:center;margin-top:16px">
+      <button type="button" class="primary" id="paperAttendanceUseMatchesBtn">✅ اعتماد المحدد وإكمال الحضور</button>
+      <button type="button" id="paperAttendanceCancelBtn">إلغاء</button>
     </div>
   </div>
 </div>
@@ -14283,7 +14337,65 @@ document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
 });
 
 if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
-if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>openAttendanceModal('present');
+if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.remove('hidden');};
+if($('closePresentEntryChoice')) $('closePresentEntryChoice').onclick=()=>$('presentEntryChoiceModal')?.classList.add('hidden');
+if($('presentElectronicEntryBtn')) $('presentElectronicEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');openAttendanceModal('present');};
+if($('presentPaperEntryBtn')) $('presentPaperEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');$('paperAttendanceModal')?.classList.remove('hidden');resetPaperAttendanceImport();};
+if($('closePaperAttendanceModal')) $('closePaperAttendanceModal').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
+if($('paperAttendanceCancelBtn')) $('paperAttendanceCancelBtn').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
+if($('paperAttendanceCameraBtn')) $('paperAttendanceCameraBtn').onclick=()=>$('paperAttendanceCameraInput')?.click();
+if($('paperAttendanceFileBtn')) $('paperAttendanceFileBtn').onclick=()=>$('paperAttendanceFileInput')?.click();
+
+let paperAttendanceMatchedIds=new Set();
+function resetPaperAttendanceImport(){
+  paperAttendanceMatchedIds.clear();
+  if($('paperAttendanceStatus')) $('paperAttendanceStatus').textContent='اختر تصوير الكشف أو استيراد ملف للبدء.';
+  if($('paperAttendanceMatches')) $('paperAttendanceMatches').innerHTML='<div class="paper-match-empty">لم تتم قراءة أي كشف بعد.</div>';
+  if($('paperAttendancePreview')){$('paperAttendancePreview').classList.add('hidden');$('paperAttendancePreview').removeAttribute('src');}
+}
+function normalizePaperArabic(s){return String(s||'').replace(/[إأآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^\u0600-\u06FF0-9 ]+/g,' ').replace(/\s+/g,' ').trim().toLowerCase();}
+function paperNameScore(source,name){
+  const a=normalizePaperArabic(source).split(' ').filter(x=>x.length>1&&!['بن','ابن'].includes(x));
+  const b=normalizePaperArabic(name).split(' ').filter(x=>x.length>1&&!['بن','ابن'].includes(x));
+  if(!a.length||!b.length)return 0; const bs=new Set(b); const hit=a.filter(x=>bs.has(x)).length; return hit/Math.max(2,Math.min(a.length,b.length));
+}
+function matchPaperAttendanceText(text){
+  const raw=String(text||''),students=getStudents(),byId=new Map(students.map(s=>[String(s.idno||'').replace(/\D/g,''),s])),found=new Map();
+  const digitText=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+  (digitText.match(/\b[12]\d{9}\b/g)||[]).forEach(id=>{const s=byId.get(id);if(s)found.set(String(s.idno),{student:s,source:'السجل المدني'});});
+  raw.split(/\r?\n/).map(x=>x.trim()).filter(x=>x.length>=5).forEach(line=>{let best=null,score=0;for(const s of students){if(found.has(String(s.idno)))continue;const sc=paperNameScore(line,s.name);if(sc>score){best=s;score=sc;}}if(best&&score>=.60)found.set(String(best.idno),{student:best,source:'مطابقة الاسم'});});
+  return [...found.values()];
+}
+function renderPaperAttendanceMatches(matches){
+  const host=$('paperAttendanceMatches'); if(!host)return; paperAttendanceMatchedIds=new Set(matches.map(x=>String(x.student.idno)));
+  if(!matches.length){host.innerHTML='<div class="paper-match-empty">لم أتعرف على طلاب مطابقين. جرّب صورة أوضح أو كشفًا يحتوي على السجل المدني.</div>';return;}
+  host.innerHTML=matches.map(x=>{const s=x.student;return `<label class="paper-match-row"><input type="checkbox" class="paper-attendance-match-check" data-id="${s.idno}" checked><div><b>${escapeFollowupHtml(s.name||'')}</b><div class="paper-meta"><span>السجل: ${escapeFollowupHtml(s.idno||'—')}</span></div></div><span class="paper-meta">${escapeFollowupHtml(s.grade||'—')} / ${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'—')}</span><span class="paper-meta">${x.source}</span></label>`;}).join('');
+  host.querySelectorAll('.paper-attendance-match-check').forEach(ch=>ch.onchange=()=>{const id=String(ch.dataset.id||'');if(ch.checked)paperAttendanceMatchedIds.add(id);else paperAttendanceMatchedIds.delete(id);});
+}
+async function ensurePaperOcr(file){
+  if((file?.type==='application/pdf'||/\.pdf$/i.test(file?.name||''))&&!window.pdfjsLib)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';s.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';res();};s.onerror=rej;document.head.appendChild(s);});
+  if(!window.Tesseract)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+}
+async function paperFileToImages(file){
+  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name||'')){await ensurePaperOcr(file);const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,out=[];for(let p=1;p<=Math.min(pdf.numPages,10);p++){const page=await pdf.getPage(p),v=page.getViewport({scale:2}),canvas=document.createElement('canvas');canvas.width=v.width;canvas.height=v.height;await page.render({canvasContext:canvas.getContext('2d'),viewport:v}).promise;out.push(canvas);}return out;}return [file];
+}
+async function readPaperAttendanceFile(file){
+  if(!file)return;const status=$('paperAttendanceStatus'),preview=$('paperAttendancePreview');
+  try{
+    if(status)status.textContent='جاري قراءة الملف ومطابقة الطلاب...';
+    if(/^image\//.test(file.type||'')){const url=URL.createObjectURL(file);preview.src=url;preview.classList.remove('hidden');preview.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),5000);}else{preview.classList.add('hidden');preview.removeAttribute('src');}
+    let text='';
+    if(/\.(xlsx|xls)$/i.test(file.name||'')){const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});text=wb.SheetNames.map(n=>XLSX.utils.sheet_to_csv(wb.Sheets[n],{FS:' ',RS:'\n'})).join('\n');}
+    else if(/\.(csv|txt)$/i.test(file.name||'')||/^text\//.test(file.type||'')){text=await file.text();}
+    else{await ensurePaperOcr(file);const imgs=await paperFileToImages(file),parts=[];for(let i=0;i<imgs.length;i++){if(status)status.textContent='جاري قراءة الصفحة '+(i+1)+' من '+imgs.length+'...';const result=await Tesseract.recognize(imgs[i],'ara+eng',{logger:m=>{if(status&&m?.status==='recognizing text')status.textContent='جاري قراءة الكشف... '+Math.round((m.progress||0)*100)+'%';}});parts.push(result?.data?.text||'');}text=parts.join('\n');}
+    const matches=matchPaperAttendanceText(text);renderPaperAttendanceMatches(matches);if(status)status.textContent=matches.length?'تم التعرف على '+matches.length+' طالب. راجع التحديد ثم اضغط «اعتماد المحدد وإكمال الحضور».':'تمت القراءة لكن لم تتم مطابقة طلاب. حاول صورة أوضح أو ملفًا يحتوي على السجل المدني.';
+  }catch(e){console.error('paper attendance read',e);if(status)status.textContent='تعذر قراءة الملف: '+String(e?.message||e);}
+}
+if($('paperAttendanceCameraInput')) $('paperAttendanceCameraInput').onchange=async e=>{const f=e.target.files?.[0];if(f)await readPaperAttendanceFile(f);e.target.value='';};
+if($('paperAttendanceFileInput')) $('paperAttendanceFileInput').onchange=async e=>{const f=e.target.files?.[0];if(f)await readPaperAttendanceFile(f);e.target.value='';};
+if($('paperAttendanceSelectAllBtn')) $('paperAttendanceSelectAllBtn').onclick=()=>{const checks=[...document.querySelectorAll('.paper-attendance-match-check')],all=checks.length&&checks.every(x=>x.checked);checks.forEach(ch=>{ch.checked=!all;const id=String(ch.dataset.id||'');if(ch.checked)paperAttendanceMatchedIds.add(id);else paperAttendanceMatchedIds.delete(id);});};
+if($('paperAttendanceUseMatchesBtn')) $('paperAttendanceUseMatchesBtn').onclick=()=>{const ids=[...paperAttendanceMatchedIds];if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return;}$('paperAttendanceModal')?.classList.add('hidden');openAttendanceModal('present');attendancePresentSelectedIds=new Set(ids);attendanceSelectedId='';renderAttendanceStudentList();$('attendanceModalTitle').textContent='إضافة حاضر — إدخال ورقي ('+ids.length+' طالب)';toast('تم تحديد '+ids.length+' طالب. اختر الحصة والمادة ثم اضغط حفظ.');};
+
 if($('closeAttendanceModal')) $('closeAttendanceModal').onclick=closeAttendanceModal;
 if($('cancelAttendanceStudentBtn')) $('cancelAttendanceStudentBtn').onclick=closeAttendanceModal;
 if($('attendanceLateTab')) $('attendanceLateTab').onclick=()=>setAttendanceMode('late');
