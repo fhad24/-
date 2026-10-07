@@ -3136,6 +3136,18 @@
     }
     html.user-session-home body.admin-mode:not(.attendance-supervisor-user) #attendanceWhatsAppSelected{display:none!important}
 
+
+    .global-user-back{
+      position:sticky;top:8px;z-index:9999;
+      margin:10px 18px 6px auto;
+      min-height:46px;padding:10px 18px;border-radius:14px;
+      border:1px solid #0f6f60;background:#fff;color:#0f6f60;
+      font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;
+      box-shadow:0 4px 14px #00000014;
+      align-items:center;justify-content:center;gap:6px;
+    }
+    .global-user-back.hidden{display:none!important}
+  
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -3391,6 +3403,7 @@
 </style>
 </head>
 <body>
+  <button type="button" id="globalUserBackToPages" class="global-user-back hidden">⬅ الرجوع إلى صفحاتي</button>
 <div class="app">
 <header>
   <div class="brand">
@@ -4297,7 +4310,7 @@
 
       <div id="attendancePanel" class="attendance-panel hidden">
         <div class="attendance-topline">
-          <button type="button" id="attendanceBackToUserPages" class="attendance-btn outline hidden">⬅ الرجوع إلى صفحاتي</button>
+          <button type="button" id="attendanceBackToUserPages" class="attendance-btn outline hidden" style="display:none!important">⬅ الرجوع إلى صفحاتي</button>
         </div>
 
         <div class="attendance-stats">
@@ -5661,6 +5674,7 @@ async function loadDeputyReferrals(silent=false){
 }
 
 async function openDeputyReferralsPage(){
+  updateGlobalUserBackButton('deputyReferrals');
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('deputyReferrals')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','deputyReferrals');
@@ -7581,6 +7595,7 @@ function configureUserDashboard(){
     document.documentElement.classList.remove('user-session-home');
     document.body.classList.remove('user-permissions-only');
     if(action==='attendance'){
+      updateGlobalUserBackButton('attendance');
       const supervisor=isAttendanceSupervisor();
       applyUserAttendancePrivacy();
 
@@ -8988,7 +9003,41 @@ if($('studentTransferClearBtn')) $('studentTransferClearBtn').onclick=clearStude
 if($('studentTransferApprovalsRefresh')) $('studentTransferApprovalsRefresh').onclick=loadStudentTransferApprovals;
 if($('studentTransferBackBtn')) $('studentTransferBackBtn').onclick=openAdminDashboardInternal;
 
+function updateGlobalUserBackButton(pageId){
+  const btn=$('globalUserBackToPages');
+  if(!btn) return;
+  const owner=isCurrentOwner();
+  const internal=String(pageId||localStorage.getItem('activeMainPage')||'');
+  const shouldShow=!owner && internal && internal!=='admin' && internal!=='register';
+  btn.classList.toggle('hidden',!shouldShow);
+  btn.style.display=shouldShow?'inline-flex':'none';
+}
+
+function returnUserToPermissionPages(){
+  if(isCurrentOwner()){
+    openAdminDashboardInternal();
+    return;
+  }
+  try{ hideAllUserFeatureViews(); }catch(e){}
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  $('admin')?.classList.remove('hidden');
+  $('dashboard')?.classList.remove('hidden');
+  $('adminLoginModal')?.classList.add('hidden');
+  document.body.classList.add('admin-mode','user-permissions-only');
+  document.body.classList.remove('attendance-supervisor-user','user-attendance-only');
+  document.documentElement.classList.add('user-session-home');
+  localStorage.setItem('activeMainPage','admin');
+  try{ configureUserDashboard(); }catch(e){ console.warn('return user pages',e); }
+  $('userPermissionPortal')?.classList.remove('hidden');
+  const btn=$('globalUserBackToPages');
+  if(btn){btn.classList.add('hidden');btn.style.display='none';}
+  window.scrollTo(0,0);
+}
+
+if($('globalUserBackToPages')) $('globalUserBackToPages').onclick=returnUserToPermissionPages;
+
 function openInternalPage(pageId){
+  updateGlobalUserBackButton(pageId);
   // إبقاء شريط التنقل وزر الصفحة الرئيسية ظاهرين داخل جميع صفحات المستخدم/الأدمن بعد تسجيل الدخول.
   if(localStorage.getItem('adminLoggedIn')==='1'){
     document.body.classList.add('admin-mode');
@@ -9087,6 +9136,8 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  const globalBack=$('globalUserBackToPages');
+  if(globalBack){globalBack.classList.add('hidden');globalBack.style.display='none';}
   refreshOwnerHomeButton();
   // هذا الزر يظهر فقط بعد تسجيل الدخول، لذلك افتح لوحة الإدارة مباشرة
   // بدون الاعتماد على حالة صفحة أو زر سابق.
@@ -9141,6 +9192,7 @@ function openAdminDashboardInternal(){
 if($('headerAdminDashboardBtn')) $('headerAdminDashboardBtn').onclick=openAdminDashboardInternal;
 
 function openSchoolUsersSettings(){
+  updateGlobalUserBackButton('adminSettings');
   try{
     const u=getCurrentLoggedAdminUser();
     const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
@@ -11654,6 +11706,7 @@ function openUserPermissionEditor(username){
 }
 
 function openAdminSettings(){
+  updateGlobalUserBackButton('adminSettings');
   if(!adminLoggedIn) return;
   const ov=ensureAdminSettings();
   const s=getSchoolSettings(), p=getAdminProfile();
