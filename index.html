@@ -222,6 +222,14 @@
       margin:0!important;
     }
     body.user-attendance-only .attendance-topline{display:none!important}
+    #attendanceBackToUserPages{
+      min-height:48px!important;padding:10px 20px!important;border-radius:14px!important;
+      font-size:15px!important;font-weight:900!important;background:#fff!important;
+      color:#0f6f60!important;border:1px solid #0f6f60!important;cursor:pointer!important;
+      margin:0 0 12px auto!important;display:inline-flex;align-items:center;justify-content:center
+    }
+    #attendanceBackToUserPages.hidden{display:none!important}
+
     body.user-attendance-only .attendance-body-grid{display:none!important}
     body.user-attendance-only .admin-data-view{display:none!important}
     body.user-attendance-only .admin-summary-row,
@@ -4289,6 +4297,7 @@
 
       <div id="attendancePanel" class="attendance-panel hidden">
         <div class="attendance-topline">
+          <button type="button" id="attendanceBackToUserPages" class="attendance-btn outline hidden">⬅ الرجوع إلى صفحاتي</button>
         </div>
 
         <div class="attendance-stats">
@@ -7364,6 +7373,12 @@ function hideAllUserFeatureViews(){
 }
 
 function applyUserAttendancePrivacy(){
+  const backBtn=$('attendanceBackToUserPages');
+  if(backBtn){
+    const showBack=!isCurrentOwner();
+    backBtn.classList.toggle('hidden',!showBack);
+    backBtn.style.display=showBack?'inline-flex':'none';
+  }
   if(isAttendanceSupervisor()){
     document.body.classList.remove('user-attendance-only');
     document.body.classList.add('attendance-supervisor-user');
@@ -10356,6 +10371,21 @@ function showAdminView(view){
     renderAttendancePage();
   }
 }
+
+if($('attendanceBackToUserPages')) $('attendanceBackToUserPages').onclick=()=>{
+  if(isCurrentOwner()){
+    showAdminView('data');
+    return;
+  }
+  hideAllUserFeatureViews();
+  document.body.classList.remove('attendance-supervisor-user','user-attendance-only');
+  document.body.classList.add('user-permissions-only');
+  document.documentElement.classList.add('user-session-home');
+  $('attendancePanel')?.classList.add('hidden');
+  $('userPermissionPortal')?.classList.remove('hidden');
+  try{configureUserDashboard()}catch(e){console.warn('return to user pages',e)}
+  window.scrollTo(0,0);
+};
 
 if($('adminDataTab')) $('adminDataTab').onclick=()=>showAdminView('data');
 if($('adminAttendanceTab')) $('adminAttendanceTab').onclick=()=>showAdminView('attendance');
