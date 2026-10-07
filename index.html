@@ -5690,6 +5690,22 @@ async function loadDeputyReferrals(silent=false){
           <b>إيضاح المشكلة:</b> ${r.problem||'—'}
         </div>
 
+        <div class="referral-alert-box deputy-referral-alert-box">
+          <label>التنبيه</label>
+          <div class="referral-alert-steps">
+            ${[1,2,3].map(n=>{
+              const level=Number(r.alert_level||1);
+              const done=n<level;
+              const active=n===level;
+              return '<button type="button" class="referral-alert-step '+(done?'done ':'')+(active?'active':'')+'" disabled>'+n+'</button>';
+            }).join('')}
+          </div>
+          <span class="referral-alert-history">التنبيهات السابقة: ${Number(r.previous_alerts??Math.max(Number(r.alert_level||1)-1,0))}</span>
+          <span class="referral-alert-stage ${String(r.alert_level||'')==='3'?'ready':''}">
+            ${String(r.alert_level||'')==='3'?'التنبيه الثالث — جاهز للاستدعاء والاستجواب':'المرحلة الحالية: التنبيه '+String(r.alert_level||'1')}
+          </span>
+        </div>
+
         <div class="deputy-referral-reply">
           <select class="deputy-action-select">
             <option value="">اختر ما تم حيال الطالب</option>
