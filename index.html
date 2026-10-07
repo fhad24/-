@@ -3126,7 +3126,7 @@
       font-size:14px!important;padding:8px 18px!important;min-width:140px!important;
       width:auto!important;line-height:1.2!important;
     }
-    html.user-session-home body.admin-mode #attendanceWhatsAppSelected{display:none!important}
+    html.user-session-home body.admin-mode:not(.attendance-supervisor-user) #attendanceWhatsAppSelected{display:none!important}
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -7360,17 +7360,39 @@ function hideAllUserFeatureViews(){
   $('attendancePanel')?.classList.add('hidden');
   document.querySelector('.admin-toolbar')?.classList.add('hidden');
   document.querySelector('.admin-import-box')?.classList.add('hidden');
-  document.body.classList.remove('user-attendance-only');
+  document.body.classList.remove('user-attendance-only','attendance-supervisor-user');
 }
 
 function applyUserAttendancePrivacy(){
   if(isAttendanceSupervisor()){
     document.body.classList.remove('user-attendance-only');
+    document.body.classList.add('attendance-supervisor-user');
     const topLine=document.querySelector('.attendance-topline');
     if(topLine) topLine.style.display='';
     $('attendanceMonitoringCard')?.classList.remove('hidden');
+
+    // الوكلاء والإداريون يرون نفس أدوات صفحة التحضير الخاصة بالأدمن.
+    [
+      'attendancePresentTools',
+      'attendancePresentHijriFilter',
+      'attendanceMonitoringAboveCalendarWrap',
+      'attendanceSelectAllRows',
+      'attendanceDeleteSelected',
+      'attendanceWhatsAppSelected',
+      'attendanceAbsenceReportsBtn',
+      'addLateStudentBtn',
+      'addPresentStudentBtn',
+      'attendanceMonitoringRefreshBtn'
+    ].forEach(id=>{
+      const el=$(id);
+      if(el){
+        el.classList.remove('hidden');
+        el.style.removeProperty('display');
+      }
+    });
     return;
   }
+  document.body.classList.remove('attendance-supervisor-user');
   document.body.classList.add('user-attendance-only');
   const topLine=document.querySelector('.attendance-topline');
   if(topLine) topLine.style.display='none';
@@ -12603,9 +12625,9 @@ async function renderAttendanceMonitoring(){
   const card=$('attendanceMonitoringCard');
   if(!card)return;
 
-  const owner=isOwnerAdminSession();
-  card.classList.toggle('hidden',!owner);
-  if(!owner)return;
+  const supervisor=isAttendanceSupervisor();
+  card.classList.toggle('hidden',!supervisor);
+  if(!supervisor)return;
 
   // اقرأ أحدث حضور من قاعدة البيانات قبل رسم اللوحة الجديدة.
   if(localStorage.getItem('cloudAdminToken')){
@@ -12674,10 +12696,10 @@ async function renderAttendancePage(){
   if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
 
   if($('attendanceWhatsAppSelected')){
-    const normalUser=(typeof isCurrentOwner==='function' && !isCurrentOwner());
-    const canWhatsApp=!normalUser && canUseAttendanceWhatsApp();
+    const canWhatsApp=isAttendanceSupervisor() && canUseAttendanceWhatsApp();
     const allowedView=(attendanceListView==='late'||attendanceListView==='absent');
     $('attendanceWhatsAppSelected').classList.toggle('hidden', !(canWhatsApp&&allowedView));
+    $('attendanceWhatsAppSelected').style.removeProperty('display');
     $('attendanceWhatsAppSelected').style.display=(canWhatsApp&&allowedView)?'':'none';
   }
   const students=getStudents();
@@ -14230,7 +14252,7 @@ function renderPresentStatistics(){
   });
   const topPeriod=Object.entries(byPeriod).sort((a,b)=>b[1]-a[1])[0];
   const topCohort=Object.entries(byCohort).sort((a,b)=>b[1]-a[1])[0];
-  const scopeLabel=isOwnerAdminSession()?'جميع المدرسة':'الفصل/الفصول التي قام المستخدم بتحضيرها';
+  const scopeLabel=isAttendanceSupervisor()?'جميع المدرسة':'الفصل/الفصول التي قام المستخدم بتحضيرها';
   panel.innerHTML=`
     <div style="grid-column:1/-1;text-align:center;font-weight:900;color:#0f6f60;margin-bottom:4px">نطاق الإحصائيات: ${scopeLabel}</div>
     <div class="statbox">إجمالي سجلات الحضور<b>${rows.length}</b></div>
