@@ -5374,11 +5374,20 @@ async function loadReferralHistory(){
   if(!token) return;
   try{
     const data=await cloudApi('pull_all');
-    const cloudRows=Array.isArray(data.referrals)?data.referrals:[];
-    localStorage.setItem('studentReferrals',JSON.stringify(cloudRows));
-    renderReferralHistoryRows(cloudRows);
+    const hasReferralField=Array.isArray(data.referrals);
+    const cloudRows=hasReferralField?data.referrals:[];
+    if(cloudRows.length){
+      localStorage.setItem('studentReferrals',JSON.stringify(cloudRows));
+      renderReferralHistoryRows(cloudRows);
+    }else if(localRows.length){
+      // لا نمسح السجل الظاهر إذا أعادت المزامنة استجابة قديمة أو فارغة مؤقتًا.
+      renderReferralHistoryRows(localRows);
+    }else if(hasReferralField){
+      renderReferralHistoryRows([]);
+    }
   }catch(e){
     console.warn('load referral history',e);
+    if(localRows.length) renderReferralHistoryRows(localRows);
   }
 }
 function initReferralPage(){
@@ -6022,12 +6031,16 @@ async function cloudPullToLocal(){
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
   if(Array.isArray(data.referrals)){
-    localStorage.setItem('studentReferrals',JSON.stringify(data.referrals));
-    try{
-      if(typeof renderReferralHistoryRows==='function'){
-        renderReferralHistoryRows(data.referrals);
-      }
-    }catch(e){}
+    const currentReferralRows=getLocalReferralHistory();
+    const nextReferralRows=data.referrals.length ? data.referrals : currentReferralRows;
+    if(nextReferralRows.length){
+      localStorage.setItem('studentReferrals',JSON.stringify(nextReferralRows));
+      try{
+        if(typeof renderReferralHistoryRows==='function'){
+          renderReferralHistoryRows(nextReferralRows);
+        }
+      }catch(e){}
+    }
   }
 
   if(data.settings){
