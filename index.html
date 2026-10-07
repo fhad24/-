@@ -2305,6 +2305,9 @@
     }
     .user-permission-btn:hover{background:#f7fbfa;border-color:#0f7665}
     .user-permission-btn.primary{background:#fff;color:#173b34;border-color:#173b34}
+    .user-logout-wrap{display:flex;justify-content:center;margin-top:14px;padding-top:14px;border-top:1px solid #e1ebe8}
+    .user-logout-btn{min-height:54px;border:0;border-radius:16px;background:#b42318;color:#fff;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;padding:10px 28px;min-width:180px}
+    .user-logout-btn:hover{filter:brightness(.96)}
     @media(max-width:720px){
       .user-permission-card{padding:12px}
       .user-permission-buttons{display:grid;grid-template-columns:1fr;gap:10px}
@@ -4301,6 +4304,9 @@
         </div>
         <div class="card user-permission-card">
           <div id="userPermissionButtons" class="user-permission-buttons"></div>
+          <div class="user-logout-wrap">
+            <button type="button" id="userPortalLogoutBtn" class="user-logout-btn">تسجيل الخروج 🚪</button>
+          </div>
         </div>
       </div>
       <div class="card admin-toolbar">
@@ -9455,6 +9461,10 @@ if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
   setAdminMode(false);
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $('register')?.classList.remove('hidden');
+};
+if($('userPortalLogoutBtn')) $('userPortalLogoutBtn').onclick=()=>{
+  if($('headerLogoutBtn')) $('headerLogoutBtn').click();
+  else if($('adminLogoutNav')) $('adminLogoutNav').click();
 };
 
 
