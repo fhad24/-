@@ -105,6 +105,7 @@
     body:not(.admin-mode) header{display:none!important}
     .logged-in-header-nav{display:none;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;padding:10px 14px 14px;background:#0f6f60}
     body.admin-mode .logged-in-header-nav{display:flex}
+    html.user-session-home body.admin-mode .logged-in-header-nav{display:none!important}
     #headerAdminDashboardBtn,#headerEditBtn{display:none!important}
     .logged-in-header-nav button{border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.12);color:#fff;border-radius:14px;padding:10px 15px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
     .logged-in-header-nav button:hover{background:#fff;color:#0f6f60}
@@ -7418,6 +7419,8 @@ function configureUserDashboard(){
   if(owner){
     localStorage.setItem('activeSessionMode','owner');
     document.documentElement.classList.remove('user-session-home');
+    const ownerHeaderNav=document.querySelector('.logged-in-header-nav');
+    if(ownerHeaderNav) ownerHeaderNav.style.removeProperty('display');
     document.body.classList.remove('user-attendance-only','user-permissions-only');
     portal.classList.add('hidden');
     registerTab?.classList.remove('hidden');
@@ -7441,6 +7444,8 @@ function configureUserDashboard(){
 
   localStorage.setItem('activeSessionMode','user');
   document.documentElement.classList.add('user-session-home');
+  const duplicateHeaderNav=document.querySelector('.logged-in-header-nav');
+  if(duplicateHeaderNav) duplicateHeaderNav.style.setProperty('display','none','important');
   hideAllUserFeatureViews();
   document.body.classList.add('user-permissions-only');
   portal.classList.remove('hidden');
