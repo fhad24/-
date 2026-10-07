@@ -186,6 +186,7 @@
     html.user-session-home #userPermissionPortal{display:block!important}
     html.user-session-home #userPermissionPortal.hidden{display:block!important}
     body.user-permissions-only #userPermissionPortal{display:block!important}
+    body.user-permissions-only .admin-toolbar{display:none!important}
     body.user-permissions-only .admin-footer-card,
     body.user-permissions-only #attendancePanel{display:none!important}
     body.user-permissions-only .admin-data-view,
@@ -7455,8 +7456,8 @@ function configureUserDashboard(){
   });
   const toolbar=document.querySelector('.admin-toolbar');
   if(toolbar){
-    toolbar.classList.remove('hidden');
-    toolbar.style.display='block';
+    toolbar.classList.add('hidden');
+    toolbar.style.display='none';
   }
   try{ showAdminView('data'); }catch(e){}
 
