@@ -14082,6 +14082,21 @@ function setAttendanceMode(mode){
   }
   $('attendanceLateTab').classList.toggle('active',late);
   $('attendancePresentTab').classList.toggle('active',present);
+
+  // ثبّت أدوات التحديد عند إضافة حاضر، بما في ذلك حساب الأدمن.
+  const wholeClassBtn=$('attendanceSelectWholeGradeBtn');
+  if(wholeClassBtn){
+    wholeClassBtn.classList.toggle('hidden',!present);
+    if(present) wholeClassBtn.style.setProperty('display','flex','important');
+    else wholeClassBtn.style.removeProperty('display');
+  }
+  const presentSelectAllWrap=$('attendancePresentSelectAllWrap');
+  if(presentSelectAllWrap){
+    presentSelectAllWrap.classList.toggle('hidden',!present);
+    if(present) presentSelectAllWrap.style.setProperty('display','inline-flex','important');
+    else presentSelectAllWrap.style.removeProperty('display');
+  }
+
   const sessionControls=document.querySelector('.attendance-session-controls');
   if(sessionControls) sessionControls.classList.toggle('hidden',!(late||present));
   const morningField=$('attendanceMorningLateField');
@@ -14432,7 +14447,14 @@ document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
 });
 
 if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
-if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.remove('hidden');};
+if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>{
+  // الأدمن/الوكيل يدخل مباشرة إلى شاشة إضافة حاضر مع أدوات التحديد الجماعي.
+  if(isCurrentOwner() || isAttendanceSupervisor()){
+    openAttendanceModal('present');
+    return;
+  }
+  $('presentEntryChoiceModal')?.classList.remove('hidden');
+};
 if($('closePresentEntryChoice')) $('closePresentEntryChoice').onclick=()=>$('presentEntryChoiceModal')?.classList.add('hidden');
 if($('presentElectronicEntryBtn')) $('presentElectronicEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');openAttendanceModal('present');};
 if($('presentPaperEntryBtn')) $('presentPaperEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');$('paperAttendanceModal')?.classList.remove('hidden');resetPaperAttendanceImport();};
