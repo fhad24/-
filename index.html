@@ -12108,15 +12108,16 @@ function attendanceUserCanModifyRow(row){
 function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
-async function saveAttendanceLog(rows){
+async function saveAttendanceLog(rows,cloudRows=null){
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
+  const rowsToSync=Array.isArray(cloudRows)?cloudRows:rows;
 
   let synced=false;
   let lastError=null;
 
   if(localStorage.getItem('cloudAdminToken')){
     try{
-      await cloudApi('sync_attendance',{attendance:rows});
+      await cloudApi('sync_attendance',{attendance:rowsToSync});
       synced=true;
     }catch(e){
       lastError=e;
@@ -12130,7 +12131,7 @@ async function saveAttendanceLog(rows){
       const username=String(current.username||current.civil_id||current.civilId||'').trim();
       const password=String(current.password||current.civil_id||current.civilId||current.username||'').trim();
       if(username && password){
-        await cloudApi('sync_attendance_with_credentials',{username,password,attendance:rows},false);
+        await cloudApi('sync_attendance_with_credentials',{username,password,attendance:rowsToSync},false);
         synced=true;
       }
     }catch(e){
@@ -13915,6 +13916,7 @@ function openAttendanceModal(mode){
   attendanceMode=mode;
   attendanceSelectedId='';
   attendancePresentSelectedIds.clear();
+  attendanceGradeFilter='';
   attendanceNewPhotoBlob=null;
   attendanceFaceVerified=false;
   attendanceFaceCompareResult='none';
@@ -14046,6 +14048,28 @@ function fillAttendanceClasses(){
   const students=getStudents().filter(s=>!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter);
   const classes=[...new Set(students.map(s=>studentClassKey(s.classroom)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
   $('attendanceClassFilter').innerHTML='<option value="">كل الفصول</option>'+classes.map(k=>`<option value="${k}">الفصل ${k}</option>`).join('');
+}
+
+function getCurrentAttendanceVisibleStudents(){
+  const q=normalizeSearchText($('attendanceStudentSearch')?.value||'');
+  const cls=$('attendanceClassFilter')?.value||'';
+  return getStudents().filter(s=>{
+    const matchesSearch=!q ||
+      normalizeSearchText(s.name).includes(q) ||
+      normalizeSearchText(s.idno).includes(q) ||
+      normalizeSearchText(s.phone).includes(q);
+    return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
+      (!cls||studentClassKey(s.classroom)===cls) &&
+      matchesSearch;
+  });
+}
+
+function updateAttendanceSelectedCount(){
+  const el=$('attendanceListCount');
+  if(!el || attendanceMode!=='present') return;
+  const visible=getCurrentAttendanceVisibleStudents();
+  const selectedVisible=visible.filter(s=>attendancePresentSelectedIds.has(String(s.idno))).length;
+  el.textContent='المعروض: '+visible.length+' — المحدد: '+selectedVisible+' — في القاعدة: '+getStudents().length;
 }
 
 
@@ -14286,9 +14310,14 @@ async function renderAttendanceStudentList(){
   }));
 
   $('attendanceStudentList').innerHTML=rendered.join('') || '<div class="hint" style="padding:14px">لا توجد أسماء مطابقة</div>';
-  $('attendanceListCount').textContent=q
-    ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
-    : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
+  if(attendanceMode==='present'){
+    const selectedVisible=list.filter(s=>attendancePresentSelectedIds.has(String(s.idno))).length;
+    $('attendanceListCount').textContent=(q?'نتائج البحث: ':'المعروض: ')+list.length+' — المحدد: '+selectedVisible+' — في القاعدة: '+getStudents().length;
+  }else{
+    $('attendanceListCount').textContent=q
+      ? `نتائج البحث: ${list.length} — في القاعدة: ${getStudents().length}`
+      : `المعروض: ${list.length} — في القاعدة: ${getStudents().length}`;
+  }
 
   if($('attendancePresentSelectAll')){
     const visibleIds=list.map(s=>String(s.idno));
@@ -14303,6 +14332,7 @@ async function renderAttendanceStudentList(){
       const id=String(box.dataset.selectId||'');
       if(box.checked) attendancePresentSelectedIds.add(id);
       else attendancePresentSelectedIds.delete(id);
+      updateAttendanceSelectedCount();
     };
   });
 
@@ -14417,17 +14447,7 @@ document.querySelectorAll('.att-sort-btn').forEach(btn=>{
 
 if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=>{
   if(attendanceMode!=='present') return;
-  const q=normalizeSearchText($('attendanceStudentSearch')?.value||'');
-  const cls=$('attendanceClassFilter')?.value||'';
-  let visible=getStudents().filter(s=>{
-    const matchesSearch=!q ||
-      normalizeSearchText(s.name).includes(q) ||
-      normalizeSearchText(s.idno).includes(q) ||
-      normalizeSearchText(s.phone).includes(q);
-    return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
-      (!cls||studentClassKey(s.classroom)===cls) &&
-      matchesSearch;
-  });
+  const visible=getCurrentAttendanceVisibleStudents();
   const checked=$('attendancePresentSelectAll').checked;
   visible.forEach(s=>{
     const id=String(s.idno);
@@ -14478,9 +14498,16 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
   ev.stopPropagation();
   const btn=$('saveAttendanceStudentBtn');
   try{
-    const selectedGroup=(attendanceMode==='present' && attendancePresentSelectedIds.size)
+    let selectedGroup=(attendanceMode==='present' && attendancePresentSelectedIds.size)
       ? [...attendancePresentSelectedIds]
       : [];
+
+    // إذا كان «تحديد الكل» مفعّلًا، أعد بناء القائمة من الصف/الفصل الظاهر لحظة الحفظ
+    // حتى لا نعتمد على حالة قديمة أو ناقصة في مربعات التحديد.
+    if(attendanceMode==='present' && $('attendancePresentSelectAll')?.checked){
+      selectedGroup=getCurrentAttendanceVisibleStudents().map(s=>String(s.idno));
+      attendancePresentSelectedIds=new Set(selectedGroup);
+    }
     if(!attendanceSelectedId && !selectedGroup.length){toast('اختر اسم الطالب أو حدد مجموعة طلاب أولاً');return}
     const studentsNow=getStudents();
     const s=attendanceSelectedId ? studentsNow.find(x=>String(x.idno)===String(attendanceSelectedId)) : null;
@@ -14542,6 +14569,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     };
 
     let rows=getAttendanceLog();
+    let rowsForCloud=[];
 
     // التأخر يسجل مرة واحدة فقط للطالب في نفس اليوم، مهما كان المستخدم الذي أدخله.
     // قبل الحفظ نراجع أحدث سجلات السحابة حتى لا يتكرر التسجيل من جهاز أو حساب آخر.
@@ -14582,7 +14610,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         const student=studentsNow.find(x=>String(x.idno)===String(id));
         if(!student) return;
         rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
-        rows.push({
+        const newRow={
           ...record,
           idno:student.idno,
           name:student.name,
@@ -14590,7 +14618,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
           classroom:student.classroom||'',
           status:'present',
           faceMatch:'none'
-        });
+        };
+        rows.push(newRow);
+        rowsForCloud.push(newRow);
       });
     }else{
       if(attendanceMode==='late'){
@@ -14603,9 +14633,17 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         rows.push(record);
       }
     }
+    if(!rowsForCloud.length){
+      if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length) rowsForCloud=[rows[attendanceEditingIndex]];
+      else if(record?.idno) rowsForCloud=[record];
+    }
     const savedMode=attendanceMode;
     const wasEditing=attendanceEditingIndex>=0;
-    await saveAttendanceLog(rows);
+    const expectedCloudCount=rowsForCloud.length;
+    if(savedMode==='present' && selectedGroup.length && expectedCloudCount!==selectedGroup.length){
+      throw new Error('عدد الطلاب المحددين لا يطابق عدد سجلات الحفظ');
+    }
+    await saveAttendanceLog(rows,rowsForCloud);
 
     // رسالة النجاح لا تظهر إلا بعد تأكيد الحفظ في السحابة.
 
@@ -14638,7 +14676,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     }
   }catch(err){
     console.error('attendance save failed',err);
-    toast('تعذر الحفظ، حاول مرة أخرى');
+    const msg=String(err?.message||err||'تعذر الحفظ');
+    alert('❌ لم يتم حفظ الحضور كاملًا.\n'+msg);
+    toast('تعذر حفظ الحضور كاملًا');
   }finally{
     btn.disabled=false;
     btn.textContent='حفظ';
