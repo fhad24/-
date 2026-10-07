@@ -4395,14 +4395,15 @@
           </div>
 
           <div class="attendance-monitoring-summary">
-            <div class="attendance-monitoring-stat danger"><span>الطلاب المحتمل هروبهم</span><b id="attendanceEscapeCount">0</b></div>
-
+            <div class="attendance-monitoring-stat"><span>الحضور المعتمد</span><b id="attendanceDailyPresentCount">0</b></div>
+            <div class="attendance-monitoring-stat warning"><span>الغياب المعتمد</span><b id="attendanceDailyAbsentCount">0</b></div>
+            <div class="attendance-monitoring-stat danger"><span>الهاربون</span><b id="attendanceEscapeCount">0</b></div>
           </div>
 
           <div class="attendance-monitoring-grid">
             <div class="attendance-monitoring-pane">
               <h4>🚨 كشف الطلاب الهاربين</h4>
-              <div class="hint">يظهر الطالب فقط إذا تم تحضير فصله في حصتين أو أكثر، وكان حاضرًا/متأخرًا في حصة ثم لم يُسجل حاضرًا أو متأخرًا في حصة أخرى تم تحضير نفس الفصل فيها.</div>
+              <div class="hint">تعتمد أول حصة تم تحضيرها للفصل كأساس حضور اليوم. الطالب الحاضر في الحصة الأولى ثم لا يظهر حاضرًا/متأخرًا في حصة لاحقة تم تحضير نفس الفصل فيها يُصنف هاربًا.</div>
               <div class="attendance-monitoring-table-wrap">
                 <table class="attendance-monitoring-table">
                   <thead><tr><th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف / الفصل</th><th>حضر في</th><th>لم يسجل في</th></tr></thead>
@@ -12999,20 +13000,60 @@ function getAttendanceMonitoringData(){
   const unprepared=classStatuses.filter(x=>!x.prepared);
 
   const escapees=[];
+  const dailyPresent=[];
+  const dailyAbsent=[];
+  const dailyStablePresent=[];
+
   cohorts.forEach(cohort=>{
     const prepared=[...(preparedByCohort.get(cohort.key)||new Set())].sort((a,b)=>a-b);
-    if(prepared.length<2)return;
+    if(!prepared.length) return;
+
+    // أول حصة تم تحضيرها هي خط الأساس للفصل في هذا اليوم.
+    const baseline=prepared[0];
+    const later=prepared.slice(1);
+
     cohort.students.forEach(s=>{
-      const attended=[...(attendedByStudent.get(String(s.idno))||new Set())]
+      const id=String(s.idno||'');
+      const attended=[...(attendedByStudent.get(id)||new Set())]
         .filter(p=>prepared.includes(p)).sort((a,b)=>a-b);
-      if(!attended.length)return;
-      const missing=prepared.filter(p=>!attended.includes(p));
-      if(missing.length) escapees.push({student:s,prepared,attended,missing});
+      const inBaseline=attended.includes(baseline);
+
+      if(!inBaseline){
+        dailyAbsent.push({student:s,baseline,prepared});
+        return;
+      }
+
+      dailyPresent.push({student:s,baseline,prepared,attended});
+
+      const missingLater=later.filter(p=>!attended.includes(p));
+      if(missingLater.length){
+        escapees.push({
+          student:s,
+          baseline,
+          prepared,
+          attended,
+          missing:missingLater
+        });
+      }else{
+        dailyStablePresent.push({student:s,baseline,prepared,attended});
+      }
     });
   });
-  escapees.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
 
-  return {escapees,unprepared,classStatuses,activePeriods:[...activePeriods].sort((a,b)=>a-b),preparedByCohort};
+  escapees.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
+  dailyPresent.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
+  dailyAbsent.sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ar'));
+
+  return {
+    escapees,
+    dailyPresent,
+    dailyAbsent,
+    dailyStablePresent,
+    unprepared,
+    classStatuses,
+    activePeriods:[...activePeriods].sort((a,b)=>a-b),
+    preparedByCohort
+  };
 }
 
 async function renderAttendanceMonitoring(){
@@ -13035,6 +13076,8 @@ async function renderAttendanceMonitoring(){
   syncAttendanceMonitoringDateDisplay();
 
   const data=getAttendanceMonitoringData();
+  if($('attendanceDailyPresentCount')) $('attendanceDailyPresentCount').textContent=String(data.dailyPresent.length);
+  if($('attendanceDailyAbsentCount')) $('attendanceDailyAbsentCount').textContent=String(data.dailyAbsent.length);
   if($('attendanceEscapeCount')) $('attendanceEscapeCount').textContent=String(data.escapees.length);
   if($('attendancePreparedPeriodsCount')) $('attendancePreparedPeriodsCount').textContent=String(data.activePeriods.length);
   if($('attendanceUnpreparedCount')) $('attendanceUnpreparedCount').textContent=String(data.unprepared.length);
@@ -14745,6 +14788,10 @@ function getSelectedPresentIndexes(){
 function buildPresentReportHtml(){
   const rows=getTodayPresentRows();
   const school=getSchoolSettings?.()||{};
+  const oldMonitorDate=$('attendanceMonitoringDate')?.value||'';
+  if($('attendanceMonitoringDate')) $('attendanceMonitoringDate').value=todayKey();
+  const dailySummary=getAttendanceMonitoringData();
+  if($('attendanceMonitoringDate') && oldMonitorDate) $('attendanceMonitoringDate').value=oldMonitorDate;
   const dateLabel=new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const bodyRows=rows.map((x,i)=>`
     <tr>
@@ -14762,9 +14809,15 @@ function buildPresentReportHtml(){
       <div style="text-align:center;margin-bottom:14px">
         <div style="font-size:12px">${escapeFollowupHtml(school.authority||'')}</div>
         <h2 style="margin:5px 0">${escapeFollowupHtml(school.school||'المدرسة')}</h2>
-        <h3 style="margin:5px 0">تقرير الحضور اليومي${isAttendanceSupervisor()?'':' — سجلات المستخدم فقط'}</h3>
+        <h3 style="margin:5px 0">تقرير الحضور والغياب والهاربين اليومي${isAttendanceSupervisor()?'':' — سجلات المستخدم فقط'}</h3>
         <div style="font-size:11px">${escapeFollowupHtml(dateLabel)}</div>
       </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0">
+        <div style="border:1px solid #bbb;padding:10px;text-align:center"><b>الحضور المعتمد</b><div style="font-size:22px;font-weight:900">${dailySummary.dailyPresent.length}</div></div>
+        <div style="border:1px solid #bbb;padding:10px;text-align:center"><b>الغياب المعتمد</b><div style="font-size:22px;font-weight:900">${dailySummary.dailyAbsent.length}</div></div>
+        <div style="border:1px solid #bbb;padding:10px;text-align:center"><b>الهاربون</b><div style="font-size:22px;font-weight:900">${dailySummary.escapees.length}</div></div>
+      </div>
+      <div style="font-size:10px;margin-bottom:8px">قاعدة الاحتساب: أول حصة تم تحضيرها لكل فصل هي أساس الحضور والغياب، ثم تُقارن بها الحصص اللاحقة لاكتشاف الهاربين.</div>
       <table style="width:100%;border-collapse:collapse;font-size:10px">
         <thead><tr style="background:#eaf6f2">
           <th>م</th><th>اسم الطالب</th><th>السجل المدني</th><th>الصف</th><th>الفصل</th><th>الحصة</th><th>المادة</th><th>المسجل</th>
