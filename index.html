@@ -14343,7 +14343,10 @@ if($('presentElectronicEntryBtn')) $('presentElectronicEntryBtn').onclick=()=>{$
 if($('presentPaperEntryBtn')) $('presentPaperEntryBtn').onclick=()=>{$('presentEntryChoiceModal')?.classList.add('hidden');$('paperAttendanceModal')?.classList.remove('hidden');resetPaperAttendanceImport();};
 if($('closePaperAttendanceModal')) $('closePaperAttendanceModal').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
 if($('paperAttendanceCancelBtn')) $('paperAttendanceCancelBtn').onclick=()=>$('paperAttendanceModal')?.classList.add('hidden');
-if($('paperAttendanceCameraBtn')) $('paperAttendanceCameraBtn').onclick=()=>$('paperAttendanceCameraInput')?.click();
+if($('paperAttendanceCameraBtn')) $('paperAttendanceCameraBtn').onclick=()=>{
+  cameraCaptureContext='paper-attendance';
+  startLiveCamera();
+};
 if($('paperAttendanceFileBtn')) $('paperAttendanceFileBtn').onclick=()=>$('paperAttendanceFileInput')?.click();
 
 let paperAttendanceMatchedIds=new Set();
@@ -18303,6 +18306,10 @@ async function captureLiveStudentPhoto(){
   $('liveCameraModal').classList.add('hidden');
   if(cameraCaptureContext==='attendance'){
     await processAttendanceNewPhoto(blob);
+    cameraCaptureContext='student-add';
+  }else if(cameraCaptureContext==='paper-attendance'){
+    const paperFile=new File([blob],'paper-attendance-camera.jpg',{type:'image/jpeg'});
+    await readPaperAttendanceFile(paperFile);
     cameraCaptureContext='student-add';
   }else{
     await processNewStudentFace(blob);
