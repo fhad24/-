@@ -12730,10 +12730,10 @@ async function renderAttendancePage(){
         // بغض النظر عن المستخدم الذي أدخل السجل.
         if(attendanceListView==='present'){
           if(x.status!=='present') return false;
-          if(!attendancePresentFilterDate) return true;
-          const hp=gregorianToHijriParts(attendancePresentFilterDate);
-          const targetHijri=hp.year+'-'+String(hp.month).padStart(2,'0')+'-'+String(hp.day).padStart(2,'0');
-          return String(x.date||'')===attendancePresentFilterDate || String(x.hijriDate||x.hijri_date||'')===targetHijri;
+          if(!attendancePresentFilterDate && !attendancePresentFilterHijriDate) return true;
+          const rowHijri=String(x.hijriDate||x.hijri_date||'');
+          if(attendancePresentFilterHijriDate && rowHijri===attendancePresentFilterHijriDate) return true;
+          return !!attendancePresentFilterDate && String(x.date||'')===attendancePresentFilterDate;
         }
         const allowed=(ownerView||attendanceRowBelongsToCurrentUser(x));
         if(!allowed || x.status!==attendanceListView) return false;
@@ -13352,6 +13352,12 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
 let attendanceMode='late';
 let attendanceListView='present';
 let attendancePresentFilterDate=todayKey();
+let attendancePresentFilterHijriDate=(()=>{
+  try{
+    const p=gregorianToHijriParts(todayKey());
+    return p.year+'-'+String(p.month).padStart(2,'0')+'-'+String(p.day).padStart(2,'0');
+  }catch(e){return ''}
+})();
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
 let attendanceStudentSortKey='name';
@@ -14471,14 +14477,16 @@ function renderAttendancePresentHijriCalendar(){
   for(let d=1;d<=maxDay;d++){
     const g=hijriToGregorian(hp.year,hp.month,d);
     if(!g) continue;
-    const selected=attendancePresentFilterDate===g;
-    html+='<button type="button" class="'+(selected?'selected':'')+'" data-present-hijri-date="'+g+'">'+d+'</button>';
+    const hKey=hp.year+'-'+String(hp.month).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const selected=attendancePresentFilterHijriDate ? attendancePresentFilterHijriDate===hKey : attendancePresentFilterDate===g;
+    html+='<button type="button" class="'+(selected?'selected':'')+'" data-present-hijri-date="'+g+'" data-present-hijri-key="'+hKey+'">'+d+'</button>';
   }
   days.innerHTML=html;
 
   days.querySelectorAll('[data-present-hijri-date]').forEach(btn=>{
     btn.onclick=()=>{
       attendancePresentFilterDate=String(btn.dataset.presentHijriDate||'');
+      attendancePresentFilterHijriDate=String(btn.dataset.presentHijriKey||'');
       const hidden=$('attendancePresentFilterGregorianDate');
       if(hidden) hidden.value=attendancePresentFilterDate;
       const display=$('attendancePresentHijriDisplay');
@@ -14491,6 +14499,10 @@ function renderAttendancePresentHijriCalendar(){
 
 function initAttendancePresentHijriFilter(){
   if(!attendancePresentFilterDate) attendancePresentFilterDate=todayKey();
+  if(!attendancePresentFilterHijriDate){
+    const p=gregorianToHijriParts(attendancePresentFilterDate);
+    attendancePresentFilterHijriDate=p.year+'-'+String(p.month).padStart(2,'0')+'-'+String(p.day).padStart(2,'0');
+  }
   const hidden=$('attendancePresentFilterGregorianDate');
   if(hidden) hidden.value=attendancePresentFilterDate;
   const display=$('attendancePresentHijriDisplay');
@@ -14519,6 +14531,8 @@ if($('attendancePresentHijriPrev')) $('attendancePresentHijriPrev').onclick=()=>
 if($('attendancePresentHijriNext')) $('attendancePresentHijriNext').onclick=()=>moveAttendancePresentHijriMonth(1);
 if($('attendancePresentHijriToday')) $('attendancePresentHijriToday').onclick=()=>{
   attendancePresentFilterDate=todayKey();
+  const p=gregorianToHijriParts(attendancePresentFilterDate);
+  attendancePresentFilterHijriDate=p.year+'-'+String(p.month).padStart(2,'0')+'-'+String(p.day).padStart(2,'0');
   attendancePresentHijriViewDate=new Date();
   const display=$('attendancePresentHijriDisplay');
   if(display) display.textContent=attendancePresentHijriLabel(attendancePresentFilterDate);
@@ -14527,6 +14541,7 @@ if($('attendancePresentHijriToday')) $('attendancePresentHijriToday').onclick=()
 };
 if($('attendancePresentHijriAll')) $('attendancePresentHijriAll').onclick=()=>{
   attendancePresentFilterDate='';
+  attendancePresentFilterHijriDate='';
   const display=$('attendancePresentHijriDisplay');
   if(display) display.textContent='اختر اليوم';
   $('attendancePresentHijriPopup')?.classList.add('hidden');
