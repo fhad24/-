@@ -14286,9 +14286,10 @@ async function renderAttendanceStudentList(){
   const wholeGradeBtn=$('attendanceSelectWholeGradeBtn');
   if(wholeGradeBtn){
     wholeGradeBtn.classList.toggle('hidden',attendanceMode!=='present');
-    wholeGradeBtn.textContent=attendanceGradeFilter
-      ? '☑ تحديد الصف '+attendanceGradeFilter.replace(' الثانوي','')+' كاملًا'
-      : '☑ تحديد جميع الطلاب';
+    const cls=$('attendanceClassFilter')?.value||'';
+    wholeGradeBtn.textContent=cls
+      ? '☑ تحديد الفصل '+cls+' كاملًا'
+      : '☑ تحديد الفصل كاملًا';
   }
 
   const rendered=await Promise.all(list.map(async s=>{
@@ -14470,12 +14471,24 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
 if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclick=()=>{
   if(attendanceMode!=='present') return;
   const grade=attendanceGradeFilter||'';
-  const gradeStudents=getStudents().filter(s=>!grade || studentGradeKey(s.grade)===grade);
-  if(!gradeStudents.length){
-    alert('لا يوجد طلاب في الصف المحدد.');
+  const cls=$('attendanceClassFilter')?.value||'';
+  if(!grade){
+    alert('اختر الصف أولًا.');
     return;
   }
-  const ids=gradeStudents.map(s=>String(s.idno));
+  if(!cls){
+    alert('اختر الفصل أولًا.');
+    return;
+  }
+  const classStudents=getStudents().filter(s=>
+    studentGradeKey(s.grade)===grade &&
+    studentClassKey(s.classroom)===cls
+  );
+  if(!classStudents.length){
+    alert('لا يوجد طلاب في الفصل المحدد.');
+    return;
+  }
+  const ids=classStudents.map(s=>String(s.idno));
   const allSelected=ids.every(id=>attendancePresentSelectedIds.has(id));
   if(allSelected){
     ids.forEach(id=>attendancePresentSelectedIds.delete(id));
@@ -14483,8 +14496,7 @@ if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclic
     ids.forEach(id=>attendancePresentSelectedIds.add(id));
   }
   renderAttendanceStudentList();
-  const label=grade ? grade : 'جميع الصفوف';
-  toast((allSelected?'تم إلغاء تحديد ':'تم تحديد ')+label+' — '+ids.length+' طالب');
+  toast((allSelected?'تم إلغاء تحديد ':'تم تحديد ')+'الفصل '+cls+' كاملًا — '+ids.length+' طالب');
 };
 document.querySelectorAll('.att-grade').forEach(btn=>btn.onclick=()=>{
   attendanceGradeFilter=btn.dataset.grade||'';
