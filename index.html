@@ -5373,8 +5373,9 @@ async function loadReferralHistory(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return;
   try{
-    const data=await cloudApi('list_referral_history');
-    const cloudRows=Array.isArray(data.rows)?data.rows:[];
+    const data=await cloudApi('pull_all');
+    const cloudRows=Array.isArray(data.referrals)?data.referrals:[];
+    localStorage.setItem('studentReferrals',JSON.stringify(cloudRows));
     renderReferralHistoryRows(cloudRows);
   }catch(e){
     console.warn('load referral history',e);
@@ -6019,6 +6020,15 @@ async function cloudPullToLocal(){
     hijriDate:x.hijri_date||'', weekday:x.weekday||''
   }));
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
+
+  if(Array.isArray(data.referrals)){
+    localStorage.setItem('studentReferrals',JSON.stringify(data.referrals));
+    try{
+      if(typeof renderReferralHistoryRows==='function'){
+        renderReferralHistoryRows(data.referrals);
+      }
+    }catch(e){}
+  }
 
   if(data.settings){
     const s=data.settings;
