@@ -4313,13 +4313,13 @@
         </div>
 
         <div class="attendance-tabs">
-          <button type="button" id="attendanceTabLate" class="active" data-att-view="late">⏰ التأخر اليومي (<span id="attLateTabCount">0</span>)</button>
-          <button type="button" id="attendanceTabPresent" data-att-view="present">✓ الحضور اليومي (<span id="attPresentTabCount">0</span>)</button>
+          <button type="button" id="attendanceTabPresent" class="active" data-att-view="present">✓ الحضور اليومي (<span id="attPresentTabCount">0</span>)</button>
           <button type="button" id="attendanceTabAbsent" data-att-view="absent">✕ الغياب اليومي (<span id="attAbsentTabCount">0</span>)</button>
+          <button type="button" id="attendanceTabLate" data-att-view="late">🚪 الاستئذان (<span id="attLateTabCount">0</span>)</button>
         </div>
 
         <div class="card attendance-daily-card">
-          <h3 id="attendanceDayTitle">التأخر اليومي</h3>
+          <h3 id="attendanceDayTitle">الحضور اليومي</h3>
           <div id="attendancePresentTools" class="attendance-present-tools hidden">
             <button type="button" id="attendancePresentSaveBtn">💾 حفظ</button>
             <button type="button" id="attendancePresentEditBtn">✏️ تعديل المحدد</button>
@@ -12709,7 +12709,7 @@ async function renderAttendancePage(){
   });
 
   const labelMap={
-    late:'التأخر اليومي',
+    late:'الاستئذان',
     present:'الحضور اليومي',
     absent:'الغياب اليومي'
   };
@@ -13342,7 +13342,7 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
 
 
 let attendanceMode='late';
-let attendanceListView='late';
+let attendanceListView='present';
 let attendancePresentFilterDate=todayKey();
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
