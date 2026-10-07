@@ -193,6 +193,32 @@
     body.user-permissions-only .admin-mini-row,
     body.user-permissions-only .admin-data-card,
     body.user-permissions-only .admin-filters{display:block!important}
+
+    /* شاشة إضافة/تعديل الطلاب للمستخدمين: أبقِ فقط القسم المطلوب */
+    body.user-permissions-only .admin-import-box,
+    body.user-permissions-only .admin-summary-row,
+    body.user-permissions-only .admin-mini-row,
+    body.user-permissions-only .admin-data-card > .admin-filters,
+    body.user-permissions-only #pendingStudentPhotosBtn,
+    body.user-permissions-only .admin-data-card > .admin-bulk-actions:not(.user-keep-actions),
+    body.user-permissions-only .admin-data-card > .table-wrap,
+    body.user-permissions-only .admin-footer-card{
+      display:none!important;
+    }
+    body.user-permissions-only .admin-data-card{
+      display:block!important;
+      padding:18px!important;
+    }
+    body.user-permissions-only .admin-data-card > .add-student-btn{
+      display:block!important;
+      width:100%!important;
+      margin:0 0 12px!important;
+    }
+    body.user-permissions-only .admin-data-card > .user-keep-actions{
+      display:flex!important;
+      justify-content:flex-start!important;
+      margin:0!important;
+    }
     body.user-attendance-only .attendance-topline{display:none!important}
     body.user-attendance-only .attendance-body-grid{display:none!important}
     body.user-attendance-only .admin-data-view{display:none!important}
@@ -4429,7 +4455,7 @@
         </div>
 
         <button class="btn btn-primary add-student-btn" id="addStudentBtn">+ إضافة طالب/تعديل</button>
-        <div class="admin-bulk-actions" style="margin-top:-4px">
+        <div class="admin-bulk-actions user-keep-actions" style="margin-top:-4px">
           <button class="admin-outline-btn primary" id="studentTransferManageBtn" type="button">🔄 إدارة الطلاب ونقلهم بين الفصول</button>
           <button class="admin-outline-btn" id="studentChangeRequestsBtn" type="button">✅ طلبات تعديل الطلاب <span id="studentChangeRequestsCount"></span></button>
         </div>
