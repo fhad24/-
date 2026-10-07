@@ -10686,24 +10686,35 @@ async function createAdminBackupZip(){
     for(const s of students){
       const id=String(s.idno||'');
       if(!id) continue;
+
+      // اجعل صفحة العرض بدون اتصال مكتفية ذاتيًا بالصور، حتى لو فُتحت مباشرة من داخل ZIP.
       try{
-        const face=await getStudentPhoto(id+':face');
+        let face=null;
+        try{ face=await getStudentPhoto(id+':face'); }catch(e){}
+        if(!face && s.faceImage) face=dataURLToBlob(s.faceImage);
         if(face){
           const ext=(face.type||'').includes('png')?'png':(face.type||'').includes('webp')?'webp':'jpg';
           zip.file(`photos/faces/${id}.${ext}`,face);
-          offlineFaceFiles[id]=`../photos/faces/${id}.${ext}`;
+          offlineFaceFiles[id]=await blobToDataURL(face);
           faceCount++;
+        }else if(s.faceImage){
+          offlineFaceFiles[id]=String(s.faceImage);
         }
-      }catch(e){}
+      }catch(e){console.warn('backup face photo',id,e)}
+
       try{
-        const idPhoto=await getStudentPhoto(id+':id');
+        let idPhoto=null;
+        try{ idPhoto=await getStudentPhoto(id+':id'); }catch(e){}
+        if(!idPhoto && s.idImage) idPhoto=dataURLToBlob(s.idImage);
         if(idPhoto){
           const ext=(idPhoto.type||'').includes('png')?'png':(idPhoto.type||'').includes('webp')?'webp':'jpg';
           zip.file(`photos/ids/${id}.${ext}`,idPhoto);
-          offlineIdFiles[id]=`../photos/ids/${id}.${ext}`;
+          offlineIdFiles[id]=await blobToDataURL(idPhoto);
           idCount++;
+        }else if(s.idImage){
+          offlineIdFiles[id]=String(s.idImage);
         }
-      }catch(e){}
+      }catch(e){console.warn('backup id photo',id,e)}
     }
 
     // صور الطلاب المعلقة للمراجعة - إن وجدت
@@ -10793,7 +10804,7 @@ async function createAdminBackupZip(){
 صور الهوية: ${idCount}
 
 تحتوي مجلدات data على البيانات بصيغة JSON ومجلد photos على الصور.
-لفتح النسخة بدون اتصال بالإنترنت: فك ضغط الملف ثم افتح offline/index.html في Chrome أو Edge.
+لفتح النسخة بدون اتصال بالإنترنت: افتح offline/index.html في Chrome أو Edge. الصور مضمّنة داخل صفحة العرض نفسها، كما توجد نسخة منها داخل مجلد photos.
 لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول.
 احتفظ بهذا الملف في مكان آمن لأنه يحتوي على بيانات طلاب وصورهم.
 `);
