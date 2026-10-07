@@ -13835,6 +13835,7 @@ let attendancePresentFilterHijriDate=(()=>{
 })();
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
+let attendanceWholeClassRoster=null;
 let attendanceStudentSortKey='name';
 let attendanceStudentSortDir=1;
 let attendanceGradeFilter='';
@@ -13978,6 +13979,7 @@ function openAttendanceModal(mode){
   attendanceMode=mode;
   attendanceSelectedId='';
   attendancePresentSelectedIds.clear();
+  attendanceWholeClassRoster=null;
   attendanceGradeFilter='';
   attendanceNewPhotoBlob=null;
   attendanceFaceVerified=false;
@@ -14503,7 +14505,11 @@ if($('attendanceStudentSearch')){
   searchInput.addEventListener('paste',()=>setTimeout(renderAttendanceStudentList,0));
 }
 
-if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=renderAttendanceStudentList;
+if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=()=>{
+  attendanceWholeClassRoster=null;
+  attendancePresentSelectedIds.clear();
+  renderAttendanceStudentList();
+};
 if($('attendanceHideRegistered')) $('attendanceHideRegistered').onchange=renderAttendanceStudentList;
 
 document.querySelectorAll('.att-sort-btn').forEach(btn=>{
@@ -14527,38 +14533,54 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
   renderAttendanceStudentList();
 };
 
-if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclick=()=>{
+if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclick=async()=>{
   if(attendanceMode!=='present') return;
   const grade=attendanceGradeFilter||'';
   const cls=$('attendanceClassFilter')?.value||'';
-  if(!grade){
-    alert('اختر الصف أولًا.');
-    return;
+  if(!grade){alert('اختر الصف أولًا.');return;}
+  if(!cls){alert('اختر الفصل أولًا.');return;}
+
+  const btn=$('attendanceSelectWholeGradeBtn');
+  const oldText=btn.textContent;
+  try{
+    btn.disabled=true;
+    btn.textContent='جاري جلب طلاب الفصل...';
+
+    const out=await cloudApi('attendance_class_roster',{grade,classroom:cls});
+    const classStudents=Array.isArray(out.rows)?out.rows:[];
+    if(!classStudents.length){
+      alert('لا يوجد طلاب في الفصل المحدد بقاعدة البيانات.');
+      return;
+    }
+
+    attendanceWholeClassRoster={
+      grade,
+      classroom:cls,
+      students:classStudents.map(s=>({
+        idno:String(s.idno||''),
+        name:String(s.name||''),
+        grade:String(s.grade||grade),
+        classroom:String(s.classroom||cls)
+      }))
+    };
+
+    attendancePresentSelectedIds=new Set(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
+    renderAttendanceStudentList();
+    updateAttendanceSelectedCount();
+    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب');
+  }catch(e){
+    console.error('class roster',e);
+    alert('تعذر جلب طلاب الفصل من قاعدة البيانات.');
+  }finally{
+    btn.disabled=false;
+    btn.textContent=oldText;
+    renderAttendanceStudentList();
   }
-  if(!cls){
-    alert('اختر الفصل أولًا.');
-    return;
-  }
-  const classStudents=getStudents().filter(s=>
-    studentGradeKey(s.grade)===grade &&
-    studentClassKey(s.classroom)===cls
-  );
-  if(!classStudents.length){
-    alert('لا يوجد طلاب في الفصل المحدد.');
-    return;
-  }
-  const ids=classStudents.map(s=>String(s.idno));
-  const allSelected=ids.every(id=>attendancePresentSelectedIds.has(id));
-  if(allSelected){
-    ids.forEach(id=>attendancePresentSelectedIds.delete(id));
-  }else{
-    ids.forEach(id=>attendancePresentSelectedIds.add(id));
-  }
-  renderAttendanceStudentList();
-  toast((allSelected?'تم إلغاء تحديد ':'تم تحديد ')+'الفصل '+cls+' كاملًا — '+ids.length+' طالب');
 };
 document.querySelectorAll('.att-grade').forEach(btn=>btn.onclick=()=>{
   attendanceGradeFilter=btn.dataset.grade||'';
+  attendanceWholeClassRoster=null;
+  attendancePresentSelectedIds.clear();
   document.querySelectorAll('.att-grade').forEach(x=>x.classList.toggle('active',x===btn));
   fillAttendanceClasses();
   renderAttendanceStudentList();
@@ -14603,9 +14625,15 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       ? [...attendancePresentSelectedIds]
       : [];
 
-    // إذا كان «تحديد الكل» مفعّلًا، أعد بناء القائمة من الصف/الفصل الظاهر لحظة الحفظ
-    // حتى لا نعتمد على حالة قديمة أو ناقصة في مربعات التحديد.
-    if(attendanceMode==='present' && $('attendancePresentSelectAll')?.checked){
+    // عند استخدام «تحديد الفصل كاملًا» نعتمد كشف الفصل القادم مباشرة من الخادم.
+    if(attendanceMode==='present' && attendanceWholeClassRoster?.students?.length){
+      const currentGrade=attendanceGradeFilter||'';
+      const currentClass=$('attendanceClassFilter')?.value||'';
+      if(attendanceWholeClassRoster.grade===currentGrade && attendanceWholeClassRoster.classroom===currentClass){
+        selectedGroup=attendanceWholeClassRoster.students.map(s=>String(s.idno));
+        attendancePresentSelectedIds=new Set(selectedGroup);
+      }
+    }else if(attendanceMode==='present' && $('attendancePresentSelectAll')?.checked){
       selectedGroup=getCurrentAttendanceVisibleStudents().map(s=>String(s.idno));
       attendancePresentSelectedIds=new Set(selectedGroup);
     }
@@ -14708,7 +14736,8 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
     }else if(selectedGroup.length){
       selectedGroup.forEach(id=>{
-        const student=studentsNow.find(x=>String(x.idno)===String(id));
+        const student=studentsNow.find(x=>String(x.idno)===String(id))
+          || attendanceWholeClassRoster?.students?.find(x=>String(x.idno)===String(id));
         if(!student) return;
         rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
         const newRow={
@@ -14742,7 +14771,13 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const wasEditing=attendanceEditingIndex>=0;
     const expectedCloudCount=rowsForCloud.length;
     if(savedMode==='present' && selectedGroup.length && expectedCloudCount!==selectedGroup.length){
-      throw new Error('عدد الطلاب المحددين لا يطابق عدد سجلات الحفظ');
+      throw new Error('عدد الطلاب المحددين '+selectedGroup.length+' بينما سجلات الحفظ '+expectedCloudCount);
+    }
+    if(savedMode==='present' && attendanceWholeClassRoster?.students?.length){
+      const rosterCount=attendanceWholeClassRoster.students.length;
+      if(expectedCloudCount!==rosterCount){
+        throw new Error('الفصل يحتوي '+rosterCount+' طالبًا لكن سيتم حفظ '+expectedCloudCount+' فقط. تم إيقاف الحفظ.');
+      }
     }
     await saveAttendanceLog(rows,rowsForCloud);
 
