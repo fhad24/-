@@ -5991,6 +5991,15 @@ async function cloudAutoLoginFromSavedProfile(){
   return false;
 }
 
+function formatAppHijriDate(value,withTime=false){
+  const d=value instanceof Date?value:new Date(value||Date.now());
+  if(Number.isNaN(d.getTime())) return String(value||'—');
+  const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
+  if(withTime){opts.hour='2-digit';opts.minute='2-digit';}
+  try{return d.toLocaleString('ar-SA-u-ca-islamic-umalqura',opts)}
+  catch(e){return String(value||'—')}
+}
+
 function normalizeCivilId(value){
   const arabic='٠١٢٣٤٥٦٧٨٩';
   const persian='۰۱۲۳۴۵۶۷۸۹';
@@ -8353,10 +8362,11 @@ function captureTeacherClassCamera(){
 function teacherClassFormatDateTime(value){
   const d=value?new Date(value):new Date();
   try{
-    const greg=d.toLocaleString('ar-SA',{dateStyle:'full',timeStyle:'short'});
-    const hijri=d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'long',day:'numeric'});
-    return greg+' — '+hijri;
-  }catch(e){return d.toLocaleString('ar-SA')}
+    return d.toLocaleString('ar-SA-u-ca-islamic-umalqura',{
+      weekday:'long',year:'numeric',month:'long',day:'numeric',
+      hour:'2-digit',minute:'2-digit'
+    });
+  }catch(e){return d.toLocaleString('ar-SA-u-ca-islamic-umalqura')}
 }
 
 function populateTeacherClassGrades(){
@@ -9641,7 +9651,7 @@ async function renderApprovedStudentPhotosView(modal){
                 ? (row.submitted_by_id ? `${row.submitted_by_name}<br><small style="color:#60736e">${row.submitted_by_id}</small>` : row.submitted_by_name)
                 : (row.submitted_by||'—')}</td>
                 <td>${row.approved_by||'الإدارة'}</td>
-                <td style="min-width:155px">${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA'):'—'}</td>
+                <td style="min-width:155px">${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA-u-ca-islamic-umalqura'):'—'}</td>
               </tr>`).join('')}
           </tbody>
         </table>`:'<div class="hint" style="padding:30px;text-align:center">لم يتم تسجيل صور معتمدة بعد.</div>'}
@@ -9686,7 +9696,7 @@ async function renderApprovedStudentPhotosView(modal){
             <td>${row.grade||'—'}</td>
             <td>${displayStudentClassroom?displayStudentClassroom(row.classroom):row.classroom||'—'}</td>
             <td>${row.approved_by||'الإدارة'}</td>
-            <td>${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA'):'—'}</td>
+            <td>${row.approved_at?new Date(row.approved_at).toLocaleString('ar-SA-u-ca-islamic-umalqura'):'—'}</td>
           </tr>`);
       }
       const report=document.createElement('div');
@@ -9697,7 +9707,7 @@ async function renderApprovedStudentPhotosView(modal){
           <div style="font-size:13px">${school.authority||''}</div>
           <h2 style="margin:5px 0">${school.school||'المدرسة'}</h2>
           <h3 style="margin:5px 0">كشف صور الطلاب التي تم اعتمادها</h3>
-          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA')}</div>
+          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA-u-ca-islamic-umalqura')}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:10px">
           <thead><tr style="background:#eaf6f2">
@@ -9840,8 +9850,8 @@ async function openPendingStudentPhotos(){
     if(!iso) return '—';
     try{
       const d=new Date(iso);
-      const day=d.toLocaleDateString('ar-SA',{weekday:'long'});
-      const date=d.toLocaleDateString('ar-SA');
+      const day=d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'});
+      const date=d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura');
       const time=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
       return day+' — '+date+' — '+time;
     }catch(e){return iso}
@@ -10057,7 +10067,7 @@ async function openPendingStudentPhotos(){
           <div style="font-size:13px">${school.authority||''}</div>
           <h2 style="margin:4px 0">${school.school||'المدرسة'}</h2>
           <h3 style="margin:4px 0">كشف صور الطلاب — المعلقة والمعتمدة</h3>
-          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA')}</div>
+          <div style="font-size:11px;color:#60736e">تاريخ إصدار الكشف: ${new Date().toLocaleString('ar-SA-u-ca-islamic-umalqura')}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:8px">
           <thead><tr style="background:#eaf6f2">
@@ -10399,7 +10409,7 @@ async function createAdminBackupZip(){
       '</div><script>const DATA='+offlineJson+';'+
       'const esc=s=>String(s??"").replace(/[&<>"\x27]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\x27":"&#39;"}[m]));'+
       'document.getElementById("schoolName").textContent=(DATA.school&&DATA.school.school)||"نسخة احتياطية";'+
-      'document.getElementById("createdAt").textContent="تاريخ إنشاء النسخة: "+new Date(DATA.createdAt).toLocaleString("ar-SA");'+
+      'document.getElementById("createdAt").textContent="تاريخ إنشاء النسخة: "+new Date(DATA.createdAt).toLocaleString('ar-SA-u-ca-islamic-umalqura');'+
       'document.getElementById("stats").innerHTML=[["الطلاب",DATA.students.length],["سجلات الحضور",DATA.attendance.length],["التحويلات",DATA.referrals.length],["المستخدمون",DATA.users.length]].map(x=>"<div class=stat><div>"+x[0]+"</div><b>"+x[1]+"</b></div>").join("");'+
       'function render(q=""){q=q.trim().toLowerCase();'+
       'const sf=s=>(!q||[s.name,s.idno,s.phone,s.grade,s.classroom].some(v=>String(v||"").toLowerCase().includes(q)));'+
@@ -12661,9 +12671,9 @@ async function renderAttendancePage(){
   };
   $('attendanceDayTitle').textContent=attendanceListView==='present'
     ? (attendancePresentFilterDate
-        ? 'الحضور المحفوظ — '+new Date(attendancePresentFilterDate+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})
+        ? 'الحضور المحفوظ — '+new Date(attendancePresentFilterDate+'T12:00:00').toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'})
         : 'الحضور المحفوظ — جميع الفصول')
-    : `${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+    : `${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
 
   {
     let rows=allLogs
@@ -13490,7 +13500,7 @@ async function openAttendanceEdit(index){
   fillAttendanceHijriControls(String(row.date||todayKey()),row.hijriDate||'');
   if($('attendanceEditWeekday')){
     const allowedDays=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
-    const suggested=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA',{weekday:'long'});
+    const suggested=row.weekday||new Date(String(row.date||todayKey())+'T12:00:00').toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'});
     $('attendanceEditWeekday').value=allowedDays.includes(suggested)?suggested:'الأحد';
   }
   const isMorningLate=!!row.morningAssemblyLate || String(row.subject||'')==='تأخر عن الطابور الصباحي';
@@ -13982,7 +13992,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       subject:(attendanceMode==='late' && $('attendanceMorningLate')?.checked) ? 'تأخر عن الطابور الصباحي' : ($('attendanceSubjectSelect')?.value||''),
       morningAssemblyLate:attendanceMode==='late' && !!$('attendanceMorningLate')?.checked,
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
-      weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA',{weekday:'long'}),
+      weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'}),
       teacherName:recorder.name,
       teacherUsername:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherUsername ? attendanceEditingOriginal.teacherUsername : recorder.username,
       teacherCivilId:attendanceEditingIndex>=0 && attendanceEditingOriginal?.teacherCivilId ? attendanceEditingOriginal.teacherCivilId : recorder.civilId,
@@ -14115,7 +14125,7 @@ function getSelectedPresentIndexes(){
 function buildPresentReportHtml(){
   const rows=getTodayPresentRows();
   const school=getSchoolSettings?.()||{};
-  const dateLabel=new Date().toLocaleDateString('ar-SA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const dateLabel=new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const bodyRows=rows.map((x,i)=>`
     <tr>
       <td>${i+1}</td>
