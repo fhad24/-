@@ -6010,7 +6010,7 @@ function getLocalReferralHistory(){
 function referralHistoryReason(row){
   const reasons=Array.isArray(row.reasons)?row.reasons:[];
   const other=String(row.other_reason??row.otherReason??'').trim();
-  return [...reasons,other].filter(Boolean).join('، ')||'—';
+  return escapeAppHtml([...reasons,other].filter(Boolean).join('، ')||'—');
 }
 function renderReferralHistoryRows(rows){
   const body=$('referralHistoryBody');
@@ -6029,14 +6029,14 @@ function renderReferralHistoryRows(rows){
     const status=replied
       ? 'تم الرد'
       : (alertNum<3 ? 'تم تسجيل التنبيه '+alertNum+' — لا يفتح للوكيل حتى التنبيه الثالث' : 'بانتظار استدعاء الطالب ورد الوكيل');
-    const studentName=r.student_name??r.studentName??'—';
-    const civil=r.student_civil_id??r.studentCivilId??'—';
-    const grade=r.grade||'—';
-    const classroom=r.classroom||'—';
-    const subject=r.subject||'—';
-    const period=r.period||'—';
+    const studentName=escapeAppHtml(r.student_name??r.studentName??'—');
+    const civil=escapeAppHtml(r.student_civil_id??r.studentCivilId??'—');
+    const grade=escapeAppHtml(r.grade||'—');
+    const classroom=escapeAppHtml(r.classroom||'—');
+    const subject=escapeAppHtml(r.subject||'—');
+    const period=escapeAppHtml(r.period||'—');
     const alert=r.alert_level??r.alertLevel??'1';
-    const date=r.hijri_date??r.hijriDate??r.date??'—';
+    const date=escapeAppHtml(r.hijri_date??r.hijriDate??r.date??'—');
     return `<tr>
       <td>${i+1}</td>
       <td><b>${studentName}</b></td>
@@ -6402,7 +6402,7 @@ async function loadDeputyReferrals(silent=false){
             <option ${r.deputy_action==='متابعة الحالة'?'selected':''}>متابعة الحالة</option>
           </select>
           <div></div>
-          <textarea class="deputy-reply-text" placeholder="اكتب رد الوكيل للمعلم...">${r.deputy_reply||''}</textarea>
+          <textarea class="deputy-reply-text" placeholder="اكتب رد الوكيل للمعلم...">${escapeAppHtml(r.deputy_reply||'')}</textarea>
           <button type="button" class="deputy-referral-save">حفظ وإرسال الرد للمعلم</button>
         </div>
       </div>`).join('');
@@ -8523,7 +8523,7 @@ async function loadTeacherClassManagerFollowups(){
         </thead>
         <tbody>
           ${rows.map((r,index)=>{
-            const defaultMsg=`شكرًا لك أستاذ ${r.teacher_name||''} على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.`;
+            const defaultMsg='شكرًا لك أستاذ '+String(r.teacher_name||'')+' على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.';
             return `<tr data-teacher-followup-id="${r.id}">
               <td>${index+1}</td>
               <td class="teacher-name-cell">${escapeAppHtml(r.teacher_name||'—')}</td>
@@ -8533,11 +8533,11 @@ async function loadTeacherClassManagerFollowups(){
               <td>${escapeAppHtml(r.classroom||'—')}</td>
               <td>${escapeAppHtml(r.period||'—')}</td>
               <td style="min-width:175px">${teacherClassFormatDateTime(r.submitted_at)}</td>
-              <td class="notes-cell">${r.notes||'لا توجد ملاحظات'}</td>
+              <td class="notes-cell">${escapeAppHtml(r.notes||'لا توجد ملاحظات')}</td>
               <td>${r.image_data?`<img class="manager-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة">`:'—'}</td>
               <td><span class="teacher-status-badge ${r.manager_reply?'replied':''}">${r.manager_reply?'تم الرد':'بانتظار الرد'}</span></td>
               <td class="thanks-cell">
-                <textarea class="manager-teacher-thanks">${r.manager_reply||defaultMsg}</textarea>
+                <textarea class="manager-teacher-thanks">${escapeAppHtml(r.manager_reply||defaultMsg)}</textarea>
                 <button type="button" class="btn btn-primary manager-send-thanks">${r.manager_reply?'تحديث رسالة الشكر':'إرسال رسالة الشكر'}</button>
                 ${r.manager_reply?`<div class="teacher-manager-reply"><b>آخر رد:</b>${r.manager_reply}<br><span style="font-size:10px">— ${r.manager_name||school.manager||'مدير المدرسة'} ${r.replied_at?' | '+teacherClassFormatDateTime(r.replied_at):''}</span></div>`:''}
               </td>
