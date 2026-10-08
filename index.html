@@ -15006,10 +15006,32 @@ async function renderAttendanceStudentList(){
       if(box.checked){
         attendancePresentSelectedIds.add(id);
         queueAttendanceInstantSave(id);
+        updateAttendanceSelectedCount();
       }else{
-        attendancePresentSelectedIds.delete(id);
+        const student=getStudents().find(x=>String(x.idno)===id)
+          || attendanceWholeClassRoster?.students?.find(x=>String(x.idno)===id);
+        const name=String(student?.name||id);
+        const ok=confirm('هل تريد إلغاء تحضير الطالب المحدد؟\n\n'+name);
+        if(!ok){
+          box.checked=true;
+          attendancePresentSelectedIds.add(id);
+          updateAttendanceSelectedCount();
+          return;
+        }
+        box.disabled=true;
+        cancelInstantAttendanceForStudent(id).then(()=>{
+          attendancePresentSelectedIds.delete(id);
+          updateAttendanceSelectedCount();
+          showAttendanceSavedMessage('✅ تم إلغاء تحضير الطالب');
+          toast('تم إلغاء تحضير '+name);
+        }).catch(err=>{
+          console.error('instant attendance cancel',err);
+          box.checked=true;
+          attendancePresentSelectedIds.add(id);
+          updateAttendanceSelectedCount();
+          alert('تعذر إلغاء التحضير. لم يتم رفع التحديد.');
+        }).finally(()=>{box.disabled=false;});
       }
-      updateAttendanceSelectedCount();
     };
   });
 
@@ -15190,8 +15212,7 @@ if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclic
     attendancePresentSelectedIds=new Set(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
     renderAttendanceStudentList();
     updateAttendanceSelectedCount();
-    queueAttendanceInstantSave(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
-    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب — جاري الحفظ الفوري');
+    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب');
   }catch(e){
     console.error('class roster',e);
     alert('تعذر جلب طلاب الفصل من قاعدة البيانات.');
@@ -15338,6 +15359,47 @@ async function flushAttendanceInstantSave(){
       __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,350);
     }
   }
+}
+
+
+async function cancelInstantAttendanceForStudent(id){
+  id=String(id||'').trim();
+  if(!id) return false;
+
+  // إن كان الطالب ما زال في طابور الحفظ ولم يبدأ إرساله، ألغِه من الطابور فقط.
+  __attendanceInstantPending.delete(id);
+
+  // إذا كانت دفعة حفظ جارية، انتظر اكتمالها قبل محاولة الحذف حتى لا يحدث سباق حفظ/حذف.
+  const started=Date.now();
+  while(__attendanceInstantBusy && Date.now()-started<5000){
+    await new Promise(r=>setTimeout(r,100));
+  }
+
+  const period=attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const date=todayKey();
+  let rows=getAttendanceLog();
+  const matches=rows.filter(x=>
+    String(x?.idno||'')===id &&
+    String(x?.date||'')===String(date) &&
+    String(x?.status||'')==='present' &&
+    (!period || String(x?.period??'')===String(period))
+  );
+
+  // إذا لم يصل الحفظ أصلًا إلى السحابة فلا يوجد شيء نحذفه.
+  if(!matches.length){
+    return true;
+  }
+
+  const blocked=matches.some(x=>!attendanceUserCanModifyRow(x));
+  if(blocked){
+    throw new Error('لا يمكن إلغاء تحضير سجل لا تملك صلاحية تعديله.');
+  }
+
+  await cloudApi('delete_attendance_rows',{rows:matches});
+  const keys=new Set(matches.map(attendanceRecordKey));
+  rows=rows.filter(x=>!keys.has(attendanceRecordKey(x)));
+  localStorage.setItem('attendanceLog',JSON.stringify(rows));
+  return true;
 }
 
 
