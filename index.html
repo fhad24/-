@@ -3450,6 +3450,18 @@
     body.activity-leader-open #activityLeaderPage .nashit-hero{
       margin-top:0!important;
     }
+
+    .nashit-plan-filter,.nashit-plan-search{height:42px;border:1px solid #cddbd7;border-radius:10px;background:#fff;font-family:inherit;padding:0 10px;color:#173b34}
+    .nashit-plan-search{min-width:260px;flex:1}
+    .nashit-plan-table{min-width:1180px}
+    .nashit-plan-table td{padding:7px}
+    .nashit-plan-table input[type="checkbox"]{width:20px;height:20px;accent-color:#0f7665}
+    .nashit-plan-table input[type="date"],.nashit-plan-table input[type="text"],.nashit-plan-table select{
+      width:100%;height:38px;border:1px solid #ccdcd7;border-radius:8px;background:#fff;font-family:inherit;font-size:12px;padding:0 7px
+    }
+    .nashit-plan-table .plan-program-name{text-align:right;font-weight:900;color:#173b34;min-width:210px}
+    .nashit-plan-table tr.plan-selected td{background:#f0faf6}
+    .nashit-plan-hours{display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:#e9f5f1;color:#0f7665;font-weight:900}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -5070,8 +5082,39 @@ body.activity-leader-open main{
     </div>
 
     <div class="nashit-pane" data-nashit-pane="plan">
-      <div class="nashit-section-head"><h3>الخطة السنوية</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitNewPlanItem">إنشاء بند خطة</button><button class="nashit-btn" id="nashitCopyPlan">نسخ خطة العام الماضي</button><button class="nashit-btn" id="nashitApprovePlan">إرسال للمدير للاعتماد</button><button class="nashit-btn" id="nashitPrintPlan">طباعة الخطة</button></div></div>
-      <div class="nashit-card"><div class="nashit-note">المجالات: الديني، الثقافي، العلمي، الاجتماعي والتطوعي، الوطني، الفني، الرياضي، الكشفي، الصحي، المهني.</div><div id="nashitPlanList" style="margin-top:12px"></div></div>
+      <div class="nashit-section-head">
+        <h3>الخطة السنوية الجاهزة</h3>
+        <div class="nashit-toolbar">
+          <button class="nashit-btn primary" id="nashitSaveOfficialPlan">💾 حفظ الاختيارات والتعديلات</button>
+          <button class="nashit-btn" id="nashitSelectAllPlan">☑ تحديد الكل</button>
+          <button class="nashit-btn" id="nashitClearPlanSelection">☐ إلغاء التحديد</button>
+          <button class="nashit-btn" id="nashitApprovePlan">إرسال للمدير للاعتماد</button>
+          <button class="nashit-btn" id="nashitPrintPlan">طباعة الخطة</button>
+        </div>
+      </div>
+      <div class="nashit-card">
+        <div class="nashit-note">الخطة محمّلة مسبقًا من برامج النشاط الطلابي المعتمدة للمرحلة الثانوية. اختر البرامج المناسبة للمدرسة فقط، وعدّل الفصل والتاريخ والملاحظات عند الحاجة.</div>
+        <div class="nashit-toolbar" style="margin-top:12px">
+          <select id="nashitPlanFieldFilter" class="nashit-plan-filter">
+            <option value="">جميع المجالات</option>
+            <option>المواطنة والحياة</option>
+            <option>الثقافة والفنون</option>
+            <option>الرياضة والصحة</option>
+            <option>العلوم والتقنية</option>
+            <option>النشاط الكشفي</option>
+            <option>الأيام والمناسبات</option>
+          </select>
+          <select id="nashitPlanTermFilter" class="nashit-plan-filter">
+            <option value="">جميع الفصول</option>
+            <option>الأول</option>
+            <option>الثاني</option>
+            <option>طوال العام</option>
+          </select>
+          <input id="nashitPlanSearch" class="nashit-plan-search" placeholder="🔎 ابحث في البرامج">
+        </div>
+        <div id="nashitPlanSelectionSummary" class="nashit-note" style="margin-top:10px"></div>
+        <div id="nashitPlanList" style="margin-top:12px"></div>
+      </div>
     </div>
 
     <div class="nashit-pane" data-nashit-pane="programs">
@@ -8583,6 +8626,125 @@ function initNashitPage(){
   const saved=localStorage.getItem('nashitActiveTab')||'today';
   nashitTab(saved);
 }
+
+const NASHIT_MINISTRY_PLAN_VERSION='moe-curriculum-guide-5-secondary';
+const NASHIT_MINISTRY_PLAN_TEMPLATE=[
+  {field:'المواطنة والحياة',title:'التطوع الطلابي',hours:5},
+  {field:'المواطنة والحياة',title:'مهارات طموحة',hours:2},
+  {field:'المواطنة والحياة',title:'قيمنا حياة',hours:12},
+
+  {field:'الثقافة والفنون',title:'الفن السابع (السينما)',hours:8},
+  {field:'الثقافة والفنون',title:'حدائق الفن',hours:6},
+  {field:'الثقافة والفنون',title:'الأزياء السعودية',hours:6},
+  {field:'الثقافة والفنون',title:'الثقافة الإعلامية',hours:8},
+  {field:'الثقافة والفنون',title:'تصاميم تراثية معاصرة',hours:5},
+  {field:'الثقافة والفنون',title:'الفنون المسرحية',hours:8},
+  {field:'الثقافة والفنون',title:'البرنامج الموسيقي (الأناشيد الوطنية)',hours:8},
+  {field:'الثقافة والفنون',title:'حكايات مرئية',hours:11},
+
+  {field:'الرياضة والصحة',title:'مهارات الرياضات الجماعية',hours:8},
+  {field:'الرياضة والصحة',title:'مهارات الرياضات الفردية',hours:6},
+  {field:'الرياضة والصحة',title:'مهارات رياضات الدفاع عن النفس',hours:6},
+  {field:'الرياضة والصحة',title:'مهارات الرياضات الإلكترونية والترفيه',hours:8},
+  {field:'الرياضة والصحة',title:'مهارات الرياضات الذهنية',hours:8},
+  {field:'الرياضة والصحة',title:'مهارات الأولمبياد الرياضي',hours:8},
+
+  {field:'العلوم والتقنية',title:'تطبيقات STEM',hours:7},
+  {field:'العلوم والتقنية',title:'التصاميم العلمية التقنية',hours:7},
+  {field:'العلوم والتقنية',title:'رواد فضاء المستقبل',hours:9},
+  {field:'العلوم والتقنية',title:'مدن المستقبل',hours:9},
+  {field:'العلوم والتقنية',title:'الذكاء الاصطناعي',hours:10},
+  {field:'العلوم والتقنية',title:'تحدي إنترنت الأشياء',hours:9},
+
+  {field:'النشاط الكشفي',title:'أغامر وأكتشف',hours:5},
+  {field:'النشاط الكشفي',title:'سفير البيئة والمجتمع',hours:5},
+  {field:'النشاط الكشفي',title:'سواعد الكشفية',hours:6},
+  {field:'النشاط الكشفي',title:'درب الإحسان',hours:3},
+  {field:'النشاط الكشفي',title:'واحة الإبداع الكشفي',hours:4},
+  {field:'النشاط الكشفي',title:'مهرجان الأفلام الكشفية الصحية',hours:8},
+  {field:'النشاط الكشفي',title:'أفقي الكشفي الواسع',hours:4},
+
+  {field:'الأيام والمناسبات',title:'اليوم الوطني',hours:4,selected:true},
+  {field:'الأيام والمناسبات',title:'يوم التأسيس',hours:4,selected:true},
+  {field:'الأيام والمناسبات',title:'يوم السعودية الخضراء',hours:2},
+  {field:'الأيام والمناسبات',title:'يوم العلم',hours:2,selected:true},
+  {field:'الأيام والمناسبات',title:'يوم الصحة العالمي',hours:2},
+  {field:'الأيام والمناسبات',title:'اليوم العالمي للتعليم',hours:2},
+  {field:'الأيام والمناسبات',title:'اليوم العالمي للغة العربية',hours:1},
+  {field:'الأيام والمناسبات',title:'يوم التسامح العالمي',hours:1},
+  {field:'الأيام والمناسبات',title:'اليوم العالمي لذوي الإعاقة',hours:2}
+].map((x,i)=>({...x,id:'moe-plan-'+(i+1),term:'طوال العام',date:'',notes:'',status:'مخطط',selected:!!x.selected,source:'وزارة التعليم'}));
+
+function ensureNashitMinistryPlan(d){
+  d=d||getNashitData();
+  const oldByTitle=new Map((Array.isArray(d.plan)?d.plan:[]).map(x=>[String(x.title||'').trim(),x]));
+  const current=Array.isArray(d.plan)?d.plan:[];
+  const already=current.some(x=>String(x.id||'').startsWith('moe-plan-'));
+  if(!already || d.planTemplateVersion!==NASHIT_MINISTRY_PLAN_VERSION){
+    d.plan=NASHIT_MINISTRY_PLAN_TEMPLATE.map(base=>{
+      const old=oldByTitle.get(base.title)||{};
+      return {...base,...old,id:base.id,field:base.field,title:base.title,hours:base.hours,
+        selected:typeof old.selected==='boolean'?old.selected:base.selected};
+    });
+    d.planTemplateVersion=NASHIT_MINISTRY_PLAN_VERSION;
+    saveNashitData(d);
+  }
+  return d;
+}
+function nashitPlanUpdate(id,field,value){
+  const d=ensureNashitMinistryPlan(getNashitData());
+  const row=d.plan.find(x=>x.id===id); if(!row)return;
+  if(field==='selected') row.selected=!!value;
+  else row[field]=value;
+  saveNashitData(d);
+  renderNashitPlanOnly();
+}
+function nashitSelectAllPlanRows(value){
+  const d=ensureNashitMinistryPlan(getNashitData());
+  const field=$('nashitPlanFieldFilter')?.value||'';
+  const term=$('nashitPlanTermFilter')?.value||'';
+  const q=String($('nashitPlanSearch')?.value||'').trim().toLowerCase();
+  d.plan.forEach(x=>{
+    const visible=(!field||x.field===field)&&(!term||x.term===term)&&(!q||String(x.title+' '+x.field).toLowerCase().includes(q));
+    if(visible)x.selected=!!value;
+  });
+  saveNashitData(d);renderNashitPlanOnly();
+}
+function renderNashitPlanOnly(){
+  const host=$('nashitPlanList'); if(!host)return;
+  const d=ensureNashitMinistryPlan(getNashitData());
+  const field=$('nashitPlanFieldFilter')?.value||'';
+  const term=$('nashitPlanTermFilter')?.value||'';
+  const q=String($('nashitPlanSearch')?.value||'').trim().toLowerCase();
+  const rows=d.plan.filter(x=>(!field||x.field===field)&&(!term||x.term===term)&&(!q||String(x.title+' '+x.field).toLowerCase().includes(q)));
+  const selected=d.plan.filter(x=>x.selected);
+  if($('nashitPlanSelectionSummary')){
+    const hours=selected.reduce((s,x)=>s+Number(x.hours||0),0);
+    $('nashitPlanSelectionSummary').textContent='تم اختيار '+selected.length+' برنامجًا/مناسبة — إجمالي الساعات الاسترشادية: '+hours;
+  }
+  host.innerHTML='<div class="nashit-table-wrap"><table class="nashit-table nashit-plan-table"><thead><tr><th>اختيار</th><th>المجال</th><th>البرنامج المعتمد</th><th>الساعات للثانوي</th><th>الفصل</th><th>التاريخ</th><th>الحالة</th><th>ملاحظات/تعديل</th></tr></thead><tbody>'+
+    rows.map(x=>`<tr class="${x.selected?'plan-selected':''}">
+      <td><input type="checkbox" ${x.selected?'checked':''} onchange="nashitPlanUpdate('${x.id}','selected',this.checked)"></td>
+      <td>${nashitEsc(x.field)}</td>
+      <td class="plan-program-name">${nashitEsc(x.title)}</td>
+      <td><span class="nashit-plan-hours">${x.hours||0}</span></td>
+      <td><select onchange="nashitPlanUpdate('${x.id}','term',this.value)">
+        <option ${x.term==='الأول'?'selected':''}>الأول</option>
+        <option ${x.term==='الثاني'?'selected':''}>الثاني</option>
+        <option ${x.term==='طوال العام'?'selected':''}>طوال العام</option>
+      </select></td>
+      <td><input type="date" value="${nashitEsc(x.date||'')}" onchange="nashitPlanUpdate('${x.id}','date',this.value)"></td>
+      <td><select onchange="nashitPlanUpdate('${x.id}','status',this.value)">
+        <option ${x.status==='مخطط'?'selected':''}>مخطط</option>
+        <option ${x.status==='قيد التنفيذ'?'selected':''}>قيد التنفيذ</option>
+        <option ${x.status==='منفّذ'?'selected':''}>منفّذ</option>
+        <option ${x.status==='مؤجل'?'selected':''}>مؤجل</option>
+        <option ${x.status==='ملغى'?'selected':''}>ملغى</option>
+      </select></td>
+      <td><input type="text" value="${nashitEsc(x.notes||'')}" placeholder="اكتب التعديل أو الملاحظة" onchange="nashitPlanUpdate('${x.id}','notes',this.value)"></td>
+    </tr>`).join('')+
+    '</tbody></table></div>';
+}
 function nashitAddPlanItem(){
   const title=nashitPrompt('اسم البرنامج/البند في الخطة'); if(!title)return;
   const field=nashitPrompt('المجال: ديني/ثقافي/علمي/اجتماعي وتطوعي/وطني/فني/رياضي/كشفي/صحي/مهني','وطني'); if(field===null)return;
@@ -8678,7 +8840,10 @@ function renderNashit(){
   const d=getNashitData(),students=getStudents();
   const done=d.programs.filter(p=>p.status==='منفّذ');
   const participantIds=new Set(Object.keys(d.participation).filter(k=>d.participation[k]?.programs?.length));
-  const planRate=d.programs.length?Math.round(done.length/d.programs.length*100):0;
+  ensureNashitMinistryPlan(d);
+  const selectedPlan=d.plan.filter(x=>x.selected);
+  const donePlan=selectedPlan.filter(x=>x.status==='منفّذ');
+  const planRate=selectedPlan.length?Math.round(donePlan.length/selectedPlan.length*100):0;
   const partRate=students.length?Math.round(participantIds.size/students.length*100):0;
   if($('nashitPlanRate')) $('nashitPlanRate').textContent=planRate+'%';
   if($('nashitParticipationRate')) $('nashitParticipationRate').textContent=partRate+'%';
@@ -8704,7 +8869,7 @@ function renderNashit(){
   const compAlerts=d.competitions.filter(x=>x.deadline).sort((a,b)=>String(a.deadline).localeCompare(String(b.deadline))).slice(0,4);
   $('nashitTodayAlerts').innerHTML=compAlerts.map(x=>`<div class="nashit-today-item"><b>${nashitEsc(x.name)}</b><span>${nashitEsc(x.deadline)}</span></div>`).join('')||'<div class="nashit-empty">لا توجد تنبيهات قريبة.</div>';
 
-  $('nashitPlanList').innerHTML=d.plan.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>البند</th><th>المجال</th><th>الفصل</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>'+d.plan.map(x=>`<tr><td>${nashitEsc(x.title)}</td><td>${nashitEsc(x.field)}</td><td>${nashitEsc(x.term)}</td><td>${nashitEsc(x.date)}</td><td>${nashitEsc(x.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لم تتم إضافة بنود للخطة بعد.</div>';
+  renderNashitPlanOnly();
 
   $('nashitProgramsList').innerHTML=d.programs.length?d.programs.map(p=>`<div class="nashit-card" style="margin-bottom:10px"><div class="nashit-section-head"><div><h3>${nashitEsc(p.title)}</h3><div class="nashit-muted">${nashitEsc(p.field)} • ${nashitEsc(p.date||'بدون تاريخ')} • ${nashitEsc(p.place||'')}</div></div><span class="nashit-status ${p.status==='منفّذ'?'done':p.status==='قيد التنفيذ'?'running':p.status==='ملغى'?'cancel':''}">${nashitEsc(p.status)}</span></div><div class="nashit-muted">الهدف: ${nashitEsc(p.goal||'—')}<br>الفئة: ${nashitEsc(p.target||'—')} — المنفذون: ${nashitEsc(p.executors||'—')} — التكلفة: ${p.cost||0}</div><div class="nashit-toolbar" style="margin-top:10px"><button class="nashit-btn" onclick="nashitSetProgramStatus(${p.id},'قيد التنفيذ')">بدء التنفيذ</button><button class="nashit-btn" onclick="nashitProgramAttendance(${p.id})">تسجيل حضور</button><button class="nashit-btn" onclick="nashitAddEvidence(${p.id})">رفع شاهد</button><button class="nashit-btn primary" onclick="nashitCloseProgram(${p.id})">إغلاق وتقويم</button><button class="nashit-btn" onclick="nashitSetProgramStatus(${p.id},'مؤجل')">تأجيل</button></div></div>`).join(''):'<div class="nashit-empty">لا توجد برامج بعد.</div>';
 
@@ -8731,8 +8896,12 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('DOMContentLoaded',()=>{
   if($('nashitBackBtn')) $('nashitBackBtn').onclick=()=>{ if(isCurrentOwner()) openAdminDashboardInternal(); else returnUserToPermissionPages(); };
-  if($('nashitNewPlanItem')) $('nashitNewPlanItem').onclick=nashitAddPlanItem;
-  if($('nashitCopyPlan')) $('nashitCopyPlan').onclick=()=>toast('سيتم استخدام الخطة المحفوظة من العام السابق عند توفر نسخة احتياطية.');
+  if($('nashitSaveOfficialPlan')) $('nashitSaveOfficialPlan').onclick=()=>{saveNashitData(ensureNashitMinistryPlan(getNashitData()));toast('تم حفظ اختيارات وتعديلات الخطة السنوية');};
+  if($('nashitSelectAllPlan')) $('nashitSelectAllPlan').onclick=()=>nashitSelectAllPlanRows(true);
+  if($('nashitClearPlanSelection')) $('nashitClearPlanSelection').onclick=()=>nashitSelectAllPlanRows(false);
+  if($('nashitPlanFieldFilter')) $('nashitPlanFieldFilter').onchange=renderNashitPlanOnly;
+  if($('nashitPlanTermFilter')) $('nashitPlanTermFilter').onchange=renderNashitPlanOnly;
+  if($('nashitPlanSearch')) $('nashitPlanSearch').oninput=renderNashitPlanOnly;
   if($('nashitApprovePlan')) $('nashitApprovePlan').onclick=()=>{const link=location.href.split('#')[0]+'#activity-plan-review';navigator.clipboard?.writeText(link);toast('تم تجهيز رابط الاعتماد ونسخه');};
   if($('nashitPrintPlan')) $('nashitPrintPlan').onclick=()=>window.print();
   if($('nashitAddProgramBtn')) $('nashitAddProgramBtn').onclick=nashitAddProgram;
