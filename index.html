@@ -15013,6 +15013,7 @@ async function renderAttendanceStudentList(){
           await cancelInstantAttendanceForStudent(id);
           attendancePresentSelectedIds.delete(id);
           updateAttendanceSelectedCount();
+          showAttendanceSavedMessage('✅ تم الحفظ');
         }catch(err){
           console.error('instant attendance cancel',err);
           box.checked=true;
@@ -15247,7 +15248,7 @@ function showAttendanceSavedMessage(message='✅ تم الحفظ بنجاح'){
   box.textContent=message;
   box.style.display='block';
   clearTimeout(window.__attendanceSavedTimer);
-  window.__attendanceSavedTimer=setTimeout(()=>{if(box) box.style.display='none'},2200);
+  window.__attendanceSavedTimer=setTimeout(()=>{if(box) box.style.display='none'},1200);
 }
 
 /* SHURAHBIL_ATTENDANCE_INSTANT_SAVE_V1 */
@@ -15354,6 +15355,7 @@ async function flushAttendanceInstantSave(){
 
     await saveAttendanceLog(rows,cloudRows);
 
+    showAttendanceSavedMessage('✅ تم الحفظ');
     const n=cloudRows.length;
   }catch(e){
     console.error('instant attendance save',e);
