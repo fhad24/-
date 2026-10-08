@@ -15006,6 +15006,8 @@ async function renderAttendanceStudentList(){
       if(box.checked){
         attendancePresentSelectedIds.add(id);
         updateAttendanceSelectedCount();
+        // في التأخر نظهر رسالة الحفظ فورًا عند التحديد، بدون انتظار الشبكة.
+        if(attendanceMode==='late') showAttendanceSavedMessage('✅ تم الحفظ');
         queueAttendanceInstantSave(id);
       }else{
         box.disabled=true;
@@ -15356,11 +15358,13 @@ async function flushAttendanceInstantSave(){
 
     await saveAttendanceLog(rows,cloudRows);
 
-    showAttendanceSavedMessage('✅ تم الحفظ');
+    // الحضور يعرض الرسالة بعد تأكيد الخادم، أما التأخر فظهرت فورًا عند التحديد.
+    if(attendanceMode==='present') showAttendanceSavedMessage('✅ تم الحفظ');
     const n=cloudRows.length;
   }catch(e){
     console.error('instant attendance save',e);
     ids.forEach(id=>__attendanceInstantPending.add(id));
+    if(attendanceMode==='late') showAttendanceSavedMessage('❌ تعذر الحفظ');
 
   }finally{
     __attendanceInstantBusy=false;
