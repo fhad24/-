@@ -3703,6 +3703,50 @@
   margin:0!important;
 }
 </style>
+
+<style id="activityLeaderHardFinalStyle">
+body.activity-leader-open{overflow:hidden!important}
+body.activity-leader-open #activityLeaderPage{
+  display:block!important;
+  position:fixed!important;
+  z-index:99980!important;
+  top:var(--activity-header-height,0px)!important;
+  right:0!important;
+  left:0!important;
+  bottom:0!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:auto!important;
+  background:#f4f7f6!important;
+  transform:none!important;
+  box-sizing:border-box!important
+}
+body.activity-leader-open #activityLeaderPage>.nashit-page{
+  display:block!important;
+  position:static!important;
+  width:100%!important;
+  max-width:1500px!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  padding:12px 14px 24px!important;
+  box-sizing:border-box!important;
+  transform:none!important
+}
+body.activity-leader-open #activityLeaderPage .nashit-hero{margin-top:0!important}
+body.activity-leader-open main{
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important
+}
+</style>
 </head>
 <body>
   <button type="button" id="globalUserBackToPages" class="global-user-back hidden">⬅ الرجوع إلى صفحاتي</button>
@@ -8516,13 +8560,16 @@ function nashitTab(name){
 function positionActivityLeaderPage(){
   try{
     const header=document.querySelector('header');
-    const bottom=header ? Math.max(0,Math.round(header.getBoundingClientRect().bottom)) : 0;
-    document.documentElement.style.setProperty('--activity-header-height',bottom+'px');
+    const top=header ? Math.max(0,Math.round(header.offsetHeight||header.getBoundingClientRect().height||0)) : 0;
+    document.documentElement.style.setProperty('--activity-header-height',top+'px');
     const page=$('activityLeaderPage');
     if(page){
       page.scrollTop=0;
-      page.style.setProperty('top',bottom+'px','important');
+      page.style.setProperty('top',top+'px','important');
+      page.style.setProperty('bottom','0','important');
     }
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
     window.scrollTo(0,0);
   }catch(e){console.warn('activity leader position',e)}
 }
@@ -18811,52 +18858,7 @@ function printStudents(rows){
       .attendance-present-hijri-copy b{font-size:19px!important}
     }
 </style>
-<style id="activityLeaderHardFinalStyle">
-body.activity-leader-open{
-  overflow:auto!important;
-}
-body.activity-leader-open #activityLeaderPage{
-  display:block!important;
-  position:fixed!important;
-  z-index:99980!important;
-  top:var(--activity-header-height,0px)!important;
-  right:0!important;
-  left:0!important;
-  bottom:0!important;
-  width:100vw!important;
-  max-width:none!important;
-  height:auto!important;
-  min-height:0!important;
-  margin:0!important;
-  padding:0!important;
-  overflow:auto!important;
-  background:#f4f7f6!important;
-  transform:none!important;
-  box-sizing:border-box!important;
-}
-body.activity-leader-open #activityLeaderPage > .nashit-page{
-  display:block!important;
-  position:static!important;
-  width:100%!important;
-  max-width:1500px!important;
-  height:auto!important;
-  min-height:0!important;
-  margin:0 auto!important;
-  padding:12px 14px 24px!important;
-  box-sizing:border-box!important;
-  transform:none!important;
-}
-body.activity-leader-open #activityLeaderPage .nashit-hero{
-  margin-top:0!important;
-}
-body.activity-leader-open main{
-  min-height:0!important;
-  height:0!important;
-  padding:0!important;
-  margin:0!important;
-  overflow:visible!important;
-}
-</style>
+
 </head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
