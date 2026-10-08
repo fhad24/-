@@ -9551,6 +9551,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 setInterval(()=>{try{updateGlobalUserBackButton()}catch(e){}},1200);
 
 function openInternalPage(pageId){
+  // ابدأ كل صفحة داخلية من أعلى الصفحة حتى لا يظهر فراغ ناتج عن موضع التمرير السابق.
+  try{ window.scrollTo({top:0,left:0,behavior:'auto'}); }catch(e){ window.scrollTo(0,0); }
   updateGlobalUserBackButton(pageId);
   // إبقاء شريط التنقل وزر الصفحة الرئيسية ظاهرين داخل جميع صفحات المستخدم/الأدمن بعد تسجيل الدخول.
   if(localStorage.getItem('adminLoggedIn')==='1'){
@@ -9619,7 +9621,10 @@ function openInternalPage(pageId){
       openAdminDashboardInternal();
       return;
     }
-    if(typeof initStudentTransferManager==='function') setTimeout(initStudentTransferManager,0);
+    if(typeof initStudentTransferManager==='function') setTimeout(async()=>{
+      try{ await initStudentTransferManager(); }catch(e){ console.error('student transfer init',e); }
+      try{ window.scrollTo({top:0,left:0,behavior:'auto'}); }catch(e){ window.scrollTo(0,0); }
+    },0);
   }
   // إعادة تثبيت زر الصفحة الرئيسية بعد فتح أي صفحة داخلية حتى لا يختفي بسبب إعادة تهيئة الواجهة.
   setTimeout(()=>{
