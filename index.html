@@ -3785,7 +3785,7 @@ body.activity-leader-open main{
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
     <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
-    <button type="button" id="headerActivityLeaderBtn">نَشِط — رائد النشاط ⭐</button>
+    <button type="button" id="headerActivityLeaderBtn">رائد النشاط ⭐</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
   </div>
@@ -4668,7 +4668,8 @@ body.activity-leader-open main{
           <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
-          <button class="admin-pill" id="adminActivityLeaderTab">نَشِط — رائد النشاط ⭐</button>
+          <button class="admin-pill" id="adminActivityLeaderTab">رائد النشاط ⭐</button>
+          <button class="admin-pill" id="adminDataReviewBtn">⚠️ مراجعة بيانات الطلاب <span id="adminDataReviewCount"></span></button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
       </div>
@@ -6689,6 +6690,7 @@ async function cloudLoginAndSync(username,password){
   
   await cloudPullToLocal();
   if(typeof renderAdmin==='function') renderAdmin();
+  if(typeof refreshStudentDataReviewCount==='function') refreshStudentDataReviewCount();
   return login;
 }
 
@@ -6958,6 +6960,8 @@ function configureUserDashboard(){
   $('userWelcomeCivil').textContent='السجل المدني: '+civil;
 
   const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+  if(!isCurrentOwner()) $('adminDataReviewBtn')?.style.setProperty('display','none','important');
+  else $('adminDataReviewBtn')?.style.removeProperty('display');
 
   // نفس أزرار الأدمن لكن يظهر للمستخدم فقط ما لديه صلاحية به
   const toolbarPermMap={
@@ -7009,7 +7013,7 @@ function configureUserDashboard(){
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
     ['backupZip','نسخة احتياطية ZIP 💾','backupZip'],
-    ['activityLeader','نَشِط — رائد النشاط ⭐','activityLeader'],
+    ['activityLeader','رائد النشاط ⭐','activityLeader'],
   ];
   const host=$('userPermissionButtons');
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
@@ -9282,6 +9286,7 @@ if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('ed
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('adminActivityLeaderTab')) $('adminActivityLeaderTab').onclick=()=>openActivityLeaderPage();
+if($('adminDataReviewBtn')) $('adminDataReviewBtn').onclick=openStudentDataReviewModal;
 if($('attendanceAbsenceReportsBtn')) $('attendanceAbsenceReportsBtn').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
@@ -10642,6 +10647,87 @@ async function createAdminBackupZip(){
 if($('adminBackupZipBtn')) $('adminBackupZipBtn').onclick=createAdminBackupZip;
 
 
+
+async function refreshStudentDataReviewCount(){
+  const el=$('adminDataReviewCount');
+  if(!el || !isCurrentOwner()) return;
+  try{
+    const r=await cloudApi('data_review_list');
+    const rows=Array.isArray(r?.rows)?r.rows:[];
+    el.textContent=rows.length?('('+rows.length+')'):'';
+  }catch(e){el.textContent=''}
+}
+
+async function openStudentDataReviewModal(){
+  if(!isCurrentOwner()) return;
+  let rows=[];
+  try{
+    const r=await cloudApi('data_review_list');
+    rows=Array.isArray(r?.rows)?r.rows:[];
+  }catch(e){
+    alert('تعذر تحميل قائمة مراجعة البيانات.');
+    return;
+  }
+  document.getElementById('studentDataReviewModal')?.remove();
+  const ov=document.createElement('div');
+  ov.id='studentDataReviewModal';
+  ov.className='modal-backdrop';
+  const gradeOptions=['الأول الثانوي','الثاني الثانوي','الثالث الثانوي'];
+  const classOptions=['أ','ب','ج','د','هـ','و','الانتساب'];
+  ov.innerHTML=`
+    <div class="modal-card" style="width:min(1200px,97vw);max-height:92vh;overflow:auto">
+      <button type="button" class="modal-close-x" id="studentDataReviewClose">×</button>
+      <h2 style="text-align:center">⚠️ بيانات طلاب تحتاج مراجعة</h2>
+      <div class="hint" style="font-size:13px;margin-bottom:12px">
+        هذه السجلات لم يتم تصحيحها آليًا لأن التخمين في السجل المدني أو الفصل قد يفسد بيانات الطالب.
+        أدخل السجل الصحيح واختر الصف والفصل ثم اضغط حفظ.
+      </div>
+      <div id="studentDataReviewRows"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  const host=ov.querySelector('#studentDataReviewRows');
+  if(!rows.length){
+    host.innerHTML='<div class="nashit-empty">✅ لا توجد بيانات معلقة للمراجعة.</div>';
+  }else{
+    host.innerHTML='<div class="table-wrap"><table class="admin-table" style="min-width:1050px"><thead><tr><th>الطالب</th><th>المشكلة</th><th>السجل الحالي</th><th>السجل الصحيح</th><th>الصف</th><th>الفصل</th><th>حفظ</th></tr></thead><tbody>'+
+      rows.map(r=>`<tr data-review-row="${Number(r.id)}">
+        <td><b>${escapeAppHtml(r.name||'')}</b></td>
+        <td>${escapeAppHtml(r.details?.reason||r.issue_type||'يحتاج مراجعة')}</td>
+        <td>${escapeAppHtml(r.idno||'')}</td>
+        <td><input class="review-idno" inputmode="numeric" maxlength="10" value="${/^\d{10}$/.test(String(r.idno||''))?escapeAppHtml(r.idno):''}" placeholder="10 خانات"></td>
+        <td><select class="review-grade">${gradeOptions.map(g=>`<option ${String(r.grade||'')===g?'selected':''}>${g}</option>`).join('')}</select></td>
+        <td><select class="review-class">${classOptions.map(k=>`<option value="${k}" ${String(r.classroom||'')===k?'selected':''}>${k}</option>`).join('')}</select></td>
+        <td><button type="button" class="admin-user-btn review-save" data-id="${Number(r.id)}">حفظ واعتماد</button></td>
+      </tr>`).join('')+'</tbody></table></div>';
+  }
+
+  ov.querySelector('#studentDataReviewClose').onclick=()=>ov.remove();
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove()});
+  ov.querySelectorAll('.review-save').forEach(btn=>btn.onclick=async()=>{
+    const tr=btn.closest('[data-review-row]');
+    const idno=String(tr.querySelector('.review-idno')?.value||'').replace(/\D/g,'');
+    const grade=String(tr.querySelector('.review-grade')?.value||'');
+    const classroom=String(tr.querySelector('.review-class')?.value||'');
+    if(!/^\d{10}$/.test(idno)){alert('السجل المدني/الإقامة يجب أن يكون 10 خانات.');return}
+    if(classroom==='الوهمي'){alert('اختر فصلًا حقيقيًا.');return}
+    btn.disabled=true;btn.textContent='جاري الحفظ...';
+    try{
+      await cloudApi('data_review_resolve',{id:Number(btn.dataset.id),idno,grade,classroom});
+      tr.remove();
+      await cloudPullToLocal();
+      await refreshStudentDataReviewCount();
+      toast('✅ تم تصحيح بيانات الطالب');
+      if(!ov.querySelector('[data-review-row]')){
+        host.innerHTML='<div class="nashit-empty">✅ تم إنهاء جميع السجلات المعلقة.</div>';
+      }
+    }catch(e){
+      const msg=String(e?.message||e||'');
+      if(msg.includes('duplicate')) alert('هذا السجل المدني مستخدم لطالب آخر.');
+      else alert('تعذر حفظ التصحيح: '+msg);
+      btn.disabled=false;btn.textContent='حفظ واعتماد';
+    }
+  });
+}
 function getSchoolSettings(){
   const defaults={
     authority:'الإدارة العامة للتعليم بمنطقة نجران',
@@ -18768,6 +18854,8 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 window.addEventListener('resize',()=>{if(document.body.classList.contains('activity-leader-open')) positionActivityLeaderPage();});
+
+setTimeout(refreshStudentDataReviewCount,900);
 </script>
 </body>
 </html>
