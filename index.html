@@ -4703,7 +4703,7 @@ body.activity-leader-open main{
         <div class="attendance-tabs">
           <button type="button" id="attendanceTabPresent" class="active" data-att-view="present">✓ الحضور اليومي (<span id="attPresentTabCount">0</span>)</button>
           <button type="button" id="attendanceTabAbsent" data-att-view="absent">✕ الغياب اليومي (<span id="attAbsentTabCount">0</span>)</button>
-          <button type="button" id="attendanceTabLate" data-att-view="late">🚪 الاستئذان (<span id="attLateTabCount">0</span>)</button>
+          <button type="button" id="attendanceTabLate" data-att-view="late">⏰ التأخر اليومي (<span id="attLateTabCount">0</span>)</button>
         </div>
 
         <div class="card attendance-daily-card">
@@ -13150,7 +13150,7 @@ async function renderAttendancePage(){
   });
 
   const labelMap={
-    late:'الاستئذان',
+    late:'التأخر اليومي',
     present:'الحضور اليومي',
     absent:'الغياب اليومي'
   };
