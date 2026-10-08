@@ -1,6 +1,163 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head>
+<head>\n<script>
+/* SHURAHBIL_PROGRAM_UPDATE_BOOTSTRAP */
+(function(){
+  if(window.__SHURAHBIL_RUNTIME_UPDATE__) return;
+  try{
+    if(new URLSearchParams(location.search).get('safe')==='1') return;
+  }catch(e){}
+  const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
+  const CACHE_HASH='shurahbil_program_update_hash';
+  const CACHE_HTML='shurahbil_program_update_html';
+  const managerScript = `
+(function(){
+  const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
+  function isOwnerNow(){
+    try{return typeof isCurrentOwner==='function' && isCurrentOwner();}catch(e){return false}
+  }
+  async function uploadProgramZip(file,button){
+    if(!isOwnerNow()){alert('تحديث البرنامج متاح لمدير النظام فقط.');return}
+    if(!window.JSZip){alert('تعذر تشغيل أداة ZIP.');return}
+    const old=button.textContent;
+    button.disabled=true;button.textContent='جاري فحص ملف التحديث...';
+    try{
+      const zip=await JSZip.loadAsync(file);
+      const entry=zip.file('site/index.html')||zip.file('index.html');
+      if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
+      const html=await entry.async('string');
+      if(html.length<100000 || html.length>3500000 || !/<html[\\s>]/i.test(html) || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
+        throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
+      }
+      let manifest={};
+      try{const mf=zip.file('backup_manifest.json');if(mf)manifest=JSON.parse(await mf.async('string'))}catch(e){}
+      const version=String(manifest.fixedAt||manifest.createdAt||file.name||new Date().toISOString()).slice(0,120);
+      const ok=confirm(
+        'سيتم تحديث كود البرنامج فقط من الملف الخارجي.\\n\\n'+
+        'لن يتم استيراد أو حذف بيانات الطلاب أو الصور أو الحضور أو التحويلات.\\n'+
+        'حجم ملف البرنامج: '+Math.round(html.length/1024)+' KB\\n\\n'+
+        'هل تريد اعتماد هذا التحديث لجميع الأجهزة؟'
+      );
+      if(!ok)return;
+      button.textContent='جاري رفع التحديث...';
+      const token=localStorage.getItem('cloudAdminToken')||'';
+      if(!token) throw new Error('يلزم تسجيل الدخول بحساب المدير');
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),60000);
+      let res;
+      try{
+        res=await fetch(API,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-app-token':token},
+          body:JSON.stringify({action:'publish_program_update',html,version}),
+          signal:ctrl.signal
+        });
+      }finally{clearTimeout(timer)}
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+      localStorage.removeItem('shurahbil_program_update_hash');
+      localStorage.removeItem('shurahbil_program_update_html');
+      alert('✅ تم اعتماد تحديث البرنامج بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+      location.reload();
+    }catch(e){
+      alert('تعذر تحديث البرنامج: '+(e?.message||e));
+    }finally{
+      button.disabled=false;button.textContent=old;
+    }
+  }
+  async function rollbackProgramUpdate(button){
+    if(!isOwnerNow()){alert('الرجوع للإصدار السابق متاح لمدير النظام فقط.');return}
+    if(!confirm('هل تريد الرجوع إلى إصدار البرنامج السابق؟ بيانات الطلاب لن تتأثر.'))return;
+    const old=button.textContent;button.disabled=true;button.textContent='جاري الرجوع...';
+    try{
+      const token=localStorage.getItem('cloudAdminToken')||'';
+      if(!token) throw new Error('يلزم تسجيل الدخول بحساب المدير');
+      const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-app-token':token},body:JSON.stringify({action:'program_update_rollback'})});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error==='no previous update'?'لا يوجد إصدار سابق محفوظ للرجوع إليه':(data.error||('HTTP '+res.status)));
+      localStorage.removeItem('shurahbil_program_update_hash');
+      localStorage.removeItem('shurahbil_program_update_html');
+      alert('✅ تم الرجوع للإصدار السابق.');
+      location.reload();
+    }catch(e){alert('تعذر الرجوع للإصدار السابق: '+(e?.message||e))}
+    finally{button.disabled=false;button.textContent=old}
+  }
+  function install(){
+    const anchor=document.getElementById('adminBackupZipBtn');
+    if(!anchor)return;
+    let input=document.getElementById('programUpdateZipInput');
+    if(!input){
+      input=document.createElement('input');
+      input.type='file';input.accept='.zip,application/zip';input.id='programUpdateZipInput';input.hidden=true;
+      anchor.parentElement?.appendChild(input);
+    }
+    let update=document.getElementById('adminProgramUpdateBtn');
+    if(!update){
+      update=document.createElement('button');update.type='button';update.className=anchor.className;
+      update.id='adminProgramUpdateBtn';update.textContent='⬆️ تحديث البرنامج من ملف';
+      anchor.insertAdjacentElement('afterend',update);
+      update.onclick=()=>input.click();
+      input.onchange=async()=>{const file=input.files?.[0];input.value='';if(file)await uploadProgramZip(file,update)};
+    }
+    let rollback=document.getElementById('adminProgramRollbackBtn');
+    if(!rollback){
+      rollback=document.createElement('button');rollback.type='button';rollback.className=anchor.className;
+      rollback.id='adminProgramRollbackBtn';rollback.textContent='↩️ الإصدار السابق';
+      update.insertAdjacentElement('afterend',rollback);
+      rollback.onclick=()=>rollbackProgramUpdate(rollback);
+    }
+    const show=isOwnerNow();
+    update.style.display=show?'':'none';
+    rollback.style.display=show?'':'none';
+  }
+  install();
+  setInterval(install,1200);
+})();
+`;
+  async function start(){
+    let hidden=false,replaced=false;
+    try{
+      document.documentElement.style.visibility='hidden';hidden=true;
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),4500);
+      let metaRes;
+      try{
+        metaRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'program_update_meta'}),signal:ctrl.signal});
+      }finally{clearTimeout(timer)}
+      if(!metaRes.ok) return;
+      const meta=await metaRes.json().catch(()=>({}));
+      const u=meta&&meta.update;
+      if(!u||!u.sha256) return;
+      let html='';
+      try{
+        if(localStorage.getItem(CACHE_HASH)===u.sha256) html=localStorage.getItem(CACHE_HTML)||'';
+      }catch(e){}
+      if(!html){
+        const contentRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'program_update_content',sha256:u.sha256})});
+        if(!contentRes.ok)return;
+        html=await contentRes.text();
+        if(html.length<100000 || !/<html[\\s>]/i.test(html))return;
+        try{
+          localStorage.setItem(CACHE_HASH,u.sha256);
+          localStorage.setItem(CACHE_HTML,html);
+        }catch(e){}
+      }
+      const safeManager=managerScript.replace(/<\\/script/gi,'<\\\\/script');
+      html=html.replace(/<\\/body>/i,'<script>'+safeManager+'<\\/script></body>');
+      window.__SHURAHBIL_RUNTIME_UPDATE__=u.sha256;
+      replaced=true;
+      document.open();
+      document.write(html);
+      document.close();
+    }catch(e){
+      console.warn('program update bootstrap',e);
+    }finally{
+      if(hidden&&!replaced) document.documentElement.style.visibility='';
+    }
+  }
+  start();
+})();
+</script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -4669,7 +4826,7 @@ body.activity-leader-open main{
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminActivityLeaderTab">رائد النشاط ⭐</button>
           <button class="admin-pill" id="adminDataReviewBtn">⚠️ مراجعة بيانات الطلاب <span id="adminDataReviewCount"></span></button>
-          <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
+          <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>\n          <button class="admin-pill" id="adminProgramUpdateBtn" style="display:none">⬆️ تحديث البرنامج من ملف</button>\n          <button class="admin-pill" id="adminProgramRollbackBtn" style="display:none">↩️ الإصدار السابق</button>\n          <input id="programUpdateZipInput" class="hidden" type="file" accept=".zip,application/zip">
         </div>
       </div>
 
@@ -9637,6 +9794,10 @@ function setAdminMode(on){
       if(followupAdminTab) followupAdminTab.style.display=(owner||perms.has('followupSheets'))?'':'none';
       const backupAdminTab=$('adminBackupZipBtn');
       if(backupAdminTab) backupAdminTab.style.display=(owner||perms.has('backupZip'))?'':'none';
+      const programUpdateBtn=$('adminProgramUpdateBtn');
+      if(programUpdateBtn) programUpdateBtn.style.display=owner?'':'none';
+      const programRollbackBtn=$('adminProgramRollbackBtn');
+      if(programRollbackBtn) programRollbackBtn.style.display=owner?'':'none';
       const referralBtn=$('headerReferralBtn');
       if(referralBtn) referralBtn.style.display=(owner||perms.has('referralSubmit'))?'':'none';
       const deputyBtn=$('headerDeputyRepliesBtn');
@@ -10752,6 +10913,87 @@ async function createAdminBackupZip(){
   }
 }
 if($('adminBackupZipBtn')) $('adminBackupZipBtn').onclick=createAdminBackupZip;
+
+async function importProgramUpdateZip(file){
+  const btn=$('adminProgramUpdateBtn');
+  if(!isCurrentOwner()){alert('تحديث البرنامج متاح لمدير النظام فقط.');return}
+  if(!file)return;
+  if(!window.JSZip){alert('تعذر تشغيل أداة ZIP.');return}
+  const oldText=btn?.textContent||'⬆️ تحديث البرنامج من ملف';
+  if(btn){btn.disabled=true;btn.textContent='جاري فحص ملف التحديث...';}
+  try{
+    const zip=await JSZip.loadAsync(file);
+    const entry=zip.file('site/index.html')||zip.file('index.html');
+    if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
+    const html=await entry.async('string');
+    if(html.length<100000 || html.length>3500000 || !/<html[\\s>]/i.test(html) || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
+      throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
+    }
+    let manifest={};
+    try{const mf=zip.file('backup_manifest.json');if(mf)manifest=JSON.parse(await mf.async('string'))}catch(e){}
+    const version=String(manifest.fixedAt||manifest.createdAt||file.name||new Date().toISOString()).slice(0,120);
+    if(!confirm(
+      'سيتم تحديث كود البرنامج فقط من الملف الخارجي.\\n\\n'+
+      'لن يتم استيراد أو حذف بيانات الطلاب أو الصور أو الحضور أو التحويلات.\\n'+
+      'حجم ملف البرنامج: '+Math.round(html.length/1024)+' KB\\n\\n'+
+      'هل تريد اعتماد هذا التحديث لجميع الأجهزة؟'
+    )) return;
+    if(btn)btn.textContent='جاري رفع التحديث...';
+    const token=localStorage.getItem('cloudAdminToken')||'';
+    if(!token) throw new Error('يلزم تسجيل الدخول بحساب المدير');
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),60000);
+    let res;
+    try{
+      res=await fetch(CLOUD_API_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-app-token':token},
+        body:JSON.stringify({action:'publish_program_update',html,version}),
+        signal:controller.signal
+      });
+    }finally{clearTimeout(timer)}
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+    localStorage.removeItem('shurahbil_program_update_hash');
+    localStorage.removeItem('shurahbil_program_update_html');
+    alert('✅ تم اعتماد تحديث البرنامج بنجاح. سيتم إعادة تحميل الصفحة الآن.');
+    location.reload();
+  }catch(e){
+    console.error('program update',e);
+    alert('تعذر تحديث البرنامج: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+}
+
+async function rollbackProgramUpdate(){
+  if(!isCurrentOwner()){alert('الرجوع للإصدار السابق متاح لمدير النظام فقط.');return}
+  if(!confirm('هل تريد الرجوع إلى إصدار البرنامج السابق؟ بيانات الطلاب لن تتأثر.'))return;
+  const btn=$('adminProgramRollbackBtn');
+  const oldText=btn?.textContent||'↩️ الإصدار السابق';
+  if(btn){btn.disabled=true;btn.textContent='جاري الرجوع...';}
+  try{
+    const data=await cloudApi('program_update_rollback');
+    localStorage.removeItem('shurahbil_program_update_hash');
+    localStorage.removeItem('shurahbil_program_update_html');
+    alert('✅ تم الرجوع للإصدار السابق: '+(data?.version||''));
+    location.reload();
+  }catch(e){
+    const msg=String(e?.message||e);
+    alert(msg.includes('no previous update')?'لا يوجد إصدار سابق محفوظ للرجوع إليه.':'تعذر الرجوع للإصدار السابق: '+msg);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+}
+if($('adminProgramUpdateBtn')) $('adminProgramUpdateBtn').onclick=()=>$('programUpdateZipInput')?.click();
+if($('programUpdateZipInput')) $('programUpdateZipInput').onchange=async(e)=>{
+  const input=e.currentTarget;
+  const file=input.files?.[0];
+  input.value='';
+  if(file) await importProgramUpdateZip(file);
+};
+if($('adminProgramRollbackBtn')) $('adminProgramRollbackBtn').onclick=rollbackProgramUpdate;
+
 
 
 
