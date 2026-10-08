@@ -3474,7 +3474,6 @@
     <button type="button" id="headerAdminHomeBtn" class="admin-home-btn">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
-    <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
     <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
@@ -9782,15 +9781,6 @@ if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
 };
 if($('headerTeacherClassFollowupBtn')) $('headerTeacherClassFollowupBtn').onclick=()=>openInternalPage('teacherClassFollowup');
 if($('headerTeacherClassManagerBtn')) $('headerTeacherClassManagerBtn').onclick=()=>openInternalPage('teacherClassManager');
-if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
-  const u=getCurrentLoggedAdminUser();
-  const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
-  if(!isCurrentOwner() && !perms.has('followupSheets')){
-    alert('لا توجد لديك صلاحية كشوف متابعة الطلاب.');
-    return;
-  }
-  openInternalPage('followup');
-};
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
     openAdminDashboardInternal();
