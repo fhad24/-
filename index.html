@@ -3674,6 +3674,7 @@
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
     <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
+    <button type="button" id="headerActivityLeaderBtn">نَشِط — رائد النشاط ⭐</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
     <button type="button" id="headerLogoutBtn">تسجيل الخروج 🚪</button>
   </div>
@@ -4553,6 +4554,7 @@
           <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
+          <button class="admin-pill" id="adminActivityLeaderTab">نَشِط — رائد النشاط ⭐</button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
       </div>
@@ -8256,6 +8258,7 @@ function configureUserDashboard(){
     adminReferralTab:'referralSubmit',
     adminDeputyReferralsTab:'referralReview',
     adminFollowupTab:'followupSheets',
+    adminActivityLeaderTab:'activityLeader',
     adminBackupZipBtn:'backupZip'
   };
   Object.entries(toolbarPermMap).forEach(([id,perm])=>{
@@ -10369,6 +10372,7 @@ if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openStudentTrans
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
+if($('adminActivityLeaderTab')) $('adminActivityLeaderTab').onclick=()=>openInternalPage('activityLeaderPage');
 if($('attendanceAbsenceReportsBtn')) $('attendanceAbsenceReportsBtn').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
@@ -10524,6 +10528,7 @@ if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
   openInternalPage('followup');
 };
 if($('headerTeacherClassManagerBtn')) $('headerTeacherClassManagerBtn').onclick=()=>openInternalPage('teacherClassManager');
+if($('headerActivityLeaderBtn')) $('headerActivityLeaderBtn').onclick=()=>openInternalPage('activityLeaderPage');
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
     openAdminDashboardInternal();
