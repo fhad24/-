@@ -3279,6 +3279,46 @@
     }
     .global-user-back.hidden{display:none!important}
   
+
+    /* FINAL HARD FIX — صفحة إدارة ونقل الفصول مستقلة تمامًا عن تدفق بقية الصفحة */
+    body.transfer-manager-open{
+      overflow:hidden!important;
+    }
+    body.transfer-manager-open #studentTransferManager{
+      display:block!important;
+      position:fixed!important;
+      z-index:99990!important;
+      inset:0!important;
+      top:0!important;
+      right:0!important;
+      bottom:0!important;
+      left:0!important;
+      width:100vw!important;
+      max-width:none!important;
+      height:100vh!important;
+      min-height:100vh!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:auto!important;
+      background:#f4f7f6!important;
+      transform:none!important;
+      box-sizing:border-box!important;
+    }
+    body.transfer-manager-open #studentTransferManager > .student-transfer-page{
+      display:block!important;
+      position:static!important;
+      width:100%!important;
+      max-width:1400px!important;
+      min-height:0!important;
+      height:auto!important;
+      margin:0 auto!important;
+      padding:12px 14px 24px!important;
+      transform:none!important;
+      box-sizing:border-box!important;
+    }
+    body.transfer-manager-open #studentTransferManager .student-transfer-head{
+      margin-top:0!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -9634,6 +9674,7 @@ setInterval(()=>{try{updateGlobalUserBackButton()}catch(e){}},1200);
 function openInternalPage(pageId){
   // وضع مستقل لصفحة إدارة ونقل الفصول لمنع أي مساحة موروثة من الصفحات الأخرى.
   document.body.classList.toggle('transfer-manager-open',pageId==='studentTransferManager');
+  if(pageId!=='studentTransferManager') document.body.style.removeProperty('overflow');
   if(pageId!=='studentTransferManager'){
     document.querySelectorAll('main > .page').forEach(p=>{
       p.style.removeProperty('display');
@@ -9811,6 +9852,7 @@ if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPa
 
 function openAdminDashboardInternal(){
   document.body.classList.remove('transfer-manager-open');
+  document.body.style.removeProperty('overflow');
   const mainReset=document.querySelector('main');
   if(mainReset){
     ['display','height','min-height','max-height','padding-top','margin-top','align-items','justify-content']
