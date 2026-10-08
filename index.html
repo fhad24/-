@@ -5701,6 +5701,7 @@ if($('studentEditForm') && !$('studentEditForm').dataset.serverBound){
         classroom:String($('editClassroom')?.value||'').trim()
       };
       if(idFile) patch.idImage=await fileToDataURLSafe(idFile);
+      if(faceFile) patch.faceImage=await fileToDataURLSafe(faceFile);
       const out=await cloudApi('student_update',{
         idno:selfEditStudentId,
         birth:selfEditBirth,
@@ -5709,19 +5710,8 @@ if($('studentEditForm') && !$('studentEditForm').dataset.serverBound){
         patch
       },false);
       if(!out?.updated) throw new Error('not updated');
-      if(faceFile){
-        const imageData=await fileToDataURLSafe(faceFile);
-        await cloudApi('submit_pending_photo',{
-          idno:selfEditStudentId,
-          student_name:patch.name,
-          image_data:imageData,
-          birth:selfEditBirth,
-          calendar:selfEditCalendar,
-          verify_phone:selfEditVerifyPhone
-        },false);
-      }
       $('editWelcomeName').textContent=patch.name||'بيانات الطالب';
-      toast(faceFile?'✅ تم حفظ البيانات وإرسال صورة الوجه للاعتماد':'✅ تم حفظ التعديلات في قاعدة البيانات');
+      toast(out.face_pending?'✅ تم حفظ البيانات وإرسال صورة الوجه للاعتماد':'✅ تم حفظ التعديلات في قاعدة البيانات');
     }catch(err){
       console.error('student self update',err);
       toast('تعذر حفظ التعديلات؛ لم يتم اعتماد العملية');
