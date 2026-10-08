@@ -3319,6 +3319,37 @@
     body.transfer-manager-open #studentTransferManager .student-transfer-head{
       margin-top:0!important;
     }
+
+    /* إدارة ونقل الطلاب تظهر مباشرة تحت شريط أزرار الإدارة */
+    #dashboard .admin-shell.transfer-inline-open > *:not(.admin-toolbar):not(#studentTransferManager){
+      display:none!important;
+    }
+    #dashboard .admin-shell.transfer-inline-open .admin-toolbar{
+      display:block!important;
+      margin-bottom:10px!important;
+    }
+    #dashboard .admin-shell.transfer-inline-open #studentTransferManager{
+      display:block!important;
+      position:static!important;
+      inset:auto!important;
+      width:100%!important;
+      max-width:none!important;
+      min-height:0!important;
+      height:auto!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:visible!important;
+      background:transparent!important;
+      transform:none!important;
+      z-index:auto!important;
+    }
+    #dashboard .admin-shell.transfer-inline-open #studentTransferManager > .student-transfer-page{
+      width:100%!important;
+      max-width:1400px!important;
+      margin:0 auto!important;
+      padding:0 14px 18px!important;
+      box-sizing:border-box!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -9671,6 +9702,49 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 setInterval(()=>{try{updateGlobalUserBackButton()}catch(e){}},1200);
 
+
+async function openStudentTransferManagerInline(){
+  document.body.classList.remove('transfer-manager-open');
+  document.body.style.removeProperty('overflow');
+  document.body.classList.add('admin-mode');
+
+  const adminPage=$('admin');
+  const dashboard=$('dashboard');
+  const shell=document.querySelector('#dashboard .admin-shell');
+  const toolbar=document.querySelector('#dashboard .admin-toolbar');
+  const page=$('studentTransferManager');
+
+  if(!adminPage||!dashboard||!shell||!toolbar||!page) return;
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  adminPage.classList.remove('hidden');
+  dashboard.classList.remove('hidden');
+
+  // انقل الصفحة فعليًا إلى أسفل شريط أزرار الإدارة مباشرة.
+  if(page.parentElement!==shell || toolbar.nextElementSibling!==page){
+    toolbar.insertAdjacentElement('afterend',page);
+  }
+
+  shell.classList.add('transfer-inline-open');
+  page.classList.remove('hidden');
+
+  // امسح أي تنسيقات قديمة كانت تجعل الصفحة ثابتة أو تخفيها.
+  ['position','inset','top','right','bottom','left','width','max-width','height','min-height',
+   'margin','padding','overflow','background','transform','z-index','display']
+    .forEach(prop=>page.style.removeProperty(prop));
+
+  const inner=page.querySelector('.student-transfer-page');
+  if(inner){
+    ['position','top','right','bottom','left','height','min-height','margin','padding','transform','display']
+      .forEach(prop=>inner.style.removeProperty(prop));
+  }
+
+  localStorage.setItem('activeMainPage','studentTransferManager');
+  try{ await initStudentTransferManager(); }catch(e){ console.error('student transfer init',e); }
+
+  window.scrollTo({top:Math.max(0,toolbar.getBoundingClientRect().top+window.scrollY-8),left:0,behavior:'auto'});
+}
+
 function openInternalPage(pageId){
   // وضع مستقل لصفحة إدارة ونقل الفصول لمنع أي مساحة موروثة من الصفحات الأخرى.
   document.body.classList.toggle('transfer-manager-open',pageId==='studentTransferManager');
@@ -9842,7 +9916,7 @@ function openInternalPage(pageId){
     if(typeof initWeeklyAttendanceReport==='function') setTimeout(initWeeklyAttendanceReport,0);
   }
 }
-if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openInternalPage('studentTransferManager');
+if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openStudentTransferManagerInline();
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
@@ -9851,6 +9925,7 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  document.querySelector('#dashboard .admin-shell')?.classList.remove('transfer-inline-open');
   document.body.classList.remove('transfer-manager-open');
   document.body.style.removeProperty('overflow');
   const mainReset=document.querySelector('main');
@@ -11061,7 +11136,7 @@ async function openStudentChangeRequestsModal(){
     }catch(e){alert('تعذر رفض الطلب');btn.disabled=false}
   });
 }
-if($('studentTransferManageBtn')) $('studentTransferManageBtn').onclick=()=>openInternalPage('studentTransferManager');
+if($('studentTransferManageBtn')) $('studentTransferManageBtn').onclick=()=>openStudentTransferManagerInline();
 if($('studentChangeRequestsBtn')) $('studentChangeRequestsBtn').onclick=openStudentChangeRequestsModal;
 setTimeout(refreshStudentChangeRequestsCount,500);
 
