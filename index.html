@@ -15274,10 +15274,13 @@ async function flushAttendanceInstantSave(){
   if((attendanceMode!=='present' && attendanceMode!=='late') || !__attendanceInstantPending.size) return;
 
   const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
-  const selectedPeriod=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
-  const selectedSubject=morningLate ? 'تأخر عن الطابور الصباحي' : String($('attendanceSubjectSelect')?.value||'').trim();
+  // التأخر لا يحتاج حصة أو مادة؛ يسجل الوقت والتاريخ تلقائيًا بمجرد تحديد الطالب.
+  const selectedPeriod=attendanceMode==='late' ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const selectedSubject=attendanceMode==='late'
+    ? (morningLate ? 'تأخر عن الطابور الصباحي' : '')
+    : String($('attendanceSubjectSelect')?.value||'').trim();
 
-  if(!morningLate && !selectedPeriod){
+  if(attendanceMode==='present' && !selectedPeriod){
     return;
   }
   if(attendanceMode==='present' && !selectedSubject){
@@ -15324,9 +15327,8 @@ async function flushAttendanceInstantSave(){
         const duplicate=rows.some(x=>{
           if(String(x?.status||'')!=='late') return false;
           if(String(x?.date||'')!==String(date) || String(x?.idno||'')!==String(id)) return false;
-          const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
-          if(morningLate || xMorning) return morningLate===xMorning;
-          return String(x?.period??'')===String(selectedPeriod??'');
+          // التأخر يسجل مرة واحدة للطالب في اليوم، بدون اشتراط حصة.
+          return true;
         });
         if(duplicate){ skipped.push(student.name||id); continue; }
       }else{
