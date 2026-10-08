@@ -126,7 +126,7 @@
         const base64=await entry.async('base64');
         const mime=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
         const item=photoMap.get(idno)||{idno};
-        item[kind]=`data:${mime};base64,${base64}`;
+        item[kind]='data:'+mime+';base64,'+base64;
         photoMap.set(idno,item);
       };
       const photoEntries=Object.values(zip.files).filter(e=>!e.dir);
@@ -11149,7 +11149,7 @@ async function restoreBackupFromExternalFile(file){
       const base64=await entry.async('base64');
       const mime=ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg';
       const item=photoMap.get(idno)||{idno};
-      item[kind]=`data:${mime};base64,${base64}`;
+      item[kind]='data:'+mime+';base64,'+base64;
       photoMap.set(idno,item);
     };
     const photoEntries=Object.values(zip.files).filter(e=>!e.dir);
