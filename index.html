@@ -27,7 +27,7 @@
       if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
       const html=await entry.async('string');
       if(html.length<100000 || html.length>3500000 || !html.toLowerCase().includes('<html') || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
-        throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
+        throw new Error('هذا الملف ليس تحديث برنامج كاملًا. ملف site/index.html داخله صغير/تجريبي ولا يحتوي نظام شُرَحبيل. استخدم زر «استعادة من ملف خارجي» فقط إذا كانت النسخة الاحتياطية متوافقة.');
       }
       let manifest={};
       try{const mf=zip.file('backup_manifest.json');if(mf)manifest=JSON.parse(await mf.async('string'))}catch(e){}
@@ -84,6 +84,10 @@
       const users=await readJson('data/users.json',false)||[];
       const settings=await readJson('data/school_settings.json',false)||null;
       if(!Array.isArray(students)||!students.length)throw new Error('لا توجد بيانات طلاب صالحة في النسخة');
+      const validStudentIds=students.filter(s=>/^\d{10}$/.test(String(s.idno||'').replace(/\D/g,''))).length;
+      if(validStudentIds===0){
+        throw new Error('هذه الحزمة ليست نسخة احتياطية متوافقة مع نظام شُرَحبيل: بيانات الطلاب لا تحتوي سجلات مدنية من 10 أرقام. لا يمكن استعادتها بأمان.');
+      }
       if(!Array.isArray(attendance)||!Array.isArray(referrals)||!Array.isArray(users))throw new Error('تنسيق النسخة الاحتياطية غير صالح');
 
       const msg='سيتم استعادة النسخة الاحتياطية من الملف الخارجي.\\n\\n'+
@@ -11054,7 +11058,7 @@ async function importProgramUpdateZip(file){
     if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
     const html=await entry.async('string');
     if(html.length<100000 || html.length>3500000 || !html.toLowerCase().includes('<html') || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
-      throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
+      throw new Error('هذا الملف ليس تحديث برنامج كاملًا. ملف site/index.html داخله صغير/تجريبي ولا يحتوي نظام شُرَحبيل. استخدم زر «استعادة من ملف خارجي» فقط إذا كانت النسخة الاحتياطية متوافقة.');
     }
     let manifest={};
     try{const mf=zip.file('backup_manifest.json');if(mf)manifest=JSON.parse(await mf.async('string'))}catch(e){}
@@ -11115,6 +11119,10 @@ async function restoreBackupFromExternalFile(file){
     const users=await readJson('data/users.json',false)||[];
     const settings=await readJson('data/school_settings.json',false)||null;
     if(!Array.isArray(students)||!students.length)throw new Error('لا توجد بيانات طلاب صالحة في النسخة');
+      const validStudentIds=students.filter(s=>/^\d{10}$/.test(String(s.idno||'').replace(/\D/g,''))).length;
+      if(validStudentIds===0){
+        throw new Error('هذه الحزمة ليست نسخة احتياطية متوافقة مع نظام شُرَحبيل: بيانات الطلاب لا تحتوي سجلات مدنية من 10 أرقام. لا يمكن استعادتها بأمان.');
+      }
     if(!Array.isArray(attendance)||!Array.isArray(referrals)||!Array.isArray(users))throw new Error('تنسيق النسخة الاحتياطية غير صالح');
 
     if(!confirm(
