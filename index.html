@@ -6537,9 +6537,14 @@ async function cloudPullToLocal(){
     }));
   }
   const extras=cloudUsers.filter(u=>!u.is_owner).map(u=>({
-    username:String(u.username||''), name:u.name||'', role:u.role||'معلم',
+    username:String(u.username||''),
+    civilId:String(u.civil_id||u.username||''),
+    name:u.name||'',
+    role:u.role||'معلم',
     permissions:Array.isArray(u.permissions)?u.permissions:[],
-    password:oldBy.get(String(u.username||''))?.password||''
+    accountLocked:!!u.account_locked,
+    passwordUpdatedAt:String(u.password_updated_at||''),
+    password:''
   }));
   localStorage.setItem('adminUsers',JSON.stringify(extras));
   return data;
@@ -11413,15 +11418,40 @@ function renderAdminUsersSettings(){
     renderAdminUsersSettings(); toast('تم حذف المستخدم');
   });
 
-  document.querySelectorAll('[data-edit-admin-user]').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('[data-edit-admin-user]').forEach(btn=>btn.onclick=async()=>{
     const users=getAdminUsers();
     const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.editAdminUser));
     const u=users[idx]; if(!u) return;
     const name=prompt('الاسم',u.name||''); if(name===null) return;
-    const pass=prompt('كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)','');
-    u.name=name.trim()||u.name;
-    if(pass) u.password=pass;
-    saveAdminUsers(users); renderAdminUsersSettings(); alert('✅ تم حفظ بيانات المستخدم');
+    const message=u.accountLocked
+      ? 'الحساب مقفل أمنيًا. أدخل كلمة مرور جديدة (10 أحرف على الأقل وتحتوي حروفًا وأرقامًا)'
+      : 'كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)';
+    const pass=prompt(message,''); if(pass===null) return;
+    if(u.accountLocked && !pass.trim()){
+      alert('يجب تعيين كلمة مرور جديدة لفتح الحساب.');
+      return;
+    }
+    if(pass && (pass.length<10 || !/[0-9]/.test(pass) || !/[^0-9\\s]/.test(pass))){
+      alert('كلمة المرور يجب أن تكون 10 أحرف على الأقل وتحتوي حروفًا وأرقامًا.');
+      return;
+    }
+    try{
+      await cloudApi('save_user',{user:{
+        username:u.username,
+        civilId:u.civilId||u.username,
+        name:name.trim()||u.name,
+        role:u.role||'معلم',
+        permissions:Array.isArray(u.permissions)?u.permissions:[],
+        password:pass||''
+      }});
+      await cloudPullToLocal();
+      renderAdminUsersSettings();
+      alert(pass?'✅ تم حفظ المستخدم وتفعيل الحساب بكلمة المرور الجديدة':'✅ تم حفظ بيانات المستخدم');
+    }catch(e){
+      const msg=String(e?.message||e||'');
+      if(msg.includes('weak_password')) alert('كلمة المرور ضعيفة. استخدم 10 أحرف على الأقل وتحتوي حروفًا وأرقامًا، ولا تستخدم السجل المدني.');
+      else alert('تعذر حفظ بيانات المستخدم في الخادم.');
+    }
   });
 
   document.querySelectorAll('[data-edit-owner-user]').forEach(btn=>btn.onclick=async()=>{
