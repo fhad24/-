@@ -3395,6 +3395,61 @@
     .nashit-note{padding:10px 12px;border-radius:12px;background:#eff8f5;color:#0f6f60;font-size:12px;font-weight:800}
     @media(max-width:1000px){.nashit-grid{grid-template-columns:repeat(2,1fr)}.nashit-form-grid{grid-template-columns:1fr 1fr}}
     @media(max-width:650px){.nashit-grid,.nashit-quick,.nashit-student-summary,.nashit-form-grid{grid-template-columns:1fr}.nashit-form-grid .wide{grid-column:auto}.nashit-page{padding:8px}.nashit-hero h2{font-size:22px}}
+
+    /* إصلاح نهائي: رائد النشاط يبدأ مباشرة بعد الشريط العلوي بلا فراغ */
+    body.activity-leader-open main{
+      display:block!important;
+      position:static!important;
+      width:100%!important;
+      max-width:none!important;
+      height:auto!important;
+      min-height:0!important;
+      max-height:none!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:visible!important;
+    }
+    body.activity-leader-open main > .page:not(#activityLeaderPage){
+      display:none!important;
+      width:0!important;
+      height:0!important;
+      min-height:0!important;
+      max-height:0!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:hidden!important;
+      position:static!important;
+      transform:none!important;
+    }
+    body.activity-leader-open #activityLeaderPage{
+      display:block!important;
+      position:static!important;
+      inset:auto!important;
+      width:100%!important;
+      max-width:none!important;
+      height:auto!important;
+      min-height:0!important;
+      max-height:none!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:visible!important;
+      transform:none!important;
+    }
+    body.activity-leader-open #activityLeaderPage > .nashit-page{
+      display:block!important;
+      position:static!important;
+      width:100%!important;
+      max-width:1500px!important;
+      height:auto!important;
+      min-height:0!important;
+      margin:0 auto!important;
+      padding:12px 14px 20px!important;
+      transform:none!important;
+      box-sizing:border-box!important;
+    }
+    body.activity-leader-open #activityLeaderPage .nashit-hero{
+      margin-top:0!important;
+    }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4929,7 +4984,7 @@
   <div class="nashit-page">
     <div class="nashit-hero">
       <div>
-        <h2>⭐ نَشِط — المساعد الشخصي لرائد النشاط</h2>
+        <h2>رائد النشاط</h2>
         <p>الخطة والبرامج والطلاب والتقارير والميزانية في مكان واحد.</p>
       </div>
       <button type="button" class="nashit-back" id="nashitBackBtn">العودة إلى صفحاتي</button>
@@ -10189,8 +10244,11 @@ async function openStudentTransferManagerInline(){
 function openInternalPage(pageId){
   // وضع مستقل لصفحة إدارة ونقل الفصول لمنع أي مساحة موروثة من الصفحات الأخرى.
   document.body.classList.toggle('transfer-manager-open',pageId==='studentTransferManager');
+  document.body.classList.toggle('activity-leader-open',pageId==='activityLeaderPage');
+  if(pageId!=='activityLeaderPage') document.querySelector('#dashboard .admin-shell')?.classList.remove('transfer-inline-open');
   if(pageId!=='studentTransferManager') document.body.style.removeProperty('overflow');
   if(pageId!=='studentTransferManager'){
+    if(pageId!=='activityLeaderPage') document.body.classList.remove('activity-leader-open');
     document.querySelectorAll('main > .page').forEach(p=>{
       p.style.removeProperty('display');
       p.style.removeProperty('height');
@@ -10269,6 +10327,35 @@ function openInternalPage(pageId){
     if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
   if(pageId==='activityLeaderPage'){
+    try{
+      document.querySelector('#dashboard .admin-shell')?.classList.remove('transfer-inline-open');
+      const mainEl=document.querySelector('main');
+      const page=$('activityLeaderPage');
+      if(mainEl && page && page.parentElement===mainEl){
+        mainEl.prepend(page);
+      }
+      if(mainEl){
+        ['display','height','min-height','max-height','padding-top','margin-top','align-items','justify-content','position','transform']
+          .forEach(prop=>mainEl.style.removeProperty(prop));
+      }
+      document.querySelectorAll('main > .page').forEach(p=>{
+        if(p.id==='activityLeaderPage'){
+          p.classList.remove('hidden');
+          ['display','height','min-height','max-height','margin','padding','position','transform','top','bottom','left','right']
+            .forEach(prop=>p.style.removeProperty(prop));
+        }else{
+          p.classList.add('hidden');
+          p.style.setProperty('display','none','important');
+          p.style.setProperty('height','0','important');
+          p.style.setProperty('min-height','0','important');
+          p.style.setProperty('margin','0','important');
+          p.style.setProperty('padding','0','important');
+        }
+      });
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      window.scrollTo(0,0);
+    }catch(e){console.warn('activity leader layout reset',e)}
     const u=getCurrentLoggedAdminUser();
     const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
     if(!isCurrentOwner() && !perms.has('activityLeader')){
@@ -10378,6 +10465,7 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  document.body.classList.remove('activity-leader-open');
   document.querySelector('#dashboard .admin-shell')?.classList.remove('transfer-inline-open');
   document.body.classList.remove('transfer-manager-open');
   document.body.style.removeProperty('overflow');
