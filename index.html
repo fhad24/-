@@ -4639,6 +4639,38 @@
       <div id="studentTransferStatus" class="hint"></div>
     </div>
 
+    <div class="card" id="studentRosterReconcileCard">
+      <h3 style="margin-top:0">🧩 مطابقة كشف الفصل</h3>
+      <div class="hint" style="margin-bottom:12px">للأدمن فقط: الصق قائمة الطلاب (الاسم ثم السجل المدني)، وسيتم تثبيت المطابقين في الفصل المختار ونقل أي طالب زائد من نفس الفصل إلى الفصل الوهمي. الصور والحضور لا تُحذف.</div>
+      <div class="student-transfer-grid">
+        <div>
+          <label>الصف الدراسي</label>
+          <select id="studentRosterReconcileGrade">
+            <option value="">اختر الصف</option>
+            <option>الأول الثانوي</option>
+            <option>الثاني الثانوي</option>
+            <option>الثالث الثانوي</option>
+          </select>
+        </div>
+        <div>
+          <label>الفصل</label>
+          <select id="studentRosterReconcileClass">
+            <option value="">اختر الفصل</option>
+            <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
+            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+          </select>
+        </div>
+        <div class="wide" style="grid-column:1/-1">
+          <label>قائمة الطلاب</label>
+          <textarea id="studentRosterReconcileText" rows="12" style="width:100%;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px;font-family:inherit;line-height:1.8" placeholder="الصق القائمة هنا: اسم الطالب ثم السجل المدني، ويمكن لصق نفس التنسيق المنسوخ من المحادثة أو Word."></textarea>
+        </div>
+      </div>
+      <div class="student-transfer-save-row">
+        <button type="button" class="btn btn-primary" id="studentRosterReconcileBtn">✅ مطابقة الفصل ونقل الزائد للوهمي</button>
+      </div>
+      <div id="studentRosterReconcileStatus" class="hint"></div>
+    </div>
+
     <div class="card hidden" id="studentTransferApprovalsCard">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
@@ -9335,6 +9367,8 @@ async function initStudentTransferManager(){
   setTimeout(removeStudentTransferSelectAll,50);
   setTimeout(removeStudentTransferSelectAll,500);
   const owner=isCurrentOwner();
+  const rosterCard=$('studentRosterReconcileCard');
+  if(rosterCard) rosterCard.classList.toggle('hidden',!owner);
   if($('studentTransferModeHint')) $('studentTransferModeHint').textContent=owner
     ? 'الأدمن يستطيع التعديل والنقل مباشرة ومراجعة طلبات المستخدمين.'
     : 'يمكنك اقتراح تعديل أو نقل الطالب، ولن يتم تطبيقه إلا بعد اعتماد الأدمن.';
@@ -9358,6 +9392,97 @@ document.addEventListener('change',e=>{
     toggleStudentTransferMulti(cb.dataset.id||'',!!cb.checked);
   }
 });
+
+function parseStudentRosterText(raw){
+  const text=String(raw||'')
+    .replace(/&#x20;/gi,' ')
+    .replace(/&nbsp;/gi,' ')
+    .replace(/\r/g,'');
+  const rows=[];
+  const seen=new Set();
+
+  const boldRe=/\*\*([^*\n]+)\*\*[\s\S]*?\*\*([0-9٠-٩]{7,12})\*\*/g;
+  let m;
+  while((m=boldRe.exec(text))){
+    const name=String(m[1]||'').trim();
+    const idno=String(m[2]||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,'');
+    const key=idno+'|'+name;
+    if(name && idno && !seen.has(key)){seen.add(key);rows.push({name,idno});}
+  }
+  if(rows.length) return rows;
+
+  const lines=text.split('\n')
+    .map(x=>x.replace(/[|*_#>\-]+/g,' ').replace(/\s+/g,' ').trim())
+    .filter(Boolean);
+  let pendingName='';
+  for(const line of lines){
+    const digits=line.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,'');
+    const isId=/^[0-9٠-٩]{7,12}$/.test(line.replace(/\s/g,''));
+    const hasArabic=/[ء-ي]/.test(line);
+    if(hasArabic && !isId){
+      pendingName=line;
+      continue;
+    }
+    if(isId && pendingName){
+      const key=digits+'|'+pendingName;
+      if(!seen.has(key)){seen.add(key);rows.push({name:pendingName,idno:digits});}
+      pendingName='';
+    }
+  }
+  return rows;
+}
+
+async function reconcileStudentRosterFromAdmin(){
+  if(!isCurrentOwner()){
+    alert('هذه الأداة متاحة للأدمن فقط.');
+    return;
+  }
+  const grade=String($('studentRosterReconcileGrade')?.value||'').trim();
+  const classroom=String($('studentRosterReconcileClass')?.value||'').trim();
+  const raw=String($('studentRosterReconcileText')?.value||'');
+  const roster=parseStudentRosterText(raw);
+  if(!grade){alert('اختر الصف أولًا.');return}
+  if(!classroom){alert('اختر الفصل أولًا.');return}
+  if(!roster.length){alert('لم أتمكن من قراءة أي اسم مع سجل مدني من القائمة.');return}
+
+  const msg='تمت قراءة '+roster.length+' طالب.\nسيتم تثبيت المطابقين في '+grade+' '+classroom+' ونقل أي طالب زائد من نفس الفصل إلى الفصل الوهمي.\nلن يتم حذف الصور أو الحضور.\n\nهل تريد المتابعة؟';
+  if(!confirm(msg)) return;
+
+  const btn=$('studentRosterReconcileBtn');
+  const status=$('studentRosterReconcileStatus');
+  const oldText=btn?.textContent||'مطابقة الفصل';
+  if(btn){btn.disabled=true;btn.textContent='جاري المطابقة والحفظ...';}
+  if(status) status.textContent='جاري مطابقة السجلات مع قاعدة البيانات...';
+
+  try{
+    const out=await cloudApi('reconcile_class_roster',{
+      grade,
+      classroom,
+      phantomClass:'الوهمي',
+      roster
+    });
+    await cloudPullToLocal();
+    await renderStudentTransferStudents();
+
+    const matched=Number(out?.target_count||0);
+    const moved=Number(out?.moved_to_phantom||0);
+    const missing=Array.isArray(out?.missing)?out.missing:[];
+    if(status){
+      status.innerHTML='✅ تم التنفيذ: <b>'+matched+'</b> طالب في الفصل، ونقل <b>'+moved+'</b> طالب زائد إلى الفصل الوهمي.'
+        +(missing.length?'<br>⚠️ لم تتم مطابقة '+missing.length+' طالب من القائمة.':'');
+    }
+    toast('✅ تمت مطابقة الفصل بنجاح');
+    alert('✅ تمت مطابقة الفصل بنجاح.\nالمثبتون في الفصل: '+matched+'\nالمنقولون إلى الوهمي: '+moved+(missing.length?'\nغير المطابقين من القائمة: '+missing.length:''));
+  }catch(e){
+    console.error('reconcile class roster',e);
+    if(status) status.textContent='تعذر تنفيذ المطابقة: '+(e?.message||e);
+    alert('تعذر تنفيذ مطابقة الفصل: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+}
+
+if($('studentRosterReconcileBtn')) $('studentRosterReconcileBtn').onclick=reconcileStudentRosterFromAdmin;
 
 if($('studentTransferBulkMoveBtn')) $('studentTransferBulkMoveBtn').onclick=moveSelectedStudentsBetweenClasses;
 
