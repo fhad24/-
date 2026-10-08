@@ -5749,7 +5749,7 @@ function updateReferralDates(){
   const hijri=$('referralHijriDate');
   if(greg){
     try{
-      greg.value=new Intl.DateTimeFormat('ar-SA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+      greg.value=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
     }catch(e){
       greg.value=now.toISOString().slice(0,10);
     }
@@ -9065,6 +9065,15 @@ async function openStudentTransferManagerInline(){
 }
 
 function openInternalPage(pageId){
+  const sessionUser=getCurrentLoggedAdminUser();
+  if(!sessionUser){
+    localStorage.removeItem('adminLoggedIn');
+    localStorage.setItem('activeMainPage','register');
+    document.body.classList.remove('admin-mode');
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    $('register')?.classList.remove('hidden');
+    return;
+  }
   // وضع مستقل لصفحة إدارة ونقل الفصول لمنع أي مساحة موروثة من الصفحات الأخرى.
   document.body.classList.toggle('transfer-manager-open',pageId==='studentTransferManager');
   document.body.classList.toggle('activity-leader-open',pageId==='activityLeaderPage');
@@ -11087,9 +11096,16 @@ function ensureAdminSettings(){
       if(!gradePerms.length){toast('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');return}
       permissions.push(...gradePerms);
     }
-    users.push({username,civilId,name,password,role,permissions});
-    saveAdminUsers(users);
-    cloudApi('save_user',{user:users[users.length-1]}).catch(e=>console.warn('cloud user',e));
+    const newUser={username,civilId,name,role,permissions,password};
+    cloudApi('save_user',{user:newUser}).then(async()=>{
+      await refreshAdminUsersFromCloud();
+      renderAdminUsersSettings();
+      toast('تمت إضافة المستخدم وتفعيل الحساب');
+    }).catch(e=>{
+      console.warn('cloud user',e);
+      const msg=String(e?.message||e||'');
+      toast(msg.includes('weak_password')?'كلمة المرور ضعيفة أو غير مسموحة':'تعذر إضافة المستخدم');
+    });
     document.getElementById('newAdminUsername').value='';
     document.getElementById('newAdminName').value='';
     document.getElementById('newAdminCivilId').value='';
@@ -11311,10 +11327,15 @@ function ensureAdminSettings(){
         if(idx>=0){users[idx]={...users[idx],...rec,password:String(password||'')};updated++}
         else{users.push(rec);added++}
       }
-      saveAdminUsers(users);
-      cloudApi('sync_users',{users}).catch(e=>console.warn('cloud teachers',e));
+      const payloadUsers=users.map(u=>({
+        username:u.username,civilId:u.civilId||u.username,name:u.name,role:u.role,
+        permissions:Array.isArray(u.permissions)?u.permissions:[],
+        ...(String(u.password||'').trim()?{password:String(u.password)}:{})
+      }));
+      await cloudApi('sync_users',{users:payloadUsers});
+      await refreshAdminUsersFromCloud();
       renderAdminUsersSettings();
-      status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله.`;
+      status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله. الحسابات بلا كلمة مرور بقيت مقفلة.`;
     }catch(err){
       console.error(err);
       status.textContent='تعذر قراءة ملف Excel.';
@@ -11796,6 +11817,14 @@ setTimeout(async()=>{
 function fillAttendanceTeacherSelect(selectedUsername=''){
   const sel=$('attendanceTeacherSelect');
   if(!sel) return;
+  if(!isAttendanceSupervisor()){
+    const recorder=getCurrentAttendanceRecorder();
+    sel.innerHTML='<option value="'+escapeAppHtml(recorder.username)+'">'+escapeAppHtml(recorder.name||recorder.username)+'</option>';
+    sel.value=recorder.username;
+    sel.disabled=true;
+    return;
+  }
+  sel.disabled=false;
 
   const p=getAdminProfile();
   const owner={username:String(p.username||''),name:String(p.displayName||'المدير'),role:'مدير'};
@@ -11816,6 +11845,7 @@ function fillAttendanceTeacherSelect(selectedUsername=''){
 }
 
 function getSelectedAttendanceTeacher(){
+  if(!isAttendanceSupervisor()) return getCurrentAttendanceRecorder();
   const sel=$('attendanceTeacherSelect');
   if(!sel || !sel.value) return getCurrentAttendanceRecorder();
   const users=[{username:getAdminProfile().username,name:getAdminProfile().displayName,role:'مدير'},...getAdminUsers()];
@@ -18575,10 +18605,8 @@ window.addEventListener('load',()=>{
   setTimeout(removeVisibleReportButtons,100);
   setTimeout(removeVisibleReportButtons,700);
   setTimeout(()=>{
-    if(localStorage.getItem('adminLoggedIn')==='1'){
-      document.body.classList.add('admin-mode');
-      ensureHeaderAdminHomeButton();
-      refreshOwnerHomeButton();
+    if(localStorage.getItem('cloudAdminToken')){
+      // ظهور وضع الإدارة ينتظر التحقق من الجلسة في restoreLastAppLocation.
     }
   },120);
 });
