@@ -11534,6 +11534,7 @@ function renderAdminUsersSettings(){
     import:'استيراد البيانات',
     deleteStudents:'حذف الطلاب',
     attendance:'تحضير الطلاب',
+    attendanceSupervisor:'الإشراف على التحضير لجميع المعلمين',
     weeklyAttendance:'كشف الحضور والغياب الأسبوعي',
     reports:'التقارير والتصدير',
     settings:'بيانات المدرسة والمستخدمون',
@@ -11545,6 +11546,7 @@ function renderAdminUsersSettings(){
     teacherFollowupManager:'متابعة المدير للمعلمين',
     referralReview:'ردود الوكلاء',
     backupZip:'نسخة احتياطية ZIP',
+    activityLeader:'رائد النشاط',
     'referralGrade:first':'ردود الوكلاء: الأول الثانوي',
     'referralGrade:second':'ردود الوكلاء: الثاني الثانوي',
     'referralGrade:third':'ردود الوكلاء: الثالث الثانوي'
@@ -11557,7 +11559,7 @@ function renderAdminUsersSettings(){
       <div>
         <b>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</b>
         ${u.owner?'':`<label class="admin-user-bulk-select">تحديد هذا المستخدم <input type="checkbox" class="bulk-user-card-check" value="${u.username||''}"></label>`}
-        <div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
+        ${u.owner?'':`<div style="margin:6px 0;font-size:12px;font-weight:900;color:${u.accountLocked?'#b42318':'#0f7665'}">${u.accountLocked?'🔒 الحساب مقفل — عيّن كلمة مرور جديدة':'✅ الحساب مفعل'}</div>`}<div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
         <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
       <div class="admin-user-actions">
