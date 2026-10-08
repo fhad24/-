@@ -6122,6 +6122,89 @@ async function reconcileFirstSecondaryBOnce(students){
   return students;
 }
 
+const FIRST_SECONDARY_C_ROSTER_20261008=[
+  ['1155405333','احمد عبداللة علي نتيفان الحارثي'],
+  ['1157308725','بتال سلطان عبدالرحمن الصاعدي'],
+  ['1162844151','حسين بن فواز بن حسين آل قفله'],
+  ['1156506105','حسين حمد حسين آل قريع'],
+  ['1156984526','حمد بن محمد بن فرج المحامض'],
+  ['1154671224','دهيمان حسين بن حمد المحامض'],
+  ['1156668228','زايد سالم بن حمد اليامي'],
+  ['1156980185','سالم بن حمد بن محمد آل صلاح'],
+  ['1155753781','سعيد بن راشد بن هادي آل صلاح'],
+  ['1157836162','سلطان بن حمد بن علي آل سويدان'],
+  ['2285170755','سلطان سالم عوض الحداد'],
+  ['1153121932','صالح بن علي بن محمد آل صلاح'],
+  ['1219575246','صالح حمد محمد ال صلاح'],
+  ['1158602498','طالب مساعد محمد الحارثي'],
+  ['1152817928','عبدالرحمن مساعد علي الحارثي'],
+  ['1144774369','عبدالله بن جابر بن فرج آل ذيبان'],
+  ['2503852127','عبدالله حمد محسن ال سلامه'],
+  ['1154026874','عبدالله علي بن ناصر الصومعي'],
+  ['1154160905','علي بن هادي بن صالح المحامض'],
+  ['2503852028','علي حمد محسن ال سلامه'],
+  ['1155251323','علي شريم بن مسفر ال صلاح'],
+  ['1155868928','فهد علي فهيد الحارثي'],
+  ['4159011131','فهد محمد حسين ال حسين'],
+  ['1149763201','محمد بن علي بن عائض آل سويدان'],
+  ['1156736637','محمد بن هادي بن صالح آل سويدان'],
+  ['1157275031','ناصر شافي ناصر الحارثي'],
+  ['0161038616','ناصر عبدالله أحمد باقطمي'],
+  ['1184632790','نوح علي بن صالح آل الحارث'],
+  ['1159763588','هادي بن مسفر بن هادي آل ذيبان'],
+  ['2334565757','يوسف محمد محمد عيضه'],
+  ['', 'حمد حسين هادي الجعفري'],
+  ['', 'محمد حسين هادي الجعفري'],
+  ['1156630590','حسين بن محمد بن مانع آل ذيبان'],
+  ['1152434047','عبدالله بن علي محمد المحمضي'],
+  ['1158086841','هادي بن مانع بن حمد آل ذيبان'],
+  ['1155243205','صالح بن علي بن ظافر آل سويدان'],
+  ['1152720650','سعادان بن ذيب بن حسن آل ذيبان'],
+  ['1155037821','محمد بن عوض بن حسين آل قفله']
+];
+
+async function reconcileFirstSecondaryCOnce(students){
+  if(!isCurrentOwner()) return students;
+  const marker='rosterFix:firstSecondaryC:20261008:v1';
+  if(localStorage.getItem(marker)==='done') return students;
+
+  const rosterIds=new Set(FIRST_SECONDARY_C_ROSTER_20261008.map(x=>normalizeRosterId(x[0])).filter(Boolean));
+  const rosterNames=new Set(FIRST_SECONDARY_C_ROSTER_20261008.map(x=>normalizeRosterName(x[1])).filter(Boolean));
+  const changed=[];
+
+  (students||[]).forEach(s=>{
+    const idMatch=rosterIds.has(normalizeRosterId(s.idno));
+    const nameMatch=rosterNames.has(normalizeRosterName(s.name));
+    const isTarget=idMatch||nameMatch;
+    const isCurrentC=studentGradeKey(s.grade)==='الأول الثانوي' && studentClassKey(s.classroom)==='ج';
+
+    if(isTarget){
+      if(studentGradeKey(s.grade)!=='الأول الثانوي' || studentClassKey(s.classroom)!=='ج'){
+        s.grade='الأول الثانوي';
+        s.classroom='ج';
+        changed.push(s);
+      }
+    }else if(isCurrentC){
+      s.grade='الأول الثانوي';
+      s.classroom='الوهمي';
+      changed.push(s);
+    }
+  });
+
+  if(!changed.length){
+    localStorage.setItem(marker,'done');
+    return students;
+  }
+
+  for(let i=0;i<changed.length;i+=10){
+    await cloudApi('sync_students',{students:changed.slice(i,i+10)});
+  }
+  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+  localStorage.setItem(marker,'done');
+  toast('✅ تم تحديث الأول الثانوي ج ونقل غير المطابق إلى الفصل الوهمي');
+  return students;
+}
+
 async function cloudPullToLocal(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return null;
@@ -6141,6 +6224,13 @@ async function cloudPullToLocal(){
   }catch(e){
     console.warn('1B roster reconcile',e);
     toast('تعذر تحديث 1ث ب تلقائيًا — سيعاد المحاولة عند التحديث القادم');
+  }
+
+  try{
+    await reconcileFirstSecondaryCOnce(students);
+  }catch(e){
+    console.warn('1C roster reconcile',e);
+    toast('تعذر تحديث 1ث ج تلقائيًا — سيعاد المحاولة عند التحديث القادم');
   }
 
   for(const s of students){
