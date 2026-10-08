@@ -8474,7 +8474,7 @@ function configureUserDashboard(){
       return;
     }
     if(action==='activityLeader'){
-      openInternalPage('activityLeaderPage');
+      openActivityLeaderPage();
       return;
     }
     if(action==='reports'){
@@ -8513,8 +8513,23 @@ function nashitTab(name){
   localStorage.setItem('nashitActiveTab',name);
   renderNashit();
 }
+function positionActivityLeaderPage(){
+  try{
+    const header=document.querySelector('header');
+    const bottom=header ? Math.max(0,Math.round(header.getBoundingClientRect().bottom)) : 0;
+    document.documentElement.style.setProperty('--activity-header-height',bottom+'px');
+    const page=$('activityLeaderPage');
+    if(page){
+      page.scrollTop=0;
+      page.style.setProperty('top',bottom+'px','important');
+    }
+    window.scrollTo(0,0);
+  }catch(e){console.warn('activity leader position',e)}
+}
 function openActivityLeaderPage(){
   openInternalPage('activityLeaderPage');
+  requestAnimationFrame(positionActivityLeaderPage);
+  setTimeout(positionActivityLeaderPage,50);
 }
 function initNashitPage(){
   document.querySelectorAll('.nashit-tab').forEach(b=>b.onclick=()=>nashitTab(b.dataset.nashitTab));
@@ -10364,7 +10379,9 @@ function openInternalPage(pageId){
       openAdminDashboardInternal();
       return;
     }
-    setTimeout(()=>{try{initNashitPage();renderNashit();}catch(e){console.error('nashit init',e)}},0);
+    setTimeout(()=>{try{initNashitPage();renderNashit();positionActivityLeaderPage();}catch(e){console.error('nashit init',e)}},0);
+    requestAnimationFrame(positionActivityLeaderPage);
+    setTimeout(positionActivityLeaderPage,80);
   }
   if(pageId==='studentTransferManager'){
     // إصلاح نهائي لمساحة الصفحة الفارغة: اجعل صفحة النقل وحدها داخل main بدون أي ارتفاع/تموضع موروث.
@@ -10459,7 +10476,7 @@ if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openStudentTrans
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
 if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
-if($('adminActivityLeaderTab')) $('adminActivityLeaderTab').onclick=()=>openInternalPage('activityLeaderPage');
+if($('adminActivityLeaderTab')) $('adminActivityLeaderTab').onclick=()=>openActivityLeaderPage();
 if($('attendanceAbsenceReportsBtn')) $('attendanceAbsenceReportsBtn').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
@@ -10616,7 +10633,7 @@ if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
   openInternalPage('followup');
 };
 if($('headerTeacherClassManagerBtn')) $('headerTeacherClassManagerBtn').onclick=()=>openInternalPage('teacherClassManager');
-if($('headerActivityLeaderBtn')) $('headerActivityLeaderBtn').onclick=()=>openInternalPage('activityLeaderPage');
+if($('headerActivityLeaderBtn')) $('headerActivityLeaderBtn').onclick=()=>openActivityLeaderPage();
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
     openAdminDashboardInternal();
@@ -18793,7 +18810,54 @@ function printStudents(rows){
       .attendance-present-hijri-open{min-height:64px!important}
       .attendance-present-hijri-copy b{font-size:19px!important}
     }
-</style></head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
+</style>
+<style id="activityLeaderHardFinalStyle">
+body.activity-leader-open{
+  overflow:auto!important;
+}
+body.activity-leader-open #activityLeaderPage{
+  display:block!important;
+  position:fixed!important;
+  z-index:99980!important;
+  top:var(--activity-header-height,0px)!important;
+  right:0!important;
+  left:0!important;
+  bottom:0!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:auto!important;
+  background:#f4f7f6!important;
+  transform:none!important;
+  box-sizing:border-box!important;
+}
+body.activity-leader-open #activityLeaderPage > .nashit-page{
+  display:block!important;
+  position:static!important;
+  width:100%!important;
+  max-width:1500px!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  padding:12px 14px 24px!important;
+  box-sizing:border-box!important;
+  transform:none!important;
+}
+body.activity-leader-open #activityLeaderPage .nashit-hero{
+  margin-top:0!important;
+}
+body.activity-leader-open main{
+  min-height:0!important;
+  height:0!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+</style>
+</head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
   w.document.close();
   w.focus();
   setTimeout(()=>w.print(),300);
@@ -18848,7 +18912,7 @@ if($('confirmAllBtn')) $('confirmAllBtn').onclick=()=>{
 };
 
 if($('studentCounselorFollowBtn')) $('studentCounselorFollowBtn').onclick=()=>toast('متابعة الموجه الطلابي');
-if($('activityLeaderFollowBtn')) $('activityLeaderFollowBtn').onclick=()=>openInternalPage('activityLeaderPage');
+if($('activityLeaderFollowBtn')) $('activityLeaderFollowBtn').onclick=()=>openActivityLeaderPage();
 if($('teachersFollowBtn')) $('teachersFollowBtn').onclick=()=>toast('متابعة المعلمين');
 
 if($('deleteAllStudentsBtn')) $('deleteAllStudentsBtn').onclick=async ()=>{
@@ -20171,6 +20235,8 @@ document.addEventListener('visibilitychange',()=>{
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
 });
+
+window.addEventListener('resize',()=>{if(document.body.classList.contains('activity-leader-open')) positionActivityLeaderPage();});
 </script>
 </body>
 </html>
