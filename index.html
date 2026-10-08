@@ -15003,8 +15003,12 @@ async function renderAttendanceStudentList(){
     box.onchange=(e)=>{
       e.stopPropagation();
       const id=String(box.dataset.selectId||'');
-      if(box.checked) attendancePresentSelectedIds.add(id);
-      else attendancePresentSelectedIds.delete(id);
+      if(box.checked){
+        attendancePresentSelectedIds.add(id);
+        queueAttendanceInstantSave(id);
+      }else{
+        attendancePresentSelectedIds.delete(id);
+      }
       updateAttendanceSelectedCount();
     };
   });
@@ -15148,6 +15152,7 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
     if(checked) attendancePresentSelectedIds.add(id);
     else attendancePresentSelectedIds.delete(id);
   });
+  if(checked) queueAttendanceInstantSave(visible.map(s=>String(s.idno)));
   renderAttendanceStudentList();
 };
 
@@ -15185,7 +15190,8 @@ if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclic
     attendancePresentSelectedIds=new Set(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
     renderAttendanceStudentList();
     updateAttendanceSelectedCount();
-    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب');
+    queueAttendanceInstantSave(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
+    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب — جاري الحفظ الفوري');
   }catch(e){
     console.error('class roster',e);
     alert('تعذر جلب طلاب الفصل من قاعدة البيانات.');
@@ -15233,6 +15239,107 @@ function showAttendanceSavedMessage(message='✅ تم الحفظ بنجاح'){
   clearTimeout(window.__attendanceSavedTimer);
   window.__attendanceSavedTimer=setTimeout(()=>{if(box) box.style.display='none'},2200);
 }
+
+/* SHURAHBIL_ATTENDANCE_INSTANT_SAVE_V1 */
+let __attendanceInstantPending=new Set();
+let __attendanceInstantTimer=null;
+let __attendanceInstantBusy=false;
+
+function queueAttendanceInstantSave(ids){
+  if(attendanceMode!=='present') return;
+  (Array.isArray(ids)?ids:[ids]).forEach(id=>{
+    id=String(id||'').trim();
+    if(id) __attendanceInstantPending.add(id);
+  });
+  clearTimeout(__attendanceInstantTimer);
+  __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,220);
+}
+
+async function flushAttendanceInstantSave(){
+  if(__attendanceInstantBusy){
+    clearTimeout(__attendanceInstantTimer);
+    __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,220);
+    return;
+  }
+  if(attendanceMode!=='present' || !__attendanceInstantPending.size) return;
+
+  const selectedPeriod=attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const selectedSubject=String($('attendanceSubjectSelect')?.value||'').trim();
+  if(!selectedPeriod || !selectedSubject){
+    toast('اختر الحصة والمادة أولًا، ثم حدد الطلاب وسيتم الحفظ فورًا');
+    return;
+  }
+
+  const ids=[...__attendanceInstantPending];
+  __attendanceInstantPending.clear();
+  __attendanceInstantBusy=true;
+
+  try{
+    const recorder=getSelectedAttendanceTeacher();
+    const now=new Date();
+    const date=todayKey();
+    const hp=gregorianToHijriParts(date);
+    const base={
+      date,
+      time:attendanceTimeToInput(now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false})),
+      period:selectedPeriod,
+      subject:selectedSubject,
+      morningAssemblyLate:false,
+      hijriDate:hp.year+'-'+String(hp.month).padStart(2,'0')+'-'+String(hp.day).padStart(2,'0'),
+      weekday:now.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'}),
+      teacherName:recorder.name,
+      teacherUsername:recorder.username,
+      teacherCivilId:recorder.civilId,
+      status:'present',
+      faceMatch:'none'
+    };
+
+    const studentsNow=getStudents();
+    const roster=attendanceWholeClassRoster?.students||[];
+    let rows=getAttendanceLog();
+    const cloudRows=[];
+
+    ids.forEach(id=>{
+      const student=studentsNow.find(x=>String(x.idno)===String(id))
+        || roster.find(x=>String(x.idno)===String(id));
+      if(!student) return;
+
+      rows=rows.filter(x=>!(
+        String(x.date)===String(date) &&
+        String(x.idno)===String(id) &&
+        String(x.period??'')===String(selectedPeriod??'')
+      ));
+
+      const row={
+        ...base,
+        idno:String(student.idno||id),
+        name:String(student.name||''),
+        grade:String(student.grade||''),
+        classroom:String(student.classroom||'')
+      };
+      rows.push(row);
+      cloudRows.push(row);
+    });
+
+    if(!cloudRows.length) return;
+    await saveAttendanceLog(rows,cloudRows);
+
+    const n=cloudRows.length;
+    showAttendanceSavedMessage(n>1 ? ('✅ تم الحفظ الفوري لـ '+n+' طلاب') : '✅ تم حفظ الطالب فورًا');
+    toast(n>1 ? ('تم حفظ '+n+' طلاب مباشرة') : 'تم حفظ الطالب مباشرة');
+  }catch(e){
+    console.error('instant attendance save',e);
+    ids.forEach(id=>__attendanceInstantPending.add(id));
+    alert('❌ تعذر الحفظ الفوري. بقي التحديد كما هو، حاول مرة أخرى.');
+  }finally{
+    __attendanceInstantBusy=false;
+    if(__attendanceInstantPending.size){
+      clearTimeout(__attendanceInstantTimer);
+      __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,350);
+    }
+  }
+}
+
 
 if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (ev)=>{
   ev.preventDefault();
