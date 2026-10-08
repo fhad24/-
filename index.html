@@ -5577,6 +5577,165 @@ function preview(input, img){
 preview($('faceCam'),$('facePreview')); preview($('faceFile'),$('facePreview')); preview($('idFile'),$('idPreview'));
 preview($('editFaceCam'),$('editFacePreview')); preview($('editFaceFile'),$('editFacePreview')); preview($('editIdFile'),$('editIdPreview'));
 
+function fileToDataURLSafe(file){
+  return new Promise((resolve,reject)=>{
+    if(!file){resolve('');return}
+    const r=new FileReader();
+    r.onload=()=>resolve(String(r.result||''));
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+let selfEditStudentId='';
+let selfEditBirth='';
+let selfEditCalendar='';
+let selfEditVerifyPhone='';
+
+function resetStudentEditLogin(){
+  selfEditStudentId='';
+  selfEditBirth='';
+  selfEditCalendar='';
+  selfEditVerifyPhone='';
+  $('studentEditForm')?.classList.add('hidden');
+  $('studentEditLogin')?.classList.remove('hidden');
+  if($('editResult')) $('editResult').textContent='';
+  if($('searchId')) $('searchId').value='';
+  if($('editVerifyPhone')) $('editVerifyPhone').value='';
+}
+
+if($('studentForm') && !$('studentForm').dataset.serverBound){
+  $('studentForm').dataset.serverBound='1';
+  $('studentForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const idno=String($('idno')?.value||'').replace(/\D/g,'');
+    const name=String($('name')?.value||'').trim();
+    if(!/^\d{10}$/.test(idno)){toast('رقم الهوية/الإقامة يجب أن يكون 10 خانات');return}
+    if(!name){toast('أدخل اسم الطالب');return}
+    const faceFile=$('faceCam')?.files?.[0]||$('faceFile')?.files?.[0]||null;
+    const idFile=$('idFile')?.files?.[0]||null;
+    const btn=e.submitter||e.target.querySelector('[type="submit"]');
+    const old=btn?.textContent||'';
+    if(btn){btn.disabled=true;btn.textContent='جاري الحفظ...'}
+    try{
+      const student={
+        name,
+        idno,
+        phone:String($('phone')?.value||'').trim(),
+        grade:String($('grade')?.value||''),
+        classroom:String($('classroom')?.value||'').trim(),
+        calendar:String($('calendar')?.value||'هجري'),
+        birth:String($('year')?.value||'')+'-'+String($('month')?.value||'')+'-'+String($('day')?.value||''),
+        faceImage:faceFile?await fileToDataURLSafe(faceFile):'',
+        idImage:idFile?await fileToDataURLSafe(idFile):'',
+        verification:'مؤكد',
+        registrationDate:riyadhDateKey(new Date())
+      };
+      await cloudApi('student_register',{student},false);
+      e.target.reset();
+      if($('facePreview')) $('facePreview').style.display='none';
+      if($('idPreview')) $('idPreview').style.display='none';
+      fillYearSelect('year',$('calendar').value);
+      toast('✅ تم تسجيل بيانات الطالب في قاعدة البيانات');
+    }catch(err){
+      const msg=String(err?.message||err||'');
+      if(msg.includes('duplicate')) toast('السجل المدني موجود مسبقًا');
+      else if(msg.includes('invalid image')) toast('الصورة كبيرة جدًا أو بصيغة غير مدعومة');
+      else toast('تعذر حفظ الطالب في الخادم');
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=old}
+    }
+  });
+}
+
+if($('findStudent') && !$('findStudent').dataset.serverBound){
+  $('findStudent').dataset.serverBound='1';
+  $('findStudent').onclick=async e=>{
+    e.preventDefault();
+    const idno=String($('searchId')?.value||'').replace(/\D/g,'');
+    const calendar=String($('editCalendar')?.value||'');
+    const birth=String($('editYear')?.value||'')+'-'+String($('editMonth')?.value||'')+'-'+String($('editDay')?.value||'');
+    const verifyPhone=String($('editVerifyPhone')?.value||'').replace(/\D/g,'');
+    if(!/^\d{10}$/.test(idno)){toast('رقم الهوية/الإقامة يجب أن يكون 10 خانات');return}
+    $('editResult').textContent='جاري التحقق من البيانات...';
+    try{
+      const r=await cloudApi('student_lookup',{idno,birth,calendar,phone:verifyPhone},false);
+      const rec=r?.student;
+      if(!rec){
+        $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">بيانات التحقق غير مطابقة. إذا لم يكن الميلاد محفوظًا فاكتب رقم الجوال المسجل.</span>';
+        return;
+      }
+      selfEditStudentId=String(rec.idno||idno);
+      selfEditBirth=birth;
+      selfEditCalendar=calendar;
+      selfEditVerifyPhone=verifyPhone;
+      $('editName').value=rec.name||'';
+      $('editPhone').value=rec.phone||'';
+      $('editGrade').value=rec.grade||'';
+      $('editClassroom').value=rec.classroom||'';
+      $('editWelcomeName').textContent=rec.name||'بيانات الطالب';
+      $('editIdentityText').textContent='رقم الهوية/الإقامة: '+selfEditStudentId;
+      $('studentEditLogin').classList.add('hidden');
+      $('studentEditForm').classList.remove('hidden');
+      $('editResult').innerHTML='<span style="color:#0f7665;font-weight:700">✓ تم التحقق بنجاح</span>';
+    }catch(err){
+      $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">تعذر التحقق من الخادم. حاول مرة أخرى.</span>';
+    }
+  };
+}
+
+if($('studentEditForm') && !$('studentEditForm').dataset.serverBound){
+  $('studentEditForm').dataset.serverBound='1';
+  $('studentEditForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    if(!selfEditStudentId){toast('أعد التحقق من بيانات الطالب');return}
+    const faceFile=$('editFaceCam')?.files?.[0]||$('editFaceFile')?.files?.[0]||null;
+    const idFile=$('editIdFile')?.files?.[0]||null;
+    const btn=e.submitter||e.target.querySelector('[type="submit"]');
+    const old=btn?.textContent||'';
+    if(btn){btn.disabled=true;btn.textContent='جاري الحفظ...'}
+    try{
+      const patch={
+        name:String($('editName')?.value||'').trim(),
+        phone:String($('editPhone')?.value||'').trim(),
+        grade:String($('editGrade')?.value||''),
+        classroom:String($('editClassroom')?.value||'').trim()
+      };
+      if(idFile) patch.idImage=await fileToDataURLSafe(idFile);
+      const out=await cloudApi('student_update',{
+        idno:selfEditStudentId,
+        birth:selfEditBirth,
+        calendar:selfEditCalendar,
+        verify_phone:selfEditVerifyPhone,
+        patch
+      },false);
+      if(!out?.updated) throw new Error('not updated');
+      if(faceFile){
+        const imageData=await fileToDataURLSafe(faceFile);
+        await cloudApi('submit_pending_photo',{
+          idno:selfEditStudentId,
+          student_name:patch.name,
+          image_data:imageData,
+          submitted_by:'الطالب - تعديل ذاتي'
+        },false);
+      }
+      $('editWelcomeName').textContent=patch.name||'بيانات الطالب';
+      toast(faceFile?'✅ تم حفظ البيانات وإرسال صورة الوجه للاعتماد':'✅ تم حفظ التعديلات في قاعدة البيانات');
+    }catch(err){
+      console.error('student self update',err);
+      toast('تعذر حفظ التعديلات؛ لم يتم اعتماد العملية');
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=old}
+    }
+  });
+}
+
+if($('editLogoutBtn')) $('editLogoutBtn').onclick=resetStudentEditLogin;
+if($('backToRegister')) $('backToRegister').onclick=()=>{
+  resetStudentEditLogin();
+  document.querySelector('.tab[data-page="register"]')?.click();
+};
+
+
 function escapeAppHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 
 function toast(msg){
