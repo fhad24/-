@@ -3466,7 +3466,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.15/dist/face-api.js"></script>
 
 <style id="presentHijriCalendarMainStyle">
 #attendancePresentHijriFilter{
@@ -5574,6 +5574,8 @@ function preview(input, img){
 preview($('faceCam'),$('facePreview')); preview($('faceFile'),$('facePreview')); preview($('idFile'),$('idPreview'));
 preview($('editFaceCam'),$('editFacePreview')); preview($('editFaceFile'),$('editFacePreview')); preview($('editIdFile'),$('editIdPreview'));
 
+function escapeAppHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+
 function toast(msg){
   const t=$('toast'); t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
@@ -6074,14 +6076,14 @@ async function loadTeacherReferralReplies(){
           ${rows.map((r,i)=>`
             <tr>
               <td>${i+1}</td>
-              <td><b>${r.student_name||'—'}</b></td>
-              <td>${r.subject||'—'}</td>
+              <td><b>${escapeAppHtml(r.student_name||'—')}</b></td>
+              <td>${escapeAppHtml(r.subject||'—')}</td>
               <td>التنبيه ${r.alert_level||'1'}</td>
               <td><span class="teacher-replies-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':(Number(r.alert_level||1)<3?'تم تسجيل التنبيه '+(r.alert_level||1):'بانتظار استدعاء الطالب ورد الوكيل')}</span></td>
-              <td>${r.deputy_action||'—'}</td>
-              <td>${r.deputy_reply||'—'}</td>
-              <td>${r.deputy_name||'—'}</td>
-              <td>${r.deputy_civil_id||'—'}</td>
+              <td>${escapeAppHtml(r.deputy_action||'—')}</td>
+              <td>${escapeAppHtml(r.deputy_reply||'—')}</td>
+              <td>${escapeAppHtml(r.deputy_name||'—')}</td>
+              <td>${escapeAppHtml(r.deputy_civil_id||'—')}</td>
             </tr>`).join('')}
         </tbody>
       </table>`;
@@ -6196,20 +6198,20 @@ async function loadDeputyReferrals(silent=false){
       <div class="deputy-referral-card" data-referral-id="${r.id}">
         <div class="deputy-referral-top">
           <div>
-            <div class="deputy-referral-student">${r.student_name||'—'}</div>
+            <div class="deputy-referral-student">${escapeAppHtml(r.student_name||'—')}</div>
             <div class="deputy-referral-meta">
-              السجل المدني: ${r.student_civil_id||'—'} — الصف: ${r.grade||'—'} — الفصل: ${r.classroom||'—'}<br>
-              المعلم: ${r.teacher_name||'—'} — سجله: ${r.teacher_civil_id||'—'}<br>
-              المادة: ${r.subject||'—'} — الحصة: ${r.period||'—'} — التنبيه: ${r.alert_level||'1'}<br>
-              التاريخ: ${r.date||'—'} — الهجري: ${r.hijri_date||'—'}
+              السجل المدني: ${escapeAppHtml(r.student_civil_id||'—')} — الصف: ${escapeAppHtml(r.grade||'—')} — الفصل: ${escapeAppHtml(r.classroom||'—')}<br>
+              المعلم: ${escapeAppHtml(r.teacher_name||'—')} — سجله: ${escapeAppHtml(r.teacher_civil_id||'—')}<br>
+              المادة: ${escapeAppHtml(r.subject||'—')} — الحصة: ${escapeAppHtml(r.period||'—')} — التنبيه: ${r.alert_level||'1'}<br>
+              التاريخ: ${escapeAppHtml(r.date||'—')} — الهجري: ${escapeAppHtml(r.hijri_date||'—')}
             </div>
           </div>
           <span class="deputy-status ${r.status==='replied'?'replied':'pending'}">${r.status==='replied'?'تم الرد':'بانتظار الرد'}</span>
         </div>
 
         <div class="deputy-referral-problem">
-          <b>سبب التحويل:</b> ${Array.isArray(r.reasons)?r.reasons.join('، '):''} ${r.other_reason||''}<br>
-          <b>إيضاح المشكلة:</b> ${r.problem||'—'}
+          <b>سبب التحويل:</b> ${Array.isArray(r.reasons)?r.reasons.join('، '):''} ${escapeAppHtml(r.other_reason||'')}<br>
+          <b>إيضاح المشكلة:</b> ${escapeAppHtml(r.problem||'—')}
         </div>
 
         <div class="referral-alert-box deputy-referral-alert-box">
@@ -6453,68 +6455,12 @@ function dataURLToBlob(dataUrl){
   }catch(e){return null}
 }
 
-const STUDENT_CHANGE_RPC_URL='https://mlfvjsfqdmantevamzqz.supabase.co/rest/v1/rpc/student_change_api';
-const STUDENT_CHANGE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZnZqc2ZxZG1hbnRldmFtenF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NTI2NTAsImV4cCI6MjEwNjUyODY1MH0.ewTJGr7GirUC659Tzfuc096S2jnGbtl3V3uh00N8FhQ';
 async function studentChangeApi(action,payload={}){
-  const token=localStorage.getItem('cloudAdminToken')||'';
-  if(!token) throw new Error('NO_CLOUD_SESSION');
-  const res=await fetch(STUDENT_CHANGE_RPC_URL,{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'apikey':STUDENT_CHANGE_ANON_KEY,
-      'Authorization':'Bearer '+STUDENT_CHANGE_ANON_KEY
-    },
-    body:JSON.stringify({p_token:token,p_action:action,p_payload:payload})
-  });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok || data?.error) throw new Error(data?.error||('HTTP '+res.status));
-  return data;
+  if(!localStorage.getItem('cloudAdminToken')) throw new Error('NO_CLOUD_SESSION');
+  return await cloudApi('student_change',{subaction:action,payload});
 }
 
-async function recoverLocalAttendance14480425(){
-  const token=localStorage.getItem('cloudAdminToken');
-  if(!token) return {restored:0,found:0};
-  let localRows=[];
-  try{ localRows=JSON.parse(localStorage.getItem('attendanceLog')||'[]'); }catch(e){ localRows=[]; }
-  const target=localRows.filter(x=>String(x?.date||'')==='2026-10-06' || String(x?.hijriDate||x?.hijri_date||'')==='1448-04-25');
-  if(!target.length) return {restored:0,found:0};
-
-  const remote=await cloudApi('pull_attendance');
-  const remoteRows=Array.isArray(remote?.attendance)?remote.attendance:[];
-  const existing=new Set(remoteRows.map(x=>[
-    String(x?.idno||'').replace(/\D/g,''),
-    String(x?.date||''),
-    String(x?.status||'')
-  ].join('|')));
-
-  // sync_attendance يحذف السجل لنفس الطالب/اليوم/الحالة قبل الإدخال؛
-  // لذلك نستعيد فقط الطلاب الذين لا يوجد لهم أي سجل مماثل في السحابة أصلًا.
-  const byKey=new Map();
-  for(const x of target){
-    const id=String(x?.idno||'').replace(/\D/g,'');
-    const date=String(x?.date||'');
-    const status=String(x?.status||'');
-    if(!id||!date||!status) continue;
-    const key=[id,date,status].join('|');
-    if(existing.has(key)) continue;
-    byKey.set(key,x);
-  }
-  const missing=[...byKey.values()];
-  if(!missing.length) return {restored:0,found:target.length};
-
-  await cloudApi('sync_attendance',{attendance:missing});
-  try{
-    const old=JSON.parse(localStorage.getItem('attendanceRecovery14480425')||'{}');
-    localStorage.setItem('attendanceRecovery14480425',JSON.stringify({
-      ...old,
-      recoveredAt:new Date().toISOString(),
-      restored:(Number(old.restored)||0)+missing.length,
-      found:target.length
-    }));
-  }catch(e){}
-  return {restored:missing.length,found:target.length};
-}
+async function recoverLocalAttendance14480425(){ return {restored:0,found:0}; }
 
 const FIRST_SECONDARY_B_ROSTER_20261008=[
   ['1158051506','إبراهيم محمد علي رفعان المحامض'],
@@ -6832,1334 +6778,47 @@ async function cloudLoginAndSync(username,password){
   if(remoteCount===0 && localCount>0){
     await cloudPushLocalData();
   }
-  try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
+  
   await cloudPullToLocal();
   if(typeof renderAdmin==='function') renderAdmin();
   return login;
 }
 
 async function cloudAutoLoginFromSavedProfile(){
-  // إذا كانت هناك جلسة مستخدم محلية، لا يجوز أبدًا استبدالها تلقائيًا بحساب المدير.
-  let savedLocal=null;
-  try{savedLocal=JSON.parse(localStorage.getItem('currentLocalAdminUser')||'null')}catch(e){}
-  const savedIsNonOwner=!!(savedLocal && savedLocal.username && !savedLocal.is_owner && String(savedLocal.role||'')!=='مدير');
-
-  if(localStorage.getItem('cloudAdminToken')){
-    try{
-      try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
-      await cloudPullToLocal();
-      if(savedIsNonOwner){
-        localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
-        try{configureUserDashboard()}catch(e){}
-      }else if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
-        try{configureUserDashboard()}catch(e){}
-      }else if(typeof renderAdmin==='function'){
-        renderAdmin();
-      }
-      return true;
-    }catch(e){
-      localStorage.removeItem('cloudAdminToken');
-    }
-  }
-
-  if(savedIsNonOwner){
-    try{
-      const staleCloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
-      if(staleCloud && (staleCloud.is_owner || String(staleCloud.role||'')==='مدير')){
-        localStorage.removeItem('cloudAdminUser');
-        localStorage.removeItem('cloudAdminToken');
-      }
-    }catch(e){}
-    // أعد جلسة المستخدم نفسه باستخدام السجل المدني ككلمة مرور افتراضية،
-    // ولا تستخدم بيانات المدير كبديل في أي حال.
-    try{
-      const username=String(savedLocal.username||savedLocal.civil_id||'').trim();
-      const password=String(savedLocal.civil_id||savedLocal.username||'').trim();
-      if(username && password){
-        const login=await cloudApi('login',{username,password},false);
-        if(login?.token){
-          localStorage.setItem('cloudAdminToken',login.token);
-          const merged={
-            ...(login.user||{}),
-            ...savedLocal,
-            username:String(savedLocal.username||username),
-            civil_id:String(savedLocal.civil_id||savedLocal.username||username),
-            is_owner:false
-          };
-          localStorage.setItem('cloudAdminUser',JSON.stringify(merged));
-          localStorage.setItem('currentLocalAdminUser',JSON.stringify(savedLocal));
-          try{await recoverLocalAttendance14480425()}catch(e){console.warn('attendance recovery 1448-04-25',e)}
-        }
-      }
-    }catch(e){console.warn('user cloud auto login',e)}
-    try{configureUserDashboard()}catch(e){}
+  const token=String(localStorage.getItem('cloudAdminToken')||'').trim();
+  if(!token) return false;
+  try{
+    const me=await cloudApi('session_me');
+    if(!me?.user) throw new Error('NO_SESSION');
+    localStorage.setItem('cloudAdminUser',JSON.stringify(me.user));
+    localStorage.removeItem('currentLocalAdminUser');
+    await cloudPullToLocal();
     return true;
-  }
-
-  // لا نسجل دخول المدير تلقائيًا من بيانات مخزنة في المتصفح.
-  // إذا انتهت جلسة المدير، يجب إدخال كلمة المرور والتحقق منها في الخادم من جديد.
-  return false;
-}
-
-function formatAppHijriDate(value,withTime=false){
-  const d=value instanceof Date?value:new Date(value||Date.now());
-  if(Number.isNaN(d.getTime())) return String(value||'—');
-  const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
-  if(withTime){opts.hour='2-digit';opts.minute='2-digit';}
-  try{return d.toLocaleString('ar-SA-u-ca-islamic-umalqura',opts)}
-  catch(e){return String(value||'—')}
-}
-
-function normalizeCivilId(value){
-  const arabic='٠١٢٣٤٥٦٧٨٩';
-  const persian='۰۱۲۳۴۵۶۷۸۹';
-  return String(value??'')
-    .trim()
-    .replace(/[٠-٩]/g,d=>String(arabic.indexOf(d)))
-    .replace(/[۰-۹]/g,d=>String(persian.indexOf(d)))
-    .replace(/\.0$/,'')
-    .replace(/\D/g,'');
-}
-
-function dedupeStudents(list){
-  const map=new Map();
-  for(const raw of (Array.isArray(list)?list:[])){
-    const id=normalizeCivilId(raw?.idno);
-    if(!id) continue;
-
-    if(!map.has(id)){
-      map.set(id,{...raw,idno:id});
-    }else{
-      // دمج السجل المكرر بدل إنشاء طالب ثانٍ، مع الاحتفاظ بأحدث القيم غير الفارغة.
-      const old=map.get(id);
-      const merged={...old};
-      for(const [k,v] of Object.entries(raw||{})){
-        if(v!=='' && v!==null && v!==undefined) merged[k]=v;
-      }
-      merged.idno=id;
-      merged.hasFace=!!(old.hasFace||raw.hasFace);
-      merged.hasId=!!(old.hasId||raw.hasId);
-      map.set(id,merged);
-    }
-  }
-  return [...map.values()];
-}
-
-function getStudents(){
-  let raw=[];
-  try{ raw=JSON.parse(localStorage.getItem('students')||'[]'); }catch(e){ raw=[]; }
-  const clean=dedupeStudents(raw).map(s=>{
-    const fixedClass=studentClassKey(s.classroom);
-    return fixedClass && fixedClass!==String(s.classroom||'') ? {...s,classroom:fixedClass} : s;
-  });
-  const changed=clean.length!==raw.length || clean.some((s,i)=>String(s.classroom||'')!==String(raw[i]?.classroom||''));
-  if(changed) localStorage.setItem('students',JSON.stringify(clean));
-  return clean;
-}
-
-function saveStudents(s){
-  const clean=dedupeStudents(s);
-  localStorage.setItem('students',JSON.stringify(clean));
-  if(localStorage.getItem('cloudAdminToken')){
-    const light=clean.map(x=>({...x,faceImage:'',idImage:''}));
-    cloudApi('sync_students',{students:light}).catch(e=>console.warn('cloud students',e));
-  }
-  return clean;
-}
-function fileToDataURL(file){
-  return new Promise((resolve,reject)=>{
-    if(!file){ resolve(''); return; }
-    const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(file);
-  });
-}
-
-$('studentForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const students=getStudents();
-  const faceFile=$('faceCam').files[0]||$('faceFile').files[0];
-  const idFile=$('idFile').files[0];
-  const rec={
-    name:$('name').value.trim(), idno:normalizeCivilId($('idno').value), phone:$('phone').value.trim(),
-    grade:$('grade').value, classroom:$('classroom').value.trim(),
-    calendar:$('calendar').value, birth:`${$('year').value}-${$('month').value}-${$('day').value}`,
-    hasFace: !!faceFile,
-    hasId: !!idFile,
-    faceImage: faceFile ? await fileToDataURL(faceFile) : '',
-    idImage: idFile ? await fileToDataURL(idFile) : ''
-  };
-  if(students.some(x=>normalizeCivilId(x.idno)===rec.idno)){ toast('لا يمكن الحفظ: السجل المدني مسجل مسبقاً'); return; }
-  try{
-    students.push(rec); saveStudents(students);
-  }catch(err){
-    toast('تعذر حفظ الصور بسبب حجمها. جرّب صوراً أصغر.'); return;
-  }
-  e.target.reset(); $('facePreview').style.display='none'; $('idPreview').style.display='none';
-  fillYearSelect('year',$('calendar').value);
-  toast('تم تسجيل بيانات الطالب بنجاح');
-});
-
-let editingStudentId = '';
-
-function resetStudentEditLogin(){
-  editingStudentId='';
-  $('studentEditForm').classList.add('hidden');
-  $('studentEditLogin').classList.remove('hidden');
-  $('editResult').innerHTML='';
-  $('searchId').value='';
-}
-
-$('findStudent').onclick=()=>{
-  const id=normalizeCivilId($('searchId').value);
-  const selectedCalendar=$('editCalendar').value;
-  const birth=`${$('editYear').value}-${$('editMonth').value}-${$('editDay').value}`;
-  const rec=getStudents().find(x=>normalizeCivilId(x.idno)===id);
-
-  if(!rec){
-    $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">لم يتم العثور على طالب بهذا الرقم.</span>';
-    return;
-  }
-  if(!rec.birth){
-    $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">تاريخ الميلاد غير مسجل لهذا الطالب. راجع الإدارة أو أعد التسجيل.</span>';
-    return;
-  }
-  if(!rec.calendar){
-    $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">نوع التقويم غير مسجل لهذا الطالب. راجع الإدارة.</span>';
-    return;
-  }
-  if(rec.calendar!==selectedCalendar || String(rec.birth)!==birth){
-    $('editResult').innerHTML='<span style="color:#b42318;font-weight:700">تاريخ الميلاد أو نوع التقويم غير صحيح.</span>';
-    return;
-  }
-
-  editingStudentId=String(rec.idno);
-  $('editName').value=rec.name||'';
-  $('editPhone').value=rec.phone||'';
-  $('editGrade').value=rec.grade||'';
-  $('editClassroom').value=rec.classroom||'';
-  $('editWelcomeName').textContent=rec.name||'بيانات الطالب';
-  $('editIdentityText').textContent=`رقم الهوية/الإقامة: ${rec.idno}`;
-
-  if(rec.faceImage){
-    $('editAvatarPreview').src=rec.faceImage; $('editAvatarPreview').style.display='block'; $('editAvatarFallback').style.display='none';
-    $('editFacePreview').src=rec.faceImage; $('editFacePreview').style.display='block';
-  }else{
-    $('editAvatarPreview').style.display='none'; $('editAvatarFallback').style.display='grid'; $('editFacePreview').style.display='none';
-  }
-  if(rec.idImage){ $('editIdPreview').src=rec.idImage; $('editIdPreview').style.display='block'; }
-  else $('editIdPreview').style.display='none';
-
-  $('studentEditLogin').classList.add('hidden');
-  $('studentEditForm').classList.remove('hidden');
-};
-
-$('studentEditForm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  if(!editingStudentId){ toast('أعد تسجيل الدخول أولاً'); return; }
-  const students=getStudents();
-  const idx=students.findIndex(x=>String(x.idno)===editingStudentId);
-  if(idx<0){ toast('تعذر العثور على سجل الطالب'); resetStudentEditLogin(); return; }
-
-  const faceFile=$('editFaceCam').files[0]||$('editFaceFile').files[0];
-  const idFile=$('editIdFile').files[0];
-  const updated={...students[idx]};
-  updated.name=$('editName').value.trim();
-  updated.phone=$('editPhone').value.trim();
-  updated.grade=$('editGrade').value;
-  updated.classroom=$('editClassroom').value.trim();
-  if(faceFile){ updated.faceImage=await fileToDataURL(faceFile); updated.hasFace=true; }
-  if(idFile){ updated.idImage=await fileToDataURL(idFile); updated.hasId=true; }
-  students[idx]=updated;
-  try{ saveStudents(students); }
-  catch(err){ toast('تعذر حفظ الصور بسبب حجمها. جرّب صوراً أصغر.'); return; }
-
-  $('editWelcomeName').textContent=updated.name;
-  if(updated.faceImage){
-    $('editAvatarPreview').src=updated.faceImage; $('editAvatarPreview').style.display='block'; $('editAvatarFallback').style.display='none';
-  }
-  toast('تم حفظ التعديلات بنجاح');
-  if(adminLoggedIn) renderAdmin();
-});
-
-$('editLogoutBtn').onclick=resetStudentEditLogin;
-$('backToRegister').onclick=()=>{
-  resetStudentEditLogin();
-  document.querySelector('.tab[data-page="register"]').click();
-};
-
-function normalizeHeader(v){
-  return String(v??'').trim().replace(/\s+/g,' ').toLowerCase();
-}
-
-function pick(row, names){
-  const map={};
-  Object.keys(row||{}).forEach(k=>map[normalizeHeader(k)]=row[k]);
-  for(const n of names){
-    const key=normalizeHeader(n);
-    if(map[key]!==undefined && map[key]!==null && String(map[key]).trim()!=='') return map[key];
-  }
-  return '';
-}
-
-function normalizeBirth(v){
-  if(v===undefined || v===null || v==='') return '';
-  if(typeof v==='number' && window.XLSX && XLSX.SSF){
-    const d=XLSX.SSF.parse_date_code(v);
-    if(d && d.y) return `${d.y}-${d.m}-${d.d}`;
-  }
-  let s=String(v).trim().replace(/\./g,'/').replace(/-/g,'/');
-  const parts=s.split('/').map(x=>x.trim()).filter(Boolean);
-  if(parts.length===3){
-    // Accept dd/mm/yyyy or yyyy/mm/dd
-    if(parts[0].length===4) return `${Number(parts[0])}-${Number(parts[1])}-${Number(parts[2])}`;
-    return `${Number(parts[2])}-${Number(parts[1])}-${Number(parts[0])}`;
-  }
-  return s;
-}
-
-function normalizeGrade(v){
-  const s=String(v??'').trim();
-  if(!s) return '';
-  if(/اول|الأول|1/.test(s)) return 'الأول الثانوي';
-  if(/ثاني|الثاني|2/.test(s)) return 'الثاني الثانوي';
-  if(/ثالث|الثالث|3/.test(s)) return 'الثالث الثانوي';
-  return s;
-}
-
-function normalizeHeader(s){
-  return String(s??'').trim().replace(/\s+/g,' ').replace(/[ـ:：]/g,'').toLowerCase();
-}
-
-function findHeaderRow(matrix){
-  const keys=[
-    'اسم الطالب','الاسم',
-    'رقم الطالب','رقم الهوية','الهوية','السجل المدني','رقم السجل','رقم الإقامة',
-    'الجوال','رقم الجوال',
-    'رقم الصف','الصف','الصف الدراسي',
-    'الفصل','الشعبة'
-  ];
-  let best={idx:0,score:-1};
-  for(let r=0;r<Math.min(matrix.length,25);r++){
-    const row=(matrix[r]||[]).map(normalizeHeader);
-    let score=0;
-    for(const cell of row){
-      if(keys.some(k=>cell.includes(normalizeHeader(k)))) score++;
-    }
-    if(score>best.score) best={idx:r,score};
-  }
-  return best.score>=2 ? best.idx : 0;
-}
-
-function rowsFromWorksheet(ws){
-  const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
-  if(!matrix.length) return [];
-  const headerIdx=findHeaderRow(matrix);
-  const headers=(matrix[headerIdx]||[]).map((h,i)=>String(h||`عمود_${i+1}`).trim());
-  return matrix.slice(headerIdx+1)
-    .filter(r=>r.some(v=>String(v??'').trim()!==''))
-    .map(r=>{
-      const obj={};
-      headers.forEach((h,i)=>obj[h]=r[i]??'');
-      return obj;
-    });
-}
-
-
-
-const PHOTO_DB_NAME='studentPhotoDB';
-const PHOTO_STORE='photos';
-function openPhotoDB(){
-  return new Promise((resolve,reject)=>{
-    const req=indexedDB.open(PHOTO_DB_NAME,1);
-    req.onupgradeneeded=()=>{
-      const db=req.result;
-      if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
-    };
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
-  });
-}
-async function saveStudentPhoto(key,blob,fromCloud=false){
-  const db=await openPhotoDB();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(PHOTO_STORE,'readwrite');
-    tx.objectStore(PHOTO_STORE).put(blob,key);
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
-  });
-}
-async function getStudentPhoto(key){
-  const db=await openPhotoDB();
-  return new Promise((resolve,reject)=>{
-    const req=db.transaction(PHOTO_STORE,'readonly').objectStore(PHOTO_STORE).get(key);
-    req.onsuccess=()=>resolve(req.result||null);
-    req.onerror=()=>reject(req.error);
-  });
-}
-async function hydrateAdminPhotos(){
-  const imgs=[...document.querySelectorAll('img[data-photo-key]')];
-  for(const img of imgs){
-    try{
-      const blob=await getStudentPhoto(img.dataset.photoKey);
-      if(blob){
-        const url=URL.createObjectURL(blob);
-        img.src=url;
-        img.onload=()=>setTimeout(()=>URL.revokeObjectURL(url),1000);
-      }
-    }catch(e){ console.warn('photo load',e); }
+  }catch(e){
+    localStorage.removeItem('cloudAdminToken');
+    localStorage.removeItem('cloudAdminUser');
+    localStorage.removeItem('currentLocalAdminUser');
+    localStorage.removeItem('adminLoggedIn');
+    localStorage.removeItem('activeSessionMode');
+  ['students','attendanceLog','studentReferrals','adminUsers','nashitActivityLeaderV1','approvedStudentPhotoHistory'].forEach(k=>localStorage.removeItem(k));
+  try{clearAllStudentPhotos().catch(()=>{})}catch(e){}
+    return false;
   }
 }
-function resolveZipPath(base,target){
-  target=String(target||'').replace(/\\/g,'/');
-  // Excel may store relationship targets as absolute package paths: /xl/media/image1.jpeg
-  if(target.startsWith('/')) return target.replace(/^\/+/,'');
-
-  const parts=base.split('/');
-  parts.pop();
-  for(const part of target.split('/')){
-    if(!part||part==='.') continue;
-    if(part==='..') parts.pop();
-    else parts.push(part);
-  }
-  return parts.join('/');
-}
-async function extractExcelImages(arrayBuffer){
-  if(!window.JSZip) return new Map();
-  const zip=await JSZip.loadAsync(arrayBuffer);
-  const drawingPath='xl/drawings/drawing1.xml';
-  const relPath='xl/drawings/_rels/drawing1.xml.rels';
-  if(!zip.file(drawingPath)||!zip.file(relPath)) return new Map();
-
-  const parser=new DOMParser();
-  const drawDoc=parser.parseFromString(await zip.file(drawingPath).async('text'),'application/xml');
-  const relDoc=parser.parseFromString(await zip.file(relPath).async('text'),'application/xml');
-  const rels={};
-  [...relDoc.getElementsByTagNameNS('*','Relationship')].forEach(r=>rels[r.getAttribute('Id')]=r.getAttribute('Target'));
-
-  const anchors=[...drawDoc.getElementsByTagNameNS('*','oneCellAnchor'),...drawDoc.getElementsByTagNameNS('*','twoCellAnchor')];
-  const out=new Map();
-  for(const a of anchors){
-    const from=a.getElementsByTagNameNS('*','from')[0];
-    if(!from) continue;
-    const col=Number(from.getElementsByTagNameNS('*','col')[0]?.textContent||-1);
-    const row=Number(from.getElementsByTagNameNS('*','row')[0]?.textContent||-1);
-    const blip=a.getElementsByTagNameNS('*','blip')[0];
-    if(!blip) continue;
-    const rid=blip.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','embed') || blip.getAttribute('r:embed');
-    const target=rels[rid];
-    if(!target) continue;
-    const mediaPath=resolveZipPath(drawingPath,target);
-    const f=zip.file(mediaPath);
-    if(!f) continue;
-    const ext=mediaPath.split('.').pop().toLowerCase();
-    const mime=ext==='png'?'image/png':ext==='gif'?'image/gif':ext==='webp'?'image/webp':'image/jpeg';
-    const bytes=await f.async('uint8array');
-    out.set(`${row}:${col}`,new Blob([bytes],{type:mime}));
-  }
-  return out;
-}
-function excelSerialToDisplay(value){
-  if(value===null || value===undefined || value==='') return '';
-  const s=String(value).trim();
-  if(!/^\d+(\.\d+)?$/.test(s)) return s;
-  const n=Number(s);
-  if(n<20000 || n>80000) return s;
-  const utc=Math.round((n-25569)*86400*1000);
-  const d=new Date(utc);
-  if(Number.isNaN(d.getTime())) return s;
-  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-}
-
-
-function isStudentGuidanceTemplate(rows){
-  if(!rows.length) return false;
-  const keys=Object.keys(rows[0]).map(normalizeHeader);
-  const has=k=>keys.some(x=>x===normalizeHeader(k) || x.includes(normalizeHeader(k)));
-  return has('اسم الطالب') && has('رقم الطالب') && has('رقم الصف') && has('الفصل');
-}
-
-function normalizeGuidanceGrade(v){
-  const s=String(v??'').trim().replace(/\s+/g,' ');
-  const map={
-    'اول ثانوي':'الأول الثانوي',
-    'أول ثانوي':'الأول الثانوي',
-    'الاول ثانوي':'الأول الثانوي',
-    'الأول ثانوي':'الأول الثانوي',
-    'ثاني ثانوي':'الثاني الثانوي',
-    'الثاني ثانوي':'الثاني الثانوي',
-    'ثالث ثانوي':'الثالث الثانوي',
-    'الثالث ثانوي':'الثالث الثانوي'
-  };
-  return map[s] || normalizeGrade(s);
-}
-
-function rowToStudentGuidance(row){
-  const idno=normalizeCivilId(pick(row,[
-    'رقم الطالب','رقم الهوية','السجل المدني','رقم السجل المدني'
-  ]));
-  const name=String(pick(row,['اسم الطالب','الاسم'])).trim();
-  if(!idno || !name) return null;
-
-  return {
-    name,
-    idno,
-    phone:String(pick(row,['الجوال','رقم الجوال','رقم الهاتف'])).replace(/\.0$/,'').trim(),
-    grade:normalizeGuidanceGrade(pick(row,['رقم الصف','الصف','الصف الدراسي'])),
-    classroom:String(pick(row,['الفصل','الشعبة','رقم الفصل'])).replace(/\.0$/,'').trim(),
-    importedFromExcel:true,
-    importedTemplate:'StudentGuidance',
-    verification:'مؤكد'
-  };
-}
-
-function isSchoolPhotoRegisterTemplate(rows){
-  if(!rows.length) return false;
-  const keys=Object.keys(rows[0]).map(x=>String(x).trim());
-  const required=[
-    'م','الصورة الشخصية','حالة قص الصورة','صورة الهوية الوطنية','اسم الطالب',
-    'رقم الهوية/الإقامة','الجوال','الصف','الفصل','التحقق',
-    'الرقم المرجعي','تاريخ التسجيل','وجود صورة الهوية','ملاحظات'
-  ];
-  return required.every(k=>keys.includes(k));
-}
-
-function normalizeYesNo(v){
-  const s=String(v??'').trim();
-  return ['نعم','yes','true','1','متوفرة','مرفقة'].includes(s.toLowerCase()) || s==='نعم';
-}
-
-function rowToExactStudent(row){
-  const name=String(row['اسم الطالب']??'').trim();
-  const idno=normalizeCivilId(row['رقم الهوية/الإقامة']);
-  if(!name || !idno) return null;
-
-  const cropStatus=String(row['حالة قص الصورة']??'').trim();
-  const idImagePresence=String(row['وجود صورة الهوية']??'').trim();
-  const identityCell=String(row['صورة الهوية الوطنية']??'').trim();
-
-  return {
-    serial:String(row['م']??'').replace(/\.0$/,'').trim(),
-    name,
-    idno,
-    phone:String(row['الجوال']??'').replace(/\.0$/,'').trim(),
-    grade:String(row['الصف']??'').trim(),
-    classroom:String(row['الفصل']??'').replace(/\.0$/,'').trim(),
-    verification:String(row['التحقق']??'').trim(),
-    referenceNo:String(row['الرقم المرجعي']??'').trim(),
-    registrationDate:excelSerialToDisplay(row['تاريخ التسجيل']),
-    cropStatus,
-    idImagePresence,
-    notes:String(row['ملاحظات']??'').trim(),
-    hasFace: cropStatus==='تم القص' || cropStatus==='مقصوصة' || String(row['الصورة الشخصية']??'').trim()!=='',
-    hasId: normalizeYesNo(idImagePresence) || (identityCell && identityCell!=='—' && identityCell!=='-'),
-    importedFromExcel:true,
-    importedTemplate:'سجل صور الطلاب',
-    // الملف المرفق لا يحتوي تاريخ ميلاد ضمن أعمدته؛ نُبقي البيانات القديمة إن وجدت عند التحديث.
-    calendar:'',
-    birth:''
-  };
-}
-
-
-async function importStudentPhotosExcel(file){
-  if(!file) return;
-  const status=$('studentPhotosImportStatus');
-  status.innerHTML='جاري قراءة ملف صور الطلاب وربطه بالسجل المدني...';
-
-  if(!window.XLSX || !window.JSZip){
-    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر تحميل قارئ Excel أو مستخرج الصور.</span>';
-    return;
-  }
-
-  try{
-    const buffer=await file.arrayBuffer();
-    const data=new Uint8Array(buffer);
-    const wb=XLSX.read(data,{type:'array',cellDates:false});
-    const sheetName=wb.SheetNames.includes('الطلاب') ? 'الطلاب' : wb.SheetNames[0];
-    const rows=rowsFromWorksheet(wb.Sheets[sheetName]);
-
-    if(!rows.length || !isSchoolPhotoRegisterTemplate(rows)){
-      status.innerHTML='<span style="color:#b42318;font-weight:700">هذا الملف لا يطابق قالب «سجل صور الطلاب».</span>';
-      return;
-    }
-
-    const embeddedImages=await extractExcelImages(buffer);
-    if(!embeddedImages.size){
-      status.innerHTML='<span style="color:#b42318;font-weight:700">تم فتح الملف، لكن لم أجد صورًا مضمّنة داخله.</span>';
-      return;
-    }
-
-    // قاعدة الطلاب الأساسية: تنظيفها أولاً حسب السجل المدني لمنع أي تكرار.
-    const students=dedupeStudents(getStudents());
-    const byId=new Map(students.map((s,i)=>[normalizeCivilId(s.idno),i]));
-
-    let matched=0, unmatched=0, facePhotos=0, idPhotos=0, rowsWithoutPhotos=0;
-
-    for(let rowIndex=0; rowIndex<rows.length; rowIndex++){
-      const row=rows[rowIndex];
-      const idno=normalizeCivilId(row['رقم الهوية/الإقامة']);
-      if(!idno) continue;
-
-      // لا ننشئ طالبًا جديدًا هنا؛ الصور تُدمج فقط في الطالب الموجود بنفس السجل المدني.
-      if(!byId.has(idno)){
-        unmatched++;
-        continue;
-      }
-
-      const idx=byId.get(idno);
-      const student=students[idx];
-
-      // drawing rows/cols are zero-based. Excel row 2 => drawing row 1.
-      const drawingRow=rowIndex+1;
-      const faceBlob=embeddedImages.get(`${drawingRow}:1`);
-      const idBlob=embeddedImages.get(`${drawingRow}:3`);
-
-      let gotAny=false;
-      if(faceBlob){
-        await saveStudentPhoto(`${idno}:face`,faceBlob);
-        student.hasFace=true;
-        student.cropStatus=String(row['حالة قص الصورة']??student.cropStatus??'تم القص').trim() || 'تم القص';
-        facePhotos++;
-        gotAny=true;
-      }
-      if(idBlob){
-        await saveStudentPhoto(`${idno}:id`,idBlob);
-        student.hasId=true;
-        student.idImagePresence='نعم';
-        idPhotos++;
-        gotAny=true;
-      }
-
-      if(gotAny){
-        matched++;
-        // نحافظ على بيانات القاعدة الأساسية ولا نستبدل الاسم/الصف/الفصل من ملف الصور.
-        students[idx]=student;
-      }else{
-        rowsWithoutPhotos++;
-      }
-    }
-
-    saveStudents(students);
-    renderAdmin();
-    await hydrateAdminPhotos();
-
-    status.innerHTML=
-      `<span style="color:#0f7665;font-weight:700">تم دمج صور الطلاب في قاعدة البيانات الأساسية حسب السجل المدني بدون تكرار.</span>`+
-      `<br>طلاب تم ربط صورهم: ${matched} — الصور الشخصية: ${facePhotos} — صور الهوية: ${idPhotos}`+
-      `<br>سجلات غير موجودة في القاعدة الأساسية: ${unmatched} — صفوف بلا صور: ${rowsWithoutPhotos}.`;
-
-    toast(`تم ربط صور ${matched} طالب بالسجل المدني`);
-  }catch(err){
-    console.error('student photos import',err);
-    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر استيراد الصور من ملف Excel.</span>';
-  }
-}
-
-function importStudentNameKey(v){
-  return normalizeSearchText(v)
-    .replace(/\bبن\b/g,' ')
-    .replace(/\bابن\b/g,' ')
-    .replace(/\bآل\b/g,' ال ')
-    .replace(/\s+/g,' ')
-    .trim();
-}
-
-function findExistingStudentForImport(students, rawId, name){
-  const id=normalizeCivilId(rawId);
-  const nameKey=importStudentNameKey(name);
-
-  // 1) المطابقة بالسجل كما هو.
-  if(id){
-    const exact=students.findIndex(s=>normalizeCivilId(s.idno)===id);
-    if(exact>=0) return {index:exact,reason:'id'};
-  }
-
-  // 2) إذا حذف Excel أصفار بداية السجل، نبحث عن سجل ينتهي بنفس الرقم،
-  // لكن لا نعتمده إلا إذا كان الاسم مطابقًا/قريبًا لتفادي الربط الخاطئ.
-  if(id && id.length<10 && id.length>=6){
-    const suffixMatches=[];
-    students.forEach((s,i)=>{
-      const sid=normalizeCivilId(s.idno);
-      if(sid && sid.endsWith(id)) suffixMatches.push(i);
-    });
-    if(suffixMatches.length===1){
-      const i=suffixMatches[0];
-      const score=rosterNameScore(name,students[i]?.name||'');
-      if(!nameKey || score>=0.72) return {index:i,reason:'short_id'};
-    }else if(suffixMatches.length>1 && nameKey){
-      const exactName=suffixMatches.filter(i=>importStudentNameKey(students[i]?.name||'')===nameKey);
-      if(exactName.length===1) return {index:exactName[0],reason:'short_id_name'};
-    }
-  }
-
-  // 3) الاسم المطابق تمامًا — مهم لقوالب Excel التي أفسدت الأصفار الأولى.
-  if(nameKey){
-    const nameMatches=[];
-    students.forEach((s,i)=>{
-      if(importStudentNameKey(s.name||'')===nameKey) nameMatches.push(i);
-    });
-    if(nameMatches.length===1) return {index:nameMatches[0],reason:'name'};
-  }
-
-  // 4) مطابقة اسم تقريبية محافظة.
-  if(nameKey){
-    let best=-1,bestScore=0,second=0;
-    students.forEach((s,i)=>{
-      const score=rosterNameScore(name,s.name||'');
-      if(score>bestScore){second=bestScore;bestScore=score;best=i}
-      else if(score>second){second=score}
-    });
-    if(best>=0 && bestScore>=0.82 && (bestScore-second>=0.08 || bestScore>=0.94)){
-      return {index:best,reason:'fuzzy_name'};
-    }
-  }
-
-  return null;
-}
-
-function importExcelFile(file){
-  if(!file) return;
-  const status=$('excelImportStatus');
-  status.innerHTML='جاري قراءة ملف سجل صور الطلاب...';
-
-  if(!window.XLSX){
-    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر تحميل قارئ Excel. افتح البرنامج مع اتصال بالإنترنت ثم أعد المحاولة.</span>';
-    return;
-  }
-
-  const reader=new FileReader();
-  reader.onload=async (e)=>{
-    try{
-      const data=new Uint8Array(e.target.result);
-      const isLegacyXls=/\.xls$/i.test(file.name) && !/\.xlsx$/i.test(file.name);
-      const embeddedImages=isLegacyXls ? new Map() : await extractExcelImages(e.target.result);
-      const wb=XLSX.read(data,{type:'array',cellDates:false});
-
-      let preferredSheet=wb.SheetNames.includes('الطلاب') ? 'الطلاب' : wb.SheetNames[0];
-      let bestSheetScore=-1;
-      for(const sheetName of wb.SheetNames){
-        const matrix=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:'',raw:false});
-        if(!matrix.length) continue;
-        const idx=findHeaderRow(matrix);
-        const cells=(matrix[idx]||[]).map(normalizeHeader);
-        const wanted=['اسم الطالب','رقم الطالب','رقم الصف','الفصل','الجوال'];
-        const score=wanted.reduce((n,k)=>n+(cells.some(c=>c===normalizeHeader(k)||c.includes(normalizeHeader(k)))?1:0),0);
-        if(score>bestSheetScore){
-          bestSheetScore=score;
-          preferredSheet=sheetName;
-        }
-      }
-
-      const rows=rowsFromWorksheet(wb.Sheets[preferredSheet]);
-
-      if(!rows.length){
-        status.innerHTML='<span style="color:#b42318;font-weight:700">لم أجد صفوف بيانات داخل الملف.</span>';
-        return;
-      }
-
-      const guidanceTemplate=isStudentGuidanceTemplate(rows);
-      const exact=isSchoolPhotoRegisterTemplate(rows);
-      const students=getStudents();
-      const byId=new Map(students.map((s,i)=>[normalizeCivilId(s.idno),i]));
-      let added=0, updated=0, skipped=0, facePhotos=0, idPhotos=0;
-
-      for(let rowIndex=0; rowIndex<rows.length; rowIndex++){
-        const row=rows[rowIndex];
-        let rec;
-
-        if(guidanceTemplate){
-          rec=rowToStudentGuidance(row);
-        }else if(exact){
-          rec=rowToExactStudent(row);
-        }else{
-          const name=String(pick(row,['اسم الطالب','الاسم','اسم الطالب الرباعي','اسم','student name','name'])).trim();
-          const idno=normalizeCivilId(pick(row,['رقم الطالب','رقم الهوية','الهوية','السجل المدني','رقم السجل المدني','رقم السجل','رقم الإقامة','الهوية/الإقامة','رقم الهوية/الإقامة','هوية الطالب','id','national id']));
-          if(!name || !idno){ skipped++; continue; }
-
-          rec={
-            name,idno,
-            phone:String(pick(row,['رقم الجوال','الجوال','رقم الهاتف','الهاتف','mobile','phone'])).replace(/\.0$/,'').trim(),
-            grade:normalizeGuidanceGrade(pick(row,['رقم الصف','الصف','الصف الدراسي','المستوى','grade'])),
-            classroom:String(pick(row,['الفصل','الفصل الدراسي','الشعبة','رقم الفصل','class','section'])).replace(/\.0$/,'').trim(),
-            calendar:String(pick(row,['نوع التقويم','التقويم','calendar'])).trim() || 'هجري',
-            birth:normalizeBirth(pick(row,['تاريخ الميلاد','الميلاد','تاريخ ميلاد الطالب','birth date','date of birth'])),
-            hasFace:false,hasId:false,importedFromExcel:true
-          };
-        }
-
-        if(!rec){ skipped++; continue; }
-
-        if(exact){
-          // في ملف القالب: الصف 0 هو صف العناوين، لذلك صف الطالب داخل drawing = rowIndex + 1
-          const excelDrawingRow=rowIndex+1;
-          const faceBlob=embeddedImages.get(`${excelDrawingRow}:1`);
-          const idBlob=embeddedImages.get(`${excelDrawingRow}:3`);
-          if(faceBlob){
-            await saveStudentPhoto(`${rec.idno}:face`,faceBlob);
-            rec.hasFace=true;
-            facePhotos++;
-          }
-          if(idBlob){
-            await saveStudentPhoto(`${rec.idno}:id`,idBlob);
-            rec.hasId=true;
-            idPhotos++;
-          }
-        }
-
-        rec.idno=normalizeCivilId(rec.idno);
-        rec.grade=studentGradeKey(rec.grade||'');
-        rec.classroom=studentClassKey(rec.classroom||'');
-
-        const found=findExistingStudentForImport(students,rec.idno,rec.name);
-        if(found){
-          const idx=found.index;
-          const old=students[idx];
-
-          // إذا كان رقم Excel ناقص الأصفار، لا نستبدل السجل الصحيح المخزن.
-          rec.idno=normalizeCivilId(old.idno)||rec.idno;
-
-          students[idx]={
-            ...old,
-            ...rec,
-            idno:normalizeCivilId(old.idno)||rec.idno,
-            grade:rec.grade||old.grade||'',
-            classroom:rec.classroom||studentClassKey(old.classroom)||old.classroom||'',
-            // لا نمسح تاريخ الميلاد/التقويم أو الصور المخزنة مسبقًا.
-            birth: rec.birth || old.birth || '',
-            calendar: rec.calendar || old.calendar || '',
-            hasFace: rec.hasFace || old.hasFace || false,
-            hasId: rec.hasId || old.hasId || false
-          };
-          updated++;
-        }else{
-          // لا ننشئ سجلًا جديدًا من رقم قصير نتج عن حذف أصفار Excel.
-          if(rec.idno && rec.idno.length<10){
-            skipped++;
-            continue;
-          }
-          students.push(rec);
-          byId.set(rec.idno,students.length-1);
-          added++;
-        }
-      }
-
-      if(added===0 && updated===0){
-        const detectedHeaders=rows.length ? Object.keys(rows[0]).filter(Boolean).join(' | ') : 'لا توجد عناوين';
-        status.innerHTML=`<span style="color:#b42318;font-weight:700">تم فتح الملف لكن لم أتعرف على بيانات الطلاب.</span> تم تجاهل ${skipped} صف.<br><small>العناوين التي تم التعرف عليها: ${detectedHeaders}</small>`;
-        return;
-      }
-
-      saveStudents(students);
-      renderAdmin();
-      await hydrateAdminPhotos();
-
-      if(guidanceTemplate){
-        status.innerHTML=`<span style="color:#0f7665;font-weight:700">تم استيراد StudentGuidance.xls بنجاح.</span><br>رقم الطالب ← السجل المدني | اسم الطالب ← الاسم | رقم الصف ← الصف | الفصل ← الفصل | الجوال ← الجوال.<br>الطلاب: ${added+updated} — جديد: ${added} — محدث: ${updated} — متجاهل: ${skipped}.`;
-      }else if(exact && embeddedImages.size>0 && facePhotos===0 && idPhotos===0){
-        status.innerHTML=`<span style="color:#b42318;font-weight:700">تمت قراءة ${embeddedImages.size} صورة من Excel لكن تعذر ربطها بالطلاب.</span> أعد الاستيراد من نفس الملف، وإذا استمرت المشكلة أرسل لي النسخة الناتجة من البرنامج.`;
-      } else if(exact){
-        status.innerHTML=`<span style="color:#0f7665;font-weight:700">تم استيراد قالب «سجل صور الطلاب» بنجاح.</span> الطلاب: ${added+updated} — الصور الشخصية المستخرجة: ${facePhotos} — صور الهوية المستخرجة: ${idPhotos} — الصفوف المتجاهلة: ${skipped}.`;
-      }else{
-        status.innerHTML=`<span style="color:#0f7665;font-weight:700">تم الاستيراد والعرض بنجاح.</span> ${added} طالب جديد، ${updated} تم تحديثهم، ${skipped} صف تم تجاهله.`;
-      }
-
-      toast(`تم عرض ${added+updated} سجل من Excel`);
-      const table=document.querySelector('.table-wrap');
-      if(table) table.scrollIntoView({behavior:'smooth',block:'start'});
-    }catch(err){
-      console.error(err);
-      status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر قراءة الملف. تأكد أن الملف بصيغة Excel صحيحة.</span>';
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-
-const studentPhotosExcelInput=$('studentPhotosExcelInput');
-if($('importStudentPhotosBtn')) $('importStudentPhotosBtn').onclick=()=>studentPhotosExcelInput.click();
-if(studentPhotosExcelInput) studentPhotosExcelInput.onchange=async e=>{
-  const file=e.target.files?.[0];
-  if(file) await importStudentPhotosExcel(file);
-  e.target.value='';
-};
-
-
-function normalizeMadrasatiText(v){
-  return String(v??'').trim().replace(/\.0$/,'').replace(/\s+/g,' ');
-}
-
-function normalizeDigitsText(v){
-  const ar='٠١٢٣٤٥٦٧٨٩', fa='۰۱۲۳۴۵۶۷۸۹';
-  return String(v??'')
-    .replace(/[٠-٩]/g,d=>String(ar.indexOf(d)))
-    .replace(/[۰-۹]/g,d=>String(fa.indexOf(d)));
-}
-
-function studentGradeKey(v){
-  const raw=normalizeDigitsText(v).trim();
-  const s=raw.replace(/[أإآ]/g,'ا').replace(/\s+/g,' ');
-  if(s.includes('الاول') || s.includes('اول ثانوي') || s==='1' || /^1\s*ث(?:\s|$|-|–|—)/.test(s) || s==='1ث') return 'الأول الثانوي';
-  if(s.includes('الثاني') || s.includes('ثاني ثانوي') || s==='2' || /^2\s*ث(?:\s|$|-|–|—)/.test(s) || s==='2ث') return 'الثاني الثانوي';
-  if(s.includes('الثالث') || s.includes('ثالث ثانوي') || s==='3' || /^3\s*ث(?:\s|$|-|–|—)/.test(s) || s==='3ث') return 'الثالث الثانوي';
-  return raw;
-}
-
-function classroomNumberToLetter(n){
-  const letters=['أ','ب','ج','د','هـ','و','ز','ح','ط','ي','ك','ل','م','ن','س','ع','ف','ص','ق','ر','ش','ت','ث','خ','ذ','ض','ظ','غ'];
-  const num=Number(n);
-  return Number.isFinite(num) && num>=1 ? (letters[num-1] || String(num)) : '';
-}
-
-function studentClassKey(v){
-  let s=normalizeDigitsText(v).trim().replace(/\s+/g,' ');
-  if(!s) return '';
-
-  // أي رقم فصل يتحول آلياً إلى حرف: 1=أ، 2=ب، 3=ج، 4=د...
-  const nums=s.match(/\d+/g);
-  if(nums && nums.length){
-    return classroomNumberToLetter(Number(nums[nums.length-1]));
-  }
-
-  // تنظيف صيغ مدرستي مثل: "ال أ" أو "الفصل أ" أو "الأول الثانوي : أ".
-  s=s
-    .replace(/[/:：|\-–—]+/g,' ')
-    .replace(/الأول الثانوي|الاول الثانوي|أول ثانوي|اول ثانوي|الثاني الثانوي|ثاني ثانوي|الثالث الثانوي|ثالث ثانوي/gi,' ')
-    .replace(/الصف|الفصل|الشعبة|فصل|شعبة|الثانوي/gi,' ')
-    .replace(/(^|\s)ال(?=\s|$)/g,' ')
-    .replace(/\s+/g,' ')
-    .trim();
-
-  const letter=s.match(/(?:^|\s)([أإآابتثجحخدذرزسشصضطظعغفقكلمنهوي])(?:\s|$)/);
-  if(letter) return letter[1].replace(/[إآ]/,'أ');
-
-  return s;
-}
-
-function displayStudentClassroom(v){
-  const key=studentClassKey(v);
-  return key || String(v??'').trim() || '—';
-}
-
-function rosterNameNormalize(v){
-  return normalizeSearchText(v)
-    .replace(/\bبن\b/g,' ')
-    .replace(/\bابن\b/g,' ')
-    .replace(/\bآل\b/g,' ال ')
-    .replace(/\s+/g,' ')
-    .trim();
-}
-
-function rosterNameScore(a,b){
-  const na=rosterNameNormalize(a), nb=rosterNameNormalize(b);
-  if(!na||!nb) return 0;
-  if(na===nb) return 1;
-  const A=[...new Set(na.split(' ').filter(x=>x.length>1))];
-  const B=[...new Set(nb.split(' ').filter(x=>x.length>1))];
-  const bs=new Set(B);
-  const common=A.filter(x=>bs.has(x)).length;
-  let score=(2*common)/Math.max(1,A.length+B.length);
-  if(A[0]&&B[0]&&A[0]===B[0]) score+=0.06;
-  if(A.at(-1)&&B.at(-1)&&A.at(-1)===B.at(-1)) score+=0.06;
-  return Math.min(1,score);
-}
-
-function parseStudentRosterTxt(text){
-  const out=[];
-  String(text||'').split(/\r?\n/).forEach(line=>{
-    if(!line.trim()) return;
-    const parts=line.split('\t');
-    if(parts.length<2) return;
-    const cls=String(parts[0]||'').trim();
-    const name=String(parts[1]||'').trim();
-    const idno=normalizeDigitsText(String(parts[2]||'')).replace(/\D/g,'');
-    const m=cls.match(/^([23])ث\s*[-–—]\s*(.+)$/);
-    if(!m||!name) return;
-    const grade=m[1]==='2'?'الثاني الثانوي':'الثالث الثانوي';
-    const classroom=studentClassKey(m[2].trim())||m[2].trim();
-    out.push({idno,name,grade,classroom});
-  });
-  return out;
-}
-
-async function importStudentRosterTxt(file){
-  if(!file) return;
-  const raw=await file.text();
-  const roster=parseStudentRosterTxt(raw);
-  if(!roster.length){
-    alert('لم أتعرف على أسماء الطلاب. يجب أن يكون كل سطر بالشكل: 2ث - أ ثم اسم الطالب ثم السجل المدني.');
-    return;
-  }
-
-  const students=getStudents();
-  const byId=new Map(students.map((s,i)=>[String(s.idno||'').trim(),i]));
-  const changed=[];
-  let idMatched=0,fuzzyMatched=0,added=0,unmatched=0,unchanged=0;
-
-  const bestNameMatch=(name)=>{
-    let best=-1,bestScore=0,second=0;
-    students.forEach((s,i)=>{
-      const sc=rosterNameScore(name,s.name);
-      if(sc>bestScore){second=bestScore;bestScore=sc;best=i}
-      else if(sc>second){second=sc}
-    });
-    if(bestScore>=0.76 && (bestScore-second>=0.06 || bestScore>=0.92)){
-      return {index:best,score:bestScore};
-    }
-    return null;
-  };
-
-  for(const rec of roster){
-    let idx=rec.idno ? byId.get(rec.idno) : undefined;
-    if(idx!==undefined) idMatched++;
-
-    if(idx===undefined){
-      const approx=bestNameMatch(rec.name);
-      if(approx){
-        idx=approx.index;
-        fuzzyMatched++;
-      }
-    }
-
-    if(idx===undefined){
-      // لا نضيف طالبًا جديدًا إلا إذا كان لديه سجل مدني سعودي/إقامة من 10 أرقام صالح للاستخدام.
-      if(/^\d{10}$/.test(rec.idno||'') && !/^0+$/.test(rec.idno)){
-        const fresh={
-          name:rec.name,idno:rec.idno,phone:'',
-          grade:rec.grade,classroom:rec.classroom,
-          verification:'مؤكد',registered:false,
-          hasFace:false,hasId:false
-        };
-        students.push(fresh);
-        byId.set(rec.idno,students.length-1);
-        changed.push(fresh);
-        added++;
-      }else{
-        unmatched++;
-      }
-      continue;
-    }
-
-    const old=students[idx];
-    const next={
-      ...old,
-      name:rec.name||old.name,
-      grade:rec.grade||old.grade,
-      classroom:rec.classroom||old.classroom
-    };
-
-    if(String(old.name||'')===String(next.name||'') &&
-       String(old.grade||'')===String(next.grade||'') &&
-       String(studentClassKey(old.classroom)||old.classroom||'')===String(studentClassKey(next.classroom)||next.classroom||'')){
-      unchanged++;
-      continue;
-    }
-
-    students[idx]=next;
-    changed.push(next);
-  }
-
-  // حفظ محلي مباشر مع الإبقاء على مراجع الصور كما هي.
-  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-
-  // مزامنة السجلات المتغيرة فقط، مع إعادة إرفاق صورها الحالية كي لا تُمسح في السحابة.
-  if(localStorage.getItem('cloudAdminToken') && changed.length){
-    const cloudRows=[];
-    for(const s0 of changed){
-      const s={...s0};
-      try{
-        const fb=await getStudentPhoto(`${s.idno}:face`);
-        if(fb) s.faceImage=await blobToDataURL(fb);
-        const ib=await getStudentPhoto(`${s.idno}:id`);
-        if(ib) s.idImage=await blobToDataURL(ib);
-      }catch(e){}
-      cloudRows.push(s);
-    }
-    for(let i=0;i<cloudRows.length;i+=12){
-      await cloudApi('sync_students',{students:cloudRows.slice(i,i+12)});
-    }
-  }
-
-  try{renderAdmin()}catch(e){}
-  try{await hydrateAdminPhotos()}catch(e){}
-
-  alert(
-    '✅ تم ربط قائمة الطلاب بقاعدة البيانات\n\n'+
-    'إجمالي القائمة: '+roster.length+'\n'+
-    'مطابقة بالسجل المدني: '+idMatched+'\n'+
-    'مطابقة تقريبية بالاسم: '+fuzzyMatched+'\n'+
-    'طلاب جدد بسجل صالح: '+added+'\n'+
-    'بدون تغيير: '+unchanged+'\n'+
-    'تعذر ربطهم: '+unmatched+'\n\n'+
-    'لم يتم حذف أو تعديل صور الطلاب.'
-  );
-  toast('تم تحديث الصفوف والفصول بدون حذف الصور');
-}
-
-const studentRosterTxtInput=$('studentRosterTxtInput');
-if($('importStudentRosterTxtBtn')) $('importStudentRosterTxtBtn').onclick=()=>studentRosterTxtInput?.click();
-if(studentRosterTxtInput) studentRosterTxtInput.onchange=async e=>{
-  const file=e.target.files?.[0];
-  try{if(file) await importStudentRosterTxt(file)}
-  catch(err){console.error('TXT roster import',err);alert('تعذر استيراد القائمة الآن.')}
-  e.target.value='';
-};
-
-async function importMadrasatiPlacements(file){
-  const status=$('madrasatiImportStatus');
-  if(!file) return;
-  status.innerHTML='جاري مطابقة السجلات المدنية وتحديث الصفوف والفصول فقط...';
-
-  if(!window.XLSX){
-    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر تحميل قارئ Excel.</span>';
-    return;
-  }
-
-  try{
-    const buffer=await file.arrayBuffer();
-    const data=new Uint8Array(buffer);
-    let wb;
-
-    try{
-      wb=XLSX.read(data,{type:'array',cellDates:false});
-    }catch(parseErr){
-      throw new Error('READ_FAILED');
-    }
-
-    let bestSheet='';
-    let bestRows=[];
-    let bestScore=-1;
-
-    for(const sheetName of wb.SheetNames||[]){
-      const rows=rowsFromWorksheet(wb.Sheets[sheetName]);
-      if(!rows.length) continue;
-      const keys=Object.keys(rows[0]||{}).map(normalizeHeader);
-      const score=
-        (keys.some(k=>['رقم الهوية','السجل المدني','رقم السجل المدني','رقم الطالب','الهوية','رقم الهوية/الإقامة'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?3:0)+
-        (keys.some(k=>['الصف','الصف الدراسي','رقم الصف','المستوى'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?2:0)+
-        (keys.some(k=>['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي'].some(x=>k===normalizeHeader(x)||k.includes(normalizeHeader(x))))?2:0);
-      if(score>bestScore){
-        bestScore=score;
-        bestSheet=sheetName;
-        bestRows=rows;
-      }
-    }
-
-    if(!bestRows.length || bestScore<5){
-      const text=new TextDecoder('utf-8').decode(data.slice(0,3000)).toLowerCase();
-      const framedHtml=text.includes('<html') && (text.includes('sheet001.htm') || text.includes('<frameset'));
-      status.innerHTML=framedHtml
-        ? '<span style="color:#b42318;font-weight:700">هذا الملف عبارة عن صفحة Excel مرتبطة بملف ورقة خارجي وليس كشف الطلاب نفسه.</span><br>نزّل كشف الطلاب الأصلي من منصة مدرستي بصيغة Excel ثم ارفعه هنا.'
-        : '<span style="color:#b42318;font-weight:700">لم أتعرف على أعمدة السجل المدني والصف والفصل في الملف.</span>';
-      return;
-    }
-
-    const students=getStudents();
-    const byId=new Map(students.map((s,i)=>[normalizeCivilId(s.idno),i]));
-    const changed=[];
-    let matched=0, updated=0, unchanged=0, notFound=0, skipped=0, fuzzyMatched=0, added=0;
-
-    const normalizeRosterName=(v)=>normalizeSearchText(v)
-      .replace(/\bبن\b/g,' ')
-      .replace(/\bابن\b/g,' ')
-      .replace(/\bآل\b/g,' ال ')
-      .replace(/\s+/g,' ')
-      .trim();
-
-    const nameTokens=(v)=>new Set(normalizeRosterName(v).split(' ').filter(x=>x.length>1));
-    const nameSimilarity=(a,b)=>{
-      const na=normalizeRosterName(a), nb=normalizeRosterName(b);
-      if(!na||!nb) return 0;
-      if(na===nb) return 1;
-      const A=nameTokens(na), B=nameTokens(nb);
-      const inter=[...A].filter(x=>B.has(x)).length;
-      const dice=(2*inter)/Math.max(1,A.size+B.size);
-      const aa=na.split(' '), bb=nb.split(' ');
-      let boost=0;
-      if(aa[0]&&bb[0]&&aa[0]===bb[0]) boost+=0.08;
-      if(aa.at(-1)&&bb.at(-1)&&aa.at(-1)===bb.at(-1)) boost+=0.08;
-      return Math.min(1,dice+boost);
-    };
-
-    const findBestNameIndex=(name)=>{
-      let best=-1,bestScore=0,second=0;
-      students.forEach((s,i)=>{
-        const score=nameSimilarity(name,s.name);
-        if(score>bestScore){second=bestScore;bestScore=score;best=i}
-        else if(score>second){second=score}
-      });
-      return bestScore>=0.72 && (bestScore-second>=0.04 || bestScore>=0.90) ? {index:best,score:bestScore} : null;
-    };
-
-    for(const row of bestRows){
-      const rawId=normalizeDigitsText(pick(row,[
-        'السجل المدني','رقم السجل المدني','رقم الهوية','الهوية','رقم الهوية/الإقامة',
-        'هوية الطالب','رقم الطالب','رقم المستخدم','national id','id'
-      ])).replace(/\D/g,'');
-      const validId=/^\d{10}$/.test(rawId) && !/^0+$/.test(rawId);
-      const name=normalizeMadrasatiText(pick(row,['اسم الطالب','الاسم','اسم','student name','name']));
-      const phone=normalizeMadrasatiText(pick(row,['رقم الجوال','الجوال','جوال','هاتف','phone','mobile']));
-
-      let idx=validId ? byId.get(rawId) : undefined;
-      let usedFuzzy=false;
-
-      if(idx===undefined){
-        const robust=findExistingStudentForImport(students,rawId,name);
-        if(robust){
-          idx=robust.index;
-          usedFuzzy=robust.reason!=='id';
-          if(usedFuzzy) fuzzyMatched++;
-        }
-      }
-
-      if(idx===undefined && name){
-        const fuzzy=findBestNameIndex(name);
-        if(fuzzy){idx=fuzzy.index;usedFuzzy=true;fuzzyMatched++}
-      }
-
-      const gradeRaw=pick(row,['الصف الدراسي','الصف','رقم الصف','المستوى','grade']);
-      const classRaw=pick(row,['الفصل','الشعبة','رقم الفصل','الفصل الافتراضي','class','section']);
-      const grade=gradeRaw!=='' ? studentGradeKey(normalizeMadrasatiText(gradeRaw)) : '';
-      const classroomRaw=classRaw!=='' ? normalizeMadrasatiText(classRaw) : '';
-      const classroom=classroomRaw ? studentClassKey(classroomRaw) : '';
-
-      if(idx===undefined){
-        if(validId && name){
-          const rec={
-            name,
-            idno:rawId,
-            phone,
-            grade,
-            classroom,
-            verification:'مؤكد',
-            registered:false,
-            hasFace:false,
-            hasId:false
-          };
-          students.push(rec);
-          byId.set(rawId,students.length-1);
-          changed.push(rec);
-          added++;
-          continue;
-        }
-        notFound++;
-        continue;
-      }
-
-      matched++;
-      const old=students[idx];
-      const newGrade=studentGradeKey(grade || old.grade || '');
-      const newClass=studentClassKey(classroom || old.classroom || '') || old.classroom || '';
-      const newName=name || old.name || '';
-      const newPhone=phone || old.phone || '';
-
-      if(String(old.grade||'')===String(newGrade) &&
-         String(studentClassKey(old.classroom)||old.classroom||'')===String(newClass) &&
-         String(old.name||'')===String(newName) &&
-         String(old.phone||'')===String(newPhone)){
-        unchanged++;
-        continue;
-      }
-
-      // نحافظ على كامل السجل والصور، ونحدث فقط البيانات المرجعية من الكشف.
-      students[idx]={...old,name:newName,phone:newPhone,grade:newGrade,classroom:newClass};
-      changed.push(students[idx]);
-      updated++;
-    }
-
-    // حفظ محلي مباشر حتى لا تمر العملية على أي كود قد يفرغ الصور.
-    localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-
-    // إذا كانت جلسة السحابة متاحة، نرسل الطلاب المتغيرين مع صورهم الحالية حتى لا تُمسح الصور.
-    if(localStorage.getItem('cloudAdminToken') && changed.length){
-      const cloudRows=[];
-      for(const s0 of changed){
-        const s={...s0};
-        try{
-          const fb=await getStudentPhoto(`${s.idno}:face`);
-          if(fb) s.faceImage=await blobToDataURL(fb);
-          const ib=await getStudentPhoto(`${s.idno}:id`);
-          if(ib) s.idImage=await blobToDataURL(ib);
-        }catch(e){}
-        cloudRows.push(s);
-      }
-      const batchSize=12;
-      for(let i=0;i<cloudRows.length;i+=batchSize){
-        await cloudApi('sync_students',{students:cloudRows.slice(i,i+batchSize)});
-      }
-    }
-
-    renderAdmin();
-    await hydrateAdminPhotos();
-
-    status.innerHTML=
-      '<span style="color:#0f7665;font-weight:700">تم استيراد كشف الطلاب وربطه بقاعدة البرنامج بنجاح.</span>'+
-      '<br>مطابقة بالسجل المدني/الهوية: '+matched+
-      ' — مطابقة تقريبية بالاسم: '+fuzzyMatched+
-      ' — طلاب جدد أضيفوا بالسجل: '+added+
-      ' — سجلات تم تحديثها: <b>'+updated+'</b>.'+
-      '<br>بدون تغيير: '+unchanged+' — تعذر ربطهم: '+notFound+' — صفوف متجاهلة: '+skipped+'.'+
-      '<br><span style="color:#0f7665;font-weight:700">صور الوجه وصور الهوية لم يتم حذفها أو تعديلها.</span>';
-    toast('تم ربط قوائم الطلاب بالقاعدة بدون حذف الصور');
-    alert(
-      '✅ تم ربط قوائم الطلاب بقاعدة البيانات\n\n'+
-      'مطابقة بالسجل: '+matched+'\n'+
-      'مطابقة تقريبية بالاسم: '+fuzzyMatched+'\n'+
-      'طلاب جدد: '+added+'\n'+
-      'تم تحديث البيانات: '+updated+'\n'+
-      'تعذر ربطهم: '+notFound+'\n\n'+
-      'صور الطلاب لم يتم حذفها أو تعديلها.'
-    );
-  }catch(err){
-    console.error('Madrasati import',err);
-    status.innerHTML='<span style="color:#b42318;font-weight:700">تعذر قراءة ملف مدرستي. استخدم كشف Excel الأصلي من المنصة.</span>';
-  }
-}
-
-const madrasatiExcelInput=$('madrasatiExcelInput');
-if($('importMadrasatiBtn')) $('importMadrasatiBtn').onclick=()=>madrasatiExcelInput?.click();
-if(madrasatiExcelInput) madrasatiExcelInput.onchange=async e=>{
-  const file=e.target.files?.[0];
-  if(file) await importMadrasatiPlacements(file);
-  e.target.value='';
-};
-
-const excelFileInput=$('excelFileInput');
-excelFileInput.addEventListener('change',()=>{
-  importExcelFile(excelFileInput.files[0]);
-  excelFileInput.value='';
-});
-
-const adminExpectedTotal = 766;
-let adminLoggedIn = localStorage.getItem('adminLoggedIn')==='1';
-
 
 function getCurrentLoggedAdminUser(){
-  // جلسة الدخول المحلية الحالية هي المصدر الأساسي للحقيقة.
-  // هذا يمنع جلسة سحابية قديمة (خصوصًا جلسة المدير) من الاستيلاء على الواجهة بعد F5.
-  try{
-    const local=JSON.parse(localStorage.getItem('currentLocalAdminUser')||'null');
-    if(local && local.username) return local;
-  }catch(e){}
+  const token=String(localStorage.getItem('cloudAdminToken')||'').trim();
+  if(!token) return null;
   try{
     const cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'null');
     if(cloud && cloud.username) return cloud;
   }catch(e){}
-  const p=getAdminProfile();
-  return {
-    username:p.username||'',
-    civil_id:p.username||'',
-    name:p.displayName||'المدير',
-    role:'مدير',
-    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','activityLeader'],
-    is_owner:true
-  };
+  return null;
 }
 
 function isCurrentOwner(){
   const u=getCurrentLoggedAdminUser();
-  const role=String(u?.role||'').trim();
-  const username=String(u?.username||'').trim();
-  const ownerUsername=String(getAdminProfile()?.username||'').trim();
-  return !!u?.is_owner || role==='مدير' || (!!username && !!ownerUsername && username===ownerUsername);
+  return !!(u && u.is_owner===true);
 }
 
 function getCurrentPhotoOperator(){
@@ -8590,7 +7249,23 @@ function getNashitData(){
     return Object.assign(nashitDefaultData(),x||{});
   }catch(e){return nashitDefaultData()}
 }
-function saveNashitData(d){localStorage.setItem(NASHIT_KEY,JSON.stringify(d));}
+function saveNashitData(d){
+  localStorage.setItem(NASHIT_KEY,JSON.stringify(d));
+  if(localStorage.getItem('cloudAdminToken')){
+    cloudApi('activity_leader_save',{data:d}).catch(e=>console.warn('activity leader cloud save',e));
+  }
+}
+async function loadNashitDataFromCloud(){
+  if(!localStorage.getItem('cloudAdminToken')) return getNashitData();
+  try{
+    const r=await cloudApi('activity_leader_load');
+    if(r?.data && Object.keys(r.data).length){
+      localStorage.setItem(NASHIT_KEY,JSON.stringify(r.data));
+      return r.data;
+    }
+  }catch(e){console.warn('activity leader cloud load',e)}
+  return getNashitData();
+}
 function nashitEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function nashitDate(v){try{return new Date(v).toLocaleDateString('ar-SA')}catch(e){return v||'—'}}
 function nashitPrompt(label,def=''){const v=prompt(label,def);return v===null?null:String(v).trim()}
@@ -8621,7 +7296,8 @@ function openActivityLeaderPage(){
   requestAnimationFrame(positionActivityLeaderPage);
   setTimeout(positionActivityLeaderPage,50);
 }
-function initNashitPage(){
+async function initNashitPage(){
+  await loadNashitDataFromCloud();
   document.querySelectorAll('.nashit-tab').forEach(b=>b.onclick=()=>nashitTab(b.dataset.nashitTab));
   const saved=localStorage.getItem('nashitActiveTab')||'today';
   nashitTab(saved);
@@ -8856,9 +7532,9 @@ function renderNashit(){
     $('nashitNextEventName').textContent=upcoming.title||upcoming.name||'';
   }else{$('nashitNextEventDays').textContent='—';$('nashitNextEventName').textContent='لا توجد مناسبة مسجلة';}
 
-  const today=new Date().toISOString().slice(0,10);
+  const today=riyadhDateKey(new Date());
   const todayPrograms=d.programs.filter(p=>p.date===today);
-  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const tomorrow=riyadhDateKey(new Date(Date.now()+86400000));
   const tomorrowBroadcast=d.broadcasts.filter(x=>x.date===tomorrow);
   $('nashitTodayTasks').innerHTML=[
     ...todayPrograms.map(p=>`<div class="nashit-today-item"><b>برنامج اليوم: ${nashitEsc(p.title)}</b><span class="nashit-status ${p.status==='منفّذ'?'done':p.status==='قيد التنفيذ'?'running':''}">${nashitEsc(p.status)}</span></div>`),
@@ -9800,7 +8476,7 @@ async function loadMyTeacherClassFollowups(){
       <div class="teacher-followup-card">
         <div class="teacher-followup-card-head">
           <div class="teacher-followup-meta">
-            <b>${r.subject||'—'} — ${r.grade||'—'} — الفصل ${r.classroom||'—'} — الحصة ${r.period||'—'}</b><br>
+            <b>${escapeAppHtml(r.subject||'—')} — ${escapeAppHtml(r.grade||'—')} — الفصل ${escapeAppHtml(r.classroom||'—')} — الحصة ${escapeAppHtml(r.period||'—')}</b><br>
             التاريخ والوقت: ${teacherClassFormatDateTime(r.submitted_at)}<br>
             الملاحظات: ${r.notes||'لا توجد ملاحظات'}<br>
             <span class="teacher-status-badge ${r.status==='replied'?'replied':''}">${r.status==='replied'?'تم رد المدير':'بانتظار رد المدير'}</span>
@@ -9872,12 +8548,12 @@ async function loadTeacherClassManagerFollowups(){
             const defaultMsg=`شكرًا لك أستاذ ${r.teacher_name||''} على جهودك المميزة داخل الفصل وحرصك على متابعة طلابك. مع خالص تقدير إدارة المدرسة.`;
             return `<tr data-teacher-followup-id="${r.id}">
               <td>${index+1}</td>
-              <td class="teacher-name-cell">${r.teacher_name||'—'}</td>
-              <td>${r.teacher_civil_id||'—'}</td>
-              <td>${r.subject||'—'}</td>
-              <td>${r.grade||'—'}</td>
-              <td>${r.classroom||'—'}</td>
-              <td>${r.period||'—'}</td>
+              <td class="teacher-name-cell">${escapeAppHtml(r.teacher_name||'—')}</td>
+              <td>${escapeAppHtml(r.teacher_civil_id||'—')}</td>
+              <td>${escapeAppHtml(r.subject||'—')}</td>
+              <td>${escapeAppHtml(r.grade||'—')}</td>
+              <td>${escapeAppHtml(r.classroom||'—')}</td>
+              <td>${escapeAppHtml(r.period||'—')}</td>
               <td style="min-width:175px">${teacherClassFormatDateTime(r.submitted_at)}</td>
               <td class="notes-cell">${r.notes||'لا توجد ملاحظات'}</td>
               <td>${r.image_data?`<img class="manager-followup-image" src="${r.image_data}" onclick="window.open(this.src,'_blank')" title="اضغط لتكبير الصورة">`:'—'}</td>
@@ -10867,6 +9543,8 @@ if($('headerLogoutBtn')) $('headerLogoutBtn').onclick=()=>{
   localStorage.removeItem('adminLoggedIn');
   localStorage.removeItem('adminSettingsOpen');
   localStorage.removeItem('activeSessionMode');
+  ['students','attendanceLog','studentReferrals','adminUsers','nashitActivityLeaderV1','approvedStudentPhotoHistory'].forEach(k=>localStorage.removeItem(k));
+  try{clearAllStudentPhotos().catch(()=>{})}catch(e){}
   document.documentElement.classList.remove('user-session-home');
   localStorage.setItem('activeMainPage','register');
   clearLoginFields();
@@ -10974,6 +9652,8 @@ function setAdminMode(on){
       localStorage.removeItem('adminLoggedIn');
       localStorage.removeItem('adminSettingsOpen');
       localStorage.removeItem('activeSessionMode');
+  ['students','attendanceLog','studentReferrals','adminUsers','nashitActivityLeaderV1','approvedStudentPhotoHistory'].forEach(k=>localStorage.removeItem(k));
+  try{clearAllStudentPhotos().catch(()=>{})}catch(e){}
       document.documentElement.classList.remove('user-session-home');
       localStorage.setItem('activeMainPage','register');
       document.querySelector('.tab[data-page="register"]')?.classList.remove('hidden');
@@ -10991,192 +9671,34 @@ function setAdminMode(on){
 
 $('adminLoginBtn').onclick=async()=>{
   const user=String($('adminUser').value||'').trim();
-  const pass=String($('adminPass').value||'').trim();
+  const pass=String($('adminPass').value||'');
   const btn=$('adminLoginBtn');
+  if(!user||!pass){toast('أدخل اسم المستخدم وكلمة المرور');return}
   const oldText=btn.textContent;
-
-  // جميع عمليات الدخول، بما فيها حساب المدير، يتم التحقق منها في الخادم فقط.
-
-  const openDashboard=()=>{
-    const ownerNow=isCurrentOwner();
-    localStorage.setItem('activeSessionMode',ownerNow?'owner':'user');
-    document.documentElement.classList.toggle('user-session-home',!ownerNow);
+  btn.disabled=true;btn.textContent='جاري الدخول...';
+  try{
+    const login=await cloudLoginAndSync(user,pass);
+    if(!login?.token || !login?.user) throw new Error('LOGIN_FAILED');
+    const cu=login.user;
+    const owner=cu.is_owner===true;
+    localStorage.setItem('cloudAdminUser',JSON.stringify(cu));
+    localStorage.setItem('activeSessionMode',owner?'owner':'user');
     localStorage.setItem('adminLoggedIn','1');
     localStorage.setItem('activeMainPage','admin');
+    document.documentElement.classList.toggle('user-session-home',!owner);
     $('adminLoginModal').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
     setAdminMode(true);
-    try{
-      if(ownerNow) renderAdmin();
-      configureUserDashboard();
-      ensureAdminToolbarVisible();
-    }catch(e){console.error('open dashboard after login',e)}
-  };
-
-  // مسار دخول مباشر وآمن للمستخدمين الأساسيين:
-  // اسم المستخدم = السجل المدني، وكلمة المرور = السجل المدني.
-  // لا يعتمد على حالة التخزين المحلي أو نجاح المزامنة السحابية.
-  const normalizedUserDirect=normalizeCivilId(user);
-  const normalizedPassDirect=normalizeCivilId(pass);
-  const builtinDirect=BUILTIN_ADMIN_USERS.find(x=>normalizeCivilId(x.username)===normalizedUserDirect);
-  if(builtinDirect && normalizedUserDirect && normalizedPassDirect===normalizedUserDirect){
-    const latest=getAdminUsers().find(x=>normalizeCivilId(x.username)===normalizedUserDirect) || builtinDirect;
-    localStorage.setItem('currentLocalAdminUser',JSON.stringify({
-      username:String(latest.username||builtinDirect.username||user),
-      civil_id:String(latest.civilId||latest.username||builtinDirect.username||user),
-      name:String(latest.name||builtinDirect.name||user),
-      role:String(latest.role||builtinDirect.role||'معلم'),
-      permissions:Array.isArray(latest.permissions)?latest.permissions:(builtinDirect.permissions||[]),
-      is_owner:false
-    }));
-    localStorage.removeItem('cloudAdminUser');
-    localStorage.removeItem('cloudAdminToken');
-
-    // افتح الواجهة فورًا، ثم حاول إنشاء جلسة سحابية في الخلفية دون تعطيل الدخول.
-    openDashboard();
-    try{
-      cloudApi('login',{username:String(latest.username||user),password:pass},false).then(cloudLogin=>{
-        if(cloudLogin?.token){
-          localStorage.setItem('cloudAdminToken',cloudLogin.token);
-          const merged={
-            ...(cloudLogin.user||{}),
-            username:String(latest.username||user),
-            civil_id:String(latest.civilId||latest.username||user),
-            name:String(latest.name||builtinDirect.name||user),
-            role:String(latest.role||builtinDirect.role||'معلم'),
-            permissions:Array.isArray(latest.permissions)?latest.permissions:(builtinDirect.permissions||[]),
-            is_owner:false
-          };
-          localStorage.setItem('cloudAdminUser',JSON.stringify(merged));
-        }
-      }).catch(e=>console.warn('direct user cloud login',e));
-    }catch(e){}
-    btn.disabled=false;
-    btn.textContent=oldText;
-    return;
-  }
-
-  const hashText=async(s)=>{
-    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(s)));
-    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  };
-
-  const p=getAdminProfile();
-  const normalizedLoginUser=normalizeCivilId(user)||user;
-  const normalizedLoginPass=normalizeCivilId(pass)||pass;
-  const extraCandidate=getAdminUsers().find(x=>{
-    const username=String(x.username||'').trim();
-    const civil=String(x.civilId||x.username||'').trim();
-    return username===user || civil===user || normalizeCivilId(username)===normalizedLoginUser || normalizeCivilId(civil)===normalizedLoginUser;
-  });
-  const extraPasswordOk=!!extraCandidate && (
-    String(extraCandidate.password||'').trim()===pass ||
-    normalizeCivilId(String(extraCandidate.password||''))===normalizedLoginPass ||
-    String(extraCandidate.username||'').trim()===pass ||
-    String(extraCandidate.civilId||extraCandidate.username||'').trim()===pass ||
-    normalizeCivilId(String(extraCandidate.username||''))===normalizedLoginPass ||
-    normalizeCivilId(String(extraCandidate.civilId||extraCandidate.username||''))===normalizedLoginPass
-  );
-  const extra=extraPasswordOk ? extraCandidate : null;
-
-  let localOk=(String(p.username||'').trim()===user && String(p.password||'').trim()===pass) || !!extra;
-
-  if(!localOk && user==='1015401902'){
-    const h=await hashText(pass);
-    localOk=(h==='3145fce15ea7c353fb72a705d463849e85b4d21e74b703dca210cc9e168b6ea0');
-  }
-
-  if(localOk){
-    if(extra){
-      if(!String(extra.password||'').trim()){
-        try{
-          const localUsers=getAdminUsers();
-          const localIdx=localUsers.findIndex(x=>String(x.username||'').trim()===user);
-          if(localIdx>=0){
-            localUsers[localIdx].password=String(localUsers[localIdx].civilId||localUsers[localIdx].username||user);
-            saveAdminUsers(localUsers);
-          }
-        }catch(e){}
-      }
-      localStorage.setItem('currentLocalAdminUser',JSON.stringify({
-        username:String(extra.username||user),
-        civil_id:String(extra.civilId||extra.username||user),
-        name:String(extra.name||extra.username||user),
-        role:String(extra.role||'مستخدم'),
-        permissions:Array.isArray(extra.permissions)?extra.permissions:[],
-        is_owner:false
-      }));
-      localStorage.removeItem('cloudAdminUser');
-      localStorage.removeItem('cloudAdminToken');
-
-      // افتح صلاحيات المستخدم فورًا من البيانات المحلية، والسحابة تعمل في الخلفية.
-      openDashboard();
-      try{
-        cloudApi('login',{username:user,password:pass},false).then(cloudLogin=>{
-          if(cloudLogin?.token){
-            localStorage.setItem('cloudAdminToken',cloudLogin.token);
-            if(cloudLogin.user){
-              const mergedUser={
-                ...cloudLogin.user,
-                username:String(extra.username||user),
-                civil_id:String(extra.civilId||extra.username||user),
-                name:String(extra.name||extra.username||user),
-                role:String(extra.role||cloudLogin.user.role||'مستخدم'),
-                permissions:Array.isArray(extra.permissions)?extra.permissions:(cloudLogin.user.permissions||[]),
-                is_owner:false
-              };
-              localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
-            }
-          }
-        }).catch(cloudErr=>console.warn('user cloud session login',cloudErr));
-      }catch(cloudErr){
-        console.warn('user cloud session login',cloudErr);
-      }
-      btn.disabled=false;
-      btn.textContent=oldText;
-      return;
-    }else{
-      localStorage.setItem('currentLocalAdminUser',JSON.stringify({
-        username:String(p.username||user),civil_id:String(p.username||user),
-        name:String(p.displayName||'المدير'),role:'مدير',
-        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','activityLeader'],is_owner:true
-      }));
-      localStorage.removeItem('cloudAdminUser');
-      localStorage.removeItem('cloudAdminToken');
-
-      // افتح لوحة المدير فورًا ثم أنشئ الجلسة السحابية في الخلفية.
-      openDashboard();
-      try{
-        cloudApi('login',{username:user,password:pass},false).then(cloudLogin=>{
-          if(cloudLogin?.token){
-            localStorage.setItem('cloudAdminToken',cloudLogin.token);
-            if(cloudLogin.user) localStorage.setItem('cloudAdminUser',JSON.stringify(cloudLogin.user));
-          }
-        }).catch(cloudErr=>console.warn('owner cloud session login',cloudErr));
-      }catch(cloudErr){
-        console.warn('owner cloud session login',cloudErr);
-      }
-      btn.disabled=false;
-      btn.textContent=oldText;
-      return;
-    }
-    openDashboard();
-    btn.disabled=false;
-    btn.textContent=oldText;
-    return;
-  }
-
-  btn.disabled=true;
-  btn.textContent='جاري الدخول...';
-  try{
-    await cloudLoginAndSync(user,pass);
-    openDashboard();
+    if(owner){renderAdmin();}
+    configureUserDashboard();
+    ensureAdminToolbarVisible();
   }catch(e){
     console.error('admin login failed',e);
-    toast('اسم المستخدم أو كلمة المرور غير صحيحة');
+    const msg=String(e?.message||'');
+    if(msg.includes('account_locked')) toast('هذا الحساب مقفل أمنيًا. اطلب من المدير تعيين كلمة مرور جديدة.');
+    else toast('اسم المستخدم أو كلمة المرور غير صحيحة');
   }finally{
-    btn.disabled=false;
-    btn.textContent=oldText;
+    btn.disabled=false;btn.textContent=oldText;
   }
 };
 $('adminCancelBtn').onclick=()=>{
@@ -12226,47 +10748,12 @@ function getAdminProfile(){
     return {username:'1015401902',displayName:'المدير'};
   }
 }
-const BUILTIN_ADMIN_USERS=[{"username":"1096253859","name":"ابراهيم محمد علي عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1090839539","name":"احمد عبدالرحيم هادي عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1073436121","name":"احمد عبدالله بن محمد آل اسحاق","password":"","role":"معلم","permissions":["attendance"]},{"username":"298966791","name":"ادريس حسن جابر ودعاني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1059041861","name":"جابر بلغيث - الكيادي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1109565869","name":"حسن احمد علي الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1027041910","name":"حسين مسعود بن مهدي آل خريم","password":"","role":"معلم","permissions":["attendance"]},{"username":"1022052185","name":"حمد حسن حمد آل مردف","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082882521","name":"حمد محمد بن هادي ال مطيف","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111444319","name":"حمود علي سالم الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1080799446","name":"خالد محمد علان الجوفي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082314251","name":"خليل عمر خليل عسيري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1085542957","name":"سالم عبدالله بن محمد ال شريه","password":"","role":"معلم","permissions":["attendance"]},{"username":"1080879685","name":"سعيد علي سعيد الشيخي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1086117049","name":"سلطان احمد محمد حمدي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111151989","name":"صالح محمد حسن الهمامي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1091870558","name":"عبدالعزيز منصور عويضه الجهني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1015259219","name":"علي بن صالح بن احمد القارح","password":"","role":"معلم","permissions":["attendance"]},{"username":"1090956598","name":"عمر عبد الله حسين لغبي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1094501929","name":"فهد هادي علي المحامض","password":"","role":"معلم","permissions":["attendance"]},{"username":"1032026435","name":"محمد بن ظافر بن علي ال عبيه","password":"","role":"معلم","permissions":["attendance"]},{"username":"1105067217","name":"محمد تركي مساعد الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1047775695","name":"محمد خلف محمد الشهراني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1057995316","name":"محمد غبيشي محمد الهلالي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1082086743","name":"مستور عبدالله مستور الحسني","password":"","role":"معلم","permissions":["attendance"]},{"username":"1111530810","name":"ملفي علي سالم الحارثي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1055738809","name":"ناصر أحمد يحي ظامري","password":"","role":"معلم","permissions":["attendance"]},{"username":"1117041382","name":"هادي احمد سليمان شقيقي","password":"","role":"معلم","permissions":["attendance"]},{"username":"1077833299","name":"هاني عبدالرحيم شليويح الامير","password":"","role":"معلم","permissions":["attendance"]}];
+const BUILTIN_ADMIN_USERS=[];
 function getAdminUsers(){
   try{
-    let users=JSON.parse(localStorage.getItem('adminUsers')||'[]');
-    if(!Array.isArray(users)) users=[];
-
-    // ضمان بقاء جميع المستخدمين الأساسيين موجودين دائمًا حتى بعد أي مزامنة سحابية،
-    // مع الحفاظ على أي كلمة مرور أو صلاحيات أو اسم تم تعديله محليًا.
-    const byUser=new Map(users.map((u,i)=>[String(u.username||'').trim(),i]));
-    for(const item of BUILTIN_ADMIN_USERS){
-      const key=String(item.username||'').trim();
-      if(!key) continue;
-      if(!byUser.has(key)){
-        users.push({...item});
-        byUser.set(key,users.length-1);
-      }else{
-        const i=byUser.get(key);
-        const current=users[i]||{};
-        users[i]={
-          ...item,
-          ...current,
-          username:key,
-          civilId:String(current.civilId||item.civilId||key),
-          name:String(current.name||item.name||key),
-          role:String(current.role||item.role||'معلم'),
-          password:String(current.password??item.password??''),
-          permissions:(Array.isArray(current.permissions)&&current.permissions.length)
-            ? current.permissions
-            : (Array.isArray(item.permissions)?item.permissions:[])
-        };
-      }
-    }
-
-    localStorage.setItem('adminUsers',JSON.stringify(users));
-    localStorage.setItem('adminUsersImportV2','1');
-    return users;
-  }catch(e){
-    const fallback=BUILTIN_ADMIN_USERS.map(x=>({...x,civilId:String(x.civilId||x.username||'')}));
-    try{localStorage.setItem('adminUsers',JSON.stringify(fallback))}catch(_){}
-    return fallback;
-  }
+    const users=JSON.parse(localStorage.getItem('adminUsers')||'[]');
+    return Array.isArray(users)?users:[];
+  }catch(e){return []}
 }
 function saveAdminUsers(rows){localStorage.setItem('adminUsers',JSON.stringify(rows))}
 function applySchoolSettings(){
@@ -13471,45 +11958,19 @@ function getAttendanceLog(){
   try{return JSON.parse(localStorage.getItem('attendanceLog')||'[]')}catch(e){return []}
 }
 async function saveAttendanceLog(rows,cloudRows=null){
-  localStorage.setItem('attendanceLog',JSON.stringify(rows));
   const rowsToSync=Array.isArray(cloudRows)?cloudRows:rows;
-
-  let synced=false;
-  let lastError=null;
-
-  if(localStorage.getItem('cloudAdminToken')){
-    try{
-      await cloudApi('sync_attendance',{attendance:rowsToSync});
-      synced=true;
-    }catch(e){
-      lastError=e;
-      console.warn('cloud attendance token sync',e);
-    }
+  if(!localStorage.getItem('cloudAdminToken')) throw new Error('انتهت جلسة الدخول');
+  const result=await cloudApi('sync_attendance',{attendance:rowsToSync});
+  if(Number(result?.count)!==rowsToSync.length){
+    throw new Error('لم يتم حفظ جميع سجلات التحضير');
   }
-
-  if(!synced){
-    try{
-      const current=getCurrentLoggedAdminUser?.()||{};
-      const username=String(current.username||current.civil_id||current.civilId||'').trim();
-      const password=String(current.password||current.civil_id||current.civilId||current.username||'').trim();
-      if(username && password){
-        await cloudApi('sync_attendance_with_credentials',{username,password,attendance:rowsToSync},false);
-        synced=true;
-      }
-    }catch(e){
-      lastError=e;
-      console.warn('cloud attendance credential sync',e);
-    }
-  }
-
-  if(!synced){
-    throw lastError || new Error('تعذر حفظ التحضير في السحابة');
-  }
+  localStorage.setItem('attendanceLog',JSON.stringify(rows));
   return true;
 }
 
 function normalizeCloudAttendanceRow(x){
   return {
+    id:x?.id??null,
     idno:String(x?.idno||''),
     name:String(x?.student_name||x?.name||''),
     status:String(x?.status||''),
@@ -13529,13 +11990,8 @@ function normalizeCloudAttendanceRow(x){
 }
 
 function attendanceRecordKey(x){
-  return [
-    String(x?.date||''),
-    String(x?.idno||''),
-    String(x?.status||''),
-    String(x?.time||''),
-    String(x?.teacherCivilId||x?.teacher_civil_id||'')
-  ].join('|');
+  if(x?.id!==undefined && x?.id!==null && x?.id!=='') return 'id:'+String(x.id);
+  return [String(x?.idno||''),String(x?.date||''),String(x?.period??0)].join('|');
 }
 
 async function getFreshAttendanceRowsForLateCheck(localRows){
@@ -14171,7 +12627,12 @@ if($('weeklyAttAnalyticsWhatsAppBtn')) $('weeklyAttAnalyticsWhatsAppBtn').onclic
   openWeeklyAttSummaryWhatsApp(data);
 };
 
-function todayKey(){return new Date().toISOString().slice(0,10)}
+function riyadhDateKey(date=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  const m=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+  return `${m.year}-${m.month}-${m.day}`;
+}
+function todayKey(){return riyadhDateKey(new Date())}
 
 function canUseAttendanceWhatsApp(){
   if(isCurrentOwner()) return true;
@@ -20395,7 +18856,7 @@ let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
-},45000);
+},300000);
 window.addEventListener('focus',()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
