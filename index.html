@@ -4964,12 +4964,6 @@
 
 
     <div class="attendance-session-controls hidden">
-      <div class="attendance-session-field" id="attendanceMorningLateField" style="display:none;align-self:end">
-        <label for="attendanceMorningLate" style="cursor:pointer;display:flex;align-items:center;gap:9px;min-height:52px;padding:0 14px;border:1px solid #c9d8d4;border-radius:12px;background:#f7fbfa;font-weight:800">
-          <input id="attendanceMorningLate" type="checkbox" style="width:20px;height:20px;accent-color:#0f7665">
-          <span>⏰ تأخر عن الطابور الصباحي</span>
-        </label>
-      </div>
       <div class="attendance-session-field">
         <label for="attendancePeriodSelect">🕐 الحصة</label>
         <select id="attendancePeriodSelect">
@@ -14739,12 +14733,11 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     if(!seedStudent){toast('تعذر العثور على بيانات الطالب');return}
 
     if(attendanceMode==='late'){
-      const morningLate=!!$('attendanceMorningLate')?.checked;
       const periodSelected=String($('attendancePeriodSelect')?.value||'').trim();
       const subjectSelected=String($('attendanceSubjectSelect')?.value||'').trim();
-      if(!morningLate && (!periodSelected || !subjectSelected)){
-        alert('أرجو الاختيار لنوع التأخر: تأخر عن الطابور الصباحي، أو اختيار الحصة والمادة.');
-        toast('أرجو الاختيار لنوع التأخر');
+      if(!periodSelected || !subjectSelected){
+        alert('⚠️ أرجو اختيار الحصة والمادة قبل حفظ التأخر.');
+        toast('أرجو اختيار الحصة والمادة');
         return;
       }
     }
