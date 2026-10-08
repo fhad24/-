@@ -14418,8 +14418,20 @@ let attendancePresentFilterHijriDate=(()=>{
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
 
+let __attendanceSelectionDay=todayKey();
+
+function ensureAttendanceSelectionDay(){
+  const current=todayKey();
+  if(__attendanceSelectionDay!==current){
+    __attendanceSelectionDay=current;
+    attendancePresentSelectedIds.clear();
+  }
+  return current;
+}
+
 function attendanceLateSelectionStorageKey(){
-  return 'attendanceLateSelections:'+todayKey();
+  const current=ensureAttendanceSelectionDay();
+  return 'attendanceLateSelections:'+current;
 }
 function loadPersistedLateSelections(){
   try{
@@ -14572,7 +14584,7 @@ function getAttendanceEditedTime(){
 }
 
 function restoreAttendanceSelectionsForMode(mode){
-  const date=todayKey();
+  const date=ensureAttendanceSelectionDay();
   if(mode==='late'){
     // أعد التحديد فورًا من التخزين المحلي، ثم ادمج أي سجلات محفوظة فعليًا.
     const restored=loadPersistedLateSelections();
@@ -14590,6 +14602,7 @@ function restoreAttendanceSelectionsForMode(mode){
 }
 
 function openAttendanceModal(mode){
+  ensureAttendanceSelectionDay();
   attendanceEditingIndex=-1;
   attendanceMode=mode;
   attendanceSelectedId='';
@@ -14942,6 +14955,7 @@ async function makeSharpAttendanceThumb(blob,key=''){
 }
 
 async function renderAttendanceStudentList(){
+  ensureAttendanceSelectionDay();
   const rawQ=$('attendanceStudentSearch')?.value||'';
   const q=normalizeSearchText(rawQ);
   const cls=$('attendanceClassFilter').value;
