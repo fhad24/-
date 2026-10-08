@@ -4778,7 +4778,7 @@
           <select id="studentTransferClassroom">
             <option value="">اختر الفصل</option>
             <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
-            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option><option value="الانتساب">الانتساب</option>
           </select>
         </div>
       </div>
@@ -4807,7 +4807,7 @@
           <select id="studentRosterReconcileClass">
             <option value="">اختر الفصل</option>
             <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
-            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+            <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option><option value="الانتساب">الانتساب</option>
           </select>
         </div>
         <div class="wide" style="grid-column:1/-1">
@@ -4849,7 +4849,7 @@
         <select id="studentTransferClassFilter">
           <option value="">جميع الفصول</option>
           <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
-          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option><option value="الانتساب">الانتساب</option>
         </select>
       </div>
       <div class="student-transfer-bulk" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
@@ -4857,7 +4857,7 @@
         <select id="studentTransferBulkClass" style="min-width:160px">
           <option value="">اختر الفصل الجديد</option>
           <option value="أ">أ</option><option value="ب">ب</option><option value="ج">ج</option>
-          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option>
+          <option value="د">د</option><option value="هـ">هـ</option><option value="و">و</option><option value="الانتساب">الانتساب</option>
         </select>
         <button type="button" class="btn btn-primary" id="studentTransferBulkMoveBtn">نقل الطلاب المحددين</button>
       </div>
@@ -9249,6 +9249,28 @@ async function studentTransferPhotoHtml(s){
   return '<span class="student-transfer-photo-fallback">👤</span>';
 }
 
+
+function syncFirstSecondaryAffiliationOptions(){
+  const pairs=[
+    ['studentTransferGrade','studentTransferClassroom'],
+    ['studentRosterReconcileGrade','studentRosterReconcileClass'],
+    ['studentTransferGradeFilter','studentTransferClassFilter']
+  ];
+  pairs.forEach(([gradeId,classId])=>{
+    const gradeEl=$(gradeId), classEl=$(classId);
+    if(!classEl) return;
+    const opt=[...classEl.options].find(o=>o.value==='الانتساب');
+    if(!opt) return;
+    const grade=String(gradeEl?.value||'');
+    // في الفلتر العام نسمح بإظهار "الانتساب" حتى مع "جميع الصفوف" لسهولة البحث.
+    const allow=gradeId==='studentTransferGradeFilter'
+      ? (!grade || studentGradeKey(grade)===studentGradeKey('الأول الثانوي'))
+      : studentGradeKey(grade)===studentGradeKey('الأول الثانوي');
+    opt.hidden=!allow;
+    opt.disabled=!allow;
+    if(!allow && classEl.value==='الانتساب') classEl.value='';
+  });
+}
 function studentTransferFilteredStudents(){
   const q=String($('studentTransferSearch')?.value||'').trim().toLowerCase();
   const grade=String($('studentTransferGradeFilter')?.value||'');
@@ -9331,6 +9353,7 @@ function fillStudentTransferEditor(s){
   if($('studentTransferIdno')) $('studentTransferIdno').value=String(s.idno||'');
   if($('studentTransferPhone')) $('studentTransferPhone').value=String(s.phone||'');
   if($('studentTransferGrade')) $('studentTransferGrade').value=String(s.grade||'');
+  syncFirstSecondaryAffiliationOptions();
   if($('studentTransferClassroom')) $('studentTransferClassroom').value=studentClassKey(s.classroom)||String(s.classroom||'');
   if($('studentTransferStatus')) $('studentTransferStatus').textContent=isCurrentOwner()
     ? 'الأدمن: الحفظ يطبق مباشرة.'
@@ -9377,6 +9400,14 @@ async function moveSelectedStudentsBetweenClasses(){
   const ids=[...studentTransferMultiSelected];
   if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return}
   if(!targetClass){alert('اختر الفصل الجديد أولًا.');return}
+  if(targetClass==='الانتساب'){
+    const invalid=ids.map(id=>getStudents().find(x=>String(x.idno||'')===String(id)))
+      .filter(s=>s && studentGradeKey(s.grade)!==studentGradeKey('الأول الثانوي'));
+    if(invalid.length){
+      alert('فصل الانتساب مخصص للصف الأول الثانوي فقط. يوجد ضمن المحدد طلاب من صفوف أخرى.');
+      return;
+    }
+  }
   if(!confirm(`سيتم نقل ${ids.length} طالب/طلاب إلى الفصل ${targetClass}. هل تريد المتابعة؟`)) return;
 
   const btn=$('studentTransferBulkMoveBtn');
@@ -9442,6 +9473,10 @@ async function saveStudentTransferChange(){
   const phone=String($('studentTransferPhone')?.value||'').trim();
   const grade=String($('studentTransferGrade')?.value||'').trim();
   const classroom=String($('studentTransferClassroom')?.value||'').trim();
+  if(classroom==='الانتساب' && studentGradeKey(grade)!==studentGradeKey('الأول الثانوي')){
+    alert('فصل الانتساب مخصص للصف الأول الثانوي فقط.');
+    return;
+  }
   if(!old_idno){alert('اختر طالبًا أولًا.');return}
   if(!new_idno||!name||!grade||!classroom){alert('أكمل الاسم والسجل المدني والصف والفصل.');return}
   const btn=$('studentTransferSaveBtn'); const oldText=btn.textContent; btn.disabled=true;
@@ -9513,6 +9548,7 @@ async function loadStudentTransferApprovals(){
 }
 
 async function initStudentTransferManager(){
+  syncFirstSecondaryAffiliationOptions();
   removeStudentTransferSelectAll();
   setTimeout(removeStudentTransferSelectAll,50);
   setTimeout(removeStudentTransferSelectAll,500);
@@ -9593,6 +9629,10 @@ async function reconcileStudentRosterFromAdmin(){
   const roster=parseStudentRosterText(raw);
   if(!grade){alert('اختر الصف أولًا.');return}
   if(!classroom){alert('اختر الفصل أولًا.');return}
+  if(classroom==='الانتساب' && studentGradeKey(grade)!==studentGradeKey('الأول الثانوي')){
+    alert('فصل الانتساب مخصص للصف الأول الثانوي فقط.');
+    return;
+  }
   if(!roster.length){alert('لم أتمكن من قراءة أي اسم مع سجل مدني من القائمة.');return}
 
   const msg='تمت قراءة '+roster.length+' طالب.\nسيتم تثبيت المطابقين في '+grade+' '+classroom+' ونقل أي طالب زائد من نفس الفصل إلى الفصل الوهمي.\nلن يتم حذف الصور أو الحضور.\n\nهل تريد المتابعة؟';
@@ -9642,8 +9682,10 @@ if($('studentRosterReconcileBtn')) $('studentRosterReconcileBtn').onclick=reconc
 if($('studentTransferBulkMoveBtn')) $('studentTransferBulkMoveBtn').onclick=moveSelectedStudentsBetweenClasses;
 
 if($('studentTransferSearch')) $('studentTransferSearch').oninput=renderStudentTransferStudents;
-if($('studentTransferGradeFilter')) $('studentTransferGradeFilter').onchange=renderStudentTransferStudents;
+if($('studentTransferGradeFilter')) $('studentTransferGradeFilter').onchange=()=>{syncFirstSecondaryAffiliationOptions();renderStudentTransferStudents();};
 if($('studentTransferClassFilter')) $('studentTransferClassFilter').onchange=renderStudentTransferStudents;
+if($('studentTransferGrade')) $('studentTransferGrade').onchange=syncFirstSecondaryAffiliationOptions;
+if($('studentRosterReconcileGrade')) $('studentRosterReconcileGrade').onchange=syncFirstSecondaryAffiliationOptions;
 if($('studentTransferSaveBtn')) $('studentTransferSaveBtn').onclick=saveStudentTransferChange;
 if($('studentTransferClearBtn')) $('studentTransferClearBtn').onclick=clearStudentTransferSelection;
 if($('studentTransferApprovalsRefresh')) $('studentTransferApprovalsRefresh').onclick=loadStudentTransferApprovals;
