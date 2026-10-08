@@ -3350,6 +3350,51 @@
       padding:0 14px 18px!important;
       box-sizing:border-box!important;
     }
+
+    /* نَشِط — المساعد الشخصي لرائد النشاط */
+    .nashit-page{max-width:1500px;margin:0 auto;padding:14px;direction:rtl}
+    .nashit-hero{background:linear-gradient(135deg,#0f7665,#0b5d51);color:#fff;border-radius:24px;padding:22px 24px;margin-bottom:14px;display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}
+    .nashit-hero h2{color:#fff;font-size:28px;margin:0 0 6px}
+    .nashit-hero p{margin:0;opacity:.92;font-size:14px}
+    .nashit-back{border:1px solid #ffffff99;background:#fff;color:#0f7665;border-radius:14px;padding:11px 18px;font-family:inherit;font-weight:900;cursor:pointer}
+    .nashit-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:thin}
+    .nashit-tab{flex:0 0 auto;border:1px solid #cfe0db;background:#fff;color:#29463f;border-radius:14px;padding:11px 15px;font-family:inherit;font-weight:900;cursor:pointer;white-space:nowrap}
+    .nashit-tab.active{background:#0f7665;color:#fff;border-color:#0f7665}
+    .nashit-pane{display:none}.nashit-pane.active{display:block}
+    .nashit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .nashit-card{background:#fff;border:1px solid #d7e4e0;border-radius:18px;padding:16px;box-shadow:0 3px 10px #00000008}
+    .nashit-card h3{margin:0 0 10px;font-size:17px;color:#173b34}
+    .nashit-stat b{font-size:30px;color:#0f7665;display:block;margin-top:6px}
+    .nashit-muted{color:#6b7f79;font-size:12px;line-height:1.7}
+    .nashit-today-list{display:grid;gap:8px}
+    .nashit-today-item{border:1px solid #e0e9e6;border-radius:12px;padding:10px 12px;background:#fbfdfc;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .nashit-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+    .nashit-action{border:0;border-radius:15px;background:#0f7665;color:#fff;padding:13px 12px;font-family:inherit;font-weight:900;cursor:pointer}
+    .nashit-action.light{background:#e8f5f1;color:#0f7665;border:1px solid #cbe5dd}
+    .nashit-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .nashit-section-head h3{margin:0;font-size:22px;color:#173b34}
+    .nashit-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .nashit-btn{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:9px 13px;font-family:inherit;font-weight:900;cursor:pointer}
+    .nashit-btn.primary{background:#0f7665;color:#fff}
+    .nashit-btn.danger{border-color:#c52d2d;color:#c52d2d}
+    .nashit-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .nashit-form-grid .wide{grid-column:1/-1}
+    .nashit-form-grid label{font-size:12px;margin-bottom:5px}
+    .nashit-form-grid input,.nashit-form-grid select,.nashit-form-grid textarea{width:100%;border:1px solid #cddbd7;border-radius:10px;background:#fff;font-family:inherit;font-size:13px;padding:9px;box-sizing:border-box}
+    .nashit-form-grid input,.nashit-form-grid select{height:43px}
+    .nashit-form-grid textarea{min-height:90px;resize:vertical}
+    .nashit-table-wrap{overflow:auto;border:1px solid #d9e4e1;border-radius:14px;background:#fff}
+    .nashit-table{width:100%;min-width:900px;border-collapse:collapse;font-size:12px}
+    .nashit-table th,.nashit-table td{padding:9px 8px;border-bottom:1px solid #e6eeec;text-align:center;vertical-align:middle}
+    .nashit-table th{background:#eef7f4;color:#1c4a41;font-weight:900;white-space:nowrap}
+    .nashit-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;background:#edf3f1;color:#435e58}
+    .nashit-status.done{background:#e6f6ef;color:#0f7665}.nashit-status.running{background:#fff3cf;color:#8a6500}.nashit-status.cancel{background:#fde8e8;color:#b42318}
+    .nashit-progress{height:12px;background:#edf2f0;border-radius:999px;overflow:hidden}.nashit-progress span{display:block;height:100%;background:#0f7665}
+    .nashit-empty{padding:24px;text-align:center;color:#6b7f79}
+    .nashit-student-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .nashit-note{padding:10px 12px;border-radius:12px;background:#eff8f5;color:#0f6f60;font-size:12px;font-weight:800}
+    @media(max-width:1000px){.nashit-grid{grid-template-columns:repeat(2,1fr)}.nashit-form-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:650px){.nashit-grid,.nashit-quick,.nashit-student-summary,.nashit-form-grid{grid-template-columns:1fr}.nashit-form-grid .wide{grid-column:auto}.nashit-page{padding:8px}.nashit-hero h2{font-size:22px}}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -4875,6 +4920,127 @@
     </div>
 
 
+  </div>
+</section>
+
+<section id="activityLeaderPage" class="page hidden">
+  <div class="nashit-page">
+    <div class="nashit-hero">
+      <div>
+        <h2>⭐ نَشِط — المساعد الشخصي لرائد النشاط</h2>
+        <p>الخطة والبرامج والطلاب والتقارير والميزانية في مكان واحد.</p>
+      </div>
+      <button type="button" class="nashit-back" id="nashitBackBtn">العودة إلى صفحاتي</button>
+    </div>
+
+    <div class="nashit-tabs" id="nashitTabs">
+      <button class="nashit-tab active" data-nashit-tab="today">🏠 يومي</button>
+      <button class="nashit-tab" data-nashit-tab="plan">🗓️ الخطة السنوية</button>
+      <button class="nashit-tab" data-nashit-tab="programs">🎯 البرامج والفعاليات</button>
+      <button class="nashit-tab" data-nashit-tab="clubs">👥 الأندية والجماعات</button>
+      <button class="nashit-tab" data-nashit-tab="broadcast">🎙️ الإذاعة المدرسية</button>
+      <button class="nashit-tab" data-nashit-tab="students">🎓 الطلاب</button>
+      <button class="nashit-tab" data-nashit-tab="competitions">🏆 المسابقات</button>
+      <button class="nashit-tab" data-nashit-tab="approvals">✍️ الموافقات والنماذج</button>
+      <button class="nashit-tab" data-nashit-tab="committee">🧾 اللجنة والاجتماعات</button>
+      <button class="nashit-tab" data-nashit-tab="budget">💰 الميزانية</button>
+      <button class="nashit-tab" data-nashit-tab="portfolio">📚 ملف الإنجاز</button>
+      <button class="nashit-tab" data-nashit-tab="reports">📊 التقارير</button>
+      <button class="nashit-tab" data-nashit-tab="settings">⚙️ الإعدادات</button>
+    </div>
+
+    <div class="nashit-pane active" data-nashit-pane="today">
+      <div class="nashit-grid">
+        <div class="nashit-card nashit-stat"><span>نسبة تنفيذ الخطة</span><b id="nashitPlanRate">0%</b></div>
+        <div class="nashit-card nashit-stat"><span>مشاركة الطلاب</span><b id="nashitParticipationRate">0%</b></div>
+        <div class="nashit-card nashit-stat"><span>البرامج المنفذة</span><b id="nashitDonePrograms">0</b></div>
+        <div class="nashit-card nashit-stat"><span>المناسبة القادمة</span><b id="nashitNextEventDays">—</b><div id="nashitNextEventName" class="nashit-muted"></div></div>
+      </div>
+      <div class="nashit-quick">
+        <button class="nashit-action" data-nashit-quick="program">➕ برنامج</button>
+        <button class="nashit-action" data-nashit-quick="evidence">📷 شاهد</button>
+        <button class="nashit-action" data-nashit-quick="attendance">✅ حضور</button>
+        <button class="nashit-action" data-nashit-quick="report">📄 تقرير</button>
+      </div>
+      <div class="nashit-grid">
+        <div class="nashit-card" style="grid-column:span 2"><h3>مهام اليوم</h3><div id="nashitTodayTasks" class="nashit-today-list"></div></div>
+        <div class="nashit-card" style="grid-column:span 2"><h3>تنبيهات ومواعيد</h3><div id="nashitTodayAlerts" class="nashit-today-list"></div></div>
+      </div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="plan">
+      <div class="nashit-section-head"><h3>الخطة السنوية</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitNewPlanItem">إنشاء بند خطة</button><button class="nashit-btn" id="nashitCopyPlan">نسخ خطة العام الماضي</button><button class="nashit-btn" id="nashitApprovePlan">إرسال للمدير للاعتماد</button><button class="nashit-btn" id="nashitPrintPlan">طباعة الخطة</button></div></div>
+      <div class="nashit-card"><div class="nashit-note">المجالات: الديني، الثقافي، العلمي، الاجتماعي والتطوعي، الوطني، الفني، الرياضي، الكشفي، الصحي، المهني.</div><div id="nashitPlanList" style="margin-top:12px"></div></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="programs">
+      <div class="nashit-section-head"><h3>البرامج والفعاليات</h3><button class="nashit-btn primary" id="nashitAddProgramBtn">➕ إضافة برنامج</button></div>
+      <div id="nashitProgramsList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="clubs">
+      <div class="nashit-section-head"><h3>الأندية والجماعات</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitAddClubBtn">إضافة نادٍ</button><button class="nashit-btn" id="nashitClubSurveyBtn">إنشاء رابط رغبات الطلاب</button><button class="nashit-btn" id="nashitClubReminderBtn">متابعة المشرفين</button></div></div>
+      <div id="nashitClubsList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="broadcast">
+      <div class="nashit-section-head"><h3>الإذاعة المدرسية</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitAddBroadcastBtn">إضافة إذاعة</button><button class="nashit-btn" id="nashitGenerateBroadcastBtn">توليد جدول الفصل الدراسي</button><button class="nashit-btn" id="nashitPrintBroadcastBtn">طباعة</button></div></div>
+      <div id="nashitBroadcastList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="students">
+      <div class="nashit-section-head"><h3>سجل مشاركة الطلاب</h3><div class="nashit-toolbar"><button class="nashit-btn" id="nashitNonParticipantsBtn">غير المشاركين</button><button class="nashit-btn" id="nashitStudentExportBtn">تصدير سجل الطالب</button></div></div>
+      <div class="nashit-student-summary"><div class="nashit-card nashit-stat"><span>إجمالي الطلاب</span><b id="nashitStudentsTotal">0</b></div><div class="nashit-card nashit-stat"><span>شاركوا</span><b id="nashitStudentsParticipated">0</b></div><div class="nashit-card nashit-stat"><span>لم يشاركوا</span><b id="nashitStudentsNotParticipated">0</b></div></div>
+      <div id="nashitStudentsList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="competitions">
+      <div class="nashit-section-head"><h3>المسابقات</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitAddCompetitionBtn">إضافة مسابقة</button><button class="nashit-btn" id="nashitCompetitionCertificateBtn">إصدار شهادات</button></div></div>
+      <div id="nashitCompetitionsList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="approvals">
+      <div class="nashit-section-head"><h3>الموافقات والنماذج</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitParentConsentBtn">موافقة ولي الأمر</button><button class="nashit-btn" id="nashitLetterBtn">إنشاء خطاب</button><button class="nashit-btn" id="nashitArchiveBtn">الأرشيف</button></div></div>
+      <div id="nashitApprovalsList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="committee">
+      <div class="nashit-section-head"><h3>لجنة النشاط والاجتماعات</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitAddMemberBtn">إضافة عضو</button><button class="nashit-btn" id="nashitAddMeetingBtn">محضر اجتماع</button></div></div>
+      <div id="nashitCommitteeList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="budget">
+      <div class="nashit-section-head"><h3>الميزانية</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitAddExpenseBtn">إضافة مصروف</button><button class="nashit-btn" id="nashitBudgetReportBtn">تقرير صرف للمدير</button></div></div>
+      <div class="nashit-grid"><div class="nashit-card nashit-stat"><span>المعتمد</span><b id="nashitBudgetApproved">0</b></div><div class="nashit-card nashit-stat"><span>المصروف</span><b id="nashitBudgetSpent">0</b></div><div class="nashit-card nashit-stat"><span>المتبقي</span><b id="nashitBudgetRemain">0</b></div><div class="nashit-card"><label>تعديل المبلغ المعتمد</label><input id="nashitBudgetInput" type="number" min="0"><button class="nashit-btn primary" id="nashitBudgetSaveBtn" style="margin-top:8px">حفظ</button></div></div>
+      <div id="nashitExpensesList" style="margin-top:12px"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="portfolio">
+      <div class="nashit-section-head"><h3>ملف الإنجاز</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitPortfolioPdfBtn">تصدير PDF</button><button class="nashit-btn" id="nashitPortfolioRefreshBtn">تحديث الملف</button></div></div>
+      <div id="nashitPortfolioList"></div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="reports">
+      <div class="nashit-section-head"><h3>التقارير</h3><div class="nashit-toolbar"><button class="nashit-btn primary" id="nashitSmartReportBtn">✨ مساعد كتابة التقرير</button><button class="nashit-btn" id="nashitReportPdfBtn">PDF</button><button class="nashit-btn" id="nashitReportExcelBtn">Excel</button></div></div>
+      <div class="nashit-card">
+        <select id="nashitReportType" style="width:100%;height:44px;border:1px solid #cddbd7;border-radius:10px;font-family:inherit;padding:0 10px">
+          <option>تقرير تنفيذ برنامج</option><option>تقرير مناسبة وطنية مع الشواهد</option><option>التقرير الأسبوعي</option><option>التقرير الشهري</option><option>التقرير الفصلي</option><option>التقرير الختامي السنوي</option><option>نسبة تحقق الخطة</option><option>نسبة مشاركة الطلاب</option><option>تقرير متابعة المشرفين</option><option>تقرير المسابقات والإنجازات</option><option>تقرير الميزانية والمصروفات</option><option>سجل نشاط طالب</option><option>ملف إنجاز رائد النشاط</option>
+        </select>
+        <textarea id="nashitReportText" style="width:100%;min-height:260px;margin-top:10px;border:1px solid #cddbd7;border-radius:12px;padding:12px;font-family:inherit;box-sizing:border-box" placeholder="يتم إنشاء التقرير هنا..."></textarea>
+      </div>
+    </div>
+
+    <div class="nashit-pane" data-nashit-pane="settings">
+      <div class="nashit-section-head"><h3>إعدادات نَشِط</h3><button class="nashit-btn primary" id="nashitSaveSettingsBtn">حفظ الإعدادات</button></div>
+      <div class="nashit-card">
+        <div class="nashit-form-grid">
+          <div><label>اسم رائد النشاط</label><input id="nashitLeaderName"></div>
+          <div><label>العام الدراسي</label><input id="nashitSchoolYear" placeholder="1448"></div>
+          <div><label>التوقيع الإلكتروني</label><input id="nashitSignature" placeholder="اسم/عبارة التوقيع"></div>
+          <div class="wide"><label>ترويسة التقارير</label><textarea id="nashitLetterhead"></textarea></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 </main>
@@ -6501,7 +6667,7 @@ async function cloudPushLocalData(){
     }
     await cloudApi('sync_attendance',{attendance:getAttendanceLog()});
     const p=getAdminProfile();
-    const users=[{username:p.username,name:p.displayName,role:'مدير',permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true},...getAdminUsers()];
+    const users=[{username:p.username,name:p.displayName,role:'مدير',permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','activityLeader'],is_owner:true},...getAdminUsers()];
     await cloudApi('sync_users',{users});
     await cloudApi('save_settings',{settings:getSchoolSettings()});
     localStorage.setItem('cloudInitialSyncDone','1');
@@ -7839,7 +8005,7 @@ function getCurrentLoggedAdminUser(){
     civil_id:p.username||'',
     name:p.displayName||'المدير',
     role:'مدير',
-    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],
+    permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','activityLeader'],
     is_owner:true
   };
 }
@@ -8131,6 +8297,7 @@ function configureUserDashboard(){
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
     ['backupZip','نسخة احتياطية ZIP 💾','backupZip'],
+    ['activityLeader','نَشِط — رائد النشاط ⭐','activityLeader'],
   ];
   const host=$('userPermissionButtons');
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
@@ -8248,6 +8415,10 @@ function configureUserDashboard(){
       createAdminBackupZip();
       return;
     }
+    if(action==='activityLeader'){
+      openInternalPage('activityLeaderPage');
+      return;
+    }
     if(action==='reports'){
       toast('التقارير');
     }
@@ -8259,6 +8430,217 @@ function configureUserDashboard(){
 
 
 
+
+const NASHIT_KEY='nashitActivityLeaderV1';
+function nashitDefaultData(){
+  return {
+    plan:[],programs:[],clubs:[],broadcasts:[],participation:{},competitions:[],
+    approvals:[],committee:[],meetings:[],expenses:[],budgetApproved:0,evidence:[],
+    settings:{leaderName:'',schoolYear:'1448',signature:'',letterhead:''}
+  };
+}
+function getNashitData(){
+  try{
+    const x=JSON.parse(localStorage.getItem(NASHIT_KEY)||'null');
+    return Object.assign(nashitDefaultData(),x||{});
+  }catch(e){return nashitDefaultData()}
+}
+function saveNashitData(d){localStorage.setItem(NASHIT_KEY,JSON.stringify(d));}
+function nashitEsc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function nashitDate(v){try{return new Date(v).toLocaleDateString('ar-SA')}catch(e){return v||'—'}}
+function nashitPrompt(label,def=''){const v=prompt(label,def);return v===null?null:String(v).trim()}
+function nashitTab(name){
+  document.querySelectorAll('.nashit-tab').forEach(b=>b.classList.toggle('active',b.dataset.nashitTab===name));
+  document.querySelectorAll('.nashit-pane').forEach(p=>p.classList.toggle('active',p.dataset.nashitPane===name));
+  localStorage.setItem('nashitActiveTab',name);
+  renderNashit();
+}
+function openActivityLeaderPage(){
+  openInternalPage('activityLeaderPage');
+}
+function initNashitPage(){
+  document.querySelectorAll('.nashit-tab').forEach(b=>b.onclick=()=>nashitTab(b.dataset.nashitTab));
+  const saved=localStorage.getItem('nashitActiveTab')||'today';
+  nashitTab(saved);
+}
+function nashitAddPlanItem(){
+  const title=nashitPrompt('اسم البرنامج/البند في الخطة'); if(!title)return;
+  const field=nashitPrompt('المجال: ديني/ثقافي/علمي/اجتماعي وتطوعي/وطني/فني/رياضي/كشفي/صحي/مهني','وطني'); if(field===null)return;
+  const term=nashitPrompt('الفصل الدراسي','الأول')||'الأول';
+  const date=nashitPrompt('التاريخ الميلادي YYYY-MM-DD','')||'';
+  const d=getNashitData();d.plan.push({id:Date.now(),title,field,term,date,status:'مخطط'});saveNashitData(d);renderNashit();
+}
+function nashitAddProgram(){
+  const title=nashitPrompt('اسم البرنامج'); if(!title)return;
+  const goal=nashitPrompt('الهدف','')||'';
+  const field=nashitPrompt('المجال','الثقافي')||'';
+  const date=nashitPrompt('التاريخ الميلادي YYYY-MM-DD','')||'';
+  const hijri=nashitPrompt('التاريخ الهجري','')||'';
+  const place=nashitPrompt('المكان','المدرسة')||'';
+  const target=nashitPrompt('الفئة المستهدفة','طلاب المدرسة')||'';
+  const executors=nashitPrompt('المنفذون','رائد النشاط')||'';
+  const cost=Number(nashitPrompt('التكلفة','0')||0);
+  const d=getNashitData();d.programs.push({id:Date.now(),title,goal,field,date,hijri,place,target,executors,cost,status:'مخطط',reason:'',participants:[]});saveNashitData(d);renderNashit();
+}
+function nashitSetProgramStatus(id,status){
+  const d=getNashitData(),p=d.programs.find(x=>x.id===id);if(!p)return;
+  p.status=status;
+  if(status==='مؤجل'||status==='ملغى') p.reason=nashitPrompt('اذكر السبب',p.reason||'')||'';
+  saveNashitData(d);renderNashit();
+}
+function nashitProgramAttendance(id){
+  const d=getNashitData(),p=d.programs.find(x=>x.id===id);if(!p)return;
+  const q=nashitPrompt('أدخل أرقام السجلات المدنية للطلاب مفصولة بفاصلة','');if(q===null)return;
+  p.participants=q.split(/[,،\s]+/).map(x=>x.replace(/\D/g,'')).filter(Boolean);
+  p.participants.forEach(sid=>{
+    if(!d.participation[sid]) d.participation[sid]={programs:[],hours:0,competitions:[],awards:[]};
+    if(!d.participation[sid].programs.includes(p.id)) d.participation[sid].programs.push(p.id);
+  });
+  saveNashitData(d);renderNashit();
+}
+function nashitAddEvidence(programId){
+  const note=nashitPrompt('وصف الشاهد أو الملاحظة','');if(note===null)return;
+  const d=getNashitData();d.evidence.push({id:Date.now(),programId:programId||null,note,date:new Date().toISOString()});saveNashitData(d);toast('تم حفظ الشاهد');
+}
+function nashitCloseProgram(id){
+  const d=getNashitData(),p=d.programs.find(x=>x.id===id);if(!p)return;
+  p.status='منفّذ';p.evaluation=nashitPrompt('تقويم مختصر للبرنامج','تم تنفيذ البرنامج وتحقيق أهدافه.')||'';
+  saveNashitData(d);renderNashit();nashitGenerateReport('تقرير تنفيذ برنامج',p);
+}
+function nashitAddClub(){
+  const name=nashitPrompt('اسم النادي');if(!name)return;
+  const supervisor=nashitPrompt('المعلم المشرف','')||'';const meeting=nashitPrompt('موعد اللقاء','')||'';
+  const d=getNashitData();d.clubs.push({id:Date.now(),name,supervisor,meeting,members:[],lastDone:''});saveNashitData(d);renderNashit();
+}
+function nashitAddBroadcast(){
+  const classroom=nashitPrompt('الفصل المسؤول','')||'';const topic=nashitPrompt('موضوع الإذاعة','')||'';const date=nashitPrompt('التاريخ YYYY-MM-DD','')||'';
+  const d=getNashitData();d.broadcasts.push({id:Date.now(),classroom,topic,date});saveNashitData(d);renderNashit();
+}
+function nashitAddCompetition(){
+  const name=nashitPrompt('اسم المسابقة');if(!name)return;const level=nashitPrompt('المرحلة: مدرسة/إدارة/وطني','مدرسة')||'';const deadline=nashitPrompt('موعد التسجيل أو التسليم YYYY-MM-DD','')||'';
+  const d=getNashitData();d.competitions.push({id:Date.now(),name,level,deadline,participants:'',result:''});saveNashitData(d);renderNashit();
+}
+function nashitAddMeeting(){
+  const title=nashitPrompt('عنوان الاجتماع','اجتماع لجنة النشاط');if(!title)return;const date=nashitPrompt('التاريخ YYYY-MM-DD','')||'';const decisions=nashitPrompt('القرارات','')||'';
+  const d=getNashitData();d.meetings.push({id:Date.now(),title,date,decisions,status:'قيد المتابعة'});saveNashitData(d);renderNashit();
+}
+function nashitAddExpense(){
+  const title=nashitPrompt('بيان المصروف');if(!title)return;const amount=Number(nashitPrompt('المبلغ','0')||0);const date=nashitPrompt('التاريخ YYYY-MM-DD','')||'';
+  const d=getNashitData();d.expenses.push({id:Date.now(),title,amount,date,invoice:''});saveNashitData(d);renderNashit();
+}
+function nashitGenerateReport(type,obj){
+  const d=getNashitData();
+  const programs=d.programs,done=programs.filter(x=>x.status==='منفّذ');
+  const totalStudents=getStudents().length;
+  const participants=new Set(Object.keys(d.participation).filter(k=>d.participation[k]?.programs?.length));
+  let text='';
+  if(type==='تقرير تنفيذ برنامج' && obj){
+    text=`تقرير تنفيذ برنامج\n\nاسم البرنامج: ${obj.title}\nالمجال: ${obj.field||'—'}\nالهدف: ${obj.goal||'—'}\nالتاريخ: ${obj.hijri||'—'} هـ / ${obj.date||'—'} م\nالمكان: ${obj.place||'—'}\nالفئة المستهدفة: ${obj.target||'—'}\nالمنفذون: ${obj.executors||'—'}\nعدد المشاركين: ${obj.participants?.length||0}\nالتكلفة: ${obj.cost||0}\nالتقويم: ${obj.evaluation||'تم التنفيذ وفق الخطة.'}\n\nالشواهد: ${d.evidence.filter(e=>e.programId===obj.id).map(e=>e.note).join('، ')||'—'}`;
+  }else{
+    text=`${type}\n\nعدد البرامج المخططة: ${programs.length}\nعدد البرامج المنفذة: ${done.length}\nنسبة تحقق الخطة: ${programs.length?Math.round(done.length/programs.length*100):0}%\nإجمالي الطلاب: ${totalStudents}\nالطلاب المشاركون: ${participants.size}\nنسبة المشاركة: ${totalStudents?Math.round(participants.size/totalStudents*100):0}%\nإجمالي المصروفات: ${d.expenses.reduce((s,x)=>s+Number(x.amount||0),0)} ريال.\n`;
+  }
+  if($('nashitReportText')) $('nashitReportText').value=text;
+  nashitTab('reports');
+}
+function nashitExportReportPdf(){
+  const text=$('nashitReportText')?.value||'';if(!text.trim()){toast('أنشئ التقرير أولًا');return}
+  const root=document.createElement('div');root.style.cssText='direction:rtl;font-family:Tahoma,Arial;padding:28px;line-height:2;white-space:pre-wrap;background:#fff;color:#111';root.textContent=text;
+  document.body.appendChild(root);
+  if(window.html2pdf){window.html2pdf().set({margin:10,filename:'تقرير-نشط.pdf',html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(root).save().finally(()=>root.remove())}
+  else{root.remove();window.print()}
+}
+function nashitExportReportExcel(){
+  const text=$('nashitReportText')?.value||'';if(!text.trim()){toast('أنشئ التقرير أولًا');return}
+  const blob=new Blob(['\ufeff'+text],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='تقرير-نشط.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function renderNashit(){
+  if(!$('activityLeaderPage'))return;
+  const d=getNashitData(),students=getStudents();
+  const done=d.programs.filter(p=>p.status==='منفّذ');
+  const participantIds=new Set(Object.keys(d.participation).filter(k=>d.participation[k]?.programs?.length));
+  const planRate=d.programs.length?Math.round(done.length/d.programs.length*100):0;
+  const partRate=students.length?Math.round(participantIds.size/students.length*100):0;
+  if($('nashitPlanRate')) $('nashitPlanRate').textContent=planRate+'%';
+  if($('nashitParticipationRate')) $('nashitParticipationRate').textContent=partRate+'%';
+  if($('nashitDonePrograms')) $('nashitDonePrograms').textContent=String(done.length);
+
+  const upcoming=[...d.plan,...d.programs].filter(x=>x.date && new Date(x.date)>=new Date(new Date().toDateString())).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+  if(upcoming){
+    const days=Math.ceil((new Date(upcoming.date)-new Date(new Date().toDateString()))/86400000);
+    $('nashitNextEventDays').textContent=days===0?'اليوم':days+' يوم';
+    $('nashitNextEventName').textContent=upcoming.title||upcoming.name||'';
+  }else{$('nashitNextEventDays').textContent='—';$('nashitNextEventName').textContent='لا توجد مناسبة مسجلة';}
+
+  const today=new Date().toISOString().slice(0,10);
+  const todayPrograms=d.programs.filter(p=>p.date===today);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  const tomorrowBroadcast=d.broadcasts.filter(x=>x.date===tomorrow);
+  $('nashitTodayTasks').innerHTML=[
+    ...todayPrograms.map(p=>`<div class="nashit-today-item"><b>برنامج اليوم: ${nashitEsc(p.title)}</b><span class="nashit-status ${p.status==='منفّذ'?'done':p.status==='قيد التنفيذ'?'running':''}">${nashitEsc(p.status)}</span></div>`),
+    ...tomorrowBroadcast.map(x=>`<div class="nashit-today-item"><b>إذاعة الغد: ${nashitEsc(x.topic)}</b><span>${nashitEsc(x.classroom)}</span></div>`),
+    `<div class="nashit-today-item"><b>تقارير برامج منفذة بدون تقويم</b><span>${done.filter(p=>!p.evaluation).length}</span></div>`
+  ].join('')||'<div class="nashit-empty">لا توجد مهام مسجلة لليوم.</div>';
+
+  const compAlerts=d.competitions.filter(x=>x.deadline).sort((a,b)=>String(a.deadline).localeCompare(String(b.deadline))).slice(0,4);
+  $('nashitTodayAlerts').innerHTML=compAlerts.map(x=>`<div class="nashit-today-item"><b>${nashitEsc(x.name)}</b><span>${nashitEsc(x.deadline)}</span></div>`).join('')||'<div class="nashit-empty">لا توجد تنبيهات قريبة.</div>';
+
+  $('nashitPlanList').innerHTML=d.plan.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>البند</th><th>المجال</th><th>الفصل</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>'+d.plan.map(x=>`<tr><td>${nashitEsc(x.title)}</td><td>${nashitEsc(x.field)}</td><td>${nashitEsc(x.term)}</td><td>${nashitEsc(x.date)}</td><td>${nashitEsc(x.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لم تتم إضافة بنود للخطة بعد.</div>';
+
+  $('nashitProgramsList').innerHTML=d.programs.length?d.programs.map(p=>`<div class="nashit-card" style="margin-bottom:10px"><div class="nashit-section-head"><div><h3>${nashitEsc(p.title)}</h3><div class="nashit-muted">${nashitEsc(p.field)} • ${nashitEsc(p.date||'بدون تاريخ')} • ${nashitEsc(p.place||'')}</div></div><span class="nashit-status ${p.status==='منفّذ'?'done':p.status==='قيد التنفيذ'?'running':p.status==='ملغى'?'cancel':''}">${nashitEsc(p.status)}</span></div><div class="nashit-muted">الهدف: ${nashitEsc(p.goal||'—')}<br>الفئة: ${nashitEsc(p.target||'—')} — المنفذون: ${nashitEsc(p.executors||'—')} — التكلفة: ${p.cost||0}</div><div class="nashit-toolbar" style="margin-top:10px"><button class="nashit-btn" onclick="nashitSetProgramStatus(${p.id},'قيد التنفيذ')">بدء التنفيذ</button><button class="nashit-btn" onclick="nashitProgramAttendance(${p.id})">تسجيل حضور</button><button class="nashit-btn" onclick="nashitAddEvidence(${p.id})">رفع شاهد</button><button class="nashit-btn primary" onclick="nashitCloseProgram(${p.id})">إغلاق وتقويم</button><button class="nashit-btn" onclick="nashitSetProgramStatus(${p.id},'مؤجل')">تأجيل</button></div></div>`).join(''):'<div class="nashit-empty">لا توجد برامج بعد.</div>';
+
+  $('nashitClubsList').innerHTML=d.clubs.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>النادي</th><th>المشرف</th><th>موعد اللقاء</th><th>الأعضاء</th></tr></thead><tbody>'+d.clubs.map(x=>`<tr><td>${nashitEsc(x.name)}</td><td>${nashitEsc(x.supervisor)}</td><td>${nashitEsc(x.meeting)}</td><td>${x.members?.length||0}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لا توجد أندية مسجلة.</div>';
+  $('nashitBroadcastList').innerHTML=d.broadcasts.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>الفصل</th><th>الموضوع</th><th>التاريخ</th></tr></thead><tbody>'+d.broadcasts.map(x=>`<tr><td>${nashitEsc(x.classroom)}</td><td>${nashitEsc(x.topic)}</td><td>${nashitEsc(x.date)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لا يوجد جدول إذاعة بعد.</div>';
+
+  $('nashitStudentsTotal').textContent=students.length;$('nashitStudentsParticipated').textContent=participantIds.size;$('nashitStudentsNotParticipated').textContent=Math.max(0,students.length-participantIds.size);
+  $('nashitStudentsList').innerHTML='<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>الطالب</th><th>السجل</th><th>الصف</th><th>الفصل</th><th>البرامج</th><th>الساعات</th><th>المسابقات</th><th>الجوائز</th></tr></thead><tbody>'+students.map(s=>{const r=d.participation[String(s.idno)]||{};return `<tr><td>${nashitEsc(s.name)}</td><td>${nashitEsc(s.idno)}</td><td>${nashitEsc(s.grade)}</td><td>${nashitEsc(s.classroom)}</td><td>${r.programs?.length||0}</td><td>${r.hours||0}</td><td>${r.competitions?.length||0}</td><td>${r.awards?.length||0}</td></tr>`}).join('')+'</tbody></table></div>';
+
+  $('nashitCompetitionsList').innerHTML=d.competitions.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>المسابقة</th><th>المرحلة</th><th>الموعد</th><th>المشاركون</th><th>النتيجة</th></tr></thead><tbody>'+d.competitions.map(x=>`<tr><td>${nashitEsc(x.name)}</td><td>${nashitEsc(x.level)}</td><td>${nashitEsc(x.deadline)}</td><td>${nashitEsc(x.participants||'—')}</td><td>${nashitEsc(x.result||'—')}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لا توجد مسابقات.</div>';
+  $('nashitApprovalsList').innerHTML=d.approvals.length?d.approvals.map(x=>`<div class="nashit-card">${nashitEsc(x.title)} — ${nashitEsc(x.status||'مرسل')}</div>`).join(''):'<div class="nashit-empty">لا توجد موافقات أو خطابات مسجلة.</div>';
+  $('nashitCommitteeList').innerHTML=(d.meetings.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>الاجتماع</th><th>التاريخ</th><th>القرارات</th><th>الحالة</th></tr></thead><tbody>'+d.meetings.map(x=>`<tr><td>${nashitEsc(x.title)}</td><td>${nashitEsc(x.date)}</td><td>${nashitEsc(x.decisions)}</td><td>${nashitEsc(x.status)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لم تسجل اجتماعات بعد.</div>');
+
+  const spent=d.expenses.reduce((s,x)=>s+Number(x.amount||0),0);$('nashitBudgetApproved').textContent=Number(d.budgetApproved||0).toLocaleString('ar-SA');$('nashitBudgetSpent').textContent=spent.toLocaleString('ar-SA');$('nashitBudgetRemain').textContent=(Number(d.budgetApproved||0)-spent).toLocaleString('ar-SA');$('nashitBudgetInput').value=d.budgetApproved||0;
+  $('nashitExpensesList').innerHTML=d.expenses.length?'<div class="nashit-table-wrap"><table class="nashit-table"><thead><tr><th>البيان</th><th>المبلغ</th><th>التاريخ</th></tr></thead><tbody>'+d.expenses.map(x=>`<tr><td>${nashitEsc(x.title)}</td><td>${Number(x.amount||0).toLocaleString('ar-SA')}</td><td>${nashitEsc(x.date)}</td></tr>`).join('')+'</tbody></table></div>':'<div class="nashit-empty">لا توجد مصروفات.</div>';
+
+  $('nashitPortfolioList').innerHTML=`<div class="nashit-grid"><div class="nashit-card"><h3>البرامج المنفذة</h3><b style="font-size:28px">${done.length}</b></div><div class="nashit-card"><h3>الشواهد</h3><b style="font-size:28px">${d.evidence.length}</b></div><div class="nashit-card"><h3>المسابقات</h3><b style="font-size:28px">${d.competitions.length}</b></div><div class="nashit-card"><h3>الاجتماعات</h3><b style="font-size:28px">${d.meetings.length}</b></div></div>`;
+
+  const st=d.settings||{}; if($('nashitLeaderName')) $('nashitLeaderName').value=st.leaderName||'';if($('nashitSchoolYear')) $('nashitSchoolYear').value=st.schoolYear||'';if($('nashitSignature')) $('nashitSignature').value=st.signature||'';if($('nashitLetterhead')) $('nashitLetterhead').value=st.letterhead||'';
+}
+document.addEventListener('click',e=>{
+  const q=e.target?.closest?.('[data-nashit-quick]');if(!q)return;
+  const a=q.dataset.nashitQuick;if(a==='program')nashitAddProgram();if(a==='evidence')nashitAddEvidence(null);if(a==='attendance')nashitTab('programs');if(a==='report')nashitGenerateReport($('nashitReportType')?.value||'التقرير الأسبوعي');
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  if($('nashitBackBtn')) $('nashitBackBtn').onclick=()=>{ if(isCurrentOwner()) openAdminDashboardInternal(); else returnUserToPermissionPages(); };
+  if($('nashitNewPlanItem')) $('nashitNewPlanItem').onclick=nashitAddPlanItem;
+  if($('nashitCopyPlan')) $('nashitCopyPlan').onclick=()=>toast('سيتم استخدام الخطة المحفوظة من العام السابق عند توفر نسخة احتياطية.');
+  if($('nashitApprovePlan')) $('nashitApprovePlan').onclick=()=>{const link=location.href.split('#')[0]+'#activity-plan-review';navigator.clipboard?.writeText(link);toast('تم تجهيز رابط الاعتماد ونسخه');};
+  if($('nashitPrintPlan')) $('nashitPrintPlan').onclick=()=>window.print();
+  if($('nashitAddProgramBtn')) $('nashitAddProgramBtn').onclick=nashitAddProgram;
+  if($('nashitAddClubBtn')) $('nashitAddClubBtn').onclick=nashitAddClub;
+  if($('nashitClubSurveyBtn')) $('nashitClubSurveyBtn').onclick=()=>{const link=location.href.split('#')[0]+'#club-survey';navigator.clipboard?.writeText(link);toast('تم نسخ رابط استبانة رغبات الأندية');};
+  if($('nashitClubReminderBtn')) $('nashitClubReminderBtn').onclick=()=>toast('تم تجهيز قائمة متابعة المشرفين');
+  if($('nashitAddBroadcastBtn')) $('nashitAddBroadcastBtn').onclick=nashitAddBroadcast;
+  if($('nashitGenerateBroadcastBtn')) $('nashitGenerateBroadcastBtn').onclick=()=>toast('أضف الفصول والموضوعات المطلوبة ثم يتم ترتيبها حسب التاريخ.');
+  if($('nashitPrintBroadcastBtn')) $('nashitPrintBroadcastBtn').onclick=()=>window.print();
+  if($('nashitNonParticipantsBtn')) $('nashitNonParticipantsBtn').onclick=()=>{const d=getNashitData();const ids=new Set(Object.keys(d.participation).filter(k=>d.participation[k]?.programs?.length));alert(getStudents().filter(s=>!ids.has(String(s.idno))).map(s=>s.name).join('\n')||'جميع الطلاب لديهم مشاركة.');};
+  if($('nashitStudentExportBtn')) $('nashitStudentExportBtn').onclick=()=>nashitGenerateReport('سجل نشاط طالب');
+  if($('nashitAddCompetitionBtn')) $('nashitAddCompetitionBtn').onclick=nashitAddCompetition;
+  if($('nashitCompetitionCertificateBtn')) $('nashitCompetitionCertificateBtn').onclick=()=>toast('اختر المشاركين والفائزين ثم اطبع الشهادات من التقرير.');
+  if($('nashitParentConsentBtn')) $('nashitParentConsentBtn').onclick=()=>{const d=getNashitData();const title=nashitPrompt('عنوان موافقة ولي الأمر','موافقة مشاركة الطالب');if(!title)return;d.approvals.push({id:Date.now(),title,status:'مرسل'});saveNashitData(d);renderNashit();};
+  if($('nashitLetterBtn')) $('nashitLetterBtn').onclick=()=>{const d=getNashitData();const title=nashitPrompt('نوع الخطاب: طلب رحلة/دعوة جهة/شكر مشارك/طلب احتياج','طلب رحلة');if(!title)return;d.approvals.push({id:Date.now(),title,status:'مسودة'});saveNashitData(d);renderNashit();};
+  if($('nashitArchiveBtn')) $('nashitArchiveBtn').onclick=()=>toast('تظهر جميع الخطابات والموافقات المسجلة في هذه الصفحة.');
+  if($('nashitAddMemberBtn')) $('nashitAddMemberBtn').onclick=()=>{const d=getNashitData();const name=nashitPrompt('اسم عضو لجنة النشاط');if(!name)return;d.committee.push({name});saveNashitData(d);renderNashit();};
+  if($('nashitAddMeetingBtn')) $('nashitAddMeetingBtn').onclick=nashitAddMeeting;
+  if($('nashitAddExpenseBtn')) $('nashitAddExpenseBtn').onclick=nashitAddExpense;
+  if($('nashitBudgetSaveBtn')) $('nashitBudgetSaveBtn').onclick=()=>{const d=getNashitData();d.budgetApproved=Number($('nashitBudgetInput').value||0);saveNashitData(d);renderNashit();toast('تم حفظ الميزانية');};
+  if($('nashitBudgetReportBtn')) $('nashitBudgetReportBtn').onclick=()=>nashitGenerateReport('تقرير الميزانية والمصروفات');
+  if($('nashitPortfolioPdfBtn')) $('nashitPortfolioPdfBtn').onclick=()=>nashitGenerateReport('ملف إنجاز رائد النشاط');
+  if($('nashitPortfolioRefreshBtn')) $('nashitPortfolioRefreshBtn').onclick=renderNashit;
+  if($('nashitSmartReportBtn')) $('nashitSmartReportBtn').onclick=()=>nashitGenerateReport($('nashitReportType').value);
+  if($('nashitReportPdfBtn')) $('nashitReportPdfBtn').onclick=nashitExportReportPdf;
+  if($('nashitReportExcelBtn')) $('nashitReportExcelBtn').onclick=nashitExportReportExcel;
+  if($('nashitSaveSettingsBtn')) $('nashitSaveSettingsBtn').onclick=()=>{const d=getNashitData();d.settings={leaderName:$('nashitLeaderName').value,schoolYear:$('nashitSchoolYear').value,signature:$('nashitSignature').value,letterhead:$('nashitLetterhead').value};saveNashitData(d);toast('تم حفظ إعدادات نَشِط');};
+});
 const FOLLOWUP_FIELDS=['absence1','absence2','absence3','absence4','participation1','participation2','participation3','participation4','homework1','homework2','homework3','homework4','activity1','activity2','activity3','activity4','midterm','final','projects','other1','other2','other3','other4'];
 
 function followupLegacyStorageKey(){
@@ -9883,6 +10265,17 @@ function openInternalPage(pageId){
     }
     if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
+  if(pageId==='activityLeaderPage'){
+    const u=getCurrentLoggedAdminUser();
+    const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(!isCurrentOwner() && !perms.has('activityLeader')){
+      $('activityLeaderPage')?.classList.add('hidden');
+      alert('لا توجد لديك صلاحية رائد النشاط.');
+      openAdminDashboardInternal();
+      return;
+    }
+    setTimeout(()=>{try{initNashitPage();renderNashit();}catch(e){console.error('nashit init',e)}},0);
+  }
   if(pageId==='studentTransferManager'){
     // إصلاح نهائي لمساحة الصفحة الفارغة: اجعل صفحة النقل وحدها داخل main بدون أي ارتفاع/تموضع موروث.
     try{
@@ -10420,7 +10813,7 @@ $('adminLoginBtn').onclick=async()=>{
       localStorage.setItem('currentLocalAdminUser',JSON.stringify({
         username:String(p.username||user),civil_id:String(p.username||user),
         name:String(p.displayName||'المدير'),role:'مدير',
-        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview'],is_owner:true
+        permissions:['editStudents','addStudent','import','deleteStudents','attendance','reports','settings','madrasati','photos','followupSheets','referralSubmit','teacherFollowup','teacherFollowupManager','referralReview','activityLeader'],is_owner:true
       }));
       localStorage.removeItem('cloudAdminUser');
       localStorage.removeItem('cloudAdminToken');
@@ -11749,6 +12142,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">متابعة المدير للمعلمين <input class="admin-new-perm" value="teacherFollowupManager" type="checkbox"></label>
           <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
           <label class="admin-permission">نسخة احتياطية ZIP <input class="admin-new-perm" value="backupZip" type="checkbox"></label>
+          <label class="admin-permission">نَشِط — رائد النشاط <input class="admin-new-perm" value="activityLeader" type="checkbox"></label>
         </div>
         <div id="newReferralGradePermissions" style="margin-top:12px;padding:12px;border:1px solid #d8e2df;border-radius:12px;background:#f8fbfa">
           <div style="font-weight:900;margin-bottom:8px">تحديد الصفوف المسموح بها في ردود الوكلاء</div>
@@ -18361,7 +18755,7 @@ if($('confirmAllBtn')) $('confirmAllBtn').onclick=()=>{
 };
 
 if($('studentCounselorFollowBtn')) $('studentCounselorFollowBtn').onclick=()=>toast('متابعة الموجه الطلابي');
-if($('activityLeaderFollowBtn')) $('activityLeaderFollowBtn').onclick=()=>toast('متابعة رائد النشاط');
+if($('activityLeaderFollowBtn')) $('activityLeaderFollowBtn').onclick=()=>openInternalPage('activityLeaderPage');
 if($('teachersFollowBtn')) $('teachersFollowBtn').onclick=()=>toast('متابعة المعلمين');
 
 if($('deleteAllStudentsBtn')) $('deleteAllStudentsBtn').onclick=async ()=>{
