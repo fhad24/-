@@ -9649,6 +9649,39 @@ function openInternalPage(pageId){
     if(typeof initStudentFollowupPage==='function') setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup init',e)),0);
   }
   if(pageId==='studentTransferManager'){
+    // إصلاح نهائي لمساحة الصفحة الفارغة: اجعل صفحة النقل وحدها داخل main بدون أي ارتفاع/تموضع موروث.
+    try{
+      const mainEl=document.querySelector('main');
+      if(mainEl){
+        mainEl.style.setProperty('display','block','important');
+        mainEl.style.setProperty('height','auto','important');
+        mainEl.style.setProperty('min-height','0','important');
+        mainEl.style.setProperty('max-height','none','important');
+        mainEl.style.setProperty('padding-top','0','important');
+        mainEl.style.setProperty('margin-top','0','important');
+        mainEl.style.setProperty('align-items','flex-start','important');
+        mainEl.style.setProperty('justify-content','flex-start','important');
+      }
+      document.querySelectorAll('main > .page').forEach(p=>{
+        if(p.id==='studentTransferManager'){
+          p.classList.remove('hidden');
+          p.style.setProperty('display','block','important');
+          p.style.setProperty('margin','0','important');
+          p.style.setProperty('padding','0','important');
+          p.style.setProperty('height','auto','important');
+          p.style.setProperty('min-height','0','important');
+          p.style.setProperty('position','static','important');
+          p.style.setProperty('transform','none','important');
+        }else{
+          p.classList.add('hidden');
+          p.style.setProperty('display','none','important');
+        }
+      });
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
+      window.scrollTo(0,0);
+    }catch(e){ console.warn('transfer layout reset',e); }
+
     const u=getCurrentLoggedAdminUser();
     const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
     if(!isCurrentOwner() && !perms.has('addStudent')){
@@ -9659,7 +9692,25 @@ function openInternalPage(pageId){
     }
     if(typeof initStudentTransferManager==='function') setTimeout(async()=>{
       try{ await initStudentTransferManager(); }catch(e){ console.error('student transfer init',e); }
-      try{ window.scrollTo({top:0,left:0,behavior:'auto'}); }catch(e){ window.scrollTo(0,0); }
+      try{
+        const mainEl=document.querySelector('main');
+        if(mainEl){
+          mainEl.style.setProperty('display','block','important');
+          mainEl.style.setProperty('height','auto','important');
+          mainEl.style.setProperty('min-height','0','important');
+        }
+        const page=$('studentTransferManager');
+        if(page){
+          page.style.setProperty('display','block','important');
+          page.style.setProperty('height','auto','important');
+          page.style.setProperty('min-height','0','important');
+          page.style.setProperty('margin','0','important');
+          page.style.setProperty('padding','0','important');
+        }
+        document.documentElement.scrollTop=0;
+        document.body.scrollTop=0;
+        window.scrollTo(0,0);
+      }catch(e){}
     },0);
   }
   // إعادة تثبيت زر الصفحة الرئيسية بعد فتح أي صفحة داخلية حتى لا يختفي بسبب إعادة تهيئة الواجهة.
