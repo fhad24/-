@@ -15266,7 +15266,7 @@ let __attendanceInstantTimer=null;
 let __attendanceInstantBusy=false;
 
 function queueAttendanceInstantSave(ids){
-  if(attendanceMode!=='present') return;
+  if(attendanceMode!=='present' && attendanceMode!=='late') return;
   (Array.isArray(ids)?ids:[ids]).forEach(id=>{
     id=String(id||'').trim();
     if(id) __attendanceInstantPending.add(id);
@@ -15281,18 +15281,27 @@ async function flushAttendanceInstantSave(){
     __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,220);
     return;
   }
-  if(attendanceMode!=='present' || !__attendanceInstantPending.size) return;
+  if((attendanceMode!=='present' && attendanceMode!=='late') || !__attendanceInstantPending.size) return;
 
-  const selectedPeriod=attendancePeriodNumber($('attendancePeriodSelect')?.value);
-  const selectedSubject=String($('attendanceSubjectSelect')?.value||'').trim();
-  if(!selectedPeriod || !selectedSubject){
-    toast('اختر الحصة والمادة أولًا، ثم حدد الطلاب وسيتم الحفظ فورًا');
+  const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
+  const selectedPeriod=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const selectedSubject=morningLate ? 'تأخر عن الطابور الصباحي' : String($('attendanceSubjectSelect')?.value||'').trim();
+
+  if(!morningLate && !selectedPeriod){
+    showAttendanceSavedMessage('⚠️ اختر الحصة أولًا');
+    toast('اختر الحصة أولًا ثم حدد الطالب');
+    return;
+  }
+  if(attendanceMode==='present' && !selectedSubject){
+    showAttendanceSavedMessage('⚠️ اختر المادة أولًا');
+    toast('اختر المادة أولًا ثم حدد الطالب');
     return;
   }
 
   const ids=[...__attendanceInstantPending];
   __attendanceInstantPending.clear();
   __attendanceInstantBusy=true;
+  showAttendanceSavedMessage(ids.length>1 ? '⏳ جاري حفظ الطلاب المحددين...' : '⏳ جاري حفظ الطالب...');
 
   try{
     const recorder=getSelectedAttendanceTeacher();
@@ -15304,13 +15313,13 @@ async function flushAttendanceInstantSave(){
       time:attendanceTimeToInput(now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false})),
       period:selectedPeriod,
       subject:selectedSubject,
-      morningAssemblyLate:false,
+      morningAssemblyLate:morningLate,
       hijriDate:hp.year+'-'+String(hp.month).padStart(2,'0')+'-'+String(hp.day).padStart(2,'0'),
       weekday:now.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'}),
       teacherName:recorder.name,
       teacherUsername:recorder.username,
       teacherCivilId:recorder.civilId,
-      status:'present',
+      status:attendanceMode,
       faceMatch:'none'
     };
 
@@ -15318,17 +15327,29 @@ async function flushAttendanceInstantSave(){
     const roster=attendanceWholeClassRoster?.students||[];
     let rows=getAttendanceLog();
     const cloudRows=[];
+    const skipped=[];
 
-    ids.forEach(id=>{
+    for(const id of ids){
       const student=studentsNow.find(x=>String(x.idno)===String(id))
         || roster.find(x=>String(x.idno)===String(id));
-      if(!student) return;
+      if(!student) continue;
 
-      rows=rows.filter(x=>!(
-        String(x.date)===String(date) &&
-        String(x.idno)===String(id) &&
-        String(x.period??'')===String(selectedPeriod??'')
-      ));
+      if(attendanceMode==='late'){
+        const duplicate=rows.some(x=>{
+          if(String(x?.status||'')!=='late') return false;
+          if(String(x?.date||'')!==String(date) || String(x?.idno||'')!==String(id)) return false;
+          const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
+          if(morningLate || xMorning) return morningLate===xMorning;
+          return String(x?.period??'')===String(selectedPeriod??'');
+        });
+        if(duplicate){ skipped.push(student.name||id); continue; }
+      }else{
+        rows=rows.filter(x=>!(
+          String(x.date)===String(date) &&
+          String(x.idno)===String(id) &&
+          String(x.period??'')===String(selectedPeriod??'')
+        ));
+      }
 
       const row={
         ...base,
@@ -15339,17 +15360,26 @@ async function flushAttendanceInstantSave(){
       };
       rows.push(row);
       cloudRows.push(row);
-    });
+    }
 
-    if(!cloudRows.length) return;
+    if(!cloudRows.length){
+      if(skipped.length){
+        showAttendanceSavedMessage('⚠️ سبق تسجيل تأخر الطالب');
+        toast('سبق تسجيل التأخر للمحدد');
+      }
+      return;
+    }
+
     await saveAttendanceLog(rows,cloudRows);
 
     const n=cloudRows.length;
-    showAttendanceSavedMessage(n>1 ? ('✅ تم الحفظ الفوري لـ '+n+' طلاب') : '✅ تم حفظ الطالب فورًا');
+    const label=attendanceMode==='late' ? 'التأخر' : 'الحضور';
+    showAttendanceSavedMessage(n>1 ? ('✅ تم حفظ '+label+' لـ '+n+' طلاب فورًا') : ('✅ تم حفظ '+label+' للطالب فورًا'));
     toast(n>1 ? ('تم حفظ '+n+' طلاب مباشرة') : 'تم حفظ الطالب مباشرة');
   }catch(e){
     console.error('instant attendance save',e);
     ids.forEach(id=>__attendanceInstantPending.add(id));
+    showAttendanceSavedMessage('❌ تعذر الحفظ الفوري');
     alert('❌ تعذر الحفظ الفوري. بقي التحديد كما هو، حاول مرة أخرى.');
   }finally{
     __attendanceInstantBusy=false;
@@ -15360,37 +15390,33 @@ async function flushAttendanceInstantSave(){
   }
 }
 
-
 async function cancelInstantAttendanceForStudent(id){
   id=String(id||'').trim();
   if(!id) return false;
-
-  // إن كان الطالب ما زال في طابور الحفظ ولم يبدأ إرساله، ألغِه من الطابور فقط.
   __attendanceInstantPending.delete(id);
 
-  // إذا كانت دفعة حفظ جارية، انتظر اكتمالها قبل محاولة الحذف حتى لا يحدث سباق حفظ/حذف.
   const started=Date.now();
   while(__attendanceInstantBusy && Date.now()-started<5000){
     await new Promise(r=>setTimeout(r,100));
   }
 
-  const period=attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const mode=attendanceMode;
+  const morningLate=mode==='late' && !!$('attendanceMorningLate')?.checked;
+  const period=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
   const date=todayKey();
   let rows=getAttendanceLog();
-  const matches=rows.filter(x=>
-    String(x?.idno||'')===id &&
-    String(x?.date||'')===String(date) &&
-    String(x?.status||'')==='present' &&
-    (!period || String(x?.period??'')===String(period))
-  );
 
-  // إذا لم يصل الحفظ أصلًا إلى السحابة فلا يوجد شيء نحذفه.
-  if(!matches.length){
-    return true;
-  }
+  const matches=rows.filter(x=>{
+    if(String(x?.idno||'')!==id || String(x?.date||'')!==String(date) || String(x?.status||'')!==String(mode)) return false;
+    if(mode==='late'){
+      const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
+      if(morningLate || xMorning) return morningLate===xMorning;
+    }
+    return !period || String(x?.period??'')===String(period);
+  });
 
-  const blocked=matches.some(x=>!attendanceUserCanModifyRow(x));
-  if(blocked){
+  if(!matches.length) return true;
+  if(matches.some(x=>!attendanceUserCanModifyRow(x))){
     throw new Error('لا يمكن إلغاء تحضير سجل لا تملك صلاحية تعديله.');
   }
 
@@ -15400,7 +15426,6 @@ async function cancelInstantAttendanceForStudent(id){
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
   return true;
 }
-
 
 if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (ev)=>{
   ev.preventDefault();
