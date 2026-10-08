@@ -6177,7 +6177,7 @@ async function loadDeputyReferrals(silent=false){
     const data=await cloudApi('list_referrals');
     if(!data.canReview){
       host.innerHTML='<div class="hint">جاري تفعيل صلاحية الرد وتحميل التحويلات...</div>';
-      scheduleDeputyAutoRetry(1200);
+      scheduleDeputyAutoRetry(10000);
       return;
     }
     let rows=(Array.isArray(data.rows)?data.rows:[]).filter(r=>String(r.status||'')==='pending' && String(r.alert_level||'')==='3');
@@ -6190,7 +6190,7 @@ async function loadDeputyReferrals(silent=false){
     }
     if(!rows.length){
       host.innerHTML='<div class="hint">لا توجد تحويلات بانتظار الرد حاليًا.</div>';
-      scheduleDeputyAutoRetry(3000);
+      scheduleDeputyAutoRetry(30000);
       return;
     }
 
@@ -6210,7 +6210,7 @@ async function loadDeputyReferrals(silent=false){
         </div>
 
         <div class="deputy-referral-problem">
-          <b>سبب التحويل:</b> ${Array.isArray(r.reasons)?r.reasons.join('، '):''} ${escapeAppHtml(r.other_reason||'')}<br>
+          <b>سبب التحويل:</b> ${Array.isArray(r.reasons)?r.reasons.map(escapeAppHtml).join('، '):''} ${escapeAppHtml(r.other_reason||'')}<br>
           <b>إيضاح المشكلة:</b> ${escapeAppHtml(r.problem||'—')}
         </div>
 
@@ -6312,7 +6312,7 @@ async function loadDeputyReferrals(silent=false){
     console.error('load deputy referrals',e);
     const msg=String(e?.message||e||'');
     host.innerHTML='<div class="hint">جاري إعادة تحميل التحويلات تلقائيًا'+(msg?' — '+msg:'')+'</div>';
-    scheduleDeputyAutoRetry(1200);
+    scheduleDeputyAutoRetry(10000);
   }finally{
     deputyReferralsLoading=false;
   }
@@ -6463,186 +6463,9 @@ async function studentChangeApi(action,payload={}){
 
 async function recoverLocalAttendance14480425(){ return {restored:0,found:0}; }
 
-const FIRST_SECONDARY_B_ROSTER_20261008=[
-  ['1158051506','إبراهيم محمد علي رفعان المحامض'],
-  ['1155802331','ابراهيم سعيد صالح الحارثي'],
-  ['1157874106','حسن عبدالله حسين آل ذيبان'],
-  ['1153941388','حمد بن مسفر بن حمد اليامي'],
-  ['1156526004','حمد مانع بن علي السليمان'],
-  ['1151893763','حمد مسفر بن هادي آل قريع'],
-  ['1152640452','خالد بن مهدي بن علي المحمضي'],
-  ['1158308971','داود سعييد علي السليمان'],
-  ['1149129213','ذياب بن حمد بن صالح اليامي'],
-  ['6067183146','زياد طارق محمد احمد'],
-  ['6043672406','سالم علي سالم الحارثي'],
-  ['00715458','سالم محمد سالم العولقي'],
-  ['1151876149','سلطان عائض بن علي آل قريع'],
-  ['1158181428','صالح رائد بن محمد بالحارث'],
-  ['1158634699','عبدالله بن حسن بن محمد اليامي'],
-  ['1156105486','عبدالله بن راشد بن رفعان المحامض'],
-  ['1154385767','عبدالله عائض بن علي آل قريع'],
-  ['1150736930','عبدالله هادي بن جحيان آل مطارد'],
-  ['2316426515','عبدالملك راشد علي حسن'],
-  ['2281706289','عرمان احمد علي عبدالله'],
-  ['1157262104','علي بن حسن بن محمد آل ذيبان'],
-  ['1155314105','علي بن محمد بن هادي ال عوام المحامض'],
-  ['1156198747','علي بندر علي الحارثي'],
-  ['1157661149','علي مساعد حسين الحارثي'],
-  ['1157160209','فهد بن مهدي بن علي المحمضي'],
-  ['1153807373','محمد بن سالم بن حسين المحامض'],
-  ['1154910598','محمد بن علي بن حسين المحامض'],
-  ['1156726067','محمد بن مهدي بن حمد آل ذيبان'],
-  ['1158559417','محمد علي بن حمد ال مطارد'],
-  ['1151498290','محمد مسفر بن هادي آل قريع'],
-  ['1156241901','ناصر غانم بن ناصر العمورات'],
-  ['1154650426','هادي بن علي بن هادي المحامض'],
-  ['1156857870','هتان صالح طالب الحارثي'],
-  ['6043672408','يحيى علي سالم الحارثي'],
-  ['1157469477','يوسف بن حمد بن علي المحامض'],
-  ['1148889056','يوسف بن راشد بن رفعان المحامض'],
-  ['1154630899','عبدالله بن محمد بن صالح المحامض']
-];
-
-function normalizeRosterId(v){
-  const s=String(v||'').replace(/\D/g,'');
-  return s.replace(/^0+(?=\d)/,'');
-}
-function normalizeRosterName(v){
-  return String(v||'')
-    .normalize('NFKD')
-    .replace(/[\u064B-\u065F\u0670]/g,'')
-    .replace(/[إأآٱ]/g,'ا')
-    .replace(/ى/g,'ي')
-    .replace(/ة/g,'ه')
-    .replace(/ؤ/g,'و')
-    .replace(/ئ/g,'ي')
-    .replace(/[^ء-ي0-9]/g,'')
-    .toLowerCase();
-}
-async function reconcileFirstSecondaryBOnce(students){
-  if(!isCurrentOwner()) return students;
-  const marker='rosterFix:firstSecondaryB:20261008:v1';
-  if(localStorage.getItem(marker)==='done') return students;
-
-  const rosterIds=new Set(FIRST_SECONDARY_B_ROSTER_20261008.map(x=>normalizeRosterId(x[0])));
-  const rosterNames=new Set(FIRST_SECONDARY_B_ROSTER_20261008.map(x=>normalizeRosterName(x[1])));
-  const changed=[];
-
-  (students||[]).forEach(s=>{
-    const idMatch=rosterIds.has(normalizeRosterId(s.idno));
-    const nameMatch=rosterNames.has(normalizeRosterName(s.name));
-    const isTarget=idMatch||nameMatch;
-    const isCurrentB=studentGradeKey(s.grade)==='الأول الثانوي' && studentClassKey(s.classroom)==='ب';
-
-    if(isTarget){
-      if(studentGradeKey(s.grade)!=='الأول الثانوي' || studentClassKey(s.classroom)!=='ب'){
-        s.grade='الأول الثانوي';
-        s.classroom='ب';
-        changed.push(s);
-      }
-    }else if(isCurrentB){
-      s.grade='الأول الثانوي';
-      s.classroom='الوهمي';
-      changed.push(s);
-    }
-  });
-
-  if(!changed.length){
-    localStorage.setItem(marker,'done');
-    return students;
-  }
-
-  for(let i=0;i<changed.length;i+=10){
-    await cloudApi('sync_students',{students:changed.slice(i,i+10)});
-  }
-  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-  localStorage.setItem(marker,'done');
-  toast('✅ تم تحديث الأول الثانوي ب ونقل غير المطابق إلى الفصل الوهمي');
-  return students;
-}
-
-const FIRST_SECONDARY_C_ROSTER_20261008=[
-  ['1155405333','احمد عبداللة علي نتيفان الحارثي'],
-  ['1157308725','بتال سلطان عبدالرحمن الصاعدي'],
-  ['1162844151','حسين بن فواز بن حسين آل قفله'],
-  ['1156506105','حسين حمد حسين آل قريع'],
-  ['1156984526','حمد بن محمد بن فرج المحامض'],
-  ['1154671224','دهيمان حسين بن حمد المحامض'],
-  ['1156668228','زايد سالم بن حمد اليامي'],
-  ['1156980185','سالم بن حمد بن محمد آل صلاح'],
-  ['1155753781','سعيد بن راشد بن هادي آل صلاح'],
-  ['1157836162','سلطان بن حمد بن علي آل سويدان'],
-  ['2285170755','سلطان سالم عوض الحداد'],
-  ['1153121932','صالح بن علي بن محمد آل صلاح'],
-  ['1219575246','صالح حمد محمد ال صلاح'],
-  ['1158602498','طالب مساعد محمد الحارثي'],
-  ['1152817928','عبدالرحمن مساعد علي الحارثي'],
-  ['1144774369','عبدالله بن جابر بن فرج آل ذيبان'],
-  ['2503852127','عبدالله حمد محسن ال سلامه'],
-  ['1154026874','عبدالله علي بن ناصر الصومعي'],
-  ['1154160905','علي بن هادي بن صالح المحامض'],
-  ['2503852028','علي حمد محسن ال سلامه'],
-  ['1155251323','علي شريم بن مسفر ال صلاح'],
-  ['1155868928','فهد علي فهيد الحارثي'],
-  ['4159011131','فهد محمد حسين ال حسين'],
-  ['1149763201','محمد بن علي بن عائض آل سويدان'],
-  ['1156736637','محمد بن هادي بن صالح آل سويدان'],
-  ['1157275031','ناصر شافي ناصر الحارثي'],
-  ['0161038616','ناصر عبدالله أحمد باقطمي'],
-  ['1184632790','نوح علي بن صالح آل الحارث'],
-  ['1159763588','هادي بن مسفر بن هادي آل ذيبان'],
-  ['2334565757','يوسف محمد محمد عيضه'],
-  ['', 'حمد حسين هادي الجعفري'],
-  ['', 'محمد حسين هادي الجعفري'],
-  ['1156630590','حسين بن محمد بن مانع آل ذيبان'],
-  ['1152434047','عبدالله بن علي محمد المحمضي'],
-  ['1158086841','هادي بن مانع بن حمد آل ذيبان'],
-  ['1155243205','صالح بن علي بن ظافر آل سويدان'],
-  ['1152720650','سعادان بن ذيب بن حسن آل ذيبان'],
-  ['1155037821','محمد بن عوض بن حسين آل قفله']
-];
-
-async function reconcileFirstSecondaryCOnce(students){
-  if(!isCurrentOwner()) return students;
-  const marker='rosterFix:firstSecondaryC:20261008:v1';
-  if(localStorage.getItem(marker)==='done') return students;
-
-  const rosterIds=new Set(FIRST_SECONDARY_C_ROSTER_20261008.map(x=>normalizeRosterId(x[0])).filter(Boolean));
-  const rosterNames=new Set(FIRST_SECONDARY_C_ROSTER_20261008.map(x=>normalizeRosterName(x[1])).filter(Boolean));
-  const changed=[];
-
-  (students||[]).forEach(s=>{
-    const idMatch=rosterIds.has(normalizeRosterId(s.idno));
-    const nameMatch=rosterNames.has(normalizeRosterName(s.name));
-    const isTarget=idMatch||nameMatch;
-    const isCurrentC=studentGradeKey(s.grade)==='الأول الثانوي' && studentClassKey(s.classroom)==='ج';
-
-    if(isTarget){
-      if(studentGradeKey(s.grade)!=='الأول الثانوي' || studentClassKey(s.classroom)!=='ج'){
-        s.grade='الأول الثانوي';
-        s.classroom='ج';
-        changed.push(s);
-      }
-    }else if(isCurrentC){
-      s.grade='الأول الثانوي';
-      s.classroom='الوهمي';
-      changed.push(s);
-    }
-  });
-
-  if(!changed.length){
-    localStorage.setItem(marker,'done');
-    return students;
-  }
-
-  for(let i=0;i<changed.length;i+=10){
-    await cloudApi('sync_students',{students:changed.slice(i,i+10)});
-  }
-  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-  localStorage.setItem(marker,'done');
-  toast('✅ تم تحديث الأول الثانوي ج ونقل غير المطابق إلى الفصل الوهمي');
-  return students;
-}
+// تمت إزالة قوائم الفصول المضمّنة والإصلاحات المؤقتة لحماية بيانات الطلاب ومنع النقل التلقائي.
+async function reconcileFirstSecondaryBOnce(students){return students;}
+async function reconcileFirstSecondaryCOnce(students){return students;}
 
 async function cloudPullToLocal(){
   const token=localStorage.getItem('cloudAdminToken');
@@ -6657,20 +6480,6 @@ async function cloudPullToLocal(){
     faceImage:s.face_image||'', idImage:s.id_image||''
   }));
   localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-
-  try{
-    await reconcileFirstSecondaryBOnce(students);
-  }catch(e){
-    console.warn('1B roster reconcile',e);
-    toast('تعذر تحديث 1ث ب تلقائيًا — سيعاد المحاولة عند التحديث القادم');
-  }
-
-  try{
-    await reconcileFirstSecondaryCOnce(students);
-  }catch(e){
-    console.warn('1C roster reconcile',e);
-    toast('تعذر تحديث 1ث ج تلقائيًا — سيعاد المحاولة عند التحديث القادم');
-  }
 
   for(const s of students){
     if(s.faceImage){
@@ -10707,7 +10516,7 @@ async function createAdminBackupZip(){
 
 تحتوي مجلدات data على البيانات بصيغة JSON ومجلد photos على الصور.
 لفتح النسخة بدون اتصال بالإنترنت: افتح offline/index.html في Chrome أو Edge. الصور مضمّنة داخل صفحة العرض نفسها، كما توجد نسخة منها داخل مجلد photos.
-لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول.
+لا تتضمن النسخة كلمات المرور أو رموز جلسات الدخول. السجلات المدنية الموجودة هي معرفات للطلاب والمستخدمين وليست كلمات مرور.
 احتفظ بهذا الملف في مكان آمن لأنه يحتوي على بيانات طلاب وصورهم.
 `);
 
@@ -11927,18 +11736,11 @@ function getCurrentAttendanceRecorder(){
   };
 }
 function isAttendanceSupervisor(){
-  if(isCurrentOwner()) return true;
-  const u=getCurrentLoggedAdminUser?.()||{};
+  const u=getCurrentLoggedAdminUser?.();
+  if(!u) return false;
   const role=String(u.role||'').trim();
   const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
-  return role.includes('وكيل') ||
-         role.includes('إداري') ||
-         role.includes('اداري') ||
-         role.includes('مدير') ||
-         role==='موظف' ||
-         perms.has('referralReview') ||
-         perms.has('settings') ||
-         perms.has('backupZip');
+  return u.is_owner===true || role.includes('مدير') || role.includes('وكيل') || perms.has('attendanceSupervisor');
 }
 
 function attendanceRowBelongsToCurrentUser(row){
