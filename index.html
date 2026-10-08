@@ -11021,6 +11021,7 @@ function ensureAdminSettings(){
 
         <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
         <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
+        <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 إنشاء كلمات مرور آمنة للحسابات المقفلة</button>
         <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
 
         <h3 style="text-align:center;font-size:22px;margin-top:28px">تسجيل يدوي لمعلم أو إداري غير موجود</h3>
@@ -11453,6 +11454,24 @@ function ensureAdminSettings(){
     }
   };
 
+    document.getElementById('resetLockedUsersPasswords').onclick=async()=>{
+      if(!confirm('سيتم إنشاء كلمة مرور مؤقتة قوية لكل حساب مقفل. ستظهر الكلمات مرة واحدة فقط للطباعة أو التوزيع. متابعة؟')) return;
+      const btn=document.getElementById('resetLockedUsersPasswords');
+      const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإنشاء...';
+      try{
+        const r=await cloudApi('reset_locked_user_passwords');
+        const rows=Array.isArray(r?.credentials)?r.credentials:[];
+        await refreshAdminUsersFromCloud();
+        renderAdminUsersSettings();
+        if(!rows.length){alert('لا توجد حسابات مقفلة.');return}
+        const w=window.open('','_blank');
+        if(!w){alert('تم إنشاء الكلمات لكن المتصفح منع نافذة العرض.');return}
+        const body=rows.map(x=>'<tr><td>'+escapeAppHtml(x.name)+'</td><td>'+escapeAppHtml(x.username)+'</td><td>'+escapeAppHtml(x.temporary_password)+'</td></tr>').join('');
+        w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>كلمات المرور المؤقتة</title><style>body{font-family:Tahoma;padding:25px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:10px;text-align:center}h2{text-align:center}</style></head><body><h2>كلمات المرور المؤقتة للمستخدمين</h2><p>هذه القائمة تظهر مرة واحدة. اطبعها أو وزعها بشكل آمن، ثم اطلب من كل مستخدم تغيير كلمة مروره.</p><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>كلمة المرور المؤقتة</th></tr></thead><tbody>'+body+'</tbody></table><script>window.print()<\/script></body></html>');
+        w.document.close();
+      }catch(e){alert('تعذر إنشاء كلمات المرور: '+String(e?.message||e||''))}
+      finally{btn.disabled=false;btn.textContent=old}
+    };
     document.getElementById('importTeachersExcelBtn').onclick=()=>document.getElementById('teachersExcelInput').click();
   document.getElementById('teachersExcelInput').onchange=async e=>{
     const file=e.target.files?.[0];
