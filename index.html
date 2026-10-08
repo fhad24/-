@@ -15294,6 +15294,7 @@ function showAttendanceSavedMessage(message='✅ تم الحفظ بنجاح'){
 
 /* SHURAHBIL_ATTENDANCE_INSTANT_SAVE_V1 */
 let __attendanceInstantPending=new Set();
+let __attendanceInstantCancelled=new Set();
 let __attendanceInstantTimer=null;
 let __attendanceInstantBusy=false;
 
@@ -15301,7 +15302,10 @@ function queueAttendanceInstantSave(ids){
   if(attendanceMode!=='present' && attendanceMode!=='late') return;
   (Array.isArray(ids)?ids:[ids]).forEach(id=>{
     id=String(id||'').trim();
-    if(id) __attendanceInstantPending.add(id);
+    if(id){
+      __attendanceInstantCancelled.delete(id);
+      __attendanceInstantPending.add(id);
+    }
   });
   clearTimeout(__attendanceInstantTimer);
   __attendanceInstantTimer=setTimeout(flushAttendanceInstantSave,220);
@@ -15329,8 +15333,9 @@ async function flushAttendanceInstantSave(){
     return;
   }
 
-  const ids=[...__attendanceInstantPending];
+  const ids=[...__attendanceInstantPending].filter(id=>!__attendanceInstantCancelled.has(String(id)));
   __attendanceInstantPending.clear();
+  if(!ids.length) return;
   __attendanceInstantBusy=true;
 
 
@@ -15361,6 +15366,7 @@ async function flushAttendanceInstantSave(){
     const skipped=[];
 
     for(const id of ids){
+      if(__attendanceInstantCancelled.has(String(id))) continue;
       const student=studentsNow.find(x=>String(x.idno)===String(id))
         || roster.find(x=>String(x.idno)===String(id));
       if(!student) continue;
@@ -15398,6 +15404,18 @@ async function flushAttendanceInstantSave(){
 
     await saveAttendanceLog(rows,cloudRows);
 
+    // إذا أُلغي تحديد طالب أثناء انتظار الحفظ، لا نعيده محليًا ولو انتهى طلب الحفظ بعد ذلك.
+    const cancelledNow=new Set(ids.filter(id=>__attendanceInstantCancelled.has(String(id))).map(String));
+    if(cancelledNow.size){
+      const clean=getAttendanceLog().filter(x=>!(
+        cancelledNow.has(String(x?.idno||'')) &&
+        String(x?.date||'')===String(date) &&
+        String(x?.status||'')===String(attendanceMode)
+      ));
+      localStorage.setItem('attendanceLog',JSON.stringify(clean));
+      try{ renderAttendancePage(); }catch(e){}
+    }
+
     // الحضور يعرض الرسالة بعد تأكيد الخادم، أما التأخر فظهرت فورًا عند التحديد.
     if(attendanceMode==='present') showAttendanceSavedMessage('✅ تم الحفظ');
     const n=cloudRows.length;
@@ -15418,37 +15436,63 @@ async function flushAttendanceInstantSave(){
 async function cancelInstantAttendanceForStudent(id){
   id=String(id||'').trim();
   if(!id) return false;
-  __attendanceInstantPending.delete(id);
 
-  const started=Date.now();
-  while(__attendanceInstantBusy && Date.now()-started<5000){
-    await new Promise(r=>setTimeout(r,100));
-  }
+  // علّم الطالب كملغى فورًا حتى لا يعيده أي حفظ جارٍ أو مؤجل.
+  __attendanceInstantCancelled.add(id);
+  __attendanceInstantPending.delete(id);
 
   const mode=attendanceMode;
   const morningLate=mode==='late' && !!$('attendanceMorningLate')?.checked;
   const period=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
   const date=todayKey();
-  let rows=getAttendanceLog();
 
-  const matches=rows.filter(x=>{
+  const isMatch=(x)=>{
     if(String(x?.idno||'')!==id || String(x?.date||'')!==String(date) || String(x?.status||'')!==String(mode)) return false;
-    if(mode==='late'){
-      const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
-      if(morningLate || xMorning) return morningLate===xMorning;
-    }
+    if(mode==='late') return true;
     return !period || String(x?.period??'')===String(period);
-  });
+  };
 
-  if(!matches.length) return true;
+  // الإلغاء محليًا أولًا: يختفي فورًا من التقرير والعدادات دون انتظار الشبكة.
+  let rows=getAttendanceLog();
+  let matches=rows.filter(isMatch);
   if(matches.some(x=>!attendanceUserCanModifyRow(x))){
+    __attendanceInstantCancelled.delete(id);
     throw new Error('لا يمكن إلغاء تحضير سجل لا تملك صلاحية تعديله.');
   }
+  if(matches.length){
+    rows=rows.filter(x=>!isMatch(x));
+    localStorage.setItem('attendanceLog',JSON.stringify(rows));
+  }
+  try{ renderAttendancePage(); }catch(e){}
 
-  await cloudApi('delete_attendance_rows',{rows:matches});
-  const keys=new Set(matches.map(attendanceRecordKey));
-  rows=rows.filter(x=>!keys.has(attendanceRecordKey(x)));
-  localStorage.setItem('attendanceLog',JSON.stringify(rows));
+  // إذا كان هناك حفظ جارٍ لنفس اللحظة، ننتظر في الخلفية فقط ثم ننظف أي سجل أعاده.
+  const started=Date.now();
+  while(__attendanceInstantBusy && Date.now()-started<5000){
+    await new Promise(r=>setTimeout(r,60));
+  }
+
+  rows=getAttendanceLog();
+  const afterBusy=rows.filter(isMatch);
+  if(afterBusy.length){
+    matches=matches.concat(afterBusy);
+    rows=rows.filter(x=>!isMatch(x));
+    localStorage.setItem('attendanceLog',JSON.stringify(rows));
+    try{ renderAttendancePage(); }catch(e){}
+  }
+
+  // احذف من السحابة بعد أن اختفى محليًا بالفعل.
+  const unique=new Map();
+  matches.forEach(x=>unique.set(attendanceRecordKey(x),x));
+  const cloudMatches=[...unique.values()];
+  if(cloudMatches.length){
+    try{
+      await cloudApi('delete_attendance_rows',{rows:cloudMatches});
+    }catch(err){
+      // لا نعيد التحديد للمستخدم بسبب بطء الشبكة؛ سيبقى الإلغاء فوريًا محليًا.
+      console.error('instant attendance cloud cancel',err);
+      throw err;
+    }
+  }
   return true;
 }
 
