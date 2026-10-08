@@ -15212,7 +15212,8 @@ if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclic
     attendancePresentSelectedIds=new Set(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
     renderAttendanceStudentList();
     updateAttendanceSelectedCount();
-    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب');
+    queueAttendanceInstantSave(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
+    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب — جاري الحفظ الفوري');
   }catch(e){
     console.error('class roster',e);
     alert('تعذر جلب طلاب الفصل من قاعدة البيانات.');
