@@ -14417,6 +14417,21 @@ let attendancePresentFilterHijriDate=(()=>{
 })();
 let attendanceSelectedId='';
 let attendancePresentSelectedIds=new Set();
+
+function attendanceLateSelectionStorageKey(){
+  return 'attendanceLateSelections:'+todayKey();
+}
+function loadPersistedLateSelections(){
+  try{
+    const a=JSON.parse(localStorage.getItem(attendanceLateSelectionStorageKey())||'[]');
+    return new Set(Array.isArray(a)?a.map(x=>String(x||'').trim()).filter(Boolean):[]);
+  }catch(e){ return new Set(); }
+}
+function persistLateSelections(){
+  try{
+    localStorage.setItem(attendanceLateSelectionStorageKey(),JSON.stringify([...attendancePresentSelectedIds]));
+  }catch(e){}
+}
 let attendanceWholeClassRoster=null;
 let attendanceStudentSortKey='name';
 let attendanceStudentSortDir=1;
@@ -14559,13 +14574,16 @@ function getAttendanceEditedTime(){
 function restoreAttendanceSelectionsForMode(mode){
   const date=todayKey();
   if(mode==='late'){
-    attendancePresentSelectedIds=new Set(
-      getAttendanceLog()
-        .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
-        .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
-        .map(x=>String(x?.idno||'').trim())
-        .filter(Boolean)
-    );
+    // أعد التحديد فورًا من التخزين المحلي، ثم ادمج أي سجلات محفوظة فعليًا.
+    const restored=loadPersistedLateSelections();
+    getAttendanceLog()
+      .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
+      .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
+      .map(x=>String(x?.idno||'').trim())
+      .filter(Boolean)
+      .forEach(id=>restored.add(id));
+    attendancePresentSelectedIds=restored;
+    persistLateSelections();
     return;
   }
   attendancePresentSelectedIds.clear();
@@ -15021,20 +15039,26 @@ async function renderAttendanceStudentList(){
       const id=String(box.dataset.selectId||'');
       if(box.checked){
         attendancePresentSelectedIds.add(id);
+        if(attendanceMode==='late') persistLateSelections();
         updateAttendanceSelectedCount();
         // في التأخر نظهر رسالة الحفظ فورًا عند التحديد، بدون انتظار الشبكة.
         if(attendanceMode==='late') showAttendanceSavedMessage('✅ تم الحفظ');
         queueAttendanceInstantSave(id);
       }else{
+        // ارفع التحديد محليًا فورًا حتى يبقى صحيحًا عند إغلاق اللوحة وفتحها.
+        attendancePresentSelectedIds.delete(id);
+        if(attendanceMode==='late') persistLateSelections();
         box.disabled=true;
         try{
           await cancelInstantAttendanceForStudent(id);
           attendancePresentSelectedIds.delete(id);
+          if(attendanceMode==='late') persistLateSelections();
           updateAttendanceSelectedCount();
         }catch(err){
           console.error('instant attendance cancel',err);
           box.checked=true;
           attendancePresentSelectedIds.add(id);
+          if(attendanceMode==='late') persistLateSelections();
           updateAttendanceSelectedCount();
         }finally{
           box.disabled=false;
