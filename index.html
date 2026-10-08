@@ -14556,11 +14556,26 @@ function getAttendanceEditedTime(){
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
 
+function restoreAttendanceSelectionsForMode(mode){
+  const date=todayKey();
+  if(mode==='late'){
+    attendancePresentSelectedIds=new Set(
+      getAttendanceLog()
+        .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
+        .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
+        .map(x=>String(x?.idno||'').trim())
+        .filter(Boolean)
+    );
+    return;
+  }
+  attendancePresentSelectedIds.clear();
+}
+
 function openAttendanceModal(mode){
   attendanceEditingIndex=-1;
   attendanceMode=mode;
   attendanceSelectedId='';
-  attendancePresentSelectedIds.clear();
+  restoreAttendanceSelectionsForMode(mode);
   attendanceWholeClassRoster=null;
   attendanceGradeFilter='';
   attendanceNewPhotoBlob=null;
@@ -14650,6 +14665,7 @@ function closeAttendanceModal(){
 
 function setAttendanceMode(mode){
   attendanceMode=mode;
+  if(mode==='late') restoreAttendanceSelectionsForMode('late');
   const late=mode==='late';
   const present=mode==='present';
   const absent=mode==='absent';
