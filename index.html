@@ -308,6 +308,51 @@
       position:static!important;
       transform:none!important;
     }
+
+    /* عزل صفحة إدارة ونقل الفصول تمامًا عن تخطيط بقية النظام */
+    body.transfer-manager-open main{
+      display:block!important;
+      position:static!important;
+      margin:0!important;
+      padding:0!important;
+      min-height:0!important;
+      height:auto!important;
+      max-height:none!important;
+      overflow:visible!important;
+    }
+    body.transfer-manager-open main > .page:not(#studentTransferManager){
+      display:none!important;
+      height:0!important;
+      min-height:0!important;
+      margin:0!important;
+      padding:0!important;
+      overflow:hidden!important;
+    }
+    body.transfer-manager-open #studentTransferManager{
+      display:block!important;
+      position:relative!important;
+      inset:auto!important;
+      top:0!important;
+      margin:0!important;
+      padding:0!important;
+      min-height:0!important;
+      height:auto!important;
+      transform:none!important;
+      overflow:visible!important;
+    }
+    body.transfer-manager-open #studentTransferManager > .student-transfer-page{
+      display:block!important;
+      position:relative!important;
+      top:0!important;
+      margin:0 auto!important;
+      padding:0 14px 14px!important;
+      min-height:0!important;
+      height:auto!important;
+      transform:none!important;
+    }
+    body.transfer-manager-open #studentTransferManager > .student-transfer-page > .student-transfer-head{
+      margin-top:0!important;
+    }
     @media(max-width:760px){
       .student-transfer-filters{grid-template-columns:1fr}
       .student-transfer-grid{grid-template-columns:1fr}
@@ -9587,6 +9632,25 @@ document.addEventListener('DOMContentLoaded',()=>{
 setInterval(()=>{try{updateGlobalUserBackButton()}catch(e){}},1200);
 
 function openInternalPage(pageId){
+  // وضع مستقل لصفحة إدارة ونقل الفصول لمنع أي مساحة موروثة من الصفحات الأخرى.
+  document.body.classList.toggle('transfer-manager-open',pageId==='studentTransferManager');
+  if(pageId!=='studentTransferManager'){
+    document.querySelectorAll('main > .page').forEach(p=>{
+      p.style.removeProperty('display');
+      p.style.removeProperty('height');
+      p.style.removeProperty('min-height');
+      p.style.removeProperty('max-height');
+      p.style.removeProperty('margin');
+      p.style.removeProperty('padding');
+      p.style.removeProperty('position');
+      p.style.removeProperty('transform');
+    });
+    const mainReset=document.querySelector('main');
+    if(mainReset){
+      ['display','height','min-height','max-height','padding-top','margin-top','align-items','justify-content']
+        .forEach(prop=>mainReset.style.removeProperty(prop));
+    }
+  }
   // ابدأ كل صفحة داخلية من أعلى الصفحة حتى لا يظهر فراغ ناتج عن موضع التمرير السابق.
   try{ window.scrollTo({top:0,left:0,behavior:'auto'}); }catch(e){ window.scrollTo(0,0); }
   updateGlobalUserBackButton(pageId);
@@ -9652,6 +9716,10 @@ function openInternalPage(pageId){
     // إصلاح نهائي لمساحة الصفحة الفارغة: اجعل صفحة النقل وحدها داخل main بدون أي ارتفاع/تموضع موروث.
     try{
       const mainEl=document.querySelector('main');
+      const transferPage=$('studentTransferManager');
+      if(mainEl && transferPage && transferPage.parentElement===mainEl){
+        mainEl.prepend(transferPage);
+      }
       if(mainEl){
         mainEl.style.setProperty('display','block','important');
         mainEl.style.setProperty('height','auto','important');
@@ -9742,6 +9810,16 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  document.body.classList.remove('transfer-manager-open');
+  const mainReset=document.querySelector('main');
+  if(mainReset){
+    ['display','height','min-height','max-height','padding-top','margin-top','align-items','justify-content']
+      .forEach(prop=>mainReset.style.removeProperty(prop));
+  }
+  document.querySelectorAll('main > .page').forEach(p=>{
+    ['display','height','min-height','max-height','margin','padding','position','transform']
+      .forEach(prop=>p.style.removeProperty(prop));
+  });
   const globalBack=$('globalUserBackToPages');
   if(globalBack){globalBack.classList.add('hidden');globalBack.style.display='none';}
   refreshOwnerHomeButton();
