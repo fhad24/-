@@ -142,8 +142,10 @@
           localStorage.setItem(CACHE_HTML,html);
         }catch(e){}
       }
-      const safeManager=managerScript.replace(/<\\/script/gi,'<\\\\/script');
-      html=html.replace(/<\\/body>/i,'<script>'+safeManager+'<\\/script></body>');
+      const safeManager=managerScript.split('</'+'script>').join('<\\/script>');
+      const closeBody=html.toLowerCase().lastIndexOf('</body>');
+      const injected='<script>'+safeManager+'<'+'/script>';
+      html=closeBody>=0 ? html.slice(0,closeBody)+injected+html.slice(closeBody) : html+injected;
       window.__SHURAHBIL_RUNTIME_UPDATE__=u.sha256;
       replaced=true;
       document.open();
