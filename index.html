@@ -5947,20 +5947,6 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
     actionTaken:'',
     createdAt:new Date().toISOString()
   };
-  const rows=(()=>{try{return JSON.parse(localStorage.getItem('studentReferrals')||'[]')}catch(e){return []}})();
-  selectedStudents.forEach((s,idx)=>rows.unshift({
-    ...base,
-    id:'R'+Date.now()+'-'+idx,
-    studentName:s.name||'',
-    studentCivilId:String(s.idno||''),
-    studentPhone:s.phone||'',
-    alertLevel:getRequiredReferralAlertLevel(String(s.idno||'')),
-    previousAlerts:getPreviousReferralAlertsCount(String(s.idno||'')),
-    grade:s.grade||base.grade,
-    classroom:studentClassKey(s.classroom)||base.classroom
-  }));
-  localStorage.setItem('studentReferrals',JSON.stringify(rows));
-
   const payload=selectedStudents.map(s=>({
     grade:s.grade||base.grade,
     classroom:studentClassKey(s.classroom)||base.classroom,
@@ -5982,6 +5968,12 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
 
   try{
     const result=await cloudApi('create_referrals',{rows:payload});
+    if(Array.isArray(result?.rows)){
+      const confirmed=getLocalReferralHistory();
+      const byId=new Map(confirmed.map(x=>[String(x.id||''),x]));
+      result.rows.forEach(x=>byId.set(String(x.id||''),x));
+      localStorage.setItem('studentReferrals',JSON.stringify([...byId.values()]));
+    }
     const sentToDeputy=(Array.isArray(result?.rows)?result.rows:[]).filter(r=>String(r.alert_level||'')==='3').length;
     const recordedOnly=(Array.isArray(result?.rows)?result.rows:[]).length-sentToDeputy;
     referralCloudHistoryLoadedAt=0;
@@ -5990,6 +5982,14 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
       ? `تم حفظ التنبيهات — ${sentToDeputy} وصل/وصلوا للتنبيه الثالث وتم تحويلهم للوكيل`
       : `تم حفظ ${recordedOnly||selectedStudents.length} تنبيه — لا يظهر للوكيل حتى التنبيه الثالث`);
     await loadTeacherReferralReplies();
+    referralSelectedIds.clear();
+    referralAlertLevels.clear();
+    if($('studentReferralForm')) $('studentReferralForm').reset();
+    if($('referralProblem')) $('referralProblem').value='';
+    if($('referralOtherReason')) $('referralOtherReason').value='';
+    updateReferralDates();
+    updateReferralStudentSelectorState();
+    await renderReferralSelectedStudents();
   }catch(err){
     console.warn('create referrals',err);
     const msg=String(err?.message||err||'');
@@ -5999,7 +5999,7 @@ if($('studentReferralForm')) $('studentReferralForm').addEventListener('submit',
       await renderReferralSelectedStudents();
       alert('لا يمكن تجاوز تسلسل التنبيهات. يجب إرسال التنبيه 1 ثم 2 ثم 3 بالترتيب.');
     }else{
-      toast('تم حفظ التحويل محليًا وتعذر إرساله سحابيًا');
+      alert('تعذر إرسال التحويل إلى الخادم. لم يتم اعتماد العملية؛ حاول مرة أخرى بعد عودة الاتصال.');
     }
   }
   await loadReferralHistory();
@@ -6426,6 +6426,7 @@ async function cloudPullAttendanceFast(){
   if(!token) return [];
   const data=await cloudApi('pull_attendance');
   const attendance=(data.attendance||[]).map(x=>({
+    id:x.id??null,
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
     date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
     subject:x.subject||'',
@@ -6683,6 +6684,7 @@ async function cloudPullToLocal(){
   }
 
   const attendance=(data.attendance||[]).map(x=>({
+    id:x.id??null,
     idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
     date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
     subject:x.subject||'',
@@ -9581,6 +9583,7 @@ function ensureAdminToolbarVisible(){
   }
 }
 function setAdminMode(on){
+  if(on && (!localStorage.getItem('cloudAdminToken') || !getCurrentLoggedAdminUser())) on=false;
   adminLoggedIn = on;
   document.body.classList.toggle('admin-mode', on);
   if(!on){
@@ -13658,16 +13661,15 @@ if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=
   }
 
   const deleted=uniqueIndexes.map(i=>rows[i]).filter(Boolean);
-  uniqueIndexes.forEach(i=>rows.splice(i,1));
-  localStorage.setItem('attendanceLog',JSON.stringify(rows));
-
   try{
-    if(localStorage.getItem('cloudAdminToken')){
-      await cloudApi('delete_attendance_rows',{rows:deleted});
-    }
+    if(!localStorage.getItem('cloudAdminToken')) throw new Error('انتهت جلسة الدخول');
+    await cloudApi('delete_attendance_rows',{rows:deleted});
+    uniqueIndexes.forEach(i=>rows.splice(i,1));
+    localStorage.setItem('attendanceLog',JSON.stringify(rows));
   }catch(e){
     console.warn('cloud bulk attendance delete',e);
-    alert('تم الحذف محليًا لكن تعذر حذف بعض السجلات من قاعدة البيانات السحابية.');
+    alert('تعذر الحذف من قاعدة البيانات. لم يتم حذف السجلات محليًا.');
+    return;
   }
 
   await renderAttendancePage();
@@ -14544,12 +14546,23 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       ? formatAttendanceTimeForDisplay(getAttendanceEditedTime())
       : '';
     const recorder=getSelectedAttendanceTeacher();
+    const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
+    const selectedPeriod=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
+    const selectedSubject=morningLate ? 'تأخر عن الطابور الصباحي' : String($('attendanceSubjectSelect')?.value||'').trim();
+    if((attendanceMode==='present'||attendanceMode==='late') && !morningLate && !selectedPeriod){
+      alert('اختر الحصة قبل الحفظ.');
+      return;
+    }
+    if(attendanceMode==='present' && !selectedSubject){
+      alert('اختر المادة قبل حفظ الحضور.');
+      return;
+    }
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
-      time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
-      period:null,
-      subject:'',
-      morningAssemblyLate:false,
+      time:attendanceTimeToInput(editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false}))),
+      period:selectedPeriod,
+      subject:selectedSubject,
+      morningAssemblyLate:morningLate,
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'}),
       teacherName:recorder.name,
@@ -14598,8 +14611,13 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       rows=freshRows;
     }
 
-    if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length){
-      rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
+    let effectiveEditingIndex=attendanceEditingIndex;
+    if(attendanceEditingOriginal?.id!==undefined && attendanceEditingOriginal?.id!==null){
+      const byId=rows.findIndex(x=>String(x.id??'')===String(attendanceEditingOriginal.id));
+      if(byId>=0) effectiveEditingIndex=byId;
+    }
+    if(effectiveEditingIndex>=0 && effectiveEditingIndex<rows.length){
+      rows[effectiveEditingIndex]={...rows[effectiveEditingIndex],...record,id:rows[effectiveEditingIndex].id??attendanceEditingOriginal?.id??null};
     }else if(selectedGroup.length){
       const skippedLate=[];
       selectedGroup.forEach(id=>{
@@ -14618,7 +14636,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
             return;
           }
         }else{
-          rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
+          rows=rows.filter(x=>!(String(x.date)===String(record.date) && String(x.idno)===String(id) && String(x.period??'')===String(record.period??'')));
         }
 
         const newRow={
@@ -14647,13 +14665,15 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         rows.push(record);
       }else{
         rows=rows.filter(x=>!(
-          x.date===todayKey() && String(x.idno)===String(attendanceSelectedId)
+          String(x.date)===String(record.date) &&
+          String(x.idno)===String(attendanceSelectedId) &&
+          String(x.period??'')===String(record.period??'')
         ));
         rows.push(record);
       }
     }
     if(!rowsForCloud.length){
-      if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length) rowsForCloud=[rows[attendanceEditingIndex]];
+      if(effectiveEditingIndex>=0 && effectiveEditingIndex<rows.length) rowsForCloud=[rows[effectiveEditingIndex]];
       else if(record?.idno) rowsForCloud=[record];
     }
     const savedMode=attendanceMode;
@@ -18756,93 +18776,59 @@ if($('landingPass')) $('landingPass').addEventListener('keydown',e=>{
 
 
 // زر الإدارة تتم إدارته من معالج التبويبات الرئيسي أعلاه.
-function restoreLastAppLocation(){
-  const loggedIn=localStorage.getItem('adminLoggedIn')==='1';
-  const page=loggedIn ? (localStorage.getItem('activeMainPage')||'admin') : 'register';
-
-  if(!loggedIn){
+async function restoreLastAppLocation(){
+  const ok=await cloudAutoLoginFromSavedProfile();
+  if(!ok){
+    adminLoggedIn=false;
+    setAdminMode(false);
     localStorage.setItem('activeMainPage','register');
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    $('register')?.classList.remove('hidden');
+    $('dashboard')?.classList.add('hidden');
+    $('adminLoginModal')?.classList.remove('hidden');
     setTimeout(()=>refreshPublicTickerFromCloud(),0);
+    return;
   }
 
-  tabs.forEach(x=>x.classList.toggle('active',x.dataset.page===page));
-  pages.forEach(p=>p.classList.toggle('hidden',p.id!==page));
-
-  if(loggedIn){
-    adminLoggedIn=true;
-    setAdminMode(true);
+  const u=getCurrentLoggedAdminUser();
+  if(!u){
+    setAdminMode(false);
+    return;
   }
+  adminLoggedIn=true;
+  localStorage.setItem('adminLoggedIn','1');
+  const owner=u.is_owner===true;
+  localStorage.setItem('activeSessionMode',owner?'owner':'user');
+  document.documentElement.classList.toggle('user-session-home',!owner);
+  document.body.classList.toggle('user-permissions-only',!owner);
+  setAdminMode(true);
 
+  let page=localStorage.getItem('activeMainPage')||'admin';
+  const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+  const allowedMap={
+    followup:'followupSheets',
+    weeklyAttendanceReport:'weeklyAttendance',
+    teacherClassFollowup:'teacherFollowup',
+    teacherClassManager:'teacherFollowupManager',
+    deputyReferrals:'referralReview',
+    referral:'referralSubmit',
+    studentTransferManager:'addStudent',
+    activityLeaderPage:'activityLeader'
+  };
+  if(!owner && allowedMap[page] && !perms.has(allowedMap[page])) page='admin';
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   if(page==='admin'){
-    if(loggedIn){
-      adminLoggedIn=true;
-      $('adminLoginModal')?.classList.add('hidden');
-      $('dashboard')?.classList.remove('hidden');
-      setAdminMode(true);
-
-      const savedMode=localStorage.getItem('activeSessionMode');
-      const owner=savedMode==='user' ? false : (savedMode==='owner' ? true : (typeof isCurrentOwner==='function' ? isCurrentOwner() : true));
-      if(!owner){
-        document.documentElement.classList.add('user-session-home');
-        document.body.classList.add('user-permissions-only');
-        document.body.classList.remove('user-attendance-only');
-      }else{
-        document.documentElement.classList.remove('user-session-home');
-      }
-      if(owner){
-        document.body.classList.remove('user-permissions-only','user-attendance-only');
-        try{configureUserDashboard();ensureAdminToolbarVisible()}catch(e){}
-        const view=localStorage.getItem('activeAdminView')||'data';
-        showAdminView(view);
-        renderAdmin();
-
-        if(localStorage.getItem('adminSettingsOpen')==='1'){
-          setTimeout(()=>openAdminSettings(),0);
-        }
-      }else{
-        // المستخدم العادي: لا نشغّل أي عرض من عروض الإدارة بعد التحديث.
-        localStorage.setItem('adminSettingsOpen','0');
-        try{configureUserDashboard()}catch(e){}
-      }
-
-      setTimeout(async()=>{
-        try{
-          await cloudAutoLoginFromSavedProfile();
-          if(typeof isCurrentOwner==='function' && !isCurrentOwner()){
-            configureUserDashboard();
-          }
-        }catch(e){}
-      },100);
-    }else{
-      $('dashboard')?.classList.add('hidden');
-      $('adminLoginModal')?.classList.remove('hidden');
-    }
+    $('admin')?.classList.remove('hidden');
+    $('adminLoginModal')?.classList.add('hidden');
+    $('dashboard')?.classList.remove('hidden');
+    configureUserDashboard();
+    if(owner){renderAdmin();ensureAdminToolbarVisible();}
   }else{
-    if(page==='edit' && typeof resetStudentEditLogin==='function') resetStudentEditLogin();
-
-    // عند تحديث المتصفح داخل صفحة كشوف متابعة الطلاب نعيد تهيئتها فورًا.
-    if(page==='followup' && loggedIn){
-      try{
-        if(typeof initStudentFollowupPage==='function'){
-          setTimeout(()=>initStudentFollowupPage().catch(e=>console.error('followup restore init',e)),0);
-        }
-      }catch(e){console.warn('restore followup page',e)}
-    }
-    if(page==='weeklyAttendanceReport' && loggedIn){
-      try{ if(typeof initWeeklyAttendanceReport==='function') setTimeout(initWeeklyAttendanceReport,0); }catch(e){}
-    }
-
-    if(page==='teacherClassFollowup' && loggedIn){
-      try{ if(typeof initTeacherClassFollowupPage==='function') setTimeout(initTeacherClassFollowupPage,0); }catch(e){}
-    }
-    if(page==='teacherClassManager' && loggedIn){
-      try{ if(typeof loadTeacherClassManagerFollowups==='function') setTimeout(loadTeacherClassManagerFollowups,0); }catch(e){}
-    }
-    if(page==='deputyReferrals' && loggedIn){
-      try{ if(typeof loadDeputyReferrals==='function') setTimeout(()=>loadDeputyReferrals(false),0); }catch(e){}
-    }
+    openInternalPage(page);
   }
 }
+
 setTimeout(restoreLastAppLocation,0);
 setTimeout(()=>ensureFaceModels().catch(()=>{}),150);
 function refreshCurrentDashboardAfterCloudPull(){
@@ -18856,8 +18842,11 @@ let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
-},300000);
+},600000);
+let lastFocusCloudRefresh=0;
 window.addEventListener('focus',()=>{
+  if(Date.now()-lastFocusCloudRefresh<120000) return;
+  lastFocusCloudRefresh=Date.now();
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
   }
