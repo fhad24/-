@@ -5715,7 +5715,9 @@ if($('studentEditForm') && !$('studentEditForm').dataset.serverBound){
           idno:selfEditStudentId,
           student_name:patch.name,
           image_data:imageData,
-          submitted_by:'الطالب - تعديل ذاتي'
+          birth:selfEditBirth,
+          calendar:selfEditCalendar,
+          verify_phone:selfEditVerifyPhone
         },false);
       }
       $('editWelcomeName').textContent=patch.name||'بيانات الطالب';
@@ -6608,16 +6610,13 @@ async function cloudPullToLocal(){
   localStorage.setItem('attendanceLog',JSON.stringify(attendance));
 
   if(Array.isArray(data.referrals)){
-    const currentReferralRows=getLocalReferralHistory();
-    const nextReferralRows=data.referrals.length ? data.referrals : currentReferralRows;
-    if(nextReferralRows.length){
-      localStorage.setItem('studentReferrals',JSON.stringify(nextReferralRows));
-      try{
-        if(typeof renderReferralHistoryRows==='function'){
-          renderReferralHistoryRows(nextReferralRows);
-        }
-      }catch(e){}
-    }
+    const nextReferralRows=data.referrals;
+    localStorage.setItem('studentReferrals',JSON.stringify(nextReferralRows));
+    try{
+      if(typeof renderReferralHistoryRows==='function'){
+        renderReferralHistoryRows(nextReferralRows);
+      }
+    }catch(e){}
   }
 
   if(data.settings){
@@ -6647,8 +6646,7 @@ async function cloudPullToLocal(){
     role:u.role||'معلم',
     permissions:Array.isArray(u.permissions)?u.permissions:[],
     accountLocked:!!u.account_locked,
-    passwordUpdatedAt:String(u.password_updated_at||''),
-    password:''
+    passwordUpdatedAt:String(u.password_updated_at||'')
   }));
   localStorage.setItem('adminUsers',JSON.stringify(extras));
   return data;
@@ -6797,7 +6795,7 @@ function ensureHeaderAdminHomeButton(){
 
 function refreshOwnerHomeButton(){
   try{
-    const show=document.body.classList.contains('admin-mode') || localStorage.getItem('adminLoggedIn')==='1';
+    const show=!!getCurrentLoggedAdminUser() && document.body.classList.contains('admin-mode');
     const btn=ensureHeaderAdminHomeButton();
     if(btn){
       btn.style.setProperty('display',show?'inline-flex':'none','important');
@@ -13531,38 +13529,51 @@ if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>
   openAttendanceWhatsAppForRows(indexes.map(i=>logs[i]).filter(Boolean));
 };
 
-if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=()=>{
+if($('attendanceBulkAbsent')) $('attendanceBulkAbsent').onclick=async()=>{
   const ids=[...document.querySelectorAll('.attendance-pending-select:checked')].map(x=>String(x.dataset.pendingIdCheck||'')).filter(Boolean);
   if(!ids.length){
     alert('اذهب إلى «بانتظار تحديد الاسم» وحدد طالبًا أو مجموعة طلاب لإضافتهم كغياب');
     return;
   }
   const period=$('attendanceBulkPeriod')?.value ? Number($('attendanceBulkPeriod').value) : null;
+  if(!period){alert('اختر الحصة قبل تسجيل الغياب');return}
   const recorder=getCurrentAttendanceRecorder();
   const students=getStudents();
   const now=new Date();
   let rows=getAttendanceLog();
+  const cloudRows=[];
 
   ids.forEach(id=>{
     const s=students.find(x=>String(x.idno)===id);
     if(!s) return;
-    rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===id));
-    rows.push({
+    rows=rows.filter(x=>!(
+      String(x.date)===todayKey() &&
+      String(x.idno)===id &&
+      String(x.period??'')===String(period)
+    ));
+    const row={
       date:todayKey(),
-      time:now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}),
+      time:attendanceTimeToInput(now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false})),
       period,
       subject:'',
       idno:s.idno,name:s.name,grade:s.grade||'',classroom:s.classroom||'',
       status:'absent',
       faceMatch:'none',
       teacherName:recorder.name,teacherUsername:recorder.username,teacherCivilId:recorder.civilId
-    });
+    };
+    rows.push(row);
+    cloudRows.push(row);
   });
 
-  saveAttendanceLog(rows);
-  attendanceListView='absent';
-  renderAttendancePage();
-  toast('تم تسجيل الغياب للمحدد');
+  try{
+    await saveAttendanceLog(rows,cloudRows);
+    attendanceListView='absent';
+    await renderAttendancePage();
+    toast('تم تسجيل الغياب للمحدد');
+  }catch(e){
+    console.error('bulk absence save',e);
+    alert('تعذر حفظ الغياب في الخادم. لم يتم اعتماد العملية.');
+  }
 };
 
 if($('attendanceDeleteSelected')) $('attendanceDeleteSelected').onclick=async()=>{
@@ -18535,11 +18546,8 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
         await cloudApi('submit_pending_photo',{
           idno,
           student_name:name,
-          image_data:imageData,
-          submitted_by:operator.label,
-          submitted_by_name:operator.name,
-          submitted_by_id:operator.id
-        },false);
+          image_data:imageData
+        });
         // لا تغلق صفحة الإضافة/التعديل بعد الإرسال.
         addStudentNewFaceBlob=null;
         addStudentFaceVerified=false;
@@ -18635,7 +18643,7 @@ if($('landingLoginBtn')) $('landingLoginBtn').onclick=async()=>{
     if(!login?.token || !login?.user) throw new Error('LOGIN_FAILED');
 
     const cu=login.user||{};
-    const owner=!!cu.is_owner || String(cu.role||'')==='مدير';
+    const owner=cu.is_owner===true;
     const sessionUser={
       ...cu,
       username:String(cu.username||user),
