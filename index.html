@@ -272,6 +272,42 @@
     .student-transfer-grid input,.student-transfer-grid select{height:48px;border-radius:12px}
     .student-transfer-save-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
     .student-transfer-row-selected td{background:#edf8f5!important}
+    /* FIX: صفحة إدارة ونقل الطلاب تبدأ مباشرة بدون مساحة علوية فارغة */
+    #studentTransferManager{
+      display:block;
+      position:static!important;
+      inset:auto!important;
+      top:auto!important;
+      bottom:auto!important;
+      transform:none!important;
+      margin:0!important;
+      padding:0!important;
+      min-height:0!important;
+      height:auto!important;
+      max-height:none!important;
+      overflow:visible!important;
+      align-items:flex-start!important;
+      justify-content:flex-start!important;
+    }
+    #studentTransferManager.hidden{display:none!important}
+    #studentTransferManager .student-transfer-page{
+      position:static!important;
+      top:auto!important;
+      bottom:auto!important;
+      transform:none!important;
+      margin:0 auto!important;
+      padding:14px!important;
+      min-height:0!important;
+      height:auto!important;
+      max-height:none!important;
+      align-self:auto!important;
+    }
+    #studentTransferManager .student-transfer-head{
+      margin-top:0!important;
+      top:auto!important;
+      position:static!important;
+      transform:none!important;
+    }
     @media(max-width:760px){
       .student-transfer-filters{grid-template-columns:1fr}
       .student-transfer-grid{grid-template-columns:1fr}
