@@ -26,7 +26,7 @@
       const entry=zip.file('site/index.html')||zip.file('index.html');
       if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
       const html=await entry.async('string');
-      if(html.length<100000 || html.length>3500000 || !/<html[\\s>]/i.test(html) || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
+      if(html.length<100000 || html.length>3500000 || !html.toLowerCase().includes('<html') || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
         throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
       }
       let manifest={};
@@ -136,7 +136,7 @@
         const contentRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'program_update_content',sha256:u.sha256})});
         if(!contentRes.ok)return;
         html=await contentRes.text();
-        if(html.length<100000 || !/<html[\\s>]/i.test(html))return;
+        if(html.length<100000 || !html.toLowerCase().includes('<html'))return;
         try{
           localStorage.setItem(CACHE_HASH,u.sha256);
           localStorage.setItem(CACHE_HTML,html);
@@ -10928,7 +10928,7 @@ async function importProgramUpdateZip(file){
     const entry=zip.file('site/index.html')||zip.file('index.html');
     if(!entry) throw new Error('لم يتم العثور على site/index.html أو index.html داخل الملف');
     const html=await entry.async('string');
-    if(html.length<100000 || html.length>3500000 || !/<html[\\s>]/i.test(html) || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
+    if(html.length<100000 || html.length>3500000 || !html.toLowerCase().includes('<html') || !/<!doctype html/i.test(html) || !html.includes('CLOUD_API_URL')){
       throw new Error('ملف البرنامج داخل الحزمة غير صالح أو غير مكتمل');
     }
     let manifest={};
