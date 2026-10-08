@@ -9473,6 +9473,11 @@ async function reconcileStudentRosterFromAdmin(){
     }
     toast('✅ تمت مطابقة الفصل بنجاح');
     alert('✅ تمت مطابقة الفصل بنجاح.\nالمثبتون في الفصل: '+matched+'\nالمنقولون إلى الوهمي: '+moved+(missing.length?'\nغير المطابقين من القائمة: '+missing.length:''));
+
+    // بعد نجاح الحفظ فرّغ النموذج حتى لا تبقى بيانات الكشف السابق ظاهرة.
+    if($('studentRosterReconcileText')) $('studentRosterReconcileText').value='';
+    if($('studentRosterReconcileGrade')) $('studentRosterReconcileGrade').value='';
+    if($('studentRosterReconcileClass')) $('studentRosterReconcileClass').value='';
   }catch(e){
     console.error('reconcile class roster',e);
     if(status) status.textContent='تعذر تنفيذ المطابقة: '+(e?.message||e);
