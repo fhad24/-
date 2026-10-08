@@ -8388,8 +8388,7 @@ async function loadMyTeacherClassFollowups(){
   const host=$('teacherClassMyHistory'); if(!host) return;
   host.innerHTML='<div class="hint">جاري تحميل المتابعات...</div>';
   try{
-    const creds=getCurrentAppCredentials();
-    const res=await cloudApi('list_my_teacher_followups_with_credentials',creds,false);
+    const res=await cloudApi('list_my_teacher_followups');
     const rows=Array.isArray(res?.rows)?res.rows:[];
     if(!rows.length){host.innerHTML='<div class="hint">لا توجد متابعات مرسلة حتى الآن.</div>';return}
     host.innerHTML=rows.map(r=>`
@@ -8420,8 +8419,7 @@ async function submitTeacherClassFollowup(){
   if(!teacherClassImageData){alert('التقط صورة من السبورة بالكاميرا أولًا.');return}
   const btn=$('teacherClassSubmitBtn');const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإرسال...';
   try{
-    const creds=getCurrentAppCredentials();
-    await cloudApi('submit_teacher_followup_with_credentials',{...creds,subject,grade,classroom,period,notes,imageData:teacherClassImageData},false);
+    await cloudApi('submit_teacher_followup',{subject,grade,classroom,period,notes,imageData:teacherClassImageData});
     $('teacherClassSubject').value='';
     $('teacherClassNotes').value='';
     $('teacherClassPeriod').value='';
@@ -8440,8 +8438,7 @@ async function loadTeacherClassManagerFollowups(){
   const host=$('teacherClassManagerList'); if(!host) return;
   host.innerHTML='<div class="hint">جاري تحميل متابعات المعلمين...</div>';
   try{
-    const creds=getCurrentAppCredentials();
-    const res=await cloudApi('list_teacher_followups_manager_with_credentials',creds,false);
+    const res=await cloudApi('list_teacher_followups_manager');
     const rows=Array.isArray(res?.rows)?res.rows:[];
     if(!rows.length){host.innerHTML='<div class="hint">لا توجد متابعات مرسلة حتى الآن.</div>';return}
     const school=getSchoolSettings();
@@ -8495,8 +8492,7 @@ async function loadTeacherClassManagerFollowups(){
       if(!id||!reply){alert('اكتب رسالة الشكر أولًا.');return}
       const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الحفظ...';
       try{
-        const creds=getCurrentAppCredentials();
-        await cloudApi('reply_teacher_followup_manager_with_credentials',{...creds,id,reply},false);
+        await cloudApi('reply_teacher_followup_manager',{id,reply});
         toast('تم إرسال رسالة الشكر للمعلم');
         await loadTeacherClassManagerFollowups();
       }catch(e){console.error(e);alert('تعذر حفظ رسالة الشكر.')}
@@ -11018,29 +11014,8 @@ function ensureAdminSettings(){
       if(!tickerSave?.ok) throw new Error('TICKER_SAVE_FAILED');
 
       // بعد نجاح الشريط، حاول حفظ بقية إعدادات المدرسة.
-      try{
-        if(localStorage.getItem('cloudAdminToken')){
-          await cloudApi('save_settings',{settings:next});
-        }else{
-          const p=getAdminProfile();
-          await cloudApi('save_settings_with_credentials',{
-            username:p.username,
-            password:p.password,
-            settings:next
-          },false);
-        }
-      }catch(syncErr){
-        try{
-          const p=getAdminProfile();
-          await cloudApi('save_settings_with_credentials',{
-            username:p.username,
-            password:p.password,
-            settings:next
-          },false);
-        }catch(settingsErr){
-          console.warn('school settings save failed after ticker saved',settingsErr);
-        }
-      }
+      if(!localStorage.getItem('cloudAdminToken')) throw new Error('NO_CLOUD_SESSION');
+      await cloudApi('save_settings',{settings:next});
 
       // تحقق من النص المحفوظ وأعد عرضه فورًا.
       const verifyTicker=await cloudApi('school_settings_public',{},false);
@@ -18043,11 +18018,8 @@ async function updateAddEditStudentSummary(student){
 
   let perf=null;
   try{
-    const u=getCurrentLoggedAdminUser?.()||{};
-    const username=String(u.username||u.civil_id||u.civilId||'').trim();
-    const password=String(u.civil_id||u.civilId||u.username||'').trim();
-    if(username && password){
-      perf=await cloudApi('get_student_attendance_performance_with_credentials',{username,password,idno:String(student.idno||'')},false);
+    if(localStorage.getItem('cloudAdminToken')){
+      perf=await cloudApi('get_student_attendance_performance',{idno:String(student.idno||'')});
     }
   }catch(e){ console.warn('add/edit performance cloud',e); }
 
@@ -18132,33 +18104,12 @@ async function loadStudentsForAddEdit(){
     }catch(e){console.warn('owner student load',e)}
   }
 
-  // المستخدمون: اجلب قاعدة الطلاب مباشرة بصلاحية إضافة طالب/تعديل.
-  const u=getCurrentLoggedAdminUser?.()||{};
-  const username=String(u.username||u.civil_id||u.civilId||'').trim();
-  const password=String(u.civil_id||u.civilId||u.username||'').trim();
-  if(username && password){
+  if(localStorage.getItem('cloudAdminToken')){
     try{
-      const data=await cloudApi('list_students_with_credentials',{username,password},false);
-      const students=(data.students||[]).map(s=>({
-        name:s.name||'',
-        idno:String(s.idno||''),
-        phone:s.phone||'',
-        grade:s.grade||'',
-        classroom:studentClassKey(s.classroom)||s.classroom||'',
-        calendar:s.calendar||'',
-        birth:s.birth||'',
-        verification:s.verification||'مؤكد',
-        registered:s.registered!==false,
-        hasFace:!!s.has_face,
-        hasId:!!s.has_id,
-        cropStatus:s.crop_status||'',
-        referenceNo:s.reference_no||'',
-        registrationDate:s.registration_date||''
-      }));
-      localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
-      return students;
+      await cloudPullToLocal();
+      return getStudents();
     }catch(e){
-      console.error('credential student load',e);
+      console.error('session student load',e);
       window.__addEditStudentLoadError=String(e?.message||e||'');
     }
   }
@@ -18170,12 +18121,9 @@ async function fetchStudentFaceForAddEdit(idno){
   try{blob=await getStudentPhoto(`${idno}:face`)}catch(e){}
   if(blob) return blob;
 
-  const u=getCurrentLoggedAdminUser?.()||{};
-  const username=String(u.username||u.civil_id||u.civilId||'').trim();
-  const password=String(u.civil_id||u.civilId||u.username||'').trim();
-  if(!username||!password||!idno) return null;
+  if(!localStorage.getItem('cloudAdminToken')||!idno) return null;
   try{
-    const data=await cloudApi('get_student_face_with_credentials',{username,password,idno:String(idno)},false);
+    const data=await cloudApi('get_student_face',{idno:String(idno)});
     const b=dataURLToBlob(data.face_image||'');
     if(b){
       try{await saveStudentPhoto(`${idno}:face`,b,true)}catch(e){}
