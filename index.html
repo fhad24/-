@@ -6274,19 +6274,7 @@ async function loadTeacherReferralReplies(){
 
 function getCurrentAppCredentials(){
   const current=getCurrentLoggedAdminUser();
-  const username=String(current?.username||current?.civil_id||'').trim();
-  if(!username) return {username:'',password:''};
-
-  if(isCurrentOwner()){
-    const p=getAdminProfile();
-    return {username:String(p.username||username).trim(),password:String(p.password||'').trim()};
-  }
-
-  const localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username);
-  return {
-    username,
-    password:String(localUser?.password||localUser?.civilId||localUser?.username||'').trim()
-  };
+  return {username:String(current?.username||''),password:''};
 }
 
 function getCurrentDeputyCredentials(){
@@ -6446,9 +6434,7 @@ async function loadDeputyReferrals(silent=false){
       const oldText=btn.textContent;
       btn.textContent='جاري الحفظ...';
       try{
-        const creds=getCurrentDeputyCredentials();
-        if(!creds.username || !creds.password) throw new Error('MISSING_DEPUTY_CREDENTIALS');
-        await cloudApi('reply_referral_with_credentials',{...creds,id,reply,deputyAction},false);
+        await cloudApi('reply_referral',{id,reply,deputyAction});
         toast('تم حفظ رد الوكيل وإرساله للمعلم');
 
         // بعد الحفظ يختفي الطالب من قائمة ردود الوكلاء مباشرة.
@@ -6487,54 +6473,10 @@ async function openDeputyReferralsPage(){
   $('deputyReferrals')?.classList.remove('hidden');
   localStorage.setItem('activeMainPage','deputyReferrals');
 
-  try{
-    const current=getCurrentLoggedAdminUser();
-    const username=String(current?.username||current?.civil_id||'').trim();
-
-    let localUser=null;
-    if(!isCurrentOwner()){
-      localUser=getAdminUsers().find(x=>String(x.username||'').trim()===username)||null;
-    }
-
-    const storedCloud=(()=>{try{return JSON.parse(localStorage.getItem('cloudAdminUser')||'null')}catch(e){return null}})();
-    const cloudMatches=storedCloud && String(storedCloud.username||'').trim()===username;
-
-    if(!localStorage.getItem('cloudAdminToken') || !cloudMatches){
-      localStorage.removeItem('cloudAdminToken');
-      localStorage.removeItem('cloudAdminUser');
-
-      const p=getAdminProfile();
-      const password=isCurrentOwner()
-        ? String(p.password||'').trim()
-        : String(localUser?.password||localUser?.civilId||localUser?.username||'').trim();
-
-      if(username && password){
-        const login=await cloudApi('login',{username,password},false);
-        if(login?.token){
-          localStorage.setItem('cloudAdminToken',login.token);
-          const mergedUser=isCurrentOwner()
-            ? login.user
-            : {
-                ...login.user,
-                username:String(localUser?.username||username),
-                civil_id:String(localUser?.civilId||localUser?.username||username),
-                name:String(localUser?.name||login.user?.name||username),
-                role:String(localUser?.role||login.user?.role||'مستخدم'),
-                permissions:Array.isArray(localUser?.permissions)?localUser.permissions:(login.user?.permissions||[]),
-                is_owner:false
-              };
-          if(mergedUser) localStorage.setItem('cloudAdminUser',JSON.stringify(mergedUser));
-        }
-      }
-    }
-  }catch(e){
-    console.warn('deputy cloud relogin',e);
-  }
-
   await loadDeputyReferrals(false);
 
   // محاولات تلقائية متتابعة عند فتح الصفحة؛ لا حاجة للضغط على تحديث.
-  [500,1500,3000].forEach(ms=>setTimeout(()=>{
+  [1200,5000].forEach(ms=>setTimeout(()=>{
     const page=$('deputyReferrals');
     if(page && !page.classList.contains('hidden') && !deputyReplyEditingActive()) loadDeputyReferrals(true);
   },ms));
@@ -6548,7 +6490,7 @@ window.__deputyAutoRefreshTimer=setInterval(()=>{
   if(page && !page.classList.contains('hidden') && document.visibilityState==='visible' && !deputyReplyEditingActive()){
     loadDeputyReferrals(true);
   }
-},3000);
+},30000);
 
 window.addEventListener('focus',()=>{
   const page=$('deputyReferrals');
