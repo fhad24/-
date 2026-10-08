@@ -14095,8 +14095,9 @@ function setAttendanceMode(mode){
   }
   const presentSelectAllWrap=$('attendancePresentSelectAllWrap');
   if(presentSelectAllWrap){
-    presentSelectAllWrap.classList.toggle('hidden',!present);
-    if(present) presentSelectAllWrap.style.setProperty('display','inline-flex','important');
+    const selectable=present||late;
+    presentSelectAllWrap.classList.toggle('hidden',!selectable);
+    if(selectable) presentSelectAllWrap.style.setProperty('display','inline-flex','important');
     else presentSelectAllWrap.style.removeProperty('display');
   }
 
@@ -14363,7 +14364,7 @@ async function renderAttendanceStudentList(){
     btn.textContent=(btn.dataset.attSort==='name'?'اسم الطالب':btn.dataset.attSort==='idno'?'السجل':btn.dataset.attSort==='class'?'الصف':'الصورة')+(active?(attendanceStudentSortDir===1?' ▲':' ▼'):'');
   });
   const selectAllWrap=$('attendancePresentSelectAllWrap');
-  if(selectAllWrap) selectAllWrap.classList.toggle('hidden',attendanceMode!=='present');
+  if(selectAllWrap) selectAllWrap.classList.toggle('hidden',!(attendanceMode==='present'||attendanceMode==='late'));
   const wholeGradeBtn=$('attendanceSelectWholeGradeBtn');
   if(wholeGradeBtn){
     const cls=$('attendanceClassFilter')?.value||'';
@@ -14387,7 +14388,7 @@ async function renderAttendanceStudentList(){
       }
     }catch(e){}
     return `
-    <div class="att-student-row ${attendanceMode==='present'?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
+    <div class="att-student-row ${(attendanceMode==='present'||attendanceMode==='late')?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
       <div class="att-student-main">
         <div class="att-name-line"><b>${s.name}</b></div>
         <span class="att-inline-performance">
@@ -14396,16 +14397,16 @@ async function renderAttendanceStudentList(){
         </span>
       </div>
       <div class="att-student-class-cell">${s.grade||'—'} / ${displayStudentClassroom(s.classroom)}</div>
-      <div class="att-student-photo-wrap ${attendanceMode==='present'?'with-select':''}">
+      <div class="att-student-photo-wrap ${(attendanceMode==='present'||attendanceMode==='late')?'with-select':''}">
         ${photoHTML}
-        ${attendanceMode==='present'?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
+        ${(attendanceMode==='present'||attendanceMode==='late')?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
       </div>
       <div class="att-student-id-cell">${s.idno||'—'}</div>
     </div>`;
   }));
 
   $('attendanceStudentList').innerHTML=rendered.join('') || '<div class="hint" style="padding:14px">لا توجد أسماء مطابقة</div>';
-  if(attendanceMode==='present'){
+  if(attendanceMode==='present'||attendanceMode==='late'){
     const selectedVisible=list.filter(s=>attendancePresentSelectedIds.has(String(s.idno))).length;
     $('attendanceListCount').textContent=(q?'نتائج البحث: ':'المعروض: ')+list.length+' — المحدد: '+selectedVisible+' — في القاعدة: '+getStudents().length;
   }else{
@@ -14562,7 +14563,7 @@ document.querySelectorAll('.att-sort-btn').forEach(btn=>{
 });
 
 if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=>{
-  if(attendanceMode!=='present') return;
+  if(attendanceMode!=='present' && attendanceMode!=='late') return;
   const visible=getCurrentAttendanceVisibleStudents();
   const checked=$('attendancePresentSelectAll').checked;
   visible.forEach(s=>{
@@ -14661,7 +14662,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
   ev.stopPropagation();
   const btn=$('saveAttendanceStudentBtn');
   try{
-    let selectedGroup=(attendanceMode==='present' && attendancePresentSelectedIds.size)
+    let selectedGroup=((attendanceMode==='present'||attendanceMode==='late') && attendancePresentSelectedIds.size)
       ? [...attendancePresentSelectedIds]
       : [];
 
@@ -14673,7 +14674,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         selectedGroup=attendanceWholeClassRoster.students.map(s=>String(s.idno));
         attendancePresentSelectedIds=new Set(selectedGroup);
       }
-    }else if(attendanceMode==='present' && $('attendancePresentSelectAll')?.checked){
+    }else if((attendanceMode==='present'||attendanceMode==='late') && $('attendancePresentSelectAll')?.checked){
       selectedGroup=getCurrentAttendanceVisibleStudents().map(s=>String(s.idno));
       attendancePresentSelectedIds=new Set(selectedGroup);
     }
@@ -14754,23 +14755,46 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     if(attendanceEditingIndex>=0 && attendanceEditingIndex<rows.length){
       rows[attendanceEditingIndex]={...rows[attendanceEditingIndex],...record};
     }else if(selectedGroup.length){
+      const skippedLate=[];
       selectedGroup.forEach(id=>{
         const student=studentsNow.find(x=>String(x.idno)===String(id))
           || attendanceWholeClassRoster?.students?.find(x=>String(x.idno)===String(id));
         if(!student) return;
-        rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
+
+        if(attendanceMode==='late'){
+          const alreadyLate=rows.some(x=>
+            String(x?.status||'')==='late' &&
+            String(x?.date||'')===String(record.date||'') &&
+            String(x?.idno||'')===String(id)
+          );
+          if(alreadyLate){
+            skippedLate.push(student.name||String(id));
+            return;
+          }
+        }else{
+          rows=rows.filter(x=>!(x.date===todayKey() && String(x.idno)===String(id)));
+        }
+
         const newRow={
           ...record,
           idno:student.idno,
           name:student.name,
           grade:student.grade||'',
           classroom:student.classroom||'',
-          status:'present',
+          status:attendanceMode,
           faceMatch:'none'
         };
         rows.push(newRow);
         rowsForCloud.push(newRow);
       });
+
+      if(attendanceMode==='late' && skippedLate.length){
+        toast('تم تجاهل '+skippedLate.length+' طالب سبق تسجيل تأخرهم اليوم');
+      }
+      if(attendanceMode==='late' && !rowsForCloud.length){
+        alert('جميع الطلاب المحددين سبق تسجيل تأخرهم اليوم.');
+        return;
+      }
     }else{
       if(attendanceMode==='late'){
         // لا نحذف سجل تأخر سابق؛ التكرار تم منعه أعلاه.
