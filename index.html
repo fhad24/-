@@ -3889,11 +3889,14 @@ body.activity-leader-open main{
   <div id="studentEditLogin" class="card" style="padding:18px 16px">
     <h2 style="font-size:16px;margin-bottom:18px;text-align:right">دخول الطالب لتعديل البيانات</h2>
     <div style="font-size:11px;line-height:1.9;color:var(--muted);margin-bottom:16px">
-      سجّل الدخول برقم الهوية أو الإقامة، وكلمة المرور هي تاريخ الميلاد المسجل بنفس نوع التقويم.
+      تحقق برقم الهوية/الإقامة وتاريخ الميلاد المسجل. إذا لم يكن تاريخ الميلاد محفوظًا سابقًا، استخدم رقم الجوال المسجل للتحقق.
     </div>
 
     <label>رقم الهوية أو الإقامة</label>
     <input id="searchId" inputmode="numeric" maxlength="10" placeholder="أدخل رقم الهوية أو الإقامة">
+
+    <label style="margin-top:16px">رقم الجوال المسجل (يُستخدم إذا لم يكن تاريخ الميلاد محفوظًا)</label>
+    <input id="editVerifyPhone" inputmode="tel" placeholder="05xxxxxxxx">
 
     <label style="margin-top:16px">نوع التقويم</label>
     <select id="editCalendar"><option>هجري</option><option>ميلادي</option></select>
@@ -10560,9 +10563,9 @@ function getSchoolSettings(){
 function getAdminProfile(){
   try{
     const saved=JSON.parse(localStorage.getItem('adminProfile')||'{}');
-    return {username:String(saved.username||'1015401902'),displayName:String(saved.displayName||'المدير')};
+    return {username:String(saved.username||''),displayName:String(saved.displayName||'المدير')};
   }catch(e){
-    return {username:'1015401902',displayName:'المدير'};
+    return {username:'',displayName:'المدير'};
   }
 }
 const BUILTIN_ADMIN_USERS=[];
