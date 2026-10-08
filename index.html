@@ -3474,6 +3474,7 @@
     <button type="button" id="headerAdminHomeBtn" class="admin-home-btn">🏠 الصفحة الرئيسية</button>
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
+    <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
     <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
@@ -4355,7 +4356,6 @@
           <button class="admin-pill" id="adminWeeklyAttendanceTab">كشف الحضور والغياب الأسبوعي ✅✕</button>
           <button class="admin-pill" id="adminReferralTab">تحويل طالب لوكيل شؤون الطلاب 📝</button>
           <button class="admin-pill" id="adminDeputyReferralsTab">ردود الوكلاء 📬</button>
-          <button class="admin-pill" id="adminFollowupTab">كشوف متابعة الطلاب 📋</button>
           <button class="admin-pill" id="adminBackupZipBtn">نسخة احتياطية ZIP 💾</button>
         </div>
       </div>
@@ -9645,7 +9645,6 @@ function openInternalPage(pageId){
 if($('adminAddStudentTab')) $('adminAddStudentTab').onclick=()=>openInternalPage('studentTransferManager');
 if($('adminEditPageBtn')) $('adminEditPageBtn').onclick=()=>openInternalPage('edit');
 if($('adminReferralPageBtn')) $('adminReferralPageBtn').onclick=()=>openInternalPage('referral');
-if($('adminFollowupTab')) $('adminFollowupTab').onclick=()=>openInternalPage('followup');
 if($('adminWeeklyAttendanceTab')) $('adminWeeklyAttendanceTab').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('attendanceAbsenceReportsBtn')) $('attendanceAbsenceReportsBtn').onclick=()=>openInternalPage('weeklyAttendanceReport');
 if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit');
@@ -9780,6 +9779,15 @@ if($('headerDeputyRepliesBtn')) $('headerDeputyRepliesBtn').onclick=()=>{
   if(typeof openDeputyReferralsPage==='function') openDeputyReferralsPage();
 };
 if($('headerTeacherClassFollowupBtn')) $('headerTeacherClassFollowupBtn').onclick=()=>openInternalPage('teacherClassFollowup');
+if($('headerFollowupBtn')) $('headerFollowupBtn').onclick=()=>{
+  const u=getCurrentLoggedAdminUser();
+  const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+  if(!isCurrentOwner() && !perms.has('followupSheets')){
+    alert('لا توجد لديك صلاحية كشوف متابعة الطلاب.');
+    return;
+  }
+  openInternalPage('followup');
+};
 if($('headerTeacherClassManagerBtn')) $('headerTeacherClassManagerBtn').onclick=()=>openInternalPage('teacherClassManager');
 if($('headerSettingsBtn')) $('headerSettingsBtn').onclick=()=>{
   try{
