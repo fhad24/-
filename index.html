@@ -15174,7 +15174,6 @@ if($('attendancePresentSelectAll')) $('attendancePresentSelectAll').onchange=()=
     if(checked) attendancePresentSelectedIds.add(id);
     else attendancePresentSelectedIds.delete(id);
   });
-  if(checked) queueAttendanceInstantSave(visible.map(s=>String(s.idno)));
   renderAttendanceStudentList();
 };
 
@@ -15212,8 +15211,7 @@ if($('attendanceSelectWholeGradeBtn')) $('attendanceSelectWholeGradeBtn').onclic
     attendancePresentSelectedIds=new Set(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
     renderAttendanceStudentList();
     updateAttendanceSelectedCount();
-    queueAttendanceInstantSave(attendanceWholeClassRoster.students.map(s=>String(s.idno)));
-    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب — جاري الحفظ الفوري');
+    toast('تم تحديد الفصل '+cls+' كاملًا — '+attendanceWholeClassRoster.students.length+' طالب');
   }catch(e){
     console.error('class roster',e);
     alert('تعذر جلب طلاب الفصل من قاعدة البيانات.');
