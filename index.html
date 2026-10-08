@@ -13,8 +13,29 @@
   const managerScript = `
 (function(){
   const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
+  let maintenanceOwner=false;
   function isOwnerNow(){
-    try{return typeof isCurrentOwner==='function' && isCurrentOwner();}catch(e){return false}
+    try{
+      if(maintenanceOwner) return true;
+      return typeof isCurrentOwner==='function' && isCurrentOwner();
+    }catch(e){return maintenanceOwner}
+  }
+  async function refreshMaintenanceOwner(){
+    const token=localStorage.getItem('cloudAdminToken')||'';
+    if(!token){maintenanceOwner=false;return false}
+    try{
+      const res=await fetch(API,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-app-token':token},
+        body:JSON.stringify({action:'session_me'})
+      });
+      const data=await res.json().catch(()=>({}));
+      maintenanceOwner=!!(res.ok && data?.user?.is_owner);
+      return maintenanceOwner;
+    }catch(e){
+      try{maintenanceOwner=typeof isCurrentOwner==='function'&&isCurrentOwner()}catch(_){maintenanceOwner=false}
+      return maintenanceOwner;
+    }
   }
   async function uploadProgramZip(file,button){
     if(!isOwnerNow()){alert('تحديث البرنامج متاح لمدير النظام فقط.');return}
@@ -194,51 +215,107 @@
     }catch(e){alert('تعذر الرجوع للإصدار السابق: '+(e?.message||e))}
     finally{button.disabled=false;button.textContent=old}
   }
-  function install(){
-    const anchor=document.getElementById('adminBackupZipBtn');
-    if(!anchor)return;
-    let input=document.getElementById('programUpdateZipInput');
-    if(!input){
-      input=document.createElement('input');
-      input.type='file';input.accept='.zip,application/zip';input.id='programUpdateZipInput';input.hidden=true;
-      anchor.parentElement?.appendChild(input);
+  function ensureMaintenancePanel(){
+    let panel=document.getElementById('shurahbilMaintenancePanel');
+    if(!panel){
+      const style=document.createElement('style');
+      style.id='shurahbilMaintenanceStyle';
+      style.textContent=
+        '#shurahbilMaintenancePanel{position:fixed;left:16px;bottom:16px;z-index:2147483000;direction:rtl;font-family:Tahoma,Arial,sans-serif;background:#fff;border:2px solid #0f7665;border-radius:16px;padding:10px;box-shadow:0 10px 30px #0004;display:none;gap:8px;align-items:center;flex-wrap:wrap;max-width:min(94vw,760px)}'+
+        '#shurahbilMaintenancePanel .sm-title{font-weight:900;color:#0f5f52;padding:0 6px;white-space:nowrap}'+
+        '#shurahbilMaintenancePanel button{border:1px solid #0f7665;background:#f7fffc;color:#0b5f52;border-radius:11px;padding:9px 12px;font:700 13px Tahoma,Arial,sans-serif;cursor:pointer;white-space:nowrap}'+
+        '#shurahbilMaintenancePanel button:hover{background:#e7f4f0}'+
+        '#shurahbilMaintenancePanel button:disabled{opacity:.55;cursor:wait}'+
+        '#shurahbilMaintenancePanel .sm-close{border-color:#c8d6d2;color:#536b65;background:#fff;padding:7px 9px}'+
+        '@media(max-width:700px){#shurahbilMaintenancePanel{left:8px;right:8px;bottom:8px;max-width:none}#shurahbilMaintenancePanel button{font-size:12px;padding:8px 9px}}';
+      document.head?.appendChild(style);
+
+      panel=document.createElement('div');
+      panel.id='shurahbilMaintenancePanel';
+      panel.innerHTML=
+        '<span class="sm-title">🛠 صيانة البرنامج</span>'+
+        '<button type="button" id="smProgramUpdate">⬆️ تحديث من ملف</button>'+
+        '<button type="button" id="smProgramRollback">↩️ الإصدار السابق</button>'+
+        '<button type="button" id="smBackupRestore">♻️ استعادة من ملف</button>'+
+        '<button type="button" id="smPanelClose" class="sm-close" title="إخفاء مؤقت">✕</button>'+
+        '<input type="file" id="smProgramUpdateInput" accept=".zip,application/zip" hidden>'+
+        '<input type="file" id="smBackupRestoreInput" accept=".zip,application/zip" hidden>';
+      document.body?.appendChild(panel);
+
+      const update=panel.querySelector('#smProgramUpdate');
+      const rollback=panel.querySelector('#smProgramRollback');
+      const restore=panel.querySelector('#smBackupRestore');
+      const updateInput=panel.querySelector('#smProgramUpdateInput');
+      const restoreInput=panel.querySelector('#smBackupRestoreInput');
+
+      update.onclick=()=>updateInput.click();
+      rollback.onclick=()=>rollbackProgramUpdate(rollback);
+      restore.onclick=()=>restoreInput.click();
+      updateInput.onchange=async()=>{const file=updateInput.files?.[0];updateInput.value='';if(file)await uploadProgramZip(file,update)};
+      restoreInput.onchange=async()=>{const file=restoreInput.files?.[0];restoreInput.value='';if(file)await restoreBackupZip(file,restore)};
+      panel.querySelector('#smPanelClose').onclick=()=>{
+        panel.style.display='none';
+        sessionStorage.setItem('shurahbilMaintenanceHidden','1');
+      };
     }
-    let update=document.getElementById('adminProgramUpdateBtn');
-    if(!update){
-      update=document.createElement('button');update.type='button';update.className=anchor.className;
-      update.id='adminProgramUpdateBtn';update.textContent='⬆️ تحديث البرنامج من ملف';
-      anchor.insertAdjacentElement('afterend',update);
+    return panel;
+  }
+
+  async function install(){
+    const owner=await refreshMaintenanceOwner();
+
+    // الأزرار الأصلية إن كانت موجودة داخل النسخة الحالية.
+    const anchor=document.getElementById('adminBackupZipBtn');
+    if(anchor){
+      let input=document.getElementById('programUpdateZipInput');
+      if(!input){
+        input=document.createElement('input');
+        input.type='file';input.accept='.zip,application/zip';input.id='programUpdateZipInput';input.hidden=true;
+        anchor.parentElement?.appendChild(input);
+      }
+      let update=document.getElementById('adminProgramUpdateBtn');
+      if(!update){
+        update=document.createElement('button');update.type='button';update.className=anchor.className;
+        update.id='adminProgramUpdateBtn';update.textContent='⬆️ تحديث البرنامج من ملف';
+        anchor.insertAdjacentElement('afterend',update);
+      }
       update.onclick=()=>input.click();
       input.onchange=async()=>{const file=input.files?.[0];input.value='';if(file)await uploadProgramZip(file,update)};
-    }
-    let rollback=document.getElementById('adminProgramRollbackBtn');
-    if(!rollback){
-      rollback=document.createElement('button');rollback.type='button';rollback.className=anchor.className;
-      rollback.id='adminProgramRollbackBtn';rollback.textContent='↩️ الإصدار السابق';
-      update.insertAdjacentElement('afterend',rollback);
+
+      let rollback=document.getElementById('adminProgramRollbackBtn');
+      if(!rollback){
+        rollback=document.createElement('button');rollback.type='button';rollback.className=anchor.className;
+        rollback.id='adminProgramRollbackBtn';rollback.textContent='↩️ الإصدار السابق';
+        update.insertAdjacentElement('afterend',rollback);
+      }
       rollback.onclick=()=>rollbackProgramUpdate(rollback);
+
+      let restoreInput=document.getElementById('backupRestoreZipInput');
+      if(!restoreInput){
+        restoreInput=document.createElement('input');
+        restoreInput.type='file';restoreInput.accept='.zip,application/zip';restoreInput.id='backupRestoreZipInput';restoreInput.hidden=true;
+        anchor.parentElement?.appendChild(restoreInput);
+      }
+      let restore=document.getElementById('adminBackupRestoreBtn');
+      if(!restore){
+        restore=document.createElement('button');restore.type='button';restore.className=anchor.className;
+        restore.id='adminBackupRestoreBtn';restore.textContent='♻️ استعادة من ملف خارجي';
+        rollback.insertAdjacentElement('afterend',restore);
+      }
+      restore.onclick=()=>restoreInput.click();
+      restoreInput.onchange=async()=>{const file=restoreInput.files?.[0];restoreInput.value='';if(file)await restoreBackupZip(file,restore)};
+
+      update.style.display=owner?'':'none';
+      rollback.style.display=owner?'':'none';
+      restore.style.display=owner?'':'none';
     }
-    let restoreInput=document.getElementById('backupRestoreZipInput');
-    if(!restoreInput){
-      restoreInput=document.createElement('input');
-      restoreInput.type='file';restoreInput.accept='.zip,application/zip';restoreInput.id='backupRestoreZipInput';restoreInput.hidden=true;
-      anchor.parentElement?.appendChild(restoreInput);
-    }
-    let restore=document.getElementById('adminBackupRestoreBtn');
-    if(!restore){
-      restore=document.createElement('button');restore.type='button';restore.className=anchor.className;
-      restore.id='adminBackupRestoreBtn';restore.textContent='♻️ استعادة من ملف خارجي';
-      rollback.insertAdjacentElement('afterend',restore);
-    }
-    restore.onclick=()=>restoreInput.click();
-    restoreInput.onchange=async()=>{const file=restoreInput.files?.[0];restoreInput.value='';if(file)await restoreBackupZip(file,restore)};
-    const show=isOwnerNow();
-    update.style.display=show?'':'none';
-    rollback.style.display=show?'':'none';
-    restore.style.display=show?'':'none';
-  }
-  install();
-  setInterval(install,1200);
+
+    // لوحة صيانة مستقلة لا تعتمد على تصميم النسخة المرفوعة.
+    const panel=ensureMaintenancePanel();
+    const hidden=sessionStorage.getItem('shurahbilMaintenanceHidden')==='1';
+    panel.style.display=(owner&&!hidden)?'flex':'none';
+  }  install();
+  setInterval(install,3000);
 })();
 `;
   async function start(){
