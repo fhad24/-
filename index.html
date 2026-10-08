@@ -4964,54 +4964,6 @@
 
 
     <div class="attendance-session-controls hidden">
-      <div class="attendance-session-field">
-        <label for="attendancePeriodSelect">🕐 الحصة</label>
-        <select id="attendancePeriodSelect">
-          <option value="">اختر الحصة</option>
-          <option value="1">الحصة الأولى</option>
-          <option value="2">الحصة الثانية</option>
-          <option value="3">الحصة الثالثة</option>
-          <option value="4">الحصة الرابعة</option>
-          <option value="5">الحصة الخامسة</option>
-          <option value="6">الحصة السادسة</option>
-          <option value="7">الحصة السابعة</option>
-        </select>
-      </div>
-      <div class="attendance-session-field attendance-session-subject">
-        <label for="attendanceSubjectSelect">📘 المادة</label>
-        <select id="attendanceSubjectSelect">
-          <option value="">اختر المادة</option>
-          <option value="الكفايات اللغوية">الكفايات اللغوية</option>
-          <option value="القرآن الكريم وتفسيره">القرآن الكريم وتفسيره</option>
-          <option value="الرياضيات">الرياضيات</option>
-          <option value="الكيمياء">الكيمياء</option>
-          <option value="الأحياء">الأحياء</option>
-          <option value="اللغة الإنجليزية">اللغة الإنجليزية</option>
-          <option value="التفكير الناقد">التفكير الناقد</option>
-          <option value="التقنية الرقمية">التقنية الرقمية</option>
-          <option value="التربية الصحية والبدنية">التربية الصحية والبدنية</option>
-          <option value="الفيزياء">الفيزياء</option>
-          <option value="التاريخ">التاريخ</option>
-          <option value="التوحيد">التوحيد</option>
-          <option value="الفنون">الفنون</option>
-          <option value="اللياقة">اللياقة</option>
-          <option value="الثقافة الصحية">الثقافة الصحية</option>
-          <option value="مواد متقدمة في البرمجة">مواد متقدمة في البرمجة</option>
-          <option value="هندسة البرمجيات">هندسة البرمجيات</option>
-          <option value="العلوم الطبية الحيوية">العلوم الطبية الحيوية</option>
-          <option value="الأحياء المتقدمة">الأحياء المتقدمة</option>
-          <option value="التشريح">التشريح</option>
-          <option value="الصحة العامة">الصحة العامة</option>
-          <option value="مبادئ الإدارة">مبادئ الإدارة</option>
-          <option value="الاقتصاد">الاقتصاد</option>
-          <option value="المحاسبة">المحاسبة</option>
-          <option value="التقنية الرقمية للأعمال">التقنية الرقمية للأعمال</option>
-          <option value="الفقه">الفقه</option>
-          <option value="التفسير">التفسير</option>
-          <option value="الحديث">الحديث</option>
-          <option value="الأصول">الأصول</option>
-        </select>
-      </div>
       <div class="attendance-session-field attendance-session-teacher">
         <label for="attendanceTeacherSelect">👤 اسم المعلم</label>
         <select id="attendanceTeacherSelect">
@@ -14732,26 +14684,6 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     if(attendanceSelectedId && !s){toast('تعذر العثور على الطالب');return}
     if(!seedStudent){toast('تعذر العثور على بيانات الطالب');return}
 
-    if(attendanceMode==='late'){
-      const periodSelected=String($('attendancePeriodSelect')?.value||'').trim();
-      const subjectSelected=String($('attendanceSubjectSelect')?.value||'').trim();
-      if(!periodSelected || !subjectSelected){
-        alert('⚠️ أرجو اختيار الحصة والمادة قبل حفظ التأخر.');
-        toast('أرجو اختيار الحصة والمادة');
-        return;
-      }
-    }
-
-    if(attendanceMode==='present'){
-      const periodSelected=String($('attendancePeriodSelect')?.value||'').trim();
-      const subjectSelected=String($('attendanceSubjectSelect')?.value||'').trim();
-      if(!periodSelected || !subjectSelected){
-        alert('⚠️ أرجو اختيار الحصة والمادة قبل حفظ الحضور.');
-        toast('أرجو اختيار الحصة والمادة');
-        return;
-      }
-    }
-
     btn.disabled=true;
     btn.textContent='جاري الحفظ...';
 
@@ -14768,9 +14700,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const record={
       date:attendanceEditingIndex>=0 && $('attendanceEditDate')?.value ? $('attendanceEditDate').value : (attendanceEditingIndex>=0 && attendanceEditingOriginal?.date ? attendanceEditingOriginal.date : todayKey()),
       time:editedTime || (attendanceEditingIndex>=0 && attendanceEditingOriginal?.time ? attendanceEditingOriginal.time : now.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'})),
-      period:(attendanceMode==='late' && $('attendanceMorningLate')?.checked) ? null : ($('attendancePeriodSelect')?.value ? Number($('attendancePeriodSelect').value) : null),
-      subject:(attendanceMode==='late' && $('attendanceMorningLate')?.checked) ? 'تأخر عن الطابور الصباحي' : ($('attendanceSubjectSelect')?.value||''),
-      morningAssemblyLate:attendanceMode==='late' && !!$('attendanceMorningLate')?.checked,
+      period:null,
+      subject:'',
+      morningAssemblyLate:false,
       hijriDate:attendanceEditingIndex>=0 ? selectedHijriDateString() : (gregorianToHijriParts(todayKey()).year+'-'+String(gregorianToHijriParts(todayKey()).month).padStart(2,'0')+'-'+String(gregorianToHijriParts(todayKey()).day).padStart(2,'0')),
       weekday:attendanceEditingIndex>=0 ? ($('attendanceEditWeekday')?.value||'') : new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long'}),
       teacherName:recorder.name,
