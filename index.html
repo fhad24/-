@@ -5507,6 +5507,105 @@ body.activity-leader-open main{
 const $=id=>document.getElementById(id);
 const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.page');
 
+function westernDigits(v){
+  return String(v??'')
+    .replace(/[٠-٩]/g,d=>'0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+    .replace(/[۰-۹]/g,d=>'0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]);
+}
+function normalizeCivilId(v){
+  return westernDigits(v).replace(/\D/g,'');
+}
+function studentGradeKey(v){
+  let s=westernDigits(v).replace(/\s+/g,' ').trim();
+  if(!s) return '';
+  s=s.replace(/الصف\s*/g,'').replace(/ثانوي(?:ة)?/g,'الثانوي').trim();
+  if(/^(1|الأول|الاول|أول|اول)(?:\s*الثانوي)?$/.test(s)) return 'الأول الثانوي';
+  if(/^(2|الثاني|ثاني)(?:\s*الثانوي)?$/.test(s)) return 'الثاني الثانوي';
+  if(/^(3|الثالث|ثالث)(?:\s*الثانوي)?$/.test(s)) return 'الثالث الثانوي';
+  if(s.includes('الأول')||s.includes('الاول')) return 'الأول الثانوي';
+  if(s.includes('الثاني')) return 'الثاني الثانوي';
+  if(s.includes('الثالث')) return 'الثالث الثانوي';
+  return s;
+}
+function studentClassKey(v){
+  let s=westernDigits(v).replace(/\s+/g,' ').trim();
+  if(!s) return '';
+  if(s==='الانتساب'||s.includes('انتساب')) return 'الانتساب';
+  if(s==='الوهمي'||s.includes('وهمي')) return 'الوهمي';
+  s=s.replace(/الفصل/g,'').replace(/الأول الثانوي|الاول الثانوي|الثاني الثانوي|الثالث الثانوي/g,'').trim();
+  const numeric={'1':'أ','2':'ب','3':'ج','4':'د','5':'هـ','6':'و'};
+  if(numeric[s]) return numeric[s];
+  const m=s.match(/(?:^|\s)([أابجدهـهو])(?:$|\s)/);
+  if(m) s=m[1];
+  const map={'ا':'أ','ه':'هـ'};
+  return map[s]||s;
+}
+function displayStudentClassroom(v){
+  return studentClassKey(v);
+}
+function dedupeStudents(rows){
+  const arr=Array.isArray(rows)?rows:[];
+  const by=new Map();
+  for(const raw of arr){
+    if(!raw || typeof raw!=='object') continue;
+    const item={...raw};
+    const idRaw=String(item.idno??'').trim();
+    if(!idRaw) continue;
+    const digits=normalizeCivilId(idRaw);
+    const key=/^\d+$/.test(westernDigits(idRaw).trim()) && digits
+      ? 'n:'+digits.replace(/^0+(?=\d)/,'')
+      : 'x:'+idRaw;
+    const prev=by.get(key);
+    if(!prev){by.set(key,item);continue}
+    const prevDigits=normalizeCivilId(prev.idno||'');
+    const score=x=>{
+      const d=normalizeCivilId(x.idno||'');
+      return (/^\d{10}$/.test(d)?100:0) + d.length + (x.hasFace?5:0) + (x.phone?2:0);
+    };
+    const base=score(item)>score(prev)?item:prev;
+    const other=base===item?prev:item;
+    by.set(key,{
+      ...other,...base,
+      name:base.name||other.name||'',
+      phone:base.phone||other.phone||'',
+      grade:base.grade||other.grade||'',
+      classroom:base.classroom||other.classroom||'',
+      faceImage:base.faceImage||other.faceImage||'',
+      idImage:base.idImage||other.idImage||'',
+      hasFace:!!(base.hasFace||other.hasFace),
+      hasId:!!(base.hasId||other.hasId)
+    });
+  }
+  return [...by.values()];
+}
+function getStudents(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('students')||'[]');
+    return dedupeStudents(Array.isArray(raw)?raw:[]);
+  }catch(e){return []}
+}
+async function saveStudents(rows){
+  const before=getStudents();
+  const clean=dedupeStudents(rows);
+  localStorage.setItem('students',JSON.stringify(clean));
+  if(!localStorage.getItem('cloudAdminToken')) return clean;
+  const oldBy=new Map(before.map(x=>[String(x.idno||''),JSON.stringify({...x,faceImage:'',idImage:''})]));
+  const changed=clean.filter(x=>{
+    const id=normalizeCivilId(x.idno||'');
+    if(!/^\d{10}$/.test(id)) return false;
+    return oldBy.get(String(x.idno||''))!==JSON.stringify({...x,faceImage:'',idImage:''});
+  }).map(x=>({...x,idno:normalizeCivilId(x.idno),faceImage:'',idImage:''}));
+  if(!changed.length) return clean;
+  try{
+    const r=await cloudApi('sync_students',{students:changed});
+    if(Number(r?.count||0)!==changed.length) throw new Error('لم تتم مزامنة جميع بيانات الطلاب');
+    return clean;
+  }catch(e){
+    localStorage.setItem('students',JSON.stringify(before));
+    throw e;
+  }
+}
+
 function removeObsoleteNavButtons(){
   document.querySelectorAll('button').forEach(btn=>{
     const t=String(btn.textContent||'').replace(/\s+/g,' ').trim();
@@ -17582,13 +17681,17 @@ if($('exportWordBtn')) $('exportWordBtn').onclick=()=>{
 };
 
 
-if($('confirmAllBtn')) $('confirmAllBtn').onclick=()=>{
+if($('confirmAllBtn')) $('confirmAllBtn').onclick=async()=>{
   const s=getStudents();
   if(!s.length){ toast('لا توجد بيانات طلاب'); return; }
   const updated=s.map(x=>({...x,verification:'مؤكد'}));
-  saveStudents(updated);
-  renderAdmin();
-  toast('تم تأكيد جميع الطلاب');
+  try{
+    await saveStudents(updated);
+    renderAdmin();
+    toast('تم تأكيد جميع الطلاب');
+  }catch(e){
+    alert('تعذر حفظ تأكيد الطلاب في الخادم.');
+  }
 };
 
 if($('studentCounselorFollowBtn')) $('studentCounselorFollowBtn').onclick=()=>toast('متابعة الموجه الطلابي');
@@ -18506,7 +18609,7 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
         registrationDate:new Date().toISOString()
       };
       students.push(rec);
-      saveStudents(students);
+      await saveStudents(students);
       if(addStudentNewFaceBlob){
         await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
         if(isCurrentOwner()){
@@ -18614,7 +18717,7 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
           })
         ]);
         students[idx]={...students[idx],hasFace:true,verification:'مؤكد',registered:true,verifiedByFace:true,faceVerifiedAt:new Date().toISOString()};
-        saveStudents(students);
+        await saveStudents(students);
         addStudentNeedsApproval=false;
       }else if(addStudentNeedsApproval){
         const operator=getCurrentPhotoOperator();
@@ -18638,7 +18741,7 @@ if($('saveMatchedStudentBtn')) $('saveMatchedStudentBtn').onclick=async ()=>{
       }else{
         await saveStudentPhoto(`${idno}:face`,addStudentNewFaceBlob,true);
         students[idx]={...students[idx],hasFace:true,verification:'مؤكد',registered:true,verifiedByFace:true,faceVerifiedAt:new Date().toISOString()};
-        saveStudents(students);
+        await saveStudents(students);
       }
     }
 
