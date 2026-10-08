@@ -11072,9 +11072,13 @@ function ensureAdminSettings(){
     const username=document.getElementById('newAdminUsername').value.trim();
     const name=document.getElementById('newAdminName').value.trim();
     const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||username;
-    const password=document.getElementById('newAdminPassword').value || civilId || username;
+    const password=String(document.getElementById('newAdminPassword').value||'');
     const role=document.getElementById('newAdminRole').value;
     if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
+    if(password.length<10 || !/[0-9]/.test(password) || !/[^0-9\s]/.test(password) || password===civilId || password===username){
+      toast('اختر كلمة مرور قوية من 10 أحرف على الأقل ولا تستخدم السجل المدني');
+      return;
+    }
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
@@ -11154,9 +11158,6 @@ function ensureAdminSettings(){
     users.forEach(u=>{
       if(!selectedSet.has(String(u.username||''))) return;
       u.permissions=[...permissions];
-      if(!String(u.password||'').trim()){
-        u.password=String(u.civilId||u.username||'').trim();
-      }
     });
 
     saveAdminUsers(users);
@@ -11194,7 +11195,6 @@ function ensureAdminSettings(){
         civilId:u.civilId||u.username,
         name:u.name,
         role:u.role,
-        password:String(u.password||u.civilId||u.username||''),
         permissions:[...permissions]
       }));
 
@@ -11212,7 +11212,6 @@ function ensureAdminSettings(){
           civilId:u.civil_id||u.username,
           name:u.name,
           role:u.role,
-          password:String(users.find(x=>String(x.username)===String(u.username||''))?.password||u.civil_id||u.username||''),
           permissions:[...permissions]
         }))});
         verified=await cloudApi('pull_all');
@@ -11225,7 +11224,7 @@ function ensureAdminSettings(){
         name:u.name||'',
         role:u.role||'معلم',
         permissions:Array.isArray(u.permissions)?u.permissions:[],
-        password:localByUser.get(String(u.username||''))?.password||''
+        accountLocked:!!u.account_locked
       }));
 
       localStorage.setItem('adminUsers',JSON.stringify(finalUsers));
@@ -11308,8 +11307,8 @@ function ensureAdminSettings(){
 
         const idx=users.findIndex(u=>String(u.username)===username);
         const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||username;
-        const rec={username,civilId,name,password:password||civilId||username,role,permissions};
-        if(idx>=0){users[idx]={...users[idx],...rec,password:password||users[idx].password||''};updated++}
+        const rec={username,civilId,name,password:String(password||''),role,permissions,accountLocked:!String(password||'').trim()};
+        if(idx>=0){users[idx]={...users[idx],...rec,password:String(password||'')};updated++}
         else{users.push(rec);added++}
       }
       saveAdminUsers(users);
@@ -11337,7 +11336,7 @@ async function refreshAdminUsersFromCloud(){
       name:u.name||'',
       role:u.role||'معلم',
       permissions:Array.isArray(u.permissions)?u.permissions:[],
-      password:oldBy.get(String(u.username||''))?.password||''
+      accountLocked:!!u.account_locked
     }));
     localStorage.setItem('adminUsers',JSON.stringify(cloudUsers));
     return true;
@@ -11654,9 +11653,6 @@ function openUserPermissionEditor(username){
       if(!gradePerms.length){alert('حدد صفًا واحدًا على الأقل لصلاحية ردود الوكلاء');return}
       u.permissions.push(...gradePerms);
     }
-    if(!String(u.password||'').trim()){
-      u.password=String(u.civilId||u.username||'').trim();
-    }
     users[idx]=u;
     saveAdminUsers(users);
 
@@ -11678,7 +11674,6 @@ function openUserPermissionEditor(username){
         civilId:String(x.civilId||x.username||''),
         name:String(x.name||''),
         role:String(x.role||'معلم'),
-        password:String(x.password||x.civilId||x.username||''),
         permissions:Array.isArray(x.permissions)?x.permissions:[]
       }));
 
@@ -11696,7 +11691,6 @@ function openUserPermissionEditor(username){
       const vi=localUsers.findIndex(x=>String(x.username||'')===String(u.username||''));
       if(vi>=0){
         localUsers[vi].permissions=Array.isArray(cloudUser.permissions)?cloudUser.permissions:u.permissions;
-        localUsers[vi].password=String(localUsers[vi].password||localUsers[vi].civilId||localUsers[vi].username||'');
         saveAdminUsers(localUsers);
       }
     }catch(e){
@@ -14500,6 +14494,9 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         if(String(x?.status||'')!=='late') return false;
         if(String(x?.date||'')!==String(record.date||'')) return false;
         if(String(x?.idno||'')!==String(record.idno||'')) return false;
+        const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
+        if(morningLate || xMorning) return morningLate===xMorning;
+        if(String(x?.period??'')!==String(record.period??'')) return false;
 
         // عند تعديل نفس السجل محليًا لا نعتبره تكرارًا.
         if(attendanceEditingIndex>=0 && idx===attendanceEditingIndex) return false;
@@ -14539,11 +14536,12 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
         if(!student) return;
 
         if(attendanceMode==='late'){
-          const alreadyLate=rows.some(x=>
-            String(x?.status||'')==='late' &&
-            String(x?.date||'')===String(record.date||'') &&
-            String(x?.idno||'')===String(id)
-          );
+          const alreadyLate=rows.some(x=>{
+            if(String(x?.status||'')!=='late' || String(x?.date||'')!==String(record.date||'') || String(x?.idno||'')!==String(id)) return false;
+            const xMorning=!!x?.morningAssemblyLate || String(x?.subject||'')==='تأخر عن الطابور الصباحي';
+            if(morningLate || xMorning) return morningLate===xMorning;
+            return String(x?.period??'')===String(record.period??'');
+          });
           if(alreadyLate){
             skippedLate.push(student.name||String(id));
             return;
