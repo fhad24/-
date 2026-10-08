@@ -13108,10 +13108,29 @@ async function renderAttendancePage(){
   const late=today.filter(x=>x.status==='late').length;
   const explicitAbsent=today.filter(x=>x.status==='absent').length;
   const presentOrLateIds=new Set(today.filter(x=>x.status==='present'||x.status==='late').map(x=>String(x.idno)));
-  const autoAbsentStudents=ownerView?students.filter(s=>!presentOrLateIds.has(String(s.idno))):[];
-  const absent=ownerView
-    ? students.filter(s=>!today.some(x=>String(x.idno)===String(s.idno) && (x.status==='present'||x.status==='late'))).length
-    : explicitAbsent;
+
+  // لا يُرصد غياب تلقائي إلا للفصول التي تم تحضيرها فعليًا اليوم.
+  // إذا لم يوجد أي تحضير يومي محفوظ، يكون الغياب صفرًا بدل اعتبار جميع الطلاب غائبين.
+  const preparedCohortsToday=new Set(
+    today
+      .filter(x=>x.status==='present'||x.status==='late'||x.status==='absent')
+      .map(x=>{
+        const grade=studentGradeKey(x.grade);
+        const classroom=studentClassKey(x.classroom);
+        return grade&&classroom?attendanceCohortKey(grade,classroom):'';
+      })
+      .filter(Boolean)
+  );
+  const autoAbsentStudents=ownerView
+    ? students.filter(s=>{
+        const grade=studentGradeKey(s.grade);
+        const classroom=studentClassKey(s.classroom);
+        if(!grade||!classroom) return false;
+        const cohortKey=attendanceCohortKey(grade,classroom);
+        return preparedCohortsToday.has(cohortKey) && !presentOrLateIds.has(String(s.idno));
+      })
+    : [];
+  const absent=ownerView ? autoAbsentStudents.length : explicitAbsent;
   const photoCount=students.filter(x=>x.hasFace).length;
   const waiting=ownerView?autoAbsentStudents.length:0;
 
