@@ -15013,7 +15013,6 @@ async function renderAttendanceStudentList(){
           await cancelInstantAttendanceForStudent(id);
           attendancePresentSelectedIds.delete(id);
           updateAttendanceSelectedCount();
-          showAttendanceSavedMessage('✅ تم الحفظ');
         }catch(err){
           console.error('instant attendance cancel',err);
           box.checked=true;
