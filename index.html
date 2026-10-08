@@ -8343,8 +8343,22 @@ function populateFollowupClasses(){
     }
   }
 
-  classes.sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
-  select.innerHTML='<option value="">اختر الفصل</option><option value="__ALL__">الكل</option>'+classes.map(k=>`<option value="${k}">الفصل ${displayStudentClassroom?displayStudentClassroom(k):k}</option>`).join('');
+  // فصل "الانتساب" يجب أن يظهر دائمًا مع الأول الثانوي حتى لو لم يكن به طلاب بعد.
+  if(grade===studentGradeKey('الأول الثانوي') && !classes.includes('الانتساب')){
+    classes.push('الانتساب');
+  }
+
+  classes.sort((a,b)=>{
+    // اجعل الانتساب بعد الفصول العادية.
+    if(a==='الانتساب' && b!=='الانتساب') return 1;
+    if(b==='الانتساب' && a!=='الانتساب') return -1;
+    return String(a).localeCompare(String(b),'ar',{numeric:true});
+  });
+
+  select.innerHTML='<option value="">اختر الفصل</option><option value="__ALL__">الكل</option>'+classes.map(k=>{
+    const label=k==='الانتساب' ? 'الانتساب' : ('الفصل '+(displayStudentClassroom?displayStudentClassroom(k):k));
+    return `<option value="${k}">${label}</option>`;
+  }).join('');
   if($('followupGrade')?.value==='__ALL__') select.value='__ALL__';
   else if(current && classes.includes(current)) select.value=current;
 }
