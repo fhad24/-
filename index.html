@@ -5506,6 +5506,7 @@ body.activity-leader-open main{
 <script>
 const $=id=>document.getElementById(id);
 const tabs=document.querySelectorAll('.tab'), pages=document.querySelectorAll('.page');
+let adminLoggedIn=false;
 
 function westernDigits(v){
   return String(v??'')
@@ -5633,7 +5634,7 @@ tabs.forEach(b=>b.onclick=()=>{
   localStorage.setItem('activeMainPage',b.dataset.page);
 
   if(b.dataset.page==='admin'){
-    if(typeof adminLoggedIn!=='undefined' && adminLoggedIn){
+    if(adminLoggedIn && !!getCurrentLoggedAdminUser() && !!localStorage.getItem('cloudAdminToken')){
       $('adminLoginModal').classList.add('hidden');
       $('dashboard').classList.remove('hidden');
 
@@ -9391,6 +9392,14 @@ if($('userEditPageBtn')) $('userEditPageBtn').onclick=()=>openInternalPage('edit
 if($('userReferralPageBtn')) $('userReferralPageBtn').onclick=()=>openInternalPage('referral');
 
 function openAdminDashboardInternal(){
+  if(!getCurrentLoggedAdminUser() || !localStorage.getItem('cloudAdminToken')){
+    adminLoggedIn=false;
+    setAdminMode(false);
+    localStorage.setItem('activeMainPage','register');
+    document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+    $('register')?.classList.remove('hidden');
+    return;
+  }
   document.body.classList.remove('activity-leader-open');
   document.querySelector('#dashboard .admin-shell')?.classList.remove('transfer-inline-open');
   document.body.classList.remove('transfer-manager-open');
@@ -11901,7 +11910,7 @@ function openUserPermissionEditor(username){
 
 function openAdminSettings(){
   updateGlobalUserBackButton('adminSettings');
-  if(!adminLoggedIn) return;
+  if(!adminLoggedIn || !getCurrentLoggedAdminUser() || !localStorage.getItem('cloudAdminToken')) return;
   const ov=ensureAdminSettings();
   const s=getSchoolSettings(), p=getAdminProfile();
   document.getElementById('settingsAuthority').value=s.authority||'';
