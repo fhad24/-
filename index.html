@@ -15000,37 +15000,27 @@ async function renderAttendanceStudentList(){
 
   document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
     box.onclick=(e)=>e.stopPropagation();
-    box.onchange=(e)=>{
+    box.onchange=async(e)=>{
       e.stopPropagation();
       const id=String(box.dataset.selectId||'');
       if(box.checked){
         attendancePresentSelectedIds.add(id);
-        queueAttendanceInstantSave(id);
         updateAttendanceSelectedCount();
+        queueAttendanceInstantSave(id);
       }else{
-        const student=getStudents().find(x=>String(x.idno)===id)
-          || attendanceWholeClassRoster?.students?.find(x=>String(x.idno)===id);
-        const name=String(student?.name||id);
-        const ok=confirm('هل تريد إلغاء تحضير الطالب المحدد؟\n\n'+name);
-        if(!ok){
-          box.checked=true;
-          attendancePresentSelectedIds.add(id);
-          updateAttendanceSelectedCount();
-          return;
-        }
         box.disabled=true;
-        cancelInstantAttendanceForStudent(id).then(()=>{
+        try{
+          await cancelInstantAttendanceForStudent(id);
           attendancePresentSelectedIds.delete(id);
           updateAttendanceSelectedCount();
-          showAttendanceSavedMessage('✅ تم إلغاء تحضير الطالب');
-          toast('تم إلغاء تحضير '+name);
-        }).catch(err=>{
+        }catch(err){
           console.error('instant attendance cancel',err);
           box.checked=true;
           attendancePresentSelectedIds.add(id);
           updateAttendanceSelectedCount();
-          alert('تعذر إلغاء التحضير. لم يتم رفع التحديد.');
-        }).finally(()=>{box.disabled=false;});
+        }finally{
+          box.disabled=false;
+        }
       }
     };
   });
@@ -15288,20 +15278,16 @@ async function flushAttendanceInstantSave(){
   const selectedSubject=morningLate ? 'تأخر عن الطابور الصباحي' : String($('attendanceSubjectSelect')?.value||'').trim();
 
   if(!morningLate && !selectedPeriod){
-    showAttendanceSavedMessage('⚠️ اختر الحصة أولًا');
-    toast('اختر الحصة أولًا ثم حدد الطالب');
     return;
   }
   if(attendanceMode==='present' && !selectedSubject){
-    showAttendanceSavedMessage('⚠️ اختر المادة أولًا');
-    toast('اختر المادة أولًا ثم حدد الطالب');
     return;
   }
 
   const ids=[...__attendanceInstantPending];
   __attendanceInstantPending.clear();
   __attendanceInstantBusy=true;
-  showAttendanceSavedMessage(ids.length>1 ? '⏳ جاري حفظ الطلاب المحددين...' : '⏳ جاري حفظ الطالب...');
+
 
   try{
     const recorder=getSelectedAttendanceTeacher();
@@ -15363,24 +15349,16 @@ async function flushAttendanceInstantSave(){
     }
 
     if(!cloudRows.length){
-      if(skipped.length){
-        showAttendanceSavedMessage('⚠️ سبق تسجيل تأخر الطالب');
-        toast('سبق تسجيل التأخر للمحدد');
-      }
       return;
     }
 
     await saveAttendanceLog(rows,cloudRows);
 
     const n=cloudRows.length;
-    const label=attendanceMode==='late' ? 'التأخر' : 'الحضور';
-    showAttendanceSavedMessage(n>1 ? ('✅ تم حفظ '+label+' لـ '+n+' طلاب فورًا') : ('✅ تم حفظ '+label+' للطالب فورًا'));
-    toast(n>1 ? ('تم حفظ '+n+' طلاب مباشرة') : 'تم حفظ الطالب مباشرة');
   }catch(e){
     console.error('instant attendance save',e);
     ids.forEach(id=>__attendanceInstantPending.add(id));
-    showAttendanceSavedMessage('❌ تعذر الحفظ الفوري');
-    alert('❌ تعذر الحفظ الفوري. بقي التحديد كما هو، حاول مرة أخرى.');
+
   }finally{
     __attendanceInstantBusy=false;
     if(__attendanceInstantPending.size){
