@@ -13408,7 +13408,8 @@ function weeklyAttImportedStatus(student,dateKey){
   const entry=weeklyAttImportedEntryForStudent(student);
   if(!entry)return null;
   const mask=parseInt(String(entry[3]||'0'),16)||0;
-  return (mask & (1<<dateIndex)) ? 'absent' : 'present';
+  // مطابق لملف Excel: ✓ = حاضر، والخانة الفارغة = لم يُسجل.
+  return (mask & (1<<dateIndex)) ? 'present' : 'unrecorded';
 }
 function weeklyAttNormalizeSubject(value){
   return String(value||'').trim().replace(/\s+/g,' ').replace(/[إأآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').toLowerCase();
@@ -13459,8 +13460,7 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   const student=allStudents.find(s=>String(s.idno)===String(idno));
   if(!student || !weeklyAttStudentInScope(student)) return false;
   const importedStatus=weeklyAttImportedStatus(student,key);
-  if(importedStatus==='absent') return true;
-  if(importedStatus==='present') return false;
+  if(importedStatus==='present' || importedStatus==='unrecorded') return false;
 
   // للمستخدم العادي نعتمد فقط تحضيره هو ومادته، فلا يؤثر تحضير أي معلم آخر.
   const cohortIds=new Set(
@@ -13479,8 +13479,8 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
 function weeklyAttStatusForStudent(idno,dateKey){
   const student=getStudents().find(s=>String(s.idno)===String(idno));
   const importedStatus=weeklyAttImportedStatus(student,dateKey);
-  if(importedStatus==='absent') return {mark:'✕',cls:'absent-mark',label:'غائب — مستورد من كشف الغياب'};
-  if(importedStatus==='present') return {mark:'✓',cls:'present-mark',label:'حاضر — مستورد من كشف الغياب'};
+  if(importedStatus==='present') return {mark:'✓',cls:'present-mark',label:'حاضر — مستورد من ملف Excel'};
+  if(importedStatus==='unrecorded') return {mark:'',cls:'',label:'لم يُسجل في ملف Excel'};
   const rows=weeklyAttScopedRows().filter(x=>String(x.idno)===String(idno) && String(x.date)===String(dateKey));
   if(rows.some(x=>x.status==='present')) return {mark:'✓',cls:'present-mark',label:'حاضر'};
   if(rows.some(x=>x.status==='late')) return {mark:'✓',cls:'present-mark',label:'حاضر — متأخر'};
