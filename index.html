@@ -13749,7 +13749,12 @@ function renderWeeklyAttendanceReport(){
       return `<tr>
         <td>${i+1}</td>
         <td class="civil">${escapeFollowupHtml(s.idno||'')}</td>
-        <td class="student-name">${escapeFollowupHtml(s.name||'')}</td>
+        <td class="student-name">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" class="weekly-att-student-report-select" data-idno="${escapeFollowupHtml(String(s.idno||''))}" ${String($('weeklyAttStudentSelect')?.value||'')===String(s.idno||'')?'checked':''} style="width:19px;height:19px;accent-color:#0f7665">
+            <span>${escapeFollowupHtml(s.name||'')}</span>
+          </label>
+        </td>
         <td>${escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')}</td>
         <td dir="ltr">${escapeFollowupHtml(s.phone||'')}</td>
         ${marks}
@@ -13762,6 +13767,19 @@ function renderWeeklyAttendanceReport(){
     th.classList.toggle('selected-day',Number(th.dataset.weekday)===selectedDay);
     const d=dates[Number(th.dataset.weekday)];
     if(d) th.innerHTML=`${['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][Number(th.dataset.weekday)]}<br><small>${weeklyAttHijriCompactDateLabel(d)}</small>`;
+  });
+
+  document.querySelectorAll('.weekly-att-student-report-select').forEach(box=>{
+    box.onchange=()=>{
+      const id=String(box.dataset.idno||'');
+      document.querySelectorAll('.weekly-att-student-report-select').forEach(other=>{
+        if(other!==box) other.checked=false;
+      });
+      if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').value=box.checked?id:'';
+      const s=getStudents().find(x=>String(x.idno||'')===id);
+      if(box.checked && s && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value=s.name||s.idno||'';
+      if(!box.checked && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value='';
+    };
   });
 
   const selectedDate=weeklyAttDateKey(dates[selectedDay]);
@@ -14096,6 +14114,12 @@ function weeklyAttWeekNumberForDate(dateKey){
   return '';
 }
 function weeklyAttFindStudentForReport(){
+  const checked=document.querySelector('.weekly-att-student-report-select:checked');
+  const checkedId=String(checked?.dataset?.idno||'').trim();
+  if(checkedId){
+    const byCheck=getStudents().find(s=>String(s.idno||'')===checkedId);
+    if(byCheck) return byCheck;
+  }
   const selectedId=String($('weeklyAttStudentSelect')?.value||'').trim();
   if(selectedId){
     const bySelect=getStudents().find(s=>String(s.idno||'')===selectedId);
@@ -14140,7 +14164,7 @@ function weeklyAttStudentAbsenceDetails(student){
 function openWeeklyAttStudentDetailedReport(){
   const student=weeklyAttFindStudentForReport();
   if(!student){
-    alert('اكتب اسم الطالب أو سجله المدني بشكل أوضح. إذا ظهر أكثر من طالب، اكتب الاسم كاملًا أو السجل المدني.');
+    alert('حدد طالبًا من علامة التحديد بجانب اسمه، أو اختره من قائمة الطلاب أولًا.');
     return;
   }
   const rows=weeklyAttStudentAbsenceDetails(student);
