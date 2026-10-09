@@ -15070,12 +15070,24 @@ async function renderAttendanceStudentList(){
           updateAttendanceSelectedCount();
         }catch(err){
           console.error('instant attendance cancel',err);
-          box.checked=true;
-          attendancePresentSelectedIds.add(id);
-          if(attendanceMode==='late') persistLateSelections();
-          updateAttendanceSelectedCount();
+          if(attendanceMode==='late'){
+            // في التأخر يبقى الإلغاء كما اختاره المستخدم فورًا، ولا نعيد علامة التحديد بسبب بطء/فشل الشبكة.
+            box.checked=false;
+            attendancePresentSelectedIds.delete(id);
+            persistLateSelections();
+            updateAttendanceSelectedCount();
+          }else{
+            box.checked=true;
+            attendancePresentSelectedIds.add(id);
+            updateAttendanceSelectedCount();
+          }
         }finally{
           box.disabled=false;
+          if(attendanceMode==='late'){
+            box.checked=false;
+            attendancePresentSelectedIds.delete(id);
+            persistLateSelections();
+          }
         }
       }
     };
@@ -15502,9 +15514,9 @@ async function cancelInstantAttendanceForStudent(id){
     try{
       await cloudApi('delete_attendance_rows',{rows:cloudMatches});
     }catch(err){
-      // لا نعيد التحديد للمستخدم بسبب بطء الشبكة؛ سيبقى الإلغاء فوريًا محليًا.
+      // لا نعيد التحديد للمستخدم بسبب بطء/فشل الشبكة؛ الإلغاء يبقى فوريًا محليًا.
       console.error('instant attendance cloud cancel',err);
-      throw err;
+      if(mode!=='late') throw err;
     }
   }
   return true;
