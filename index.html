@@ -14034,10 +14034,9 @@ async function renderAttendancePage(){
 
         // احذف التحديد فورًا من لوحة التأخر حتى لا يبقى الطالب محددًا بعد حذف سجله.
         if(deletedIsTodayLate && deletedId){
-          attendancePresentSelectedIds.delete(deletedId);
+          removePersistedLateSelectionOnly(deletedId);
           __attendanceInstantPending?.delete?.(deletedId);
           __attendanceInstantCancelled?.add?.(deletedId);
-          persistLateSelections();
         }
 
         const oldText=btn.textContent;
@@ -14054,8 +14053,7 @@ async function renderAttendancePage(){
           localStorage.setItem('attendanceLog',JSON.stringify(next));
 
           if(deletedIsTodayLate && deletedId){
-            attendancePresentSelectedIds.delete(deletedId);
-            persistLateSelections();
+            removePersistedLateSelectionOnly(deletedId);
           }
 
           await renderAttendancePage();
@@ -14070,9 +14068,11 @@ async function renderAttendancePage(){
           console.error('attendance row delete failed',err);
           // عند فشل الحذف لا ندّعي النجاح، وأعد حالة التحديد كما كانت.
           if(deletedIsTodayLate && deletedId){
-            attendancePresentSelectedIds.add(deletedId);
+            const stored=loadPersistedLateSelections()||new Set();
+            stored.add(deletedId);
+            attendancePresentSelectedIds=new Set(stored);
+            localStorage.setItem(attendanceLateSelectionStorageKey(),JSON.stringify([...stored]));
             __attendanceInstantCancelled?.delete?.(deletedId);
-            persistLateSelections();
           }
           alert('❌ تعذر حذف السجل من قاعدة البيانات. حاول مرة أخرى.');
         }finally{
@@ -14494,6 +14494,20 @@ function persistLateSelections(){
   try{
     localStorage.setItem(attendanceLateSelectionStorageKey(),JSON.stringify([...attendancePresentSelectedIds]));
   }catch(e){}
+}
+
+function removePersistedLateSelectionOnly(id){
+  id=String(id||'').trim();
+  const stored=loadPersistedLateSelections();
+  const next=stored===null ? new Set(attendancePresentSelectedIds) : new Set(stored);
+  next.delete(id);
+  localStorage.setItem(attendanceLateSelectionStorageKey(),JSON.stringify([...next]));
+
+  // إذا كانت لوحة التأخر مفتوحة، حدّث المجموعة الحالية أيضًا مع الحفاظ على بقية المحددين.
+  if(attendanceMode==='late'){
+    attendancePresentSelectedIds=new Set(next);
+  }
+  return next;
 }
 let attendanceWholeClassRoster=null;
 let attendanceStudentSortKey='name';
