@@ -13378,9 +13378,45 @@ function weeklyAttWeekDates(anchorValue){
     const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;
   });
 }
+function weeklyAttNormalizeSubject(value){
+  return String(value||'').trim().replace(/\s+/g,' ').replace(/[إأآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').toLowerCase();
+}
+function weeklyAttCurrentTeacherSubject(){
+  if(isAttendanceSupervisor()) return '';
+  return String(getCurrentTeacherDefaultSubject?.()||'').trim();
+}
+function weeklyAttScopedRows(){
+  const rows=getAttendanceLog();
+  if(isAttendanceSupervisor()) return rows;
+  const subject=weeklyAttNormalizeSubject(weeklyAttCurrentTeacherSubject());
+  return rows.filter(row=>{
+    if(!attendanceRowBelongsToCurrentUser(row)) return false;
+    // إذا كانت مادة المعلم محددة فلا يدخل في كشفه أي سجل لمادة أخرى.
+    if(subject){
+      const rowSubject=weeklyAttNormalizeSubject(row?.subject||'');
+      if(!rowSubject || rowSubject!==subject) return false;
+    }
+    return true;
+  });
+}
+function weeklyAttScopedCohorts(){
+  const set=new Set();
+  weeklyAttScopedRows().forEach(r=>{
+    const g=studentGradeKey(r.grade)||String(r.grade||'').trim();
+    const c=studentClassKey(r.classroom)||String(r.classroom||'').trim();
+    if(g&&c) set.add(g+'|'+c);
+  });
+  return set;
+}
+function weeklyAttStudentInScope(student){
+  if(isAttendanceSupervisor()) return true;
+  const key=(studentGradeKey(student?.grade)||String(student?.grade||'').trim())+'|'+
+            (studentClassKey(student?.classroom)||String(student?.classroom||'').trim());
+  return weeklyAttScopedCohorts().has(key);
+}
 function weeklyAttActiveDates(){
   const today=weeklyAttDateKey(new Date());
-  return [...new Set(getAttendanceLog()
+  return [...new Set(weeklyAttScopedRows()
     .map(x=>String(x.date||''))
     .filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d) && d<=today)
   )].sort();
@@ -13389,18 +13425,16 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   const key=String(dateKey||'');
   const allStudents=getStudents();
   const student=allStudents.find(s=>String(s.idno)===String(idno));
-  if(!student) return false;
+  if(!student || !weeklyAttStudentInScope(student)) return false;
 
-  // لا نعتبر اليوم يوم تحضير لهذا الطالب إلا إذا تم تسجيل تحضير فعلي
-  // لطالب واحد على الأقل من نفس الصف والفصل. وبهذا تبقى الأيام التي
-  // لم يفتح فيها المستخدم تحضير الفصل فارغة ولا تظهر فيها علامة غياب.
+  // للمستخدم العادي نعتمد فقط تحضيره هو ومادته، فلا يؤثر تحضير أي معلم آخر.
   const cohortIds=new Set(
     allStudents
       .filter(s=>studentGradeKey(s.grade)===studentGradeKey(student.grade) &&
                  studentClassKey(s.classroom)===studentClassKey(student.classroom))
       .map(s=>String(s.idno))
   );
-  const dayRows=getAttendanceLog().filter(x=>String(x.date)===key);
+  const dayRows=weeklyAttScopedRows().filter(x=>String(x.date)===key);
   const cohortAttendanceStarted=dayRows.some(x=>cohortIds.has(String(x.idno)));
   if(!cohortAttendanceStarted) return false;
 
@@ -13408,7 +13442,7 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   return !rows.some(x=>x.status==='present'||x.status==='late');
 }
 function weeklyAttStatusForStudent(idno,dateKey){
-  const rows=getAttendanceLog().filter(x=>String(x.idno)===String(idno) && String(x.date)===String(dateKey));
+  const rows=weeklyAttScopedRows().filter(x=>String(x.idno)===String(idno) && String(x.date)===String(dateKey));
   if(rows.some(x=>x.status==='present')) return {mark:'✓',cls:'present-mark',label:'حاضر'};
   if(rows.some(x=>x.status==='late')) return {mark:'✓',cls:'present-mark',label:'حاضر — متأخر'};
   if(weeklyAttIsAbsentOnDate(idno,dateKey)) return {mark:'✕',cls:'absent-mark',label:'غائب'};
@@ -13420,19 +13454,29 @@ function weeklyAttAbsenceCount(idno,startDate='',endDate='9999-12-31'){
 function populateWeeklyAttendanceGrades(){
   const el=$('weeklyAttGrade'); if(!el) return;
   const current=el.value;
-  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
+  const source=isAttendanceSupervisor()
+    ? getStudents()
+    : weeklyAttScopedRows();
+  const grades=[...new Set(source.map(s=>String(s.grade||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
   el.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
   if(grades.includes(current)) el.value=current;
+  else if(!isAttendanceSupervisor() && grades.length===1) el.value=grades[0];
 }
 function populateWeeklyAttendanceClasses(){
   const el=$('weeklyAttClass'); if(!el) return;
   const grade=String($('weeklyAttGrade')?.value||'');
   const current=el.value;
-  const classes=[...new Set(getStudents().filter(s=>!grade||String(s.grade||'')===grade).map(s=>String(s.classroom||'').trim()).filter(Boolean))]
+  const source=isAttendanceSupervisor()
+    ? getStudents()
+    : weeklyAttScopedRows();
+  const classes=[...new Set(source
+    .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
+    .map(s=>String(s.classroom||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
   el.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
   if(classes.includes(current)) el.value=current;
+  else if(!isAttendanceSupervisor() && classes.length===1) el.value=classes[0];
 }
 const weeklyAttHijriFullDateFormatter=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{
   weekday:'long',day:'numeric',month:'long',year:'numeric'
@@ -13557,7 +13601,9 @@ function renderWeeklyAttendanceReport(){
   const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
   const selectedDay=Number($('weeklyAttDay')?.value||0);
   const dates=weeklyAttWeekDates(anchor);
-  const students=getStudents().filter(s=>(!grade||String(s.grade||'')===grade)&&(!classroom||String(s.classroom||'')===classroom))
+  const students=getStudents()
+    .filter(s=>weeklyAttStudentInScope(s))
+    .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
   const body=$('weeklyAttBody');
   if(!body)return;
@@ -13598,7 +13644,9 @@ function renderWeeklyAttendanceReport(){
 
   $('weeklyAttHeadRight').textContent='الأسبوع الدراسي: '+week+' — اليوم: '+(['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][selectedDay]||'');
   $('weeklyAttHeadCenter').textContent='من '+weeklyAttDateKey(dates[0])+' إلى '+weeklyAttDateKey(dates[4]);
-  $('weeklyAttHeadLeft').textContent='الصف / الفصل: '+(grade||'—')+' / '+(classroom?displayStudentClassroom(classroom):'—');
+  const userSubject=weeklyAttCurrentTeacherSubject();
+  $('weeklyAttHeadLeft').textContent='الصف / الفصل: '+(grade||'—')+' / '+(classroom?displayStudentClassroom(classroom):'—')+
+    ((!isAttendanceSupervisor()&&userSubject)?' — المادة: '+userSubject:'');
   const settings=getSchoolSettings?.()||{};
   if($('weeklyAttManager')) $('weeklyAttManager').textContent=settings.manager||'';
 }
@@ -13662,26 +13710,29 @@ function weeklyAttStudentsForFilters(){
   const grade=String($('weeklyAttAnalyticsGrade')?.value||'');
   const classroom=String($('weeklyAttAnalyticsClass')?.value||'');
   return getStudents()
+    .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
 }
 function populateWeeklyAttAnalyticsGrades(){
   const el=$('weeklyAttAnalyticsGrade'); if(!el)return;
   const current=el.value;
-  const grades=[...new Set(getStudents().map(s=>String(s.grade||'').trim()).filter(Boolean))]
+  const source=isAttendanceSupervisor()?getStudents():weeklyAttScopedRows();
+  const grades=[...new Set(source.map(s=>String(s.grade||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
-  el.innerHTML='<option value="">جميع الصفوف</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
+  el.innerHTML='<option value="">'+(isAttendanceSupervisor()?'جميع الصفوف':'صفوف تحضيري فقط')+'</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
   if(grades.includes(current)) el.value=current;
 }
 function populateWeeklyAttAnalyticsClasses(){
   const el=$('weeklyAttAnalyticsClass'); if(!el)return;
   const grade=String($('weeklyAttAnalyticsGrade')?.value||'');
   const current=el.value;
-  const classes=[...new Set(getStudents()
+  const source=isAttendanceSupervisor()?getStudents():weeklyAttScopedRows();
+  const classes=[...new Set(source
     .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
     .map(s=>String(s.classroom||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
-  el.innerHTML='<option value="">جميع الفصول</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
+  el.innerHTML='<option value="">'+(isAttendanceSupervisor()?'جميع الفصول':'فصول تحضيري فقط')+'</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
   if(classes.includes(current)) el.value=current;
 }
 function populateWeeklyAttAnalyticsStudents(){
@@ -13716,7 +13767,7 @@ function weeklyAttAnalyticsData(){
   const dayCohorts=new Map();
   const presentOrLate=new Set();
   const activeDatesSet=new Set();
-  getAttendanceLog().forEach(r=>{
+  weeklyAttScopedRows().forEach(r=>{
     const date=String(r.date||'');
     const id=String(r.idno||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return;
