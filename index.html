@@ -13387,6 +13387,17 @@ function weeklyAttApplySelectedWeekDate(){
   const week=String($('weeklyAttWeek')?.value||'');
   const anchor=WEEKLY_IMPORTED_WEEK_ANCHORS[week];
   if(!anchor) return false;
+
+  // الأسابيع 1-3 المستوردة تخص الصف الثاني الثانوي.
+  const gradeEl=$('weeklyAttGrade');
+  if(gradeEl && gradeEl.value!=='الثاني الثانوي'){
+    const hasSecond=[...gradeEl.options].some(o=>o.value==='الثاني الثانوي');
+    if(hasSecond){
+      gradeEl.value='الثاني الثانوي';
+      populateWeeklyAttendanceClasses();
+    }
+  }
+
   const day=Math.max(0,Math.min(4,Number($('weeklyAttDay')?.value||0)));
   const d=new Date(anchor+'T12:00:00');
   d.setDate(d.getDate()+day);
@@ -14066,6 +14077,12 @@ if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendan
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
+  populateWeeklyAttendanceClasses();
+  const classEl=$('weeklyAttClass');
+  if(classEl && !classEl.value){
+    const first=[...classEl.options].find(o=>o.value);
+    if(first) classEl.value=first.value;
+  }
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
 };
