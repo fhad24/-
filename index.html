@@ -13553,16 +13553,30 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   if(importedStatus==='absent') return true;
   if(importedStatus==='present') return false;
 
-  const rows=weeklyAttScopedRows().filter(x=>String(x.idno)===String(idno) && String(x.date)===key);
+  const scopedRows=weeklyAttScopedRows();
+  const rows=scopedRows.filter(x=>String(x.idno)===String(idno) && String(x.date)===key);
   if(rows.some(x=>x.status==='present'||x.status==='late')) return false;
   if(rows.some(x=>x.status==='absent')) return true;
 
-  // أي يوم دراسي سابق في التقويم الثابت بلا حضور أو تأخر يُحسب غيابًا.
   const today=weeklyAttDateKey(new Date());
   if(key>today) return false;
-  const fixedDay=Object.keys(WEEKLY_FIXED_HIJRI_WEEKS)
-    .some(week=>weeklyAttFixedWeekGregorianDates(week).includes(key));
-  return fixedDay;
+
+  // لا نحسب الأسبوع غيابًا إلا إذا كان هناك تحضير فعلي لنفس الصف والفصل
+  // في ذلك الأسبوع. بهذا لا تدخل الأسابيع التي لم تُسجل أصلًا في الغياب.
+  const weekEntry=Object.entries(WEEKLY_FIXED_HIJRI_WEEKS)
+    .find(([week])=>weeklyAttFixedWeekGregorianDates(week).includes(key));
+  if(!weekEntry) return false;
+
+  const weekDates=weeklyAttFixedWeekGregorianDates(weekEntry[0]);
+  const cohortRows=scopedRows.filter(x=>
+    weekDates.includes(String(x.date||'')) &&
+    studentGradeKey(x.grade)===studentGradeKey(student.grade) &&
+    studentClassKey(x.classroom)===studentClassKey(student.classroom)
+  );
+  const weekHasAttendance=cohortRows.length>0;
+  if(!weekHasAttendance) return false;
+
+  return true;
 }
 function weeklyAttStatusForStudent(idno,dateKey){
   const student=getStudents().find(s=>String(s.idno)===String(idno));
