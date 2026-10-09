@@ -13151,6 +13151,73 @@ function isAttendanceSupervisor(){
   return u.is_owner===true || role.includes('مدير') || role.includes('وكيل') || perms.has('attendanceSupervisor');
 }
 
+function attendanceManualSelectorsAllowed(){
+  const u=getCurrentLoggedAdminUser?.();
+  if(!u) return false;
+  const role=String(u.role||'').trim();
+  return u.is_owner===true || role.includes('مدير') || role.includes('وكيل');
+}
+
+function getAutomaticAttendancePeriod(dateObj=new Date()){
+  let season='summer';
+  try{
+    const s=getSchoolSettings?.()||{};
+    season=s.scheduleSeason==='winter'?'winter':'summer';
+  }catch(e){}
+  const periods=season==='winter'
+    ? [
+        {n:1,start:'07:30',end:'08:15'},
+        {n:2,start:'08:15',end:'09:00'},
+        {n:3,start:'09:00',end:'09:45'},
+        {n:4,start:'10:25',end:'11:10'},
+        {n:5,start:'11:10',end:'11:55'},
+        {n:6,start:'11:55',end:'12:40'}
+      ]
+    : [
+        {n:1,start:'07:00',end:'07:45'},
+        {n:2,start:'07:45',end:'08:30'},
+        {n:3,start:'08:30',end:'09:15'},
+        {n:4,start:'09:55',end:'10:40'},
+        {n:5,start:'10:40',end:'11:25'},
+        {n:6,start:'11:25',end:'12:10'},
+        {n:7,start:'12:10',end:'12:55'}
+      ];
+  const toMin=v=>{const [h,m]=v.split(':').map(Number);return h*60+m};
+  const now=dateObj.getHours()*60+dateObj.getMinutes();
+  const exact=periods.find(p=>now>=toMin(p.start)&&now<toMin(p.end));
+  if(exact) return exact.n;
+  const next=periods.find(p=>now<toMin(p.start));
+  if(next) return next.n;
+  return periods[periods.length-1]?.n||1;
+}
+
+function setAttendancePeriodSelectValue(periodNo){
+  const sel=$('attendancePeriodSelect');
+  if(!sel||!periodNo) return;
+  const opt=[...sel.options].find(o=>attendancePeriodNumber(o.value||o.textContent)===Number(periodNo));
+  if(opt) sel.value=opt.value;
+}
+
+function getAutomaticAttendanceSubject(){
+  try{return String(getCurrentTeacherDefaultSubject?.()||'').trim()||'أخرى'}catch(e){return 'أخرى'}
+}
+
+function applyAutomaticAttendanceSessionForTeacher(){
+  if(attendanceManualSelectorsAllowed()) return;
+  const p=getAutomaticAttendancePeriod();
+  const subject=getAutomaticAttendanceSubject();
+  setAttendancePeriodSelectValue(p);
+  const subjectSel=$('attendanceSubjectSelect');
+  if(subjectSel){
+    let opt=[...subjectSel.options].find(o=>String(o.value||o.textContent||'').trim()===subject);
+    if(!opt){
+      opt=document.createElement('option');
+      opt.value=subject;opt.textContent=subject;subjectSel.appendChild(opt);
+    }
+    subjectSel.value=subject;
+  }
+}
+
 function attendanceRowBelongsToCurrentUser(row){
   if(isAttendanceSupervisor()) return true;
   const recorder=getCurrentAttendanceRecorder();
@@ -14622,7 +14689,7 @@ async function renderAttendancePage(){
         attendancePresentSelectedIds.clear();
         renderAttendanceStudentList();
         showAttendanceSelectedStudent(student);
-        toast('اختر الحصة والمادة ثم اضغط حفظ لتحويل الطالب إلى حاضر');
+        toast(attendanceManualSelectorsAllowed()?'اختر الحصة والمادة ثم اضغط حفظ لتحويل الطالب إلى حاضر':'تم تحديد الحصة والمادة تلقائيًا — اضغط حفظ لتحويل الطالب إلى حاضر');
       };
     });
   }
@@ -15203,7 +15270,10 @@ function openAttendanceModal(mode){
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
-  setTimeout(()=>{try{setTeacherDefaultSubject('attendanceSubjectSelect')}catch(e){}},0);
+  setTimeout(()=>{try{
+    if(attendanceManualSelectorsAllowed()) setTeacherDefaultSubject('attendanceSubjectSelect');
+    else applyAutomaticAttendanceSessionForTeacher();
+  }catch(e){}},0);
   if($('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
   syncAttendanceLateTypeControls();
   fillAttendanceTeacherSelect();
@@ -15259,6 +15329,14 @@ async function openAttendanceEdit(index){
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value=isMorningLate?'':String(row.period||'');
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value=isMorningLate?'':String(row.subject||'');
   syncAttendanceLateTypeControls();
+  if(!attendanceManualSelectorsAllowed()){
+    if($('attendancePeriodSelect') && row.period) setAttendancePeriodSelectValue(Number(row.period));
+    if($('attendanceSubjectSelect') && row.subject){
+      let existing=[...$('attendanceSubjectSelect').options].find(o=>String(o.value||o.textContent||'').trim()===String(row.subject||'').trim());
+      if(!existing){existing=document.createElement('option');existing.value=row.subject;existing.textContent=row.subject;$('attendanceSubjectSelect').appendChild(existing)}
+      $('attendanceSubjectSelect').value=String(row.subject||'');
+    }
+  }
   fillAttendanceTeacherSelect(String(row.teacherUsername||row.teacherCivilId||''));
   setAttendanceMode(attendanceMode);
   fillAttendanceClasses();
@@ -15313,7 +15391,9 @@ function setAttendanceMode(mode){
   }
 
   const sessionControls=document.querySelector('.attendance-session-controls');
-  if(sessionControls) sessionControls.classList.toggle('hidden',!(late||present));
+  const manualSession=attendanceManualSelectorsAllowed();
+  if(sessionControls) sessionControls.classList.toggle('hidden',!(late||present)||!manualSession);
+  if((late||present) && !manualSession) applyAutomaticAttendanceSessionForTeacher();
   const morningField=$('attendanceMorningLateField');
   if(morningField) morningField.style.display=late?'':'none';
   if(!late && $('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
@@ -15325,6 +15405,7 @@ function setAttendanceMode(mode){
 
 function syncAttendanceLateTypeControls(){
   const morning=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
+  if(!attendanceManualSelectorsAllowed() && attendanceMode==='present') applyAutomaticAttendanceSessionForTeacher();
   const period=$('attendancePeriodSelect');
   const subject=$('attendanceSubjectSelect');
   if(period){
@@ -15782,7 +15863,7 @@ async function readPaperAttendanceFile(file){
 if($('paperAttendanceCameraInput')) $('paperAttendanceCameraInput').onchange=async e=>{const f=e.target.files?.[0];if(f)await readPaperAttendanceFile(f);e.target.value='';};
 if($('paperAttendanceFileInput')) $('paperAttendanceFileInput').onchange=async e=>{const f=e.target.files?.[0];if(f)await readPaperAttendanceFile(f);e.target.value='';};
 if($('paperAttendanceSelectAllBtn')) $('paperAttendanceSelectAllBtn').onclick=()=>{const checks=[...document.querySelectorAll('.paper-attendance-match-check')],all=checks.length&&checks.every(x=>x.checked);checks.forEach(ch=>{ch.checked=!all;const id=String(ch.dataset.id||'');if(ch.checked)paperAttendanceMatchedIds.add(id);else paperAttendanceMatchedIds.delete(id);});};
-if($('paperAttendanceUseMatchesBtn')) $('paperAttendanceUseMatchesBtn').onclick=()=>{const ids=[...paperAttendanceMatchedIds];if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return;}$('paperAttendanceModal')?.classList.add('hidden');openAttendanceModal('present');attendancePresentSelectedIds=new Set(ids);attendanceSelectedId='';renderAttendanceStudentList();$('attendanceModalTitle').textContent='إضافة حاضر — إدخال ورقي ('+ids.length+' طالب)';toast('تم تحديد '+ids.length+' طالب. اختر الحصة والمادة ثم اضغط حفظ.');};
+if($('paperAttendanceUseMatchesBtn')) $('paperAttendanceUseMatchesBtn').onclick=()=>{const ids=[...paperAttendanceMatchedIds];if(!ids.length){alert('حدد طالبًا واحدًا على الأقل.');return;}$('paperAttendanceModal')?.classList.add('hidden');openAttendanceModal('present');attendancePresentSelectedIds=new Set(ids);attendanceSelectedId='';renderAttendanceStudentList();$('attendanceModalTitle').textContent='إضافة حاضر — إدخال ورقي ('+ids.length+' طالب)';toast(attendanceManualSelectorsAllowed()?'تم تحديد '+ids.length+' طالب. اختر الحصة والمادة ثم اضغط حفظ.':'تم تحديد '+ids.length+' طالب والحصة والمادة تلقائيًا. اضغط حفظ.');};
 
 if($('closeAttendanceModal')) $('closeAttendanceModal').onclick=closeAttendanceModal;
 if($('cancelAttendanceStudentBtn')) $('cancelAttendanceStudentBtn').onclick=closeAttendanceModal;
@@ -15933,18 +16014,18 @@ async function flushAttendanceInstantSave(){
   if((attendanceMode!=='present' && attendanceMode!=='late') || !__attendanceInstantPending.size) return;
 
   const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
-  // التأخر لا يحتاج حصة أو مادة؛ يسجل الوقت والتاريخ تلقائيًا بمجرد تحديد الطالب.
-  const selectedPeriod=attendanceMode==='late' ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
+  const manualSession=attendanceManualSelectorsAllowed();
+  if(attendanceMode==='present' && !manualSession) applyAutomaticAttendanceSessionForTeacher();
+  // المعلم: الحصة من الوقت الحالي والمادة من تخصصه تلقائيًا. الأدمن/المدير/الوكيل يختارون يدويًا.
+  const selectedPeriod=attendanceMode==='late'
+    ? null
+    : (manualSession ? attendancePeriodNumber($('attendancePeriodSelect')?.value) : getAutomaticAttendancePeriod());
   const selectedSubject=attendanceMode==='late'
     ? (morningLate ? 'تأخر عن الطابور الصباحي' : '')
-    : String($('attendanceSubjectSelect')?.value||'').trim();
+    : (manualSession ? String($('attendanceSubjectSelect')?.value||'').trim() : getAutomaticAttendanceSubject());
 
-  if(attendanceMode==='present' && !selectedPeriod){
-    return;
-  }
-  if(attendanceMode==='present' && !selectedSubject){
-    return;
-  }
+  if(attendanceMode==='present' && !selectedPeriod) return;
+  if(attendanceMode==='present' && !selectedSubject) return;
 
   const ids=[...__attendanceInstantPending].filter(id=>!__attendanceInstantCancelled.has(String(id)));
   __attendanceInstantPending.clear();
@@ -16151,13 +16232,19 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
       : '';
     const recorder=getSelectedAttendanceTeacher();
     const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
-    const selectedPeriod=morningLate ? null : attendancePeriodNumber($('attendancePeriodSelect')?.value);
-    const selectedSubject=morningLate ? 'تأخر عن الطابور الصباحي' : String($('attendanceSubjectSelect')?.value||'').trim();
-    if((attendanceMode==='present'||attendanceMode==='late') && !morningLate && !selectedPeriod){
+    const manualSession=attendanceManualSelectorsAllowed();
+    if(attendanceMode==='present' && !manualSession) applyAutomaticAttendanceSessionForTeacher();
+    const selectedPeriod=morningLate
+      ? null
+      : (manualSession ? attendancePeriodNumber($('attendancePeriodSelect')?.value) : getAutomaticAttendancePeriod(now));
+    const selectedSubject=morningLate
+      ? 'تأخر عن الطابور الصباحي'
+      : (manualSession ? String($('attendanceSubjectSelect')?.value||'').trim() : getAutomaticAttendanceSubject());
+    if(manualSession && (attendanceMode==='present'||attendanceMode==='late') && !morningLate && !selectedPeriod){
       alert('اختر الحصة قبل الحفظ.');
       return;
     }
-    if(attendanceMode==='present' && !selectedSubject){
+    if(manualSession && attendanceMode==='present' && !selectedSubject){
       alert('اختر المادة قبل حفظ الحضور.');
       return;
     }
