@@ -4779,6 +4779,12 @@ body.activity-leader-open main{
           <select id="weeklyAttClass"><option value="">اختر الفصل</option></select>
         </div>
         <div>
+          <label>اختيار الطالب</label>
+          <select id="weeklyAttStudentSelect">
+            <option value="">اختر الطالب</option>
+          </select>
+        </div>
+        <div>
           <label>بحث عن طالب</label>
           <input id="weeklyAttStudentSearch" type="search" placeholder="الاسم أو السجل المدني أو الجوال" autocomplete="off">
         </div>
@@ -13692,6 +13698,20 @@ function adjustWeeklyAttDateToDay(){
   updateWeeklyAttHijriDisplay();
   renderWeeklyAttendanceReport();
 }
+function populateWeeklyAttStudentSelect(){
+  const el=$('weeklyAttStudentSelect'); if(!el)return;
+  const grade=String($('weeklyAttGrade')?.value||'');
+  const classroom=String($('weeklyAttClass')?.value||'');
+  const current=String(el.value||'');
+  const students=getStudents()
+    .filter(s=>weeklyAttStudentInScope(s))
+    .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
+  el.innerHTML='<option value="">اختر الطالب</option>'+students.map(s=>
+    `<option value="${escapeFollowupHtml(String(s.idno||''))}">${escapeFollowupHtml(String(s.name||''))} — ${escapeFollowupHtml(String(s.idno||''))}</option>`
+  ).join('');
+  if(students.some(s=>String(s.idno||'')===current)) el.value=current;
+}
 function renderWeeklyAttendanceReport(){
   const grade=String($('weeklyAttGrade')?.value||'');
   const classroom=String($('weeklyAttClass')?.value||'');
@@ -14076,6 +14096,12 @@ function weeklyAttWeekNumberForDate(dateKey){
   return '';
 }
 function weeklyAttFindStudentForReport(){
+  const selectedId=String($('weeklyAttStudentSelect')?.value||'').trim();
+  if(selectedId){
+    const bySelect=getStudents().find(s=>String(s.idno||'')===selectedId);
+    if(bySelect) return bySelect;
+  }
+
   const q=String($('weeklyAttStudentSearch')?.value||'').trim().toLowerCase().replace(/\s+/g,' ');
   if(!q) return null;
   const grade=String($('weeklyAttGrade')?.value||'');
@@ -14195,9 +14221,33 @@ async function exportWeeklyAttendancePdf(){
 }
 if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeeklyAttendanceTab('report');
 if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
-if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendanceClasses();populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
-if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
-if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>renderWeeklyAttendanceReport();
+if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
+  populateWeeklyAttendanceClasses();
+  populateWeeklyAttStudentSelect();
+  populateWeeklyAttAnalyticsStudents();
+  renderWeeklyAttendanceReport();
+  renderWeeklyAttAnalytics()
+};
+if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
+  populateWeeklyAttStudentSelect();
+  populateWeeklyAttAnalyticsStudents();
+  renderWeeklyAttendanceReport();
+  renderWeeklyAttAnalytics()
+};
+if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').onchange=()=>{
+  const s=getStudents().find(x=>String(x.idno||'')===String($('weeklyAttStudentSelect').value||''));
+  if(s && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value=s.name||s.idno||'';
+  renderWeeklyAttendanceReport();
+};
+if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
+  const q=String($('weeklyAttStudentSearch').value||'').trim().toLowerCase();
+  if($('weeklyAttStudentSelect')){
+    const match=[...$('weeklyAttStudentSelect').options].find(o=>o.value && o.textContent.toLowerCase().includes(q));
+    if(match) $('weeklyAttStudentSelect').value=match.value;
+    else if(!q) $('weeklyAttStudentSelect').value='';
+  }
+  renderWeeklyAttendanceReport();
+};
 if($('weeklyAttStudentReportBtn')) $('weeklyAttStudentReportBtn').onclick=openWeeklyAttStudentDetailedReport;
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
@@ -14207,6 +14257,7 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     const first=[...classEl.options].find(o=>o.value);
     if(first) classEl.value=first.value;
   }
+  populateWeeklyAttStudentSelect();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
 };
