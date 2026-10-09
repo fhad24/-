@@ -6565,6 +6565,7 @@ async function loadReferralHistory(){
   }
 }
 function initReferralPage(){
+  setTimeout(()=>{try{setTeacherDefaultSubject('referralSubject')}catch(e){}},0);
   referralCloudHistoryLoadedAt=0;
   refreshReferralCloudHistory(true).then(()=>renderReferralSelectedStudents()).catch(()=>{});
   updateReferralDates();
@@ -7132,6 +7133,8 @@ async function cloudPullToLocal(){
     civilId:String(u.civil_id||u.username||''),
     name:u.name||'',
     role:u.role||'معلم',
+    specialty:String(u.specialty||''),
+    teachingSubject:String(u.teaching_subject||u.specialty||''),
     permissions:Array.isArray(u.permissions)?u.permissions:[],
     accountLocked:!!u.account_locked,
     passwordUpdatedAt:String(u.password_updated_at||'')
@@ -9111,7 +9114,7 @@ async function submitTeacherClassFollowup(){
   const btn=$('teacherClassSubmitBtn');const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإرسال...';
   try{
     await cloudApi('submit_teacher_followup',{subject,grade,classroom,period,notes,imageData:teacherClassImageData});
-    $('teacherClassSubject').value='';
+    setTeacherDefaultSubject('teacherClassSubject');
     $('teacherClassNotes').value='';
     $('teacherClassPeriod').value='';
     teacherClassImageData='';
@@ -9194,11 +9197,26 @@ async function loadTeacherClassManagerFollowups(){
   }
 }
 
+function getCurrentTeacherDefaultSubject(){
+  const u=getCurrentLoggedAdminUser?.()||{};
+  return String(u.teaching_subject||u.teachingSubject||u.specialty||'').trim();
+}
+function setTeacherDefaultSubject(selectId){
+  const sel=$(selectId); if(!sel) return;
+  const subject=getCurrentTeacherDefaultSubject(); if(!subject) return;
+  let opt=[...sel.options].find(o=>String(o.value||o.textContent||'').trim()===subject);
+  if(!opt){
+    opt=document.createElement('option'); opt.value=subject; opt.textContent=subject; sel.appendChild(opt);
+  }
+  sel.value=subject;
+}
+
 function initTeacherClassFollowupPage(){
   const u=getCurrentLoggedAdminUser();
   if($('teacherClassTeacherName')) $('teacherClassTeacherName').textContent=String(u?.name||u?.displayName||u?.username||'—');
   if($('teacherClassDateTime')) $('teacherClassDateTime').textContent=teacherClassFormatDateTime();
   populateTeacherClassGrades();
+  setTeacherDefaultSubject('teacherClassSubject');
   loadMyTeacherClassFollowups();
 }
 
@@ -11838,6 +11856,9 @@ function ensureAdminSettings(){
 
         <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
         <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
+        <input id="teacherSpecialtiesInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+        <button class="admin-settings-save" id="importTeacherSpecialtiesBtn" type="button" style="background:#e8f0ff;color:#234a91;margin-top:8px">📚 استيراد تخصصات المعلمين</button>
+        <div id="teacherSpecialtiesStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
         <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 جعل كلمة المرور = السجل المدني لجميع المستخدمين</button>
         <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
 
@@ -11848,6 +11869,10 @@ function ensureAdminSettings(){
         </div>
         <div class="row">
           <div class="admin-settings-field"><label>الاسم</label><input id="newAdminName"></div>
+          <div class="admin-settings-field"><label>التخصص</label><input id="newAdminSpecialty" placeholder="مثال: فيزياء"></div>
+        </div>
+        <div class="row">
+          <div class="admin-settings-field"><label>المادة الافتراضية</label><input id="newAdminTeachingSubject" placeholder="مثال: فيزياء"></div>
           <div></div>
         </div>
         <div class="row">
@@ -12091,6 +12116,8 @@ function ensureAdminSettings(){
     const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||normalizeCivilId(username);
     const password=String(civilId||'');
     const role=document.getElementById('newAdminRole').value;
+    const specialty=String(document.getElementById('newAdminSpecialty')?.value||'').trim();
+    const teachingSubject=String(document.getElementById('newAdminTeachingSubject')?.value||specialty||'').trim();
     if(!username||!name||!/^\d{10}$/.test(civilId)){toast('أكمل اسم المستخدم والاسم والسجل المدني الصحيح من 10 أرقام');return}
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
@@ -12112,6 +12139,8 @@ function ensureAdminSettings(){
     });
     document.getElementById('newAdminUsername').value='';
     document.getElementById('newAdminName').value='';
+    if(document.getElementById('newAdminSpecialty')) document.getElementById('newAdminSpecialty').value='';
+    if(document.getElementById('newAdminTeachingSubject')) document.getElementById('newAdminTeachingSubject').value='';
     document.getElementById('newAdminCivilId').value='';
     document.getElementById('newAdminPassword').value='';
     renderAdminUsersSettings(); toast('تمت إضافة المستخدم');
@@ -12283,6 +12312,68 @@ function ensureAdminSettings(){
     }
   };
 
+    document.getElementById('importTeacherSpecialtiesBtn').onclick=()=>document.getElementById('teacherSpecialtiesInput').click();
+    document.getElementById('teacherSpecialtiesInput').onchange=async e=>{
+      const file=e.target.files?.[0];
+      if(!file) return;
+      const status=document.getElementById('teacherSpecialtiesStatus');
+      const btn=document.getElementById('importTeacherSpecialtiesBtn');
+      const oldText=btn.textContent;
+      btn.disabled=true;btn.textContent='جاري استيراد التخصصات...';
+      try{
+        const buf=await file.arrayBuffer();
+        const wb=XLSX.read(buf,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+        const users=getAdminUsers();
+        const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
+        const pick=(row,names)=>{
+          const entries=Object.entries(row||{});
+          for(const name of names){
+            const wanted=norm(name).replace(/\s/g,'');
+            const found=entries.find(([k])=>norm(k).replace(/\s/g,'')===wanted);
+            if(found && String(found[1]??'').trim()) return String(found[1]).trim();
+          }
+          return '';
+        };
+        let updated=0,notFound=0,skipped=0;
+        for(const row of rows){
+          const rawUser=pick(row,['اسم المستخدم','رقم الهوية','السجل المدني','رقم المستخدم']);
+          const username=normalizeCivilId(rawUser);
+          const name=pick(row,['الاسم الرباعي','الاسم','اسم المعلم','اسم الموظف']);
+          const specialty=pick(row,['التخصص','تخصص']);
+          const teachingSubject=pick(row,['مجال التدريس','المادة','المادة الدراسية','التخصص'])||specialty;
+          if(!specialty && !teachingSubject){skipped++;continue}
+          let idx=-1;
+          if(username) idx=users.findIndex(u=>normalizeCivilId(u.civilId||u.username||'')===username || normalizeCivilId(u.username||'')===username);
+          if(idx<0 && name) idx=users.findIndex(u=>norm(u.name)===norm(name));
+          if(idx<0){notFound++;continue}
+          users[idx]={...users[idx],specialty:String(specialty||teachingSubject).trim(),teachingSubject:String(teachingSubject||specialty).trim()};
+          updated++;
+        }
+        saveAdminUsers(users);
+        const payloadUsers=users.map(u=>({
+          username:String(u.username||''),
+          civilId:String(u.civilId||u.username||''),
+          name:String(u.name||''),
+          role:String(u.role||'معلم'),
+          specialty:String(u.specialty||''),
+          teachingSubject:String(u.teachingSubject||u.specialty||''),
+          permissions:Array.isArray(u.permissions)?u.permissions:[]
+        }));
+        await cloudApi('sync_users',{users:payloadUsers});
+        await refreshAdminUsersFromCloud();
+        renderAdminUsersSettings();
+        status.textContent='تم تحديث تخصصات '+updated+' معلم'+(notFound?' — لم تتم مطابقة '+notFound:'')+(skipped?' — تم تجاهل '+skipped:'');
+        toast('✅ تم حفظ تخصصات المعلمين وربط المادة تلقائيًا');
+      }catch(err){
+        console.error('teacher specialties import',err);
+        status.textContent='تعذر قراءة ملف التخصصات. استخدم Excel أو CSV بعناوين: اسم المستخدم، التخصص، مجال التدريس.';
+      }finally{
+        btn.disabled=false;btn.textContent=oldText;e.target.value='';
+      }
+    };
+
     document.getElementById('resetLockedUsersPasswords').onclick=async()=>{
       if(!confirm('سيتم جعل كلمة المرور لجميع المستخدمين مساوية للسجل المدني الخاص بكل مستخدم، وسيتم تسجيل خروج جلساتهم الحالية. متابعة؟')) return;
       const btn=document.getElementById('resetLockedUsersPasswords');
@@ -12351,12 +12442,13 @@ function ensureAdminSettings(){
         const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||normalizeCivilId(username);
         if(!/^\d{10}$/.test(civilId)){skipped++;continue}
         const password=civilId;
-        const rec={username,civilId,name,password,role,permissions,accountLocked:false};
+        const rec={username,civilId,name,password,role,specialty,teachingSubject,permissions,accountLocked:false};
         if(idx>=0){users[idx]={...users[idx],...rec,password};updated++}
         else{users.push(rec);added++}
       }
       const payloadUsers=users.map(u=>({
         username:u.username,civilId:u.civilId||u.username,name:u.name,role:u.role,
+        specialty:String(u.specialty||''),teachingSubject:String(u.teachingSubject||u.specialty||''),
         permissions:Array.isArray(u.permissions)?u.permissions:[],
         ...(String(u.password||'').trim()?{password:String(u.password)}:{})
       }));
@@ -12384,6 +12476,8 @@ async function refreshAdminUsersFromCloud(){
       civilId:String(u.civil_id||u.username||''),
       name:u.name||'',
       role:u.role||'معلم',
+      specialty:String(u.specialty||''),
+      teachingSubject:String(u.teaching_subject||u.specialty||''),
       permissions:Array.isArray(u.permissions)?u.permissions:[],
       accountLocked:!!u.account_locked
     }));
@@ -12525,6 +12619,7 @@ function renderAdminUsersSettings(){
         <b>${u.name||u.displayName||''} — ${u.role||'مستخدم'}${u.owner?' (أنت)':''}</b>
         ${u.owner?'':`<label class="admin-user-bulk-select">تحديد هذا المستخدم <input type="checkbox" class="bulk-user-card-check" value="${u.username||''}"></label>`}
         ${u.owner?'':`<div style="margin:6px 0;font-size:12px;font-weight:900;color:${u.accountLocked?'#b42318':'#0f7665'}">${u.accountLocked?'🔒 الحساب مقفل — عيّن كلمة مرور جديدة':'✅ الحساب مفعل'}</div>`}<div class="admin-user-meta-line"><span>اسم المستخدم: <strong>${u.username||''}</strong></span><span>السجل المدني: <strong>${u.civilId||u.username||''}</strong></span></div>
+        ${u.owner?'':`<div class="admin-user-meta-line"><span>التخصص: <strong>${u.specialty||'غير محدد'}</strong></span><span>المادة: <strong>${u.teachingSubject||u.specialty||'غير محددة'}</strong></span></div>`}
         <span>${permLabel||'بدون صلاحيات'}</span>
       </div>
       <div class="admin-user-actions">
@@ -12552,6 +12647,8 @@ function renderAdminUsersSettings(){
     const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.editAdminUser));
     const u=users[idx]; if(!u) return;
     const name=prompt('الاسم',u.name||''); if(name===null) return;
+    const specialty=prompt('التخصص',u.specialty||''); if(specialty===null) return;
+    const teachingSubject=prompt('المادة الافتراضية',u.teachingSubject||u.specialty||''); if(teachingSubject===null) return;
     const pass=normalizeCivilId(u.civilId||u.username||'');
     if(!/^\d{10}$/.test(pass)){
       alert('لا يمكن تعيين كلمة المرور تلقائيًا لأن السجل المدني للمستخدم غير صحيح.');
@@ -12563,6 +12660,8 @@ function renderAdminUsersSettings(){
         civilId:u.civilId||u.username,
         name:name.trim()||u.name,
         role:u.role||'معلم',
+        specialty:String(specialty||'').trim(),
+        teachingSubject:String(teachingSubject||specialty||'').trim(),
         permissions:Array.isArray(u.permissions)?u.permissions:[],
         password:pass
       }});
@@ -12716,6 +12815,8 @@ function openUserPermissionEditor(username){
         civilId:String(x.civilId||x.username||''),
         name:String(x.name||''),
         role:String(x.role||'معلم'),
+        specialty:String(x.specialty||''),
+        teachingSubject:String(x.teachingSubject||x.specialty||''),
         permissions:Array.isArray(x.permissions)?x.permissions:[]
       }));
 
@@ -14953,6 +15054,7 @@ function openAttendanceModal(mode){
   if($('attendanceStudentSearch')) $('attendanceStudentSearch').value='';
   if($('attendancePeriodSelect')) $('attendancePeriodSelect').value='';
   if($('attendanceSubjectSelect')) $('attendanceSubjectSelect').value='';
+  setTimeout(()=>{try{setTeacherDefaultSubject('attendanceSubjectSelect')}catch(e){}},0);
   if($('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
   syncAttendanceLateTypeControls();
   fillAttendanceTeacherSelect();
