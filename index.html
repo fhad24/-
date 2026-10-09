@@ -7967,6 +7967,184 @@ document.addEventListener('click',e=>{
   const q=e.target?.closest?.('[data-nashit-quick]');if(!q)return;
   const a=q.dataset.nashitQuick;if(a==='program')nashitAddProgram();if(a==='evidence')nashitAddEvidence(null);if(a==='attendance')nashitTab('programs');if(a==='report')nashitGenerateReport($('nashitReportType')?.value||'التقرير الأسبوعي');
 });
+
+function nashitPrintBeautifulPlan(){
+  const d=ensureNashitMinistryPlan(getNashitData());
+  const selected=(d.plan||[]).filter(x=>x.selected);
+  if(!selected.length){ alert('حدد برنامجًا واحدًا على الأقل في الخطة أولًا.'); return; }
+
+  const school=getSchoolSettings?.()||{};
+  const settings=d.settings||{};
+  const totalHours=selected.reduce((s,x)=>s+Number(x.hours||0),0);
+  const doneCount=selected.filter(x=>String(x.status||'')==='منفّذ').length;
+  const fields=[...new Set(selected.map(x=>String(x.field||'').trim()).filter(Boolean))];
+
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const statusClass=s=>{
+    s=String(s||'');
+    if(s==='منفّذ')return 'done';
+    if(s==='قيد التنفيذ')return 'progress';
+    if(s==='مؤجل')return 'delayed';
+    if(s==='ملغى')return 'cancelled';
+    return 'planned';
+  };
+
+  const grouped=fields.map(field=>{
+    const rows=selected.filter(x=>String(x.field||'')===field);
+    return `
+      <section class="field-section">
+        <div class="field-title"><span></span><b>${esc(field)}</b><small>${rows.length} برنامج</small></div>
+        <table>
+          <thead><tr>
+            <th style="width:42px">م</th>
+            <th>البرنامج</th>
+            <th style="width:85px">الساعات</th>
+            <th style="width:110px">الفصل</th>
+            <th style="width:120px">التاريخ</th>
+            <th style="width:110px">الحالة</th>
+            <th>الملاحظات</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((x,i)=>`
+              <tr>
+                <td class="num">${i+1}</td>
+                <td class="program"><b>${esc(x.title)}</b></td>
+                <td><span class="hours">${Number(x.hours||0)}</span></td>
+                <td>${esc(x.term||'—')}</td>
+                <td class="date">${esc(x.date||'—')}</td>
+                <td><span class="status ${statusClass(x.status)}">${esc(x.status||'مخطط')}</span></td>
+                <td class="notes">${esc(x.notes||'—')}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </section>`;
+  }).join('');
+
+  const w=window.open('','_blank','noopener,noreferrer');
+  if(!w){ alert('تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.'); return; }
+
+  w.document.write(`<!doctype html>
+  <html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <title>خطة النشاط الطلابي السنوية</title>
+    <style>
+      *{box-sizing:border-box}
+      body{margin:0;background:#eef5f3;color:#173b34;font-family:Tahoma,Arial,sans-serif}
+      .page{max-width:1180px;margin:24px auto;background:#fff;border:1px solid #d4e3df;border-radius:26px;overflow:hidden;box-shadow:0 18px 50px #173b3418}
+      .hero{position:relative;padding:34px 38px 28px;color:#fff;background:linear-gradient(125deg,#063f39,#0b5f54 55%,#0f7665)}
+      .hero:after{content:"";position:absolute;left:-70px;bottom:-110px;width:260px;height:260px;border-radius:50%;border:34px solid rgba(255,255,255,.06)}
+      .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;z-index:2}
+      .brand{display:flex;align-items:center;gap:16px}
+      .emblem{width:68px;height:68px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(145deg,#fff9e8,#efd69c);color:#77530d;font-size:30px;box-shadow:0 10px 24px #0002}
+      .kicker{font-size:11px;font-weight:800;opacity:.88;margin-bottom:5px}
+      h1{margin:0;font-size:30px}
+      .school{margin-top:7px;font-size:14px;opacity:.94}
+      .meta{min-width:240px;text-align:left;font-size:12px;line-height:1.9;opacity:.96}
+      .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px 26px;background:#f8fbfa;border-bottom:1px solid #dbe8e4}
+      .stat{background:#fff;border:1px solid #d7e6e1;border-radius:16px;padding:14px;text-align:center}
+      .stat span{display:block;color:#6b7f7a;font-size:11px;font-weight:800}
+      .stat b{display:block;margin-top:5px;font-size:25px;color:#0f7665}
+      .content{padding:22px 26px 30px}
+      .intro{display:flex;gap:12px;align-items:flex-start;background:linear-gradient(135deg,#eef8f5,#fbfdfc);border:1px solid #d6e7e2;border-radius:16px;padding:14px 16px;margin-bottom:18px}
+      .intro i{width:34px;height:34px;border-radius:10px;background:#0f7665;color:#fff;display:grid;place-items:center;font-style:normal;font-weight:900}
+      .intro b{display:block;margin-bottom:4px}
+      .intro p{margin:0;color:#5d756f;font-size:12px;line-height:1.7}
+      .field-section{margin:0 0 18px;page-break-inside:avoid}
+      .field-title{display:flex;align-items:center;gap:9px;margin:0 0 8px;padding:10px 12px;border-radius:12px;background:#f4faf8;border:1px solid #dceae6}
+      .field-title span{width:5px;height:22px;border-radius:99px;background:#b98a2e}
+      .field-title b{font-size:16px}
+      .field-title small{margin-right:auto;color:#7a8d88;font-weight:700}
+      table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #d8e5e1;border-radius:14px;overflow:hidden;font-size:11px}
+      thead th{background:linear-gradient(#e8f4f1,#dfefeb);color:#173b34;padding:10px 7px;border-bottom:1px solid #cbded8}
+      tbody td{padding:9px 7px;text-align:center;border-bottom:1px solid #edf2f0;vertical-align:middle}
+      tbody tr:last-child td{border-bottom:0}
+      tbody tr:nth-child(even) td{background:#fbfdfc}
+      .program{text-align:right}
+      .num{font-weight:900;color:#0f7665}
+      .hours{display:inline-flex;min-width:34px;height:27px;align-items:center;justify-content:center;border-radius:8px;background:#e9f5f1;color:#0f7665;font-weight:900}
+      .status{display:inline-block;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap}
+      .planned{background:#eef2f1;color:#506660}.progress{background:#fff4d9;color:#8a6200}.done{background:#e3f5ee;color:#08725f}.delayed{background:#fff0e7;color:#a14f11}.cancelled{background:#feeceb;color:#b42318}
+      .notes{text-align:right;color:#526963}.date{direction:ltr}
+      .signatures{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:28px;padding-top:18px;border-top:1px dashed #bfd2cc}
+      .sign{text-align:center;min-height:90px}
+      .sign b{display:block;margin-bottom:32px}
+      .sign span{color:#6a7f79;font-size:11px}
+      .footer{text-align:center;padding:12px 20px 18px;color:#7a8c87;font-size:10px}
+      .printbar{position:sticky;top:0;z-index:9;display:flex;gap:8px;justify-content:center;padding:10px;background:#ffffffed;backdrop-filter:blur(8px);border-bottom:1px solid #d7e4e0}
+      .printbar button{border:0;border-radius:10px;padding:10px 18px;font-family:inherit;font-weight:800;cursor:pointer}
+      .printbar .primary{background:#0f7665;color:#fff}.printbar .secondary{background:#eaf4f1;color:#0f6659}
+      @media print{
+        @page{size:A4 landscape;margin:9mm}
+        body{background:#fff}
+        .printbar{display:none!important}
+        .page{max-width:none;margin:0;border:0;border-radius:0;box-shadow:none}
+        .hero{padding:22px 26px 18px}
+        .hero h1{font-size:24px}
+        .stats{padding:12px 18px;gap:8px}
+        .stat{padding:8px}.stat b{font-size:19px}
+        .content{padding:14px 18px}
+        .field-section{page-break-inside:avoid}
+        table{font-size:9.5px}
+        thead th,tbody td{padding:6px 5px}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="printbar">
+      <button class="primary" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+      <button class="secondary" onclick="window.close()">إغلاق</button>
+    </div>
+    <div class="page">
+      <header class="hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="emblem">★</div>
+            <div>
+              <div class="kicker">الخطة الرسمية للنشاط الطلابي</div>
+              <h1>خطة النشاط الطلابي السنوية</h1>
+              <div class="school">${esc(school.schoolName||school.name||'المدرسة')} • المرحلة الثانوية</div>
+            </div>
+          </div>
+          <div class="meta">
+            <div><b>العام الدراسي:</b> ${esc(settings.schoolYear||'—')}</div>
+            <div><b>رائد النشاط:</b> ${esc(settings.leaderName||'—')}</div>
+            <div><b>مدير المدرسة:</b> ${esc(school.manager||'—')}</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="stats">
+        <div class="stat"><span>البرامج المختارة</span><b>${selected.length}</b></div>
+        <div class="stat"><span>إجمالي الساعات</span><b>${totalHours}</b></div>
+        <div class="stat"><span>المجالات</span><b>${fields.length}</b></div>
+        <div class="stat"><span>البرامج المنفذة</span><b>${doneCount}</b></div>
+      </div>
+
+      <main class="content">
+        <div class="intro">
+          <i>✓</i>
+          <div>
+            <b>خطة نشاط مدرسية معتمدة للتنفيذ والمتابعة</b>
+            <p>تتضمن البرامج المختارة ومواعيد تنفيذها وساعاتها وحالة الإنجاز والملاحظات، وتستخدم كمرجع لرائد النشاط وإدارة المدرسة طوال العام الدراسي.</p>
+          </div>
+        </div>
+
+        ${grouped}
+
+        <div class="signatures">
+          <div class="sign"><b>رائد النشاط</b><span>${esc(settings.leaderName||'الاسم والتوقيع')}</span></div>
+          <div class="sign"><b>مدير المدرسة</b><span>${esc(school.manager||'الاسم والتوقيع')}</span></div>
+        </div>
+      </main>
+      <div class="footer">نظام إدارة شؤون الطلاب • خطة النشاط الطلابي</div>
+    </div>
+  </body>
+  </html>`);
+  w.document.close();
+  w.focus();
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   if($('nashitBackBtn')) $('nashitBackBtn').onclick=()=>{ if(isCurrentOwner()) openAdminDashboardInternal(); else returnUserToPermissionPages(); };
   if($('nashitSaveOfficialPlan')) $('nashitSaveOfficialPlan').onclick=()=>{saveNashitData(ensureNashitMinistryPlan(getNashitData()));toast('تم حفظ اختيارات وتعديلات الخطة السنوية');};
@@ -7976,7 +8154,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   if($('nashitPlanTermFilter')) $('nashitPlanTermFilter').onchange=renderNashitPlanOnly;
   if($('nashitPlanSearch')) $('nashitPlanSearch').oninput=renderNashitPlanOnly;
   if($('nashitApprovePlan')) $('nashitApprovePlan').onclick=()=>{const link=location.href.split('#')[0]+'#activity-plan-review';navigator.clipboard?.writeText(link);toast('تم تجهيز رابط الاعتماد ونسخه');};
-  if($('nashitPrintPlan')) $('nashitPrintPlan').onclick=()=>window.print();
+  if($('nashitPrintPlan')) $('nashitPrintPlan').onclick=nashitPrintBeautifulPlan;
   if($('nashitAddProgramBtn')) $('nashitAddProgramBtn').onclick=nashitAddProgram;
   if($('nashitAddClubBtn')) $('nashitAddClubBtn').onclick=nashitAddClub;
   if($('nashitClubSurveyBtn')) $('nashitClubSurveyBtn').onclick=()=>{const link=location.href.split('#')[0]+'#club-survey';navigator.clipboard?.writeText(link);toast('تم نسخ رابط استبانة رغبات الأندية');};
