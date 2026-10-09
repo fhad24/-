@@ -366,6 +366,43 @@
     btn.onclick=openWeeklyThanksCertificatesRuntime;
   }
 
+
+  /* SHURAHBIL_THANKS_TEXT_OBSERVER */
+  function forceThanksButtonByVisibleText(){
+    try{
+      const buttons=[...document.querySelectorAll('button')];
+      const report=buttons.find(b=>String(b.textContent||'').replace(/\s+/g,' ').trim().includes('تقرير الطالب'));
+      if(!report) return false;
+      let btn=document.getElementById('weeklyAttThanksCertificateRuntimeBtn');
+      if(!btn){
+        btn=document.createElement('button');
+        btn.type='button';
+        btn.id='weeklyAttThanksCertificateRuntimeBtn';
+        btn.className=report.className||'btn btn-primary';
+        btn.innerHTML='🏅 شهادة شكر';
+        btn.style.setProperty('display','inline-flex','important');
+        btn.style.setProperty('visibility','visible','important');
+        btn.style.setProperty('opacity','1','important');
+        btn.style.setProperty('background','#c99516','important');
+        btn.style.setProperty('color','#fff','important');
+        btn.style.setProperty('border','2px solid #a87800','important');
+        btn.style.setProperty('font-weight','900','important');
+        btn.style.setProperty('min-height','52px','important');
+        btn.style.setProperty('padding','10px 18px','important');
+        btn.style.setProperty('border-radius','10px','important');
+        btn.onclick=()=>openWeeklyThanksCertificatesRuntime();
+        report.insertAdjacentElement('afterend',btn);
+      }else if(report.parentElement && btn.parentElement!==report.parentElement){
+        report.insertAdjacentElement('afterend',btn);
+      }
+      return true;
+    }catch(e){console.warn('force thanks button',e);return false}
+  }
+  forceThanksButtonByVisibleText();
+  const thanksObserver=new MutationObserver(()=>forceThanksButtonByVisibleText());
+  try{thanksObserver.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+  setInterval(forceThanksButtonByVisibleText,800);
+
   async function install(){
     try{ensureWeeklyThanksCertificateButton()}catch(e){console.warn('thanks certificate button',e)}
     const owner=await refreshMaintenanceOwner();
