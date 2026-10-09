@@ -18602,39 +18602,41 @@ function printStudents(rows){
       .attendance-present-hijri-copy b{font-size:19px!important}
     }
 
-    /* إبقاء زر الإغلاق × ظاهرًا دائمًا أثناء التمرير في جميع نوافذ البرنامج */
-    .global-sticky-close{
+    /* زر إغلاق ثابت على مستوى الشاشة نفسها، خارج أي عنصر قابل للتمرير */
+    #globalViewportClose{
       position:fixed!important;
       top:max(12px, env(safe-area-inset-top))!important;
       left:12px!important;
       right:auto!important;
-      z-index:2147483000!important;
-      width:46px!important;
-      height:46px!important;
-      min-width:46px!important;
-      min-height:46px!important;
+      z-index:2147483646!important;
+      width:48px!important;
+      height:48px!important;
+      min-width:48px!important;
+      min-height:48px!important;
       border-radius:50%!important;
-      display:flex!important;
+      display:none;
       align-items:center!important;
       justify-content:center!important;
       background:#fff!important;
       color:#173b34!important;
-      border:1px solid #cfdeda!important;
-      box-shadow:0 6px 20px #0003!important;
-      font-size:28px!important;
+      border:1px solid #bfcfcb!important;
+      box-shadow:0 8px 24px #0004!important;
+      font-size:30px!important;
+      font-weight:900!important;
       line-height:1!important;
       padding:0!important;
       cursor:pointer!important;
     }
+    #globalViewportClose.show{display:flex!important}
     @media(max-width:600px){
-      .global-sticky-close{
+      #globalViewportClose{
         top:max(8px, env(safe-area-inset-top))!important;
         left:8px!important;
-        width:42px!important;
-        height:42px!important;
-        min-width:42px!important;
-        min-height:42px!important;
-        font-size:26px!important;
+        width:44px!important;
+        height:44px!important;
+        min-width:44px!important;
+        min-height:44px!important;
+        font-size:28px!important;
       }
     }
 </style>
@@ -19963,46 +19965,97 @@ window.addEventListener('resize',()=>{if(document.body.classList.contains('activ
 
 setTimeout(refreshStudentDataReviewCount,900);
 
-/* SHURAHBIL_GLOBAL_STICKY_CLOSE_V1 */
+/* SHURAHBIL_GLOBAL_VIEWPORT_CLOSE_V2 */
 (function(){
-  function markPersistentCloseButtons(root){
-    const scope=root&&root.querySelectorAll?root:document;
-    scope.querySelectorAll('button').forEach(btn=>{
-      const t=String(btn.textContent||'').trim();
-      const looksLikeX=(t==='×'||t==='✕'||t==='✖');
-      const knownClose=
-        btn.classList.contains('modal-close-x') ||
-        btn.classList.contains('attendance-modal-close') ||
-        btn.classList.contains('pending-photo-close') ||
-        btn.classList.contains('present-attendance-group-close') ||
-        btn.id==='closeAddStudentModal' ||
-        btn.id==='closePresentEntryChoice' ||
-        btn.id==='closePaperAttendanceModal' ||
-        btn.id==='closeAttendanceModal' ||
-        btn.id==='closeLiveCameraBtn' ||
-        btn.id==='studentChangeRequestsClose' ||
-        btn.id==='studentDataReviewClose' ||
-        btn.id==='userPermClose';
-      if(looksLikeX||knownClose) btn.classList.add('global-sticky-close');
-    });
+  let proxy=null;
+  let activeClose=null;
+
+  function isVisible(el){
+    if(!el || !document.documentElement.contains(el)) return false;
+    if(el.disabled) return false;
+    let n=el;
+    while(n && n!==document.body){
+      if(n.classList?.contains('hidden')) return false;
+      const s=getComputedStyle(n);
+      if(s.display==='none' || s.visibility==='hidden' || Number(s.opacity)===0) return false;
+      n=n.parentElement;
+    }
+    const r=el.getBoundingClientRect();
+    return r.width>0 && r.height>0;
   }
-  function initStickyClose(){
-    markPersistentCloseButtons(document);
+
+  function isCloseButton(btn){
+    if(!btn || btn===proxy) return false;
+    const t=String(btn.textContent||'').trim();
+    return t==='×' || t==='✕' || t==='✖' ||
+      btn.classList.contains('modal-close-x') ||
+      btn.classList.contains('attendance-modal-close') ||
+      btn.classList.contains('pending-photo-close') ||
+      btn.classList.contains('present-attendance-group-close') ||
+      btn.id==='closeAddStudentModal' ||
+      btn.id==='closePresentEntryChoice' ||
+      btn.id==='closePaperAttendanceModal' ||
+      btn.id==='closeAttendanceModal' ||
+      btn.id==='closeLiveCameraBtn' ||
+      btn.id==='studentChangeRequestsClose' ||
+      btn.id==='studentDataReviewClose' ||
+      btn.id==='userPermClose';
+  }
+
+  function findActiveClose(){
+    const buttons=[...document.querySelectorAll('button')].filter(b=>isCloseButton(b)&&isVisible(b));
+    if(!buttons.length) return null;
+
+    // فضّل زرًا داخل نافذة منبثقة ظاهرة.
+    const inModal=buttons.filter(b=>b.closest('.modal-backdrop:not(.hidden), .camera-live-modal:not(.hidden), [role="dialog"]:not(.hidden)'));
+    return (inModal.length?inModal:buttons).at(-1)||null;
+  }
+
+  function ensureProxy(){
+    if(proxy && document.body.contains(proxy)) return proxy;
+    proxy=document.createElement('button');
+    proxy.type='button';
+    proxy.id='globalViewportClose';
+    proxy.setAttribute('aria-label','إغلاق');
+    proxy.title='إغلاق';
+    proxy.textContent='×';
+    proxy.onclick=(e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const target=activeClose&&isVisible(activeClose)?activeClose:findActiveClose();
+      if(target) target.click();
+      setTimeout(refreshProxy,0);
+    };
+    document.body.appendChild(proxy);
+    return proxy;
+  }
+
+  function refreshProxy(){
+    ensureProxy();
+    activeClose=findActiveClose();
+    proxy.classList.toggle('show',!!activeClose);
+  }
+
+  function init(){
+    ensureProxy();
+    refreshProxy();
+
+    // لأن التمرير يحدث داخل البطاقات نفسها، نراقبه في طور الالتقاط.
+    document.addEventListener('scroll',refreshProxy,true);
+    window.addEventListener('scroll',refreshProxy,{passive:true});
+    window.addEventListener('resize',refreshProxy,{passive:true});
+
     try{
-      new MutationObserver(mutations=>{
-        for(const m of mutations){
-          for(const n of m.addedNodes||[]){
-            if(n&&n.nodeType===1){
-              if(n.matches?.('button')) markPersistentCloseButtons(n.parentElement||document);
-              else markPersistentCloseButtons(n);
-            }
-          }
-        }
-      }).observe(document.body,{childList:true,subtree:true});
+      new MutationObserver(()=>refreshProxy()).observe(document.body,{
+        childList:true,subtree:true,attributes:true,attributeFilter:['class','style']
+      });
     }catch(e){}
+
+    setInterval(refreshProxy,800);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initStickyClose,{once:true});
-  else initStickyClose();
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
 })();
 </script>
 </body>
