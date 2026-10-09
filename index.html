@@ -7640,17 +7640,33 @@ function configureUserDashboard(){
         $('attendancePanel')?.classList.remove('hidden');
       }
 
+      // عند المستخدمين: اجلب قائمة الطلاب من السحابة أولاً حتى لا تظهر نافذة التحضير فارغة.
+      const listHost=$('attendanceStudentList');
+      if(listHost && !getStudents().length){
+        listHost.innerHTML='<div class="hint" style="padding:18px;text-align:center;font-weight:900">جاري تحميل أسماء الطلاب...</div>';
+      }
       renderAttendancePage();
       setTimeout(()=>updateGlobalUserBackButton('attendance'),0);
 
-      // اجلب سجلات الحضور فقط فورًا بدون تحميل صور وبيانات الطلاب الثقيلة.
       (async()=>{
         try{
           if(localStorage.getItem('cloudAdminToken')){
+            // pull_all يعيد للمستخدم العادي بيانات الطلاب الأساسية فقط بدون الصور الثقيلة.
+            await cloudPullToLocal();
+            renderAttendancePage();
+            if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden')){
+              fillAttendanceClasses();
+              renderAttendanceStudentList();
+            }
+          }
+        }catch(e){
+          console.warn('attendance students refresh',e);
+          // إذا تعذر السحب الكامل نحاول على الأقل تحديث سجلات الحضور.
+          try{
             await cloudPullAttendanceFast();
             renderAttendancePage();
-          }
-        }catch(e){console.warn('attendance fast refresh',e)}
+          }catch(_e){}
+        }
       })();
       return;
     }
