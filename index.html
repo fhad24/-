@@ -13821,9 +13821,7 @@ function renderWeeklyAttendanceReport(){
         if(other!==box) other.checked=false;
       });
       if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').value=box.checked?id:'';
-      const s=getStudents().find(x=>String(x.idno||'')===id);
-      if(box.checked && s && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value=s.name||s.idno||'';
-      if(!box.checked && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value='';
+      // اختيار الطالب للتقرير مستقل عن مربع البحث؛ لا نغيّر نص البحث تلقائيًا.
     };
   });
 
@@ -14304,8 +14302,6 @@ if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
   renderWeeklyAttAnalytics()
 };
 if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').onchange=()=>{
-  const s=getStudents().find(x=>String(x.idno||'')===String($('weeklyAttStudentSelect').value||''));
-  if(s && $('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').value=s.name||s.idno||'';
   renderWeeklyAttendanceReport();
 };
 if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
