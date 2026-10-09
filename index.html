@@ -21975,34 +21975,77 @@ setTimeout(refreshStudentDataReviewCount,900);
     const s=settings();
     const school=norm(s.school||s.schoolName||s.name)||'المدرسة';
     const manager=norm(s.manager||s.principal||s.schoolManager);
-    const authority=norm(s.authority||s.educationDepartment);
+    const authority=norm(s.authority||s.educationDepartment||s.education)||'';
     const schoolLogo=norm(s.schoolLogo||s.logo);
     const ministryLogo=norm(s.ministryLogo||s.ministry_logo);
     const gradeSel=norm(document.getElementById('weeklyAttGrade')?.value);
     const classSel=norm(document.getElementById('weeklyAttClass')?.value);
     const week=norm(document.getElementById('weeklyAttWeek')?.value);
+    const siteUrl='https://shurahbil-students.onrender.com/';
+    const qrUrl='https://quickchart.io/qr?size=180&margin=1&text='+encodeURIComponent(siteUrl);
     const dateText=(()=>{try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'long'}).format(new Date())}catch(e){return ''}})();
+
     const certs=picked.map((st,i)=>{
       const grade=norm(st.grade)||gradeSel||'—';
       const classroom=norm(st.classroom)||classSel||'—';
+      const name=esc(st.name||'');
       return '<section class="cert '+(i?'break':'')+'">'+
-      '<div class="logos"><span>'+(ministryLogo?'<img src="'+esc(ministryLogo)+'">':'')+'</span><span>'+(schoolLogo?'<img src="'+esc(schoolLogo)+'">':'')+'</span></div>'+
-      '<div class="authority">'+esc(authority)+'</div><div class="school">'+esc(school)+'</div>'+
-      '<h1>شهادة شكر وتقدير</h1><div class="medal">🏅</div>'+
-      '<p class="intro">تتقدم إدارة المدرسة بخالص الشكر والتقدير للطالب</p>'+
-      '<div class="name">'+esc(st.name||'')+'</div>'+
-      '<div class="meta">الصف: <b>'+esc(grade)+'</b> &nbsp; | &nbsp; الفصل: <b>'+esc(classroom)+'</b></div>'+
-      '<p class="body">تقديرًا لانتظامه وحرصه على الحضور والانضباط خلال الفترة السابقة'+(week?' وحتى الأسبوع الدراسي '+esc(week):'')+'، متمنين له دوام التوفيق والتميز والنجاح.</p>'+
-      '<div class="foot"><span>'+esc(dateText)+'</span><span>مدير المدرسة<br><b>'+esc(manager)+'</b></span></div>'+
+        '<div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>'+
+        '<div class="watermark">شُرَحبيل</div>'+
+        '<div class="topline">'+
+          '<div class="logoBox">'+(ministryLogo?'<img src="'+esc(ministryLogo)+'" alt="شعار الوزارة">':'<div class="logoFallback">وزارة<br>التعليم</div>')+'</div>'+
+          '<div class="schoolHead">'+
+            (authority?'<div class="authority">'+esc(authority)+'</div>':'')+
+            '<div class="school">'+esc(school)+'</div>'+
+            '<div class="subline">نظام إدارة شؤون الطلاب</div>'+
+          '</div>'+
+          '<div class="logoBox">'+(schoolLogo?'<img src="'+esc(schoolLogo)+'" alt="شعار المدرسة">':'<div class="logoFallback">شعار<br>المدرسة</div>')+'</div>'+
+        '</div>'+
+        '<div class="titleWrap"><span class="titleLine"></span><h1>شهادة شكر وتقدير</h1><span class="titleLine"></span></div>'+
+        '<div class="medallion">★</div>'+
+        '<p class="intro">تتشرّف إدارة المدرسة بمنح هذه الشهادة للطالب</p>'+
+        '<div class="studentName">'+name+'</div>'+
+        '<div class="metaPills"><span>الصف <b>'+esc(grade)+'</b></span><span>الفصل <b>'+esc(classroom)+'</b></span></div>'+
+        '<p class="bodyText">تقديرًا لانتظامه المتميز، وحرصه على الحضور والانضباط'+
+          (week?' خلال الفترة السابقة وحتى <b>الأسبوع الدراسي '+esc(week)+'</b>':' خلال الفترة السابقة')+
+          '، وإيمانًا بأن الالتزام أساس النجاح والتميّز. مع أطيب الأمنيات له بمزيد من التفوق والإنجاز.</p>'+
+        '<div class="bottomRow">'+
+          '<div class="qrBlock"><img src="'+qrUrl+'" alt="QR"><div class="qrLabel">بوابة شُرَحبيل</div><div class="url">'+esc(siteUrl.replace(/^https?:\/\//,''))+'</div></div>'+
+          '<div class="seal"><div class="sealInner">تميز<br><strong>وانضباط</strong></div></div>'+
+          '<div class="signature"><div class="date">'+esc(dateText)+'</div><div class="role">مدير المدرسة</div><div class="manager">'+esc(manager||'________________')+'</div><div class="signLine">التوقيع والختم</div></div>'+
+        '</div>'+
       '</section>';
     }).join('');
+
     const w=window.open('','_blank');
     if(!w){alert('اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');return}
-    w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
-    '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.bar{text-align:center;padding:10px;background:#fff}.bar button{background:#0f7665;color:#fff;border:0;border-radius:10px;padding:12px 26px;font-size:18px;font-weight:800}.cert{width:277mm;min-height:190mm;margin:10mm auto;background:#fff;border:3px solid #c49a2c;padding:16mm 20mm;text-align:center;position:relative}.logos{display:flex;justify-content:space-between;height:25mm}.logos img{max-width:28mm;max-height:24mm}.authority{font-size:16px}.school{font-size:20px;font-weight:800}h1{font-size:38px;color:#98700b;margin:12px 0 4px}.medal{font-size:42px}.intro{font-size:21px}.name{font-size:34px;font-weight:900;color:#0f6f60;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:18px;margin-top:10px}.body{font-size:21px;line-height:2;max-width:900px;margin:18px auto}.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px;font-size:17px}.break{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.bar{display:none}.cert{width:auto;min-height:185mm;margin:0;page-break-after:always}.cert:last-child{page-break-after:auto}}'+
-    '</style></head><body><div class="bar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
+    w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادات شكر وتقدير</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+
+      '*{box-sizing:border-box}'+
+      'body{margin:0;background:linear-gradient(135deg,#e9efec,#f7f3e8);font-family:Tahoma,Arial,sans-serif;color:#173c35;padding:16px}'+
+      '.toolbar{position:sticky;top:0;z-index:20;text-align:center;padding:10px;margin:-16px -16px 18px;background:#ffffffee;backdrop-filter:blur(8px);border-bottom:1px solid #d8e2df}'+
+      '.toolbar button{border:0;border-radius:14px;padding:13px 30px;background:linear-gradient(135deg,#0a6f5c,#0f8b72);color:#fff;font-size:18px;font-weight:900;box-shadow:0 7px 18px #0f766533;cursor:pointer}'+
+      '.cert{width:277mm;min-height:190mm;margin:0 auto 12mm;background:radial-gradient(circle at 50% 42%,#fffdf7 0,#fff 58%,#f9f5e8 100%);position:relative;overflow:hidden;text-align:center;padding:12mm 18mm 11mm;border:1px solid #b08a2b;box-shadow:0 14px 45px #0002}'+
+      '.cert:before{content:"";position:absolute;inset:7mm;border:1.5px solid #c9a646;pointer-events:none}.cert:after{content:"";position:absolute;inset:10mm;border:1px solid #0f766533;pointer-events:none}'+
+      '.corner{position:absolute;width:44mm;height:44mm;border:4px double #b8902e;opacity:.78;z-index:1}.c1{right:-25mm;top:-25mm;transform:rotate(45deg)}.c2{left:-25mm;top:-25mm;transform:rotate(45deg)}.c3{right:-25mm;bottom:-25mm;transform:rotate(45deg)}.c4{left:-25mm;bottom:-25mm;transform:rotate(45deg)}'+
+      '.watermark{position:absolute;left:50%;top:51%;transform:translate(-50%,-50%) rotate(-13deg);font-size:78px;font-weight:900;color:#0f766508;letter-spacing:4px;white-space:nowrap}'+
+      '.topline{position:relative;z-index:3;display:grid;grid-template-columns:34mm 1fr 34mm;align-items:center;gap:10mm;margin:0 8mm 1mm}'+
+      '.logoBox{height:27mm;display:flex;align-items:center;justify-content:center}.logoBox img{max-width:30mm;max-height:25mm;object-fit:contain}.logoFallback{width:24mm;height:24mm;border-radius:50%;border:1px solid #c9a646;display:grid;place-items:center;color:#9a761d;font-size:11px;font-weight:800;background:#fffaf0}'+
+      '.authority{font-size:14px;color:#61746f;margin-bottom:3px}.school{font-size:23px;font-weight:900;color:#173c35}.subline{display:inline-block;margin-top:5px;padding:4px 13px;border-radius:999px;background:#edf7f4;color:#0f7665;font-size:11px;font-weight:800}'+
+      '.titleWrap{position:relative;z-index:3;display:flex;align-items:center;justify-content:center;gap:14px;margin-top:4px}.titleLine{height:1px;width:48mm;background:linear-gradient(90deg,transparent,#b9902d)}.titleLine:last-child{background:linear-gradient(90deg,#b9902d,transparent)}'+
+      'h1{margin:4px 0;font-size:39px;letter-spacing:.8px;color:#9a7115;text-shadow:0 1px 0 #fff;font-weight:900}.medallion{position:relative;z-index:3;width:16mm;height:16mm;margin:4px auto 2px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#f8e9a5,#c99722);color:#fff;font-size:26px;border:2px solid #f3dda0;box-shadow:0 4px 10px #9d741c44}'+
+      '.intro{position:relative;z-index:3;font-size:19px;margin:5px 0;color:#526a64}.studentName{position:relative;z-index:3;display:inline-block;min-width:115mm;padding:2px 14mm 7px;margin:0 auto 4px;font-size:36px;font-weight:900;color:#0b6c59;border-bottom:2px solid #caa347}'+
+      '.metaPills{position:relative;z-index:3;display:flex;justify-content:center;gap:12px;margin:6px 0}.metaPills span{background:#f3f8f6;border:1px solid #cfe0db;border-radius:999px;padding:7px 18px;font-size:15px;color:#4a625c}.metaPills b{color:#0f7665;margin-right:5px;font-size:16px}'+
+      '.bodyText{position:relative;z-index:3;max-width:900px;margin:7px auto 4px;font-size:18px;line-height:1.9;color:#314c45}.bodyText b{color:#956d13}'+
+      '.bottomRow{position:relative;z-index:3;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;margin:5px 10mm 0;min-height:38mm}.qrBlock{justify-self:start;text-align:center}.qrBlock img{width:24mm;height:24mm;border:1px solid #d5dfdc;border-radius:8px;padding:2px;background:#fff}.qrLabel{font-size:10px;font-weight:800;color:#0f7665;margin-top:2px}.url{font-size:8px;color:#71827e;direction:ltr}'+
+      '.seal{justify-self:center;width:30mm;height:30mm;border-radius:50%;border:2px solid #c49a2b;padding:3px;display:grid;place-items:center;transform:rotate(-8deg);background:#fffdf5}.sealInner{width:100%;height:100%;border-radius:50%;border:1px dashed #c49a2b;display:grid;place-items:center;align-content:center;color:#a07719;font-size:11px;line-height:1.4}.sealInner strong{font-size:13px}'+
+      '.signature{justify-self:end;text-align:center;min-width:55mm}.date{font-size:11px;color:#6c7e79;margin-bottom:5px}.role{font-size:14px;color:#526a64}.manager{font-size:17px;font-weight:900;color:#173c35;margin:4px 0 7px}.signLine{border-top:1px solid #9aa9a5;padding-top:4px;font-size:10px;color:#7b8986}'+
+      '.break{page-break-before:always}'+
+      '@page{size:A4 landscape;margin:5mm}@media print{body{background:#fff;padding:0}.toolbar{display:none}.cert{width:auto;min-height:190mm;margin:0;box-shadow:none;page-break-after:always}.cert:last-child{page-break-after:auto}}'+
+      '@media(max-width:900px){body{padding:0}.cert{transform-origin:top center;width:277mm;margin:0 auto}.toolbar{margin:0 0 10px}}'+
+    '</style></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
     w.document.close();
   }
+
   function bind(){
     const btn=document.getElementById('weeklyAttThanksCertificateBtn');
     if(btn && !btn.dataset.boundThanks){btn.dataset.boundThanks='1';btn.addEventListener('click',openCertificates);}
