@@ -20684,5 +20684,45 @@ setTimeout(refreshStudentDataReviewCount,900);
   else init();
 })();
 </script>
+
+<script>
+/* SHURAHBIL_ADD_SUBJECT_OPTIONS_GLOBAL */
+(function(){
+  const EXTRA_SUBJECTS=['كفايات لغوية','أخرى'];
+  function isSubjectSelect(sel){
+    if(!sel || sel.tagName!=='SELECT') return false;
+    const key=(String(sel.id||'')+' '+String(sel.name||'')+' '+String(sel.className||'')).toLowerCase();
+    if(key.includes('subject')) return true;
+    const wrap=sel.closest('div,td,th,label,section,article,form');
+    const labelText=String(wrap?.querySelector?.('label')?.textContent||'').trim();
+    return labelText==='المادة' || labelText.includes('المادة الدراسية');
+  }
+  function addOptions(sel){
+    if(!isSubjectSelect(sel)) return;
+    const values=new Set([...sel.options].map(o=>String(o.value||o.textContent||'').trim()));
+    EXTRA_SUBJECTS.forEach(subject=>{
+      if(values.has(subject)) return;
+      const opt=document.createElement('option');
+      opt.value=subject;
+      opt.textContent=subject;
+      sel.appendChild(opt);
+      values.add(subject);
+    });
+  }
+  function apply(root=document){
+    if(root?.matches?.('select')) addOptions(root);
+    root?.querySelectorAll?.('select').forEach(addOptions);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
+  else apply();
+  new MutationObserver(muts=>{
+    for(const m of muts){
+      for(const n of m.addedNodes){
+        if(n.nodeType===1) apply(n);
+      }
+    }
+  }).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
