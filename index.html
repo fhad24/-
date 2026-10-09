@@ -21345,83 +21345,122 @@ setTimeout(refreshStudentDataReviewCount,900);
 
     /* USER PRESENT ATTENDANCE MATCH LATE VIEW */
     body.user-attendance-only .attendance-present-table-wrap{
+      width:100%!important;
       overflow-x:auto!important;
     }
     body.user-attendance-only .attendance-present-pro-table{
-      min-width:1650px!important;
-      font-size:18px!important;
+      width:100%!important;
+      min-width:0!important;
+      table-layout:fixed!important;
+      font-size:14px!important;
     }
     body.user-attendance-only .attendance-present-pro-table thead th{
-      font-size:20px!important;
+      font-size:15px!important;
       font-weight:900!important;
-      padding:18px 14px!important;
-      color:#173b34!important;
+      padding:12px 8px!important;
+      white-space:normal!important;
+      line-height:1.35!important;
     }
     body.user-attendance-only .attendance-present-pro-table tbody td{
-      font-size:18px!important;
+      font-size:14px!important;
       font-weight:700!important;
-      padding:20px 14px!important;
-      line-height:1.55!important;
+      padding:12px 8px!important;
+      line-height:1.4!important;
+      white-space:normal!important;
+      overflow-wrap:anywhere!important;
+    }
+    body.user-attendance-only .attendance-present-pro-table .select-col,
+    body.user-attendance-only .attendance-present-select-cell{
+      width:58px!important;
+      min-width:58px!important;
     }
     body.user-attendance-only .attendance-present-student-cell{
-      min-width:430px!important;
+      width:28%!important;
+      min-width:0!important;
     }
     body.user-attendance-only .attendance-present-name-box b{
-      font-size:22px!important;
+      font-size:16px!important;
       font-weight:900!important;
-      line-height:1.45!important;
-      max-width:390px!important;
+      line-height:1.35!important;
+      white-space:normal!important;
+      max-width:none!important;
+      overflow:visible!important;
+      text-overflow:clip!important;
     }
     body.user-attendance-only .attendance-present-name-box span{
-      font-size:16px!important;
+      font-size:12px!important;
       font-weight:700!important;
     }
-    body.user-attendance-only .attendance-present-id-cell,
+    body.user-attendance-only .attendance-present-id-cell{
+      width:12%!important;
+      min-width:0!important;
+      font-size:14px!important;
+    }
     body.user-attendance-only .attendance-present-class-cell{
-      font-size:19px!important;
-      font-weight:800!important;
+      width:12%!important;
+      min-width:0!important;
+      font-size:14px!important;
+    }
+    body.user-attendance-only .attendance-present-date-cell{
+      width:13%!important;
+      min-width:0!important;
     }
     body.user-attendance-only .attendance-present-date-cell b{
-      font-size:18px!important;
-      font-weight:900!important;
+      font-size:14px!important;
     }
     body.user-attendance-only .attendance-present-date-cell span{
-      font-size:16px!important;
-      padding:5px 10px!important;
+      font-size:12px!important;
+      padding:3px 7px!important;
     }
     body.user-attendance-only .attendance-present-recorder-cell{
-      font-size:17px!important;
-      font-weight:700!important;
-      min-width:320px!important;
-      max-width:380px!important;
+      width:18%!important;
+      min-width:0!important;
+      max-width:none!important;
+      font-size:13px!important;
+      line-height:1.45!important;
+    }
+    body.user-attendance-only .attendance-present-status-cell{
+      width:8%!important;
+      min-width:0!important;
     }
     body.user-attendance-only .attendance-present-status-cell span{
-      font-size:17px!important;
-      font-weight:900!important;
+      font-size:13px!important;
+    }
+    body.user-attendance-only .attendance-present-actions-cell{
+      width:11%!important;
+      min-width:0!important;
     }
     body.user-attendance-only .attendance-present-table-edit,
     body.user-attendance-only .attendance-present-table-delete{
-      font-size:17px!important;
+      font-size:13px!important;
       font-weight:900!important;
-      min-height:46px!important;
-      padding:10px 14px!important;
-    }
-    body.user-attendance-only .attendance-present-select-cell,
-    body.user-attendance-only .attendance-present-pro-table .select-col{
-      width:90px!important;
-      min-width:90px!important;
+      min-height:38px!important;
+      padding:7px 9px!important;
     }
     body.user-attendance-only .attendance-present-select-cell input{
-      width:26px!important;
-      height:26px!important;
+      width:20px!important;
+      height:20px!important;
     }
     body.user-attendance-only .attendance-present-pro-table .attendance-saved-avatar{
-      width:62px!important;
-      height:62px!important;
+      width:50px!important;
+      height:50px!important;
     }
     body.user-attendance-only .attendance-present-photo-cell{
-      width:68px!important;
-      min-width:68px!important;
+      width:54px!important;
+      min-width:54px!important;
+    }
+    body.user-attendance-only .attendance-present-student-wrap{
+      gap:8px!important;
+      min-width:0!important;
+    }
+    @media(max-width:1100px){
+      body.user-attendance-only .attendance-present-pro-table{
+        min-width:980px!important;
+        table-layout:auto!important;
+      }
+      body.user-attendance-only .attendance-present-table-wrap{
+        overflow-x:auto!important;
+      }
     }
 
 </style>
