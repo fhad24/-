@@ -371,7 +371,8 @@
   function forceThanksButtonByVisibleText(){
     try{
       const buttons=[...document.querySelectorAll('button')];
-      const report=buttons.find(b=>String(b.textContent||'').replace(/\s+/g,' ').trim().includes('تقرير الطالب'));
+      const matches=buttons.filter(b=>String(b.textContent||'').replace(/\s+/g,' ').trim().includes('تقرير الطالب'));
+      const report=matches.find(b=>b.getClientRects().length>0 && getComputedStyle(b).display!=='none' && getComputedStyle(b).visibility!=='hidden') || matches[matches.length-1];
       if(!report) return false;
       let btn=document.getElementById('weeklyAttThanksCertificateRuntimeBtn');
       if(!btn){
@@ -394,14 +395,41 @@
         report.insertAdjacentElement('afterend',btn);
       }else if(report.parentElement && btn.parentElement!==report.parentElement){
         report.insertAdjacentElement('afterend',btn);
+      }else if(btn.previousElementSibling!==report){
+        report.insertAdjacentElement('afterend',btn);
       }
       return true;
     }catch(e){console.warn('force thanks button',e);return false}
   }
+
+  /* SHURAHBIL_THANKS_SHOW_FALLBACK */
+  function forceThanksButtonNearShow(){
+    try{
+      if(document.getElementById('weeklyAttThanksCertificateRuntimeBtn')?.getClientRects().length) return true;
+      const candidates=[...document.querySelectorAll('button')].filter(b=>String(b.textContent||'').replace(/\s+/g,' ').trim()==='عرض الكشف');
+      const show=candidates.find(b=>b.getClientRects().length>0);
+      if(!show) return false;
+      const row=show.parentElement;
+      if(!row) return false;
+      let btn=document.getElementById('weeklyAttThanksCertificateRuntimeBtn');
+      if(!btn){
+        btn=document.createElement('button');
+        btn.type='button';
+        btn.id='weeklyAttThanksCertificateRuntimeBtn';
+        btn.className=show.className||'btn btn-primary';
+        btn.textContent='🏅 شهادة شكر';
+        btn.onclick=()=>openWeeklyThanksCertificatesRuntime();
+      }
+      btn.style.cssText='display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;background:#c99516!important;color:#fff!important;border:2px solid #a87800!important;font-weight:900!important;font-size:16px!important;min-height:52px!important;padding:10px 18px!important;border-radius:10px!important;';
+      show.insertAdjacentElement('beforebegin',btn);
+      return true;
+    }catch(e){console.warn('force thanks near show',e);return false}
+  }
   forceThanksButtonByVisibleText();
+  forceThanksButtonNearShow();
   const thanksObserver=new MutationObserver(()=>forceThanksButtonByVisibleText());
   try{thanksObserver.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
-  setInterval(forceThanksButtonByVisibleText,800);
+  setInterval(()=>{forceThanksButtonByVisibleText();forceThanksButtonNearShow();},500);
 
   async function install(){
     try{ensureWeeklyThanksCertificateButton()}catch(e){console.warn('thanks certificate button',e)}
