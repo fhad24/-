@@ -18587,6 +18587,42 @@ function printStudents(rows){
       .attendance-present-hijri-open{min-height:64px!important}
       .attendance-present-hijri-copy b{font-size:19px!important}
     }
+
+    /* إبقاء زر الإغلاق × ظاهرًا دائمًا أثناء التمرير في جميع نوافذ البرنامج */
+    .global-sticky-close{
+      position:fixed!important;
+      top:max(12px, env(safe-area-inset-top))!important;
+      left:12px!important;
+      right:auto!important;
+      z-index:2147483000!important;
+      width:46px!important;
+      height:46px!important;
+      min-width:46px!important;
+      min-height:46px!important;
+      border-radius:50%!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      background:#fff!important;
+      color:#173b34!important;
+      border:1px solid #cfdeda!important;
+      box-shadow:0 6px 20px #0003!important;
+      font-size:28px!important;
+      line-height:1!important;
+      padding:0!important;
+      cursor:pointer!important;
+    }
+    @media(max-width:600px){
+      .global-sticky-close{
+        top:max(8px, env(safe-area-inset-top))!important;
+        left:8px!important;
+        width:42px!important;
+        height:42px!important;
+        min-width:42px!important;
+        min-height:42px!important;
+        font-size:26px!important;
+      }
+    }
 </style>
 
 </head><body><h2>بيانات الطلاب</h2><table><thead><tr><th>م</th><th>اسم الطالب</th><th>الهوية/الإقامة</th><th>الجوال</th><th>الصف</th><th>الفصل</th><th>التحقق</th></tr></thead><tbody>${trs}</tbody></table></body></html>`);
@@ -19912,6 +19948,48 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('resize',()=>{if(document.body.classList.contains('activity-leader-open')) positionActivityLeaderPage();});
 
 setTimeout(refreshStudentDataReviewCount,900);
+
+/* SHURAHBIL_GLOBAL_STICKY_CLOSE_V1 */
+(function(){
+  function markPersistentCloseButtons(root){
+    const scope=root&&root.querySelectorAll?root:document;
+    scope.querySelectorAll('button').forEach(btn=>{
+      const t=String(btn.textContent||'').trim();
+      const looksLikeX=(t==='×'||t==='✕'||t==='✖');
+      const knownClose=
+        btn.classList.contains('modal-close-x') ||
+        btn.classList.contains('attendance-modal-close') ||
+        btn.classList.contains('pending-photo-close') ||
+        btn.classList.contains('present-attendance-group-close') ||
+        btn.id==='closeAddStudentModal' ||
+        btn.id==='closePresentEntryChoice' ||
+        btn.id==='closePaperAttendanceModal' ||
+        btn.id==='closeAttendanceModal' ||
+        btn.id==='closeLiveCameraBtn' ||
+        btn.id==='studentChangeRequestsClose' ||
+        btn.id==='studentDataReviewClose' ||
+        btn.id==='userPermClose';
+      if(looksLikeX||knownClose) btn.classList.add('global-sticky-close');
+    });
+  }
+  function initStickyClose(){
+    markPersistentCloseButtons(document);
+    try{
+      new MutationObserver(mutations=>{
+        for(const m of mutations){
+          for(const n of m.addedNodes||[]){
+            if(n&&n.nodeType===1){
+              if(n.matches?.('button')) markPersistentCloseButtons(n.parentElement||document);
+              else markPersistentCloseButtons(n);
+            }
+          }
+        }
+      }).observe(document.body,{childList:true,subtree:true});
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initStickyClose,{once:true});
+  else initStickyClose();
+})();
 </script>
 </body>
 </html>
