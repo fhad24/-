@@ -20726,27 +20726,51 @@ setTimeout(refreshStudentDataReviewCount,900);
 </script>
 
 <script>
-/* SHURAHBIL_SUMMER_PERIOD_SCHEDULE_V1 */
+/* SHURAHBIL_SEASONAL_PERIOD_SCHEDULE_V2 */
 (function(){
-  const slots=[
-    {kind:'assembly',label:'الاصطفاف الصباحي',start:'06:45',end:'07:00'},
-    {kind:'period',n:1,label:'الحصة الأولى',start:'07:00',end:'07:45'},
-    {kind:'period',n:2,label:'الحصة الثانية',start:'07:45',end:'08:30'},
-    {kind:'period',n:3,label:'الحصة الثالثة',start:'08:30',end:'09:15'},
-    {kind:'break',label:'الفسحة (40 دقيقة)',start:'09:15',end:'09:55'},
-    {kind:'period',n:4,label:'الحصة الرابعة',start:'09:55',end:'10:40'},
-    {kind:'period',n:5,label:'الحصة الخامسة',start:'10:40',end:'11:25'},
-    {kind:'period',n:6,label:'الحصة السادسة',start:'11:25',end:'12:10'},
-    {kind:'period',n:7,label:'الحصة السابعة',start:'12:10',end:'12:55'}
-  ];
+  const schedules={
+    summer:{
+      key:'summer',label:'التوقيت الصيفي',icon:'☀️',
+      slots:[
+        {kind:'assembly',label:'الاصطفاف الصباحي',start:'06:45',end:'07:00'},
+        {kind:'period',n:1,label:'الحصة الأولى',start:'07:00',end:'07:45'},
+        {kind:'period',n:2,label:'الحصة الثانية',start:'07:45',end:'08:30'},
+        {kind:'period',n:3,label:'الحصة الثالثة',start:'08:30',end:'09:15'},
+        {kind:'break',label:'الفسحة (40 دقيقة)',start:'09:15',end:'09:55'},
+        {kind:'period',n:4,label:'الحصة الرابعة',start:'09:55',end:'10:40'},
+        {kind:'period',n:5,label:'الحصة الخامسة',start:'10:40',end:'11:25'},
+        {kind:'period',n:6,label:'الحصة السادسة',start:'11:25',end:'12:10'},
+        {kind:'period',n:7,label:'الحصة السابعة',start:'12:10',end:'12:55'}
+      ]
+    },
+    winter:{
+      key:'winter',label:'التوقيت الشتوي',icon:'❄️',
+      slots:[
+        {kind:'assembly',label:'الاصطفاف الصباحي',start:'07:15',end:'07:30'},
+        {kind:'period',n:1,label:'الحصة الأولى',start:'07:30',end:'08:15'},
+        {kind:'period',n:2,label:'الحصة الثانية',start:'08:15',end:'09:00'},
+        {kind:'period',n:3,label:'الحصة الثالثة',start:'09:00',end:'09:45'},
+        {kind:'break',label:'الفسحة (40 دقيقة)',start:'09:45',end:'10:25'},
+        {kind:'period',n:4,label:'الحصة الرابعة',start:'10:25',end:'11:10'},
+        {kind:'period',n:5,label:'الحصة الخامسة',start:'11:10',end:'11:55'},
+        {kind:'period',n:6,label:'الحصة السادسة',start:'11:55',end:'12:40'}
+      ]
+    }
+  };
   const arabicNames={1:'الأولى',2:'الثانية',3:'الثالثة',4:'الرابعة',5:'الخامسة',6:'السادسة',7:'السابعة'};
+  const STORAGE_KEY='shurahbilScheduleSeason';
   const toMin=s=>{const [h,m]=s.split(':').map(Number);return h*60+m};
+  function season(){
+    const saved=localStorage.getItem(STORAGE_KEY);
+    return saved==='winter'?'winter':'summer';
+  }
+  function schedule(){return schedules[season()]||schedules.summer}
   function currentSlot(){
     const d=new Date(), now=d.getHours()*60+d.getMinutes();
-    return slots.find(x=>now>=toMin(x.start)&&now<toMin(x.end))||null;
+    return schedule().slots.find(x=>now>=toMin(x.start)&&now<toMin(x.end))||null;
   }
   function periodNumberFromOption(opt){
-    const raw=(String(opt.value||'')+' '+String(opt.textContent||'')).trim();
+    const raw=(String(opt.value||'')+' '+String(opt.dataset.periodBase||opt.textContent||'')).trim();
     const direct=Number(String(opt.value||'').replace(/\D/g,''));
     if(direct>=1&&direct<=7) return direct;
     for(const [n,name] of Object.entries(arabicNames)){
@@ -20762,52 +20786,78 @@ setTimeout(refreshStudentDataReviewCount,900);
     const lab=String(box?.querySelector?.('label')?.textContent||'').trim();
     return lab==='الحصة'||lab.includes('الحصة الدراسية');
   }
-  function enhance(sel){
+  function ensureBaseText(opt){
+    if(!opt.dataset.periodBase){
+      let t=String(opt.textContent||'').trim();
+      t=t.replace(/\s*[—-]\s*\d{1,2}:\d{2}\s*إلى\s*\d{1,2}:\d{2}\s*$/,'').trim();
+      opt.dataset.periodBase=t;
+    }
+    return opt.dataset.periodBase;
+  }
+  function renderSelect(sel){
     if(!isPeriodSelect(sel)) return;
+    const sc=schedule();
     [...sel.options].forEach(opt=>{
       const n=periodNumberFromOption(opt);
       if(!n) return;
-      const slot=slots.find(x=>x.kind==='period'&&x.n===n);
-      if(!slot) return;
-      if(!opt.dataset.summerOriginal) opt.dataset.summerOriginal=String(opt.textContent||'').trim();
-      const base=opt.dataset.summerOriginal||arabicNames[n];
-      opt.textContent=base+' — '+slot.start+' إلى '+slot.end;
-      opt.dataset.summerPeriod=String(n);
+      const base=ensureBaseText(opt)||arabicNames[n];
+      const slot=sc.slots.find(x=>x.kind==='period'&&x.n===n);
+      opt.dataset.schedulePeriod=String(n);
+      opt.textContent=slot ? base+' — '+slot.start+' إلى '+slot.end : base+' — غير محدد شتويًا';
     });
-    sel.dataset.summerSchedule='1';
-    ensureBadge(sel);
+    sel.dataset.seasonalSchedule='1';
+    ensureControls(sel);
     autoSelectCurrentPeriod(sel);
   }
-  function ensureBadge(sel){
-    let badge=sel.nextElementSibling;
-    if(!badge||!badge.classList?.contains('summer-period-now')){
-      badge=document.createElement('div');
-      badge.className='summer-period-now';
-      badge.style.cssText='margin-top:6px;padding:7px 10px;border:1px solid #b8d6cf;border-radius:10px;background:#f5fbf9;color:#155e52;font:700 12px Tahoma,Arial,sans-serif;line-height:1.5';
-      sel.insertAdjacentElement('afterend',badge);
+  function ensureControls(sel){
+    let wrap=sel.nextElementSibling;
+    if(!wrap||!wrap.classList?.contains('seasonal-schedule-tools')){
+      wrap=document.createElement('div');
+      wrap.className='seasonal-schedule-tools';
+      wrap.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px';
+      const chooser=document.createElement('select');
+      chooser.className='seasonal-schedule-select';
+      chooser.setAttribute('aria-label','اختيار التوقيت المدرسي');
+      chooser.style.cssText='min-width:150px;padding:7px 9px;border:1px solid #b8d6cf;border-radius:10px;background:#fff;color:#155e52;font:700 12px Tahoma,Arial,sans-serif';
+      chooser.innerHTML='<option value="summer">☀️ التوقيت الصيفي</option><option value="winter">❄️ التوقيت الشتوي</option>';
+      chooser.value=season();
+      chooser.addEventListener('change',()=>{
+        localStorage.setItem(STORAGE_KEY,chooser.value);
+        document.querySelectorAll('.seasonal-schedule-select').forEach(x=>x.value=chooser.value);
+        document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(renderSelect);
+        document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
+      });
+      const badge=document.createElement('div');
+      badge.className='seasonal-period-now';
+      badge.style.cssText='flex:1;min-width:220px;padding:7px 10px;border:1px solid #b8d6cf;border-radius:10px;background:#f5fbf9;color:#155e52;font:700 12px Tahoma,Arial,sans-serif;line-height:1.5';
+      wrap.append(chooser,badge);
+      sel.insertAdjacentElement('afterend',wrap);
     }
-    updateBadge(badge);
+    const chooser=wrap.querySelector('.seasonal-schedule-select');
+    if(chooser) chooser.value=season();
+    updateBadge(wrap.querySelector('.seasonal-period-now'));
   }
   function updateBadge(badge){
-    const s=currentSlot();
-    if(!s){badge.textContent='☀️ التوقيت الصيفي: خارج وقت الدوام';return}
+    if(!badge) return;
+    const sc=schedule(), s=currentSlot();
+    if(!s){badge.textContent=sc.icon+' '+sc.label+': خارج وقت الدوام';return}
     const icon=s.kind==='assembly'?'🔔':s.kind==='break'?'🍔':'📝';
-    badge.textContent='☀️ التوقيت الصيفي الآن: '+icon+' '+s.label+' — '+s.start+' إلى '+s.end;
+    badge.textContent=sc.icon+' '+sc.label+' الآن: '+icon+' '+s.label+' — '+s.start+' إلى '+s.end;
   }
   function autoSelectCurrentPeriod(sel){
     if(sel.value) return;
     const s=currentSlot();
     if(!s||s.kind!=='period') return;
-    const opt=[...sel.options].find(o=>Number(o.dataset.summerPeriod||0)===s.n);
+    const opt=[...sel.options].find(o=>Number(o.dataset.schedulePeriod||0)===s.n);
     if(opt) sel.value=opt.value;
   }
   function apply(root=document){
-    if(root?.matches?.('select')) enhance(root);
-    root?.querySelectorAll?.('select').forEach(enhance);
+    if(root?.matches?.('select')) renderSelect(root);
+    root?.querySelectorAll?.('select').forEach(renderSelect);
   }
   function refresh(){
-    document.querySelectorAll('.summer-period-now').forEach(updateBadge);
-    document.querySelectorAll('select[data-summer-schedule="1"]').forEach(autoSelectCurrentPeriod);
+    document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
+    document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(autoSelectCurrentPeriod);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
   else apply();
