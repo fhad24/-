@@ -13490,6 +13490,26 @@ function weeklyAttHijriDateLabel(dateValue){
   const d=dateValue instanceof Date?dateValue:new Date(String(dateValue)+'T12:00:00');
   return weeklyAttHijriFullDateFormatter.format(d);
 }
+function weeklyAttHijriParts(dateValue){
+  const d=dateValue instanceof Date?dateValue:new Date(String(dateValue)+'T12:00:00');
+  const parts=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(d);
+  const day=parts.find(p=>p.type==='day')?.value||'';
+  const month=parts.find(p=>p.type==='month')?.value||'';
+  const year=parts.find(p=>p.type==='year')?.value||'';
+  return {day,month,year};
+}
+function weeklyAttHijriCompactDateLabel(dateValue){
+  const p=weeklyAttHijriParts(dateValue);
+  return p.year+'-'+p.month+'-'+p.day+' هـ';
+}
+function weeklyAttHijriRangeDateLabel(dateValue){
+  const d=dateValue instanceof Date?dateValue:new Date(String(dateValue)+'T12:00:00');
+  const parts=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'}).formatToParts(d);
+  const day=parts.find(p=>p.type==='day')?.value||'';
+  const month=parts.find(p=>p.type==='month')?.value||'';
+  const year=parts.find(p=>p.type==='year')?.value||'';
+  return day+' '+month+' '+year+' هـ';
+}
 function weeklyAttHijriMonthKeyFromDate(d){
   return weeklyAttHijriMonthKey(d);
 }
@@ -13632,7 +13652,7 @@ function renderWeeklyAttendanceReport(){
   document.querySelectorAll('.weekly-att-table [data-weekday]').forEach(th=>{
     th.classList.toggle('selected-day',Number(th.dataset.weekday)===selectedDay);
     const d=dates[Number(th.dataset.weekday)];
-    if(d) th.innerHTML=`${['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][Number(th.dataset.weekday)]}<br><small>${weeklyAttDateKey(d)}</small>`;
+    if(d) th.innerHTML=`${['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][Number(th.dataset.weekday)]}<br><small>${weeklyAttHijriCompactDateLabel(d)}</small>`;
   });
 
   const selectedDate=weeklyAttDateKey(dates[selectedDay]);
@@ -13643,7 +13663,7 @@ function renderWeeklyAttendanceReport(){
   $('weeklyAttNoStatusCount').textContent=String(statusRows.filter(x=>!x.mark).length);
 
   $('weeklyAttHeadRight').textContent='الأسبوع الدراسي: '+week+' — اليوم: '+(['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][selectedDay]||'');
-  $('weeklyAttHeadCenter').textContent='من '+weeklyAttDateKey(dates[0])+' إلى '+weeklyAttDateKey(dates[4]);
+  $('weeklyAttHeadCenter').textContent='من '+weeklyAttHijriRangeDateLabel(dates[0])+' إلى '+weeklyAttHijriRangeDateLabel(dates[4]);
   const userSubject=weeklyAttCurrentTeacherSubject();
   $('weeklyAttHeadLeft').textContent='الصف / الفصل: '+(grade||'—')+' / '+(classroom?displayStudentClassroom(classroom):'—')+
     ((!isAttendanceSupervisor()&&userSubject)?' — المادة: '+userSubject:'');
