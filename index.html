@@ -4778,6 +4778,10 @@ body.activity-leader-open main{
           <label>الفصل</label>
           <select id="weeklyAttClass"><option value="">اختر الفصل</option></select>
         </div>
+        <div>
+          <label>بحث عن طالب</label>
+          <input id="weeklyAttStudentSearch" type="search" placeholder="الاسم أو السجل المدني أو الجوال" autocomplete="off">
+        </div>
       </div>
 
       <div class="weekly-att-actions">
@@ -13694,9 +13698,20 @@ function renderWeeklyAttendanceReport(){
   const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
   const selectedDay=Number($('weeklyAttDay')?.value||0);
   const dates=weeklyAttWeekDates(anchor);
+  const searchRaw=String($('weeklyAttStudentSearch')?.value||'').trim();
+  const searchNorm=searchRaw.toLowerCase().replace(/\s+/g,' ');
   const students=getStudents()
     .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
+    .filter(s=>{
+      if(!searchNorm) return true;
+      const hay=[
+        String(s.name||'').toLowerCase().replace(/\s+/g,' '),
+        String(s.idno||'').toLowerCase(),
+        String(s.phone||'').toLowerCase()
+      ];
+      return hay.some(v=>v.includes(searchNorm));
+    })
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
   const body=$('weeklyAttBody');
   if(!body)return;
@@ -14075,6 +14090,7 @@ if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeek
 if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendanceClasses();populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
+if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>renderWeeklyAttendanceReport();
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
   populateWeeklyAttendanceClasses();
