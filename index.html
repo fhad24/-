@@ -22045,6 +22045,7 @@ setTimeout(refreshStudentDataReviewCount,900);
     if(!w){alert('اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');return}
     w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادات شكر وتقدير</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+
       '*{box-sizing:border-box}'+
+      '.medallion{display:none!important}'+
       'body{margin:0;background:linear-gradient(135deg,#e9efec,#f7f3e8);font-family:Tahoma,Arial,sans-serif;color:#173c35;padding:16px}'+
       '.toolbar{position:sticky;top:0;z-index:20;text-align:center;padding:10px;margin:-16px -16px 18px;background:#ffffffee;backdrop-filter:blur(8px);border-bottom:1px solid #d8e2df}'+
       '.toolbar button{border:0;border-radius:14px;padding:13px 30px;background:linear-gradient(135deg,#0a6f5c,#0f8b72);color:#fff;font-size:18px;font-weight:900;box-shadow:0 7px 18px #0f766533;cursor:pointer}'+
@@ -22068,6 +22069,8 @@ setTimeout(refreshStudentDataReviewCount,900);
       '@page{size:A4 landscape;margin:5mm}@media print{body{background:#fff;padding:0}.toolbar,.certShareBtn{display:none!important}.cert{width:auto;min-height:190mm;margin:0;box-shadow:none;page-break-after:always}.cert:last-child{page-break-after:auto}}'+
       '@media(max-width:900px){body{padding:0}.cert{transform-origin:top center;width:277mm;margin:0 auto}.toolbar{margin:0 0 10px}}'+
     '</style></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
+    /* REMOVE_LEGACY_CERT_MEDALLION */
+    try{w.document.querySelectorAll('.medallion').forEach(x=>x.remove());}catch(e){}
     w.document.close();
   }
 
