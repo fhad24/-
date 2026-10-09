@@ -346,6 +346,8 @@
     w.document.close();
   }
 
+  window.openWeeklyThanksCertificatesRuntime=openWeeklyThanksCertificatesRuntime;
+
   function ensureWeeklyThanksCertificateButton(){
     const report=document.getElementById('weeklyAttStudentReportBtn');
     const show=document.getElementById('weeklyAttShowBtn');
@@ -365,8 +367,8 @@
   }
 
   async function install(){
-    const owner=await refreshMaintenanceOwner();
     try{ensureWeeklyThanksCertificateButton()}catch(e){console.warn('thanks certificate button',e)}
+    const owner=await refreshMaintenanceOwner();
 
     // الأزرار الأصلية إن كانت موجودة داخل النسخة الحالية.
     const anchor=document.getElementById('adminBackupZipBtn');
@@ -449,6 +451,11 @@
           localStorage.setItem(CACHE_HASH,u.sha256);
           localStorage.setItem(CACHE_HTML,html);
         }catch(e){}
+      }
+      /* SHURAHBIL_THANKS_BUTTON_HTML_PATCH */
+      if(!html.includes('weeklyAttThanksCertificateRuntimeBtn')){
+        const thanksBtn='<button type="button" class="btn btn-outline" id="weeklyAttThanksCertificateRuntimeBtn" onclick="window.openWeeklyThanksCertificatesRuntime&&window.openWeeklyThanksCertificatesRuntime()" style="display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;border:2px solid #b88916!important;background:#fff3bf!important;color:#6b4f00!important;font-weight:900!important;font-size:16px!important;min-height:52px!important;padding:10px 18px!important;border-radius:10px!important">🏅 شهادة شكر</button>';
+        html=html.replace(/(<button[^>]+id=[\"']weeklyAttStudentReportBtn[\"'][^>]*>[\\s\\S]*?<\\/button>)/i,'$1'+thanksBtn);
       }
       const safeManager=managerScript.split('</'+'script>').join('<\\/script>');
       const closeBody=html.toLowerCase().lastIndexOf('</body>');
