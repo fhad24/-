@@ -19965,10 +19965,61 @@ window.addEventListener('resize',()=>{if(document.body.classList.contains('activ
 
 setTimeout(refreshStudentDataReviewCount,900);
 
-/* SHURAHBIL_GLOBAL_VIEWPORT_CLOSE_V2 */
+/* SHURAHBIL_GLOBAL_VIEWPORT_CLOSE_V3 */
 (function(){
   let proxy=null;
   let activeClose=null;
+
+  function ensureStickyCloseStyle(){
+    if(document.getElementById('globalViewportCloseStyle')) return;
+    const style=document.createElement('style');
+    style.id='globalViewportCloseStyle';
+    style.textContent=`
+      #globalViewportClose{
+        position:fixed!important;
+        top:12px!important;
+        left:12px!important;
+        right:auto!important;
+        z-index:2147483647!important;
+        width:48px!important;
+        height:48px!important;
+        min-width:48px!important;
+        min-height:48px!important;
+        border-radius:50%!important;
+        display:none!important;
+        align-items:center!important;
+        justify-content:center!important;
+        background:#ffffff!important;
+        color:#173b34!important;
+        border:2px solid #0f7665!important;
+        box-shadow:0 8px 26px rgba(0,0,0,.35)!important;
+        font-family:Arial,sans-serif!important;
+        font-size:32px!important;
+        font-weight:900!important;
+        line-height:1!important;
+        padding:0!important;
+        margin:0!important;
+        cursor:pointer!important;
+        transform:none!important;
+        opacity:1!important;
+        visibility:visible!important;
+        pointer-events:auto!important;
+      }
+      #globalViewportClose.show{display:flex!important}
+      @media(max-width:600px){
+        #globalViewportClose{
+          top:8px!important;
+          left:8px!important;
+          width:44px!important;
+          height:44px!important;
+          min-width:44px!important;
+          min-height:44px!important;
+          font-size:29px!important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function isVisible(el){
     if(!el || !document.documentElement.contains(el)) return false;
@@ -20012,7 +20063,8 @@ setTimeout(refreshStudentDataReviewCount,900);
   }
 
   function ensureProxy(){
-    if(proxy && document.body.contains(proxy)) return proxy;
+    ensureStickyCloseStyle();
+    if(proxy && document.documentElement.contains(proxy)) return proxy;
     proxy=document.createElement('button');
     proxy.type='button';
     proxy.id='globalViewportClose';
@@ -20026,14 +20078,33 @@ setTimeout(refreshStudentDataReviewCount,900);
       if(target) target.click();
       setTimeout(refreshProxy,0);
     };
-    document.body.appendChild(proxy);
+    // ضعه مباشرة تحت html وليس داخل أي حاوية قد يكون عليها transform/overflow.
+    document.documentElement.appendChild(proxy);
     return proxy;
   }
 
   function refreshProxy(){
     ensureProxy();
     activeClose=findActiveClose();
-    proxy.classList.toggle('show',!!activeClose);
+
+    // إذا كانت أي نافذة منبثقة كبيرة ظاهرة، أبقِ زر الإغلاق ظاهرًا حتى لو
+    // خرج زرها الأصلي من الجزء المرئي أثناء التمرير الداخلي.
+    const anyOpenModal=[...document.querySelectorAll('.modal-backdrop, .camera-live-modal, [role="dialog"]')]
+      .some(el=>{
+        if(el.classList.contains('hidden')) return false;
+        const s=getComputedStyle(el);
+        return s.display!=='none' && s.visibility!=='hidden';
+      });
+
+    proxy.classList.toggle('show',!!activeClose || anyOpenModal);
+
+    // في حال تعذر العثور على زر أصلي مؤقتًا، اربطه مباشرة بلوحة الحضور المفتوحة.
+    if(!activeClose && anyOpenModal){
+      const attendance=document.getElementById('attendanceStudentModal');
+      if(attendance && !attendance.classList.contains('hidden')){
+        activeClose=document.getElementById('closeAttendanceModal');
+      }
+    }
   }
 
   function init(){
