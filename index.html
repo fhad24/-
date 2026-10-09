@@ -7110,6 +7110,7 @@ async function cloudPullToLocal(){
     localStorage.setItem('schoolSettings',JSON.stringify({
       authority:s.authority||'', school:s.school||'', designer:s.designer||'', manager:s.manager||'',
       tickerText:s.ticker_text||'',
+      scheduleSeason:(s.schedule_season==='winter'?'winter':'summer'),
       ministryLogo:s.ministry_logo||'', schoolLogo:s.school_logo||''
     }));
     applySchoolSettings();
@@ -11646,6 +11647,7 @@ function getSchoolSettings(){
     designer:'محمد الشامي السلامي',
     manager:'عبدالله عيظة البديدي',
     tickerText:'تنبيه هام: يرجى التأكد من صحة البيانات والصور قبل الإرسال',
+    scheduleSeason:'summer',
     schoolLogo:'',
     ministryLogo:''
   };
@@ -11728,6 +11730,7 @@ function applySchoolSettings(){
     logos[1].style.backgroundRepeat='no-repeat';
     logos[1].style.backgroundPosition='center';
   }
+  if(typeof window.applySchoolScheduleSeason==='function') window.applySchoolScheduleSeason(s.scheduleSeason==='winter'?'winter':'summer');
 }
 function ensureAdminSettings(){
   let ov=document.getElementById('adminSettingsOverlay');
@@ -11774,6 +11777,15 @@ function ensureAdminSettings(){
           <label>نص الشريط الإخباري</label>
           <input id="settingsTickerText" placeholder="اكتب النص الذي يظهر في الشريط الإخباري">
           <div class="hint" style="text-align:right;font-size:12px;margin-top:5px">سيظهر هذا النص في الشريط المتحرك أعلى واجهة الدخول.</div>
+        </div>
+
+        <div class="admin-settings-field">
+          <label>التقويم الحالي للحصص</label>
+          <select id="settingsScheduleSeason" style="font-weight:700">
+            <option value="summer">☀️ التوقيت الصيفي</option>
+            <option value="winter">❄️ التوقيت الشتوي</option>
+          </select>
+          <div class="hint" style="text-align:right;font-size:12px;margin-top:5px">يطبَّق هذا الاختيار على جميع صفحات البرنامج وقوائم الحصص لجميع المستخدمين.</div>
         </div>
 
         <div class="school-logo-grid">
@@ -12004,6 +12016,7 @@ function ensureAdminSettings(){
         designer:document.getElementById('settingsDesigner').value.trim(),
         manager:document.getElementById('settingsManager').value.trim(),
         tickerText,
+        scheduleSeason:(document.getElementById('settingsScheduleSeason')?.value==='winter'?'winter':'summer'),
         schoolLogo,
         ministryLogo
       };
@@ -12022,7 +12035,8 @@ function ensureAdminSettings(){
       const verifyTicker=await cloudApi('school_settings_public',{},false);
       if(verifyTicker?.settings){
         const confirmed=String(verifyTicker.settings.ticker_text??tickerText);
-        const latest={...getSchoolSettings(),tickerText:confirmed};
+        const confirmedSeason=verifyTicker.settings.schedule_season==='winter'?'winter':'summer';
+        const latest={...getSchoolSettings(),tickerText:confirmed,scheduleSeason:confirmedSeason};
         localStorage.setItem('schoolSettings',JSON.stringify(latest));
         applySchoolSettings();
         if(document.getElementById('settingsTickerText')) document.getElementById('settingsTickerText').value=confirmed;
@@ -12741,6 +12755,7 @@ function openAdminSettings(){
   document.getElementById('settingsDesigner').value=s.designer||'';
   document.getElementById('settingsManager').value=s.manager||'';
   if(document.getElementById('settingsTickerText')) document.getElementById('settingsTickerText').value=s.tickerText||'';
+  if(document.getElementById('settingsScheduleSeason')) document.getElementById('settingsScheduleSeason').value=s.scheduleSeason==='winter'?'winter':'summer';
 
   const schoolImg=document.getElementById('schoolLogoPreview');
   const schoolFallback=document.getElementById('schoolLogoFallback');
@@ -12797,6 +12812,7 @@ setTimeout(async()=>{
       localStorage.setItem('schoolSettings',JSON.stringify({
         authority:s.authority||'',school:s.school||'',designer:s.designer||'',manager:s.manager||'',
         tickerText:s.ticker_text||'',
+        scheduleSeason:(s.schedule_season==='winter'?'winter':'summer'),
         ministryLogo:s.ministry_logo||'',schoolLogo:s.school_logo||''
       }));
       applySchoolSettings();
@@ -20713,6 +20729,12 @@ setTimeout(refreshStudentDataReviewCount,900);
     if(root?.matches?.('select')) addOptions(root);
     root?.querySelectorAll?.('select').forEach(addOptions);
   }
+  window.applySchoolScheduleSeason=function(value){
+    activeSeason=value==='winter'?'winter':'summer';
+    document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(renderSelect);
+    document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
+  };
+  activeSeason=readSeason();
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
   else apply();
   new MutationObserver(muts=>{
@@ -20758,12 +20780,15 @@ setTimeout(refreshStudentDataReviewCount,900);
     }
   };
   const arabicNames={1:'الأولى',2:'الثانية',3:'الثالثة',4:'الرابعة',5:'الخامسة',6:'السادسة',7:'السابعة'};
-  const STORAGE_KEY='shurahbilScheduleSeason';
   const toMin=s=>{const [h,m]=s.split(':').map(Number);return h*60+m};
-  function season(){
-    const saved=localStorage.getItem(STORAGE_KEY);
-    return saved==='winter'?'winter':'summer';
+  let activeSeason='summer';
+  function readSeason(){
+    try{
+      const s=JSON.parse(localStorage.getItem('schoolSettings')||'{}');
+      return s.scheduleSeason==='winter'?'winter':'summer';
+    }catch(e){return 'summer'}
   }
+  function season(){ return activeSeason==='winter'?'winter':'summer'; }
   function schedule(){return schedules[season()]||schedules.summer}
   function currentSlot(){
     const d=new Date(), now=d.getHours()*60+d.getMinutes();
@@ -20815,26 +20840,12 @@ setTimeout(refreshStudentDataReviewCount,900);
       wrap=document.createElement('div');
       wrap.className='seasonal-schedule-tools';
       wrap.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px';
-      const chooser=document.createElement('select');
-      chooser.className='seasonal-schedule-select';
-      chooser.setAttribute('aria-label','اختيار التوقيت المدرسي');
-      chooser.style.cssText='min-width:150px;padding:7px 9px;border:1px solid #b8d6cf;border-radius:10px;background:#fff;color:#155e52;font:700 12px Tahoma,Arial,sans-serif';
-      chooser.innerHTML='<option value="summer">☀️ التوقيت الصيفي</option><option value="winter">❄️ التوقيت الشتوي</option>';
-      chooser.value=season();
-      chooser.addEventListener('change',()=>{
-        localStorage.setItem(STORAGE_KEY,chooser.value);
-        document.querySelectorAll('.seasonal-schedule-select').forEach(x=>x.value=chooser.value);
-        document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(renderSelect);
-        document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
-      });
       const badge=document.createElement('div');
       badge.className='seasonal-period-now';
       badge.style.cssText='flex:1;min-width:220px;padding:7px 10px;border:1px solid #b8d6cf;border-radius:10px;background:#f5fbf9;color:#155e52;font:700 12px Tahoma,Arial,sans-serif;line-height:1.5';
-      wrap.append(chooser,badge);
+      wrap.append(badge);
       sel.insertAdjacentElement('afterend',wrap);
     }
-    const chooser=wrap.querySelector('.seasonal-schedule-select');
-    if(chooser) chooser.value=season();
     updateBadge(wrap.querySelector('.seasonal-period-now'));
   }
   function updateBadge(badge){
