@@ -19975,12 +19975,26 @@ setTimeout(refreshStudentDataReviewCount,900);
     const style=document.createElement('style');
     style.id='globalViewportCloseStyle';
     style.textContent=`
-      /* الزر الأصلي داخل كل نافذة يبقى مثبتًا داخل منطقة التمرير */
+      /* إبقاء زر الإغلاق الأصلي مثبتًا داخل كل نافذة/صفحة منبثقة في البرنامج */
+      .modal-backdrop button[data-sticky-close],
+      .camera-live-modal button[data-sticky-close],
+      [role="dialog"] button[data-sticky-close],
       .attendance-modal-card > .attendance-modal-close,
       .add-student-modal-card > .modal-close-x,
       .camera-live-card > .modal-close-x,
       .pending-photo-close,
-      .present-attendance-group-close {
+      .present-attendance-group-close,
+      #closeAddStudentModal,
+      #closePresentEntryChoice,
+      #closePaperAttendanceModal,
+      #closeAttendanceModal,
+      #closeLiveCameraBtn,
+      #studentChangeRequestsClose,
+      #studentDataReviewClose,
+      #userPermClose,
+      #adminSettingsClose,
+      .admin-settings-close,
+      .sm-close {
         position:sticky!important;
         top:8px!important;
         left:8px!important;
@@ -20080,7 +20094,10 @@ setTimeout(refreshStudentDataReviewCount,900);
       btn.id==='closeLiveCameraBtn' ||
       btn.id==='studentChangeRequestsClose' ||
       btn.id==='studentDataReviewClose' ||
-      btn.id==='userPermClose';
+      btn.id==='userPermClose' ||
+      btn.id==='adminSettingsClose' ||
+      btn.classList.contains('admin-settings-close') ||
+      btn.classList.contains('sm-close');
   }
 
   function findActiveClose(){
@@ -20148,8 +20165,15 @@ setTimeout(refreshStudentDataReviewCount,900);
     }
   }
 
+  function markAllCloseButtons(){
+    document.querySelectorAll('button').forEach(btn=>{
+      if(isCloseButton(btn)) btn.setAttribute('data-sticky-close','1');
+    });
+  }
+
   function init(){
     ensureProxy();
+    markAllCloseButtons();
     refreshProxy();
 
     // لأن التمرير يحدث داخل البطاقات نفسها، نراقبه في طور الالتقاط.
@@ -20158,7 +20182,7 @@ setTimeout(refreshStudentDataReviewCount,900);
     window.addEventListener('resize',refreshProxy,{passive:true});
 
     try{
-      new MutationObserver(()=>refreshProxy()).observe(document.body,{
+      new MutationObserver(()=>{ markAllCloseButtons(); refreshProxy(); }).observe(document.body,{
         childList:true,subtree:true,attributes:true,attributeFilter:['class','style']
       });
     }catch(e){}
