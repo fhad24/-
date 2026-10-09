@@ -261,8 +261,112 @@
     return panel;
   }
 
+
+  function collectWeeklySelectedStudents(){
+    const ids=new Set();
+    document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked').forEach(cb=>{
+      const id=String(cb.dataset?.idno||cb.value||'').trim();
+      if(id) ids.add(id);
+    });
+    document.querySelectorAll('.weekly-att-student-report-select:checked').forEach(cb=>{
+      const id=String(cb.dataset?.idno||cb.value||'').trim();
+      if(id) ids.add(id);
+    });
+    const sel=document.getElementById('weeklyAttStudentSelect');
+    if(!ids.size && sel?.value) ids.add(String(sel.value).trim());
+
+    let students=[];
+    try{
+      if(typeof getStudents==='function') students=getStudents()||[];
+      else students=JSON.parse(localStorage.getItem('students')||'[]');
+    }catch(e){students=[]}
+
+    const out=[];
+    ids.forEach(id=>{
+      let st=students.find(s=>String(s.idno||s.civil_id||'').trim()===id);
+      if(!st){
+        const cb=[...document.querySelectorAll('#weeklyAttBody input[type="checkbox"]')].find(x=>String(x.dataset?.idno||x.value||'').trim()===id);
+        const row=cb?.closest('tr');
+        const cells=row?[...row.querySelectorAll('td')].map(x=>String(x.innerText||'').trim()):[];
+        st={idno:id,name:cells.find(x=>x && x!==id && !/^[0-9]+$/.test(x))||'الطالب',grade:'',classroom:''};
+      }
+      out.push(st);
+    });
+    return out;
+  }
+
+  function readSchoolForCertificate(){
+    let s={};
+    try{ if(typeof getSchoolSettings==='function') s=getSchoolSettings()||{}; }catch(e){}
+    if(!Object.keys(s).length){
+      try{s=JSON.parse(localStorage.getItem('schoolSettings')||localStorage.getItem('school_settings')||'{}')}catch(e){}
+    }
+    return s||{};
+  }
+
+  function openWeeklyThanksCertificatesRuntime(){
+    const selected=collectWeeklySelectedStudents();
+    if(!selected.length){
+      alert('حدد طالبًا واحدًا أو مجموعة طلاب من الكشف أولًا.');
+      return;
+    }
+    const settings=readSchoolForCertificate();
+    const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const gradeSelected=String(document.getElementById('weeklyAttGrade')?.value||'');
+    const classSelected=String(document.getElementById('weeklyAttClass')?.value||'');
+    const week=String(document.getElementById('weeklyAttWeek')?.value||'');
+    const periodText=week?('خلال الفترة السابقة وحتى الأسبوع الدراسي '+week):'خلال الفترة السابقة';
+    const schoolName=settings.school||settings.schoolName||settings.name||'المدرسة';
+    const manager=settings.manager||settings.principal||settings.schoolManager||'';
+    const authority=settings.authority||settings.educationDepartment||'';
+    const logoSchool=settings.schoolLogo||settings.logo||'';
+    const logoMinistry=settings.ministryLogo||settings.ministry_logo||'';
+    const certs=selected.map((st,i)=>{
+      const grade=String(st.grade||gradeSelected||'—');
+      let classroom=String(st.classroom||classSelected||'—');
+      try{ if(typeof displayStudentClassroom==='function') classroom=String(displayStudentClassroom(classroom)||classroom); }catch(e){}
+      return '<section class="certificate '+(i?'pagebreak':'')+'">'+
+        '<div class="logos"><div>'+(logoMinistry?'<img src="'+esc(logoMinistry)+'" alt="شعار الوزارة">':'')+'</div><div>'+(logoSchool?'<img src="'+esc(logoSchool)+'" alt="شعار المدرسة">':'')+'</div></div>'+
+        '<div class="authority">'+esc(authority)+'</div>'+
+        '<div class="school">'+esc(schoolName)+'</div>'+
+        '<h1>شهادة شكر وتقدير</h1><div class="medal">🏅</div>'+
+        '<p class="lead">تتقدم إدارة المدرسة بالشكر والتقدير للطالب</p>'+
+        '<div class="student">'+esc(st.name||'')+'</div>'+
+        '<div class="meta">الصف: <b>'+esc(grade)+'</b> &nbsp;&nbsp; | &nbsp;&nbsp; الفصل: <b>'+esc(classroom)+'</b></div>'+
+        '<p class="body">تقديرًا لانتظامه وحرصه على الحضور والانضباط '+esc(periodText)+'، متمنين له دوام التوفيق والتميز والنجاح.</p>'+
+        '<div class="footer"><span>التاريخ: '+esc(new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'long'}).format(new Date()))+'</span><span>مدير المدرسة<br><b>'+esc(manager)+'</b></span></div>'+
+        '</section>';
+    }).join('');
+    const w=window.open('','_blank');
+    if(!w){alert('اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة.');return}
+    w.document.open();
+    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
+      '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.toolbar{position:sticky;top:0;z-index:3;background:#fff;padding:12px;text-align:center;border-bottom:1px solid #d6e2de}.toolbar button{background:#0f806c;color:#fff;border:0;border-radius:10px;padding:11px 24px;font-size:18px;font-weight:800;cursor:pointer}.certificate{position:relative;width:277mm;min-height:190mm;margin:12mm auto;background:#fff;border:3px solid #b88916;padding:16mm 20mm;text-align:center;box-shadow:0 4px 18px #0002;overflow:hidden}.certificate:before,.certificate:after{content:"";position:absolute;width:46mm;height:46mm;border:2px solid #d7b75e;transform:rotate(45deg);opacity:.35}.certificate:before{right:-24mm;top:-24mm}.certificate:after{left:-24mm;bottom:-24mm}.logos{display:flex;justify-content:space-between;align-items:center;height:25mm}.logos img{max-width:28mm;max-height:24mm;object-fit:contain}.authority{font-size:16px}.school{font-size:20px;font-weight:800;margin-top:3px}h1{font-size:38px;color:#9b6f07;margin:14px 0 4px}.medal{font-size:42px}.lead{font-size:22px;margin:8px}.student{font-size:34px;font-weight:900;color:#0f6f60;margin:8px 0 10px;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:19px;margin:8px}.body{font-size:22px;line-height:2;max-width:900px;margin:18px auto}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:18px}.pagebreak{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.toolbar{display:none}.certificate{width:auto;min-height:185mm;margin:0;box-shadow:none;page-break-after:always}.certificate:last-child{page-break-after:auto}}'+
+      '</style></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
+    w.document.close();
+  }
+
+  function ensureWeeklyThanksCertificateButton(){
+    const report=document.getElementById('weeklyAttStudentReportBtn');
+    const show=document.getElementById('weeklyAttShowBtn');
+    const anchor=report||show;
+    if(!anchor) return;
+    let btn=document.getElementById('weeklyAttThanksCertificateRuntimeBtn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.type='button';
+      btn.id='weeklyAttThanksCertificateRuntimeBtn';
+      btn.className='btn btn-outline';
+      btn.textContent='🏅 شهادة شكر';
+      btn.style.cssText='display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;border:2px solid #b88916!important;background:#fff3bf!important;color:#6b4f00!important;font-weight:900!important;font-size:16px!important;min-height:52px!important;padding:10px 18px!important;border-radius:10px!important;';
+      anchor.insertAdjacentElement(report?'afterend':'beforebegin',btn);
+    }
+    btn.onclick=openWeeklyThanksCertificatesRuntime;
+  }
+
   async function install(){
     const owner=await refreshMaintenanceOwner();
+    try{ensureWeeklyThanksCertificateButton()}catch(e){console.warn('thanks certificate button',e)}
 
     // الأزرار الأصلية إن كانت موجودة داخل النسخة الحالية.
     const anchor=document.getElementById('adminBackupZipBtn');
