@@ -11824,7 +11824,7 @@ function ensureAdminSettings(){
 
         <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
         <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
-        <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 إنشاء كلمات مرور آمنة للحسابات المقفلة</button>
+        <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 جعل كلمة المرور = السجل المدني لجميع المستخدمين</button>
         <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
 
         <h3 style="text-align:center;font-size:22px;margin-top:28px">تسجيل يدوي لمعلم أو إداري غير موجود</h3>
@@ -11837,7 +11837,7 @@ function ensureAdminSettings(){
           <div></div>
         </div>
         <div class="row">
-          <div class="admin-settings-field"><label>كلمة المرور</label><input id="newAdminPassword" type="password"></div>
+          <div class="admin-settings-field"><label>كلمة المرور (تلقائيًا = السجل المدني)</label><input id="newAdminPassword" type="text" inputmode="numeric" readonly placeholder="تُملأ تلقائيًا من السجل المدني"></div>
           <div class="admin-settings-field"><label>نوع المستخدم</label><select id="newAdminRole"><option>معلم</option><option>إداري</option><option>مدير</option><option>موظف</option></select></div>
         </div>
         <div id="bulkPermissionUsersBox" class="bulk-permission-users-box" style="margin-bottom:16px">
@@ -11896,6 +11896,12 @@ function ensureAdminSettings(){
     if(btn.dataset.settingsTab==='users'){
       renderAdminUsersSettings();
       refreshAdminUsersFromCloud().then(()=>renderAdminUsersSettings());
+      if(isCurrentOwner()){
+        cloudApi('reset_staff_passwords_to_civil')
+          .then(()=>refreshAdminUsersFromCloud())
+          .then(()=>renderAdminUsersSettings())
+          .catch(e=>console.warn('staff civil password reset',e));
+      }
     }
   });
   const removeLogoBackground=async(raw)=>{
@@ -12066,14 +12072,10 @@ function ensureAdminSettings(){
   document.getElementById('addAdminUser').onclick=()=>{
     const username=document.getElementById('newAdminUsername').value.trim();
     const name=document.getElementById('newAdminName').value.trim();
-    const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||username;
-    const password=String(document.getElementById('newAdminPassword').value||'');
+    const civilId=normalizeCivilId(document.getElementById('newAdminCivilId').value)||normalizeCivilId(username);
+    const password=String(civilId||'');
     const role=document.getElementById('newAdminRole').value;
-    if(!username||!name||!password){toast('أكمل اسم المستخدم والاسم وكلمة المرور');return}
-    if(password.length<10 || !/[0-9]/.test(password) || !/[^0-9\s]/.test(password) || password===civilId || password===username){
-      toast('اختر كلمة مرور قوية من 10 أحرف على الأقل ولا تستخدم السجل المدني');
-      return;
-    }
+    if(!username||!name||!/^\d{10}$/.test(civilId)){toast('أكمل اسم المستخدم والاسم والسجل المدني الصحيح من 10 أرقام');return}
     const users=getAdminUsers();
     if(users.some(x=>String(x.username)===username)){toast('اسم المستخدم موجود مسبقاً');return}
     const permissions=[...document.querySelectorAll('.admin-new-perm:checked')].map(x=>x.value);
@@ -12123,6 +12125,14 @@ function ensureAdminSettings(){
   });
   updateNewPermToggleText();
   syncNewReferralGradeState();
+
+  const syncNewUserPasswordToCivil=()=>{
+    const civil=normalizeCivilId(document.getElementById('newAdminCivilId')?.value||'');
+    const pass=document.getElementById('newAdminPassword');
+    if(pass) pass.value=civil;
+  };
+  document.getElementById('newAdminCivilId')?.addEventListener('input',syncNewUserPasswordToCivil);
+  syncNewUserPasswordToCivil();
 
   document.getElementById('applyBulkUserPermissions').onclick=async()=>{
     const btn=document.getElementById('applyBulkUserPermissions');
@@ -12258,22 +12268,18 @@ function ensureAdminSettings(){
   };
 
     document.getElementById('resetLockedUsersPasswords').onclick=async()=>{
-      if(!confirm('سيتم إنشاء كلمة مرور مؤقتة قوية لكل حساب مقفل. ستظهر الكلمات مرة واحدة فقط للطباعة أو التوزيع. متابعة؟')) return;
+      if(!confirm('سيتم جعل كلمة المرور لجميع المستخدمين مساوية للسجل المدني الخاص بكل مستخدم، وسيتم تسجيل خروج جلساتهم الحالية. متابعة؟')) return;
       const btn=document.getElementById('resetLockedUsersPasswords');
-      const old=btn.textContent;btn.disabled=true;btn.textContent='جاري الإنشاء...';
+      const old=btn.textContent;btn.disabled=true;btn.textContent='جاري التحديث...';
       try{
-        const r=await cloudApi('reset_locked_user_passwords');
-        const rows=Array.isArray(r?.credentials)?r.credentials:[];
+        const r=await cloudApi('reset_staff_passwords_to_civil');
         await refreshAdminUsersFromCloud();
         renderAdminUsersSettings();
-        if(!rows.length){alert('لا توجد حسابات مقفلة.');return}
-        const w=window.open('','_blank');
-        if(!w){alert('تم إنشاء الكلمات لكن المتصفح منع نافذة العرض.');return}
-        const body=rows.map(x=>'<tr><td>'+escapeAppHtml(x.name)+'</td><td>'+escapeAppHtml(x.username)+'</td><td>'+escapeAppHtml(x.temporary_password)+'</td></tr>').join('');
-        w.document.write('<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>كلمات المرور المؤقتة</title><style>body{font-family:Tahoma;padding:25px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:10px;text-align:center}h2{text-align:center}</style></head><body><h2>كلمات المرور المؤقتة للمستخدمين</h2><p>هذه القائمة تظهر مرة واحدة. اطبعها أو وزعها بشكل آمن، ثم اطلب من كل مستخدم تغيير كلمة مروره.</p><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>كلمة المرور المؤقتة</th></tr></thead><tbody>'+body+'</tbody></table><script>window.print()<\/script></body></html>');
-        w.document.close();
-      }catch(e){alert('تعذر إنشاء كلمات المرور: '+String(e?.message||e||''))}
-      finally{btn.disabled=false;btn.textContent=old}
+        alert('✅ تم تحديث '+Number(r?.updated||0)+' مستخدم. كلمة المرور الآن هي السجل المدني.');
+      }catch(e){
+        console.error(e);
+        alert('تعذر تحديث كلمات المرور الآن.');
+      }finally{btn.disabled=false;btn.textContent=old}
     };
     document.getElementById('importTeachersExcelBtn').onclick=()=>document.getElementById('teachersExcelInput').click();
   document.getElementById('teachersExcelInput').onchange=async e=>{
@@ -12301,7 +12307,7 @@ function ensureAdminSettings(){
       for(const row of rows){
         const username=normalizeCivilId(pickValue(row,['اسم المستخدم','رقم الهوية','الهوية','السجل المدني','رقم المعلم','رقم المستخدم']));
         const name=pickValue(row,['الاسم','الاسم الرباعي','اسم المعلم','اسم المستخدم الكامل','اسم الموظف']);
-        const password=pickValue(row,['كلمة المرور','الرقم السري','Password']);
+        const importedPassword=pickValue(row,['كلمة المرور','الرقم السري','Password']);
         const role=pickValue(row,['نوع المستخدم','النوع','الدور'])||'معلم';
         const permText=pickValue(row,['الصلاحيات','صلاحية','Permissions']);
         if(!username||!name){skipped++;continue}
@@ -12326,9 +12332,11 @@ function ensureAdminSettings(){
         }
 
         const idx=users.findIndex(u=>String(u.username)===username);
-        const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||username;
-        const rec={username,civilId,name,password:String(password||''),role,permissions,accountLocked:!String(password||'').trim()};
-        if(idx>=0){users[idx]={...users[idx],...rec,password:String(password||'')};updated++}
+        const civilId=normalizeCivilId(pickValue(row,['السجل المدني','رقم الهوية','الهوية','رقم السجل']))||normalizeCivilId(username);
+        if(!/^\d{10}$/.test(civilId)){skipped++;continue}
+        const password=civilId;
+        const rec={username,civilId,name,password,role,permissions,accountLocked:false};
+        if(idx>=0){users[idx]={...users[idx],...rec,password};updated++}
         else{users.push(rec);added++}
       }
       const payloadUsers=users.map(u=>({
@@ -12339,7 +12347,7 @@ function ensureAdminSettings(){
       await cloudApi('sync_users',{users:payloadUsers});
       await refreshAdminUsersFromCloud();
       renderAdminUsersSettings();
-      status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله. الحسابات بلا كلمة مرور بقيت مقفلة.`;
+      status.textContent=`تم الاستيراد: ${added} جديد، ${updated} تحديث، ${skipped} تم تجاهله. كلمة مرور كل مستخدم هي سجله المدني.`;
     }catch(err){
       console.error(err);
       status.textContent='تعذر قراءة ملف Excel.';
@@ -12528,16 +12536,9 @@ function renderAdminUsersSettings(){
     const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.editAdminUser));
     const u=users[idx]; if(!u) return;
     const name=prompt('الاسم',u.name||''); if(name===null) return;
-    const message=u.accountLocked
-      ? 'الحساب مقفل أمنيًا. أدخل كلمة مرور جديدة (10 أحرف على الأقل وتحتوي حروفًا وأرقامًا)'
-      : 'كلمة المرور الجديدة (اتركها فارغة للإبقاء على الحالية)';
-    const pass=prompt(message,''); if(pass===null) return;
-    if(u.accountLocked && !pass.trim()){
-      alert('يجب تعيين كلمة مرور جديدة لفتح الحساب.');
-      return;
-    }
-    if(pass && (pass.length<10 || !/[0-9]/.test(pass) || !/[^0-9\\s]/.test(pass))){
-      alert('كلمة المرور يجب أن تكون 10 أحرف على الأقل وتحتوي حروفًا وأرقامًا.');
+    const pass=normalizeCivilId(u.civilId||u.username||'');
+    if(!/^\d{10}$/.test(pass)){
+      alert('لا يمكن تعيين كلمة المرور تلقائيًا لأن السجل المدني للمستخدم غير صحيح.');
       return;
     }
     try{
@@ -12547,14 +12548,14 @@ function renderAdminUsersSettings(){
         name:name.trim()||u.name,
         role:u.role||'معلم',
         permissions:Array.isArray(u.permissions)?u.permissions:[],
-        password:pass||''
+        password:pass
       }});
       await cloudPullToLocal();
       renderAdminUsersSettings();
-      alert(pass?'✅ تم حفظ المستخدم وتفعيل الحساب بكلمة المرور الجديدة':'✅ تم حفظ بيانات المستخدم');
+      alert('✅ تم حفظ المستخدم — كلمة المرور هي السجل المدني');
     }catch(e){
       const msg=String(e?.message||e||'');
-      if(msg.includes('weak_password')) alert('كلمة المرور ضعيفة. استخدم 10 أحرف على الأقل وتحتوي حروفًا وأرقامًا، ولا تستخدم السجل المدني.');
+      if(msg.includes('weak_password')) alert('تعذر تعيين كلمة المرور كسجل مدني لهذا المستخدم.');
       else alert('تعذر حفظ بيانات المستخدم في الخادم.');
     }
   });
