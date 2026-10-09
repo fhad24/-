@@ -11856,7 +11856,7 @@ function ensureAdminSettings(){
 
         <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
         <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
-        <input id="teacherSpecialtiesInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+        <input id="teacherSpecialtiesInput" class="hidden" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf">
         <button class="admin-settings-save" id="importTeacherSpecialtiesBtn" type="button" style="background:#e8f0ff;color:#234a91;margin-top:8px">📚 استيراد تخصصات المعلمين</button>
         <div id="teacherSpecialtiesStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
         <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 جعل كلمة المرور = السجل المدني لجميع المستخدمين</button>
@@ -12313,6 +12313,132 @@ function ensureAdminSettings(){
   };
 
     document.getElementById('importTeacherSpecialtiesBtn').onclick=()=>document.getElementById('teacherSpecialtiesInput').click();
+
+    async function teacherSpecialtiesPdfText(file,status){
+      await ensurePaperOcr(file);
+      const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+      const textPages=[];
+      let extractedChars=0;
+      for(let p=1;p<=pdf.numPages;p++){
+        if(status) status.textContent='جاري قراءة نص PDF — الصفحة '+p+' من '+pdf.numPages+'...';
+        const page=await pdf.getPage(p);
+        const tc=await page.getTextContent();
+        const items=(tc.items||[]).map(x=>({
+          str:String(x.str||'').trim(),
+          x:Number(x.transform?.[4]||0),
+          y:Number(x.transform?.[5]||0)
+        })).filter(x=>x.str);
+        extractedChars+=items.reduce((a,x)=>a+x.str.length,0);
+        items.sort((a,b)=>Math.abs(a.y-b.y)>3?b.y-a.y:a.x-b.x);
+        const lines=[];
+        for(const item of items){
+          let line=lines.find(x=>Math.abs(x.y-item.y)<=3);
+          if(!line){line={y:item.y,items:[]};lines.push(line)}
+          line.items.push(item);
+        }
+        lines.sort((a,b)=>b.y-a.y);
+        textPages.push(lines.map(line=>line.items.sort((a,b)=>a.x-b.x).map(x=>x.str).join(' | ')).join('\n'));
+      }
+      if(extractedChars>=80) return textPages.join('\n');
+
+      const canvases=[];
+      for(let p=1;p<=pdf.numPages;p++){
+        const page=await pdf.getPage(p),v=page.getViewport({scale:2.2}),canvas=document.createElement('canvas');
+        canvas.width=Math.ceil(v.width);canvas.height=Math.ceil(v.height);
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:v}).promise;
+        canvases.push(canvas);
+      }
+      if(!window.Tesseract) await ensurePaperOcr(file);
+      const parts=[];
+      for(let i=0;i<canvases.length;i++){
+        if(status) status.textContent='PDF مصوّر — جاري التعرف على الصفحة '+(i+1)+' من '+canvases.length+'...';
+        const result=await Tesseract.recognize(canvases[i],'ara+eng',{
+          logger:m=>{
+            if(status&&m?.status==='recognizing text') status.textContent='PDF مصوّر — الصفحة '+(i+1)+' — '+Math.round((m.progress||0)*100)+'%';
+          }
+        });
+        parts.push(String(result?.data?.text||''));
+      }
+      return parts.join('\n');
+    }
+
+    function teacherSpecialtyCanonical(value){
+      let s=String(value||'').trim().replace(/\s+/g,' ');
+      const k=s.replace(/[إأآ]/g,'ا').replace(/ى/g,'ي').toLowerCase();
+      const map=[
+        [/فيزيا/,'فيزياء'],[/رياض/,'رياضيات'],[/انجلي|english/,'إنجليزي'],
+        [/حاسب|حوسب|كمبيوتر/,'حاسب'],[/كيميا/,'كيمياء'],[/دين|اسلام/,'دين'],
+        [/تاريخ/,'تاريخ'],[/عربي|اللغه العربي/,'عربي'],[/مكتب/,'مكتبات'],
+        [/احيا/,'أحياء'],[/بدني|رياضه/,'تربية بدنية'],[/فني|فنون/,'فنون']
+      ];
+      for(const [re,val] of map) if(re.test(k)) return val;
+      return s;
+    }
+
+    function teachingSubjectFromSpecialty(value){
+      const s=teacherSpecialtyCanonical(value);
+      const map={
+        'إنجليزي':'اللغة الإنجليزية',
+        'عربي':'اللغة العربية',
+        'حاسب':'الحاسب الآلي',
+        'تاريخ':'التربية الاجتماعية والوطنية',
+        'دين':'الدراسات الإسلامية',
+        'رياضيات':'الرياضيات',
+        'فيزياء':'الفيزياء',
+        'كيمياء':'الكيمياء',
+        'أحياء':'الأحياء',
+        'تربية بدنية':'التربية الصحية والبدنية',
+        'فنون':'الفنون'
+      };
+      return map[s]||s;
+    }
+
+    function parseTeacherSpecialtiesPdfText(text,users){
+      const raw=String(text||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\u00a0/g,' ');
+      const lines=raw.split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+      const rows=[];
+      const norm=s=>String(s||'').trim().replace(/[إأآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').toLowerCase();
+      const specialtyWords=['فيزياء','رياضيات','إنجليزي','انجليزي','حاسب','كيمياء','دين','تاريخ','عربي','مكتبات','أحياء','احياء','تربية بدنية','فنون'];
+
+      for(let i=0;i<lines.length;i++){
+        const windowText=[lines[i-1]||'',lines[i],lines[i+1]||''].join(' ');
+        let matchedUser=null;
+        for(const u of users){
+          const ids=[String(u.username||''),String(u.civilId||'')].filter(Boolean);
+          if(ids.some(id=>id.length>=6 && windowText.includes(id))){matchedUser=u;break}
+        }
+        if(!matchedUser){
+          const nl=norm(windowText);
+          matchedUser=users.find(u=>{
+            const n=norm(u.name||'');
+            if(!n) return false;
+            const parts=n.split(' ').filter(x=>x.length>2);
+            return parts.length>=2 && parts.slice(0,Math.min(3,parts.length)).every(x=>nl.includes(x));
+          })||null;
+        }
+        if(!matchedUser) continue;
+
+        let specialty='';
+        for(const word of specialtyWords){
+          if(norm(windowText).includes(norm(word))){specialty=teacherSpecialtyCanonical(word);break}
+        }
+        if(!specialty){
+          const chunks=windowText.split(/[|،,:;\t]+/).map(x=>x.trim()).filter(Boolean);
+          const candidate=chunks.find(x=>x.length<=30 && !/\d{6,}/.test(x) && !norm(x).includes(norm(matchedUser.name||'')) && !/اسم المستخدم|رقم الهويه|الجوال|مسمى|حاله|التوظيف/.test(norm(x)));
+          if(candidate) specialty=teacherSpecialtyCanonical(candidate);
+        }
+        if(!specialty) continue;
+        rows.push({
+          username:String(matchedUser.username||''),
+          name:String(matchedUser.name||''),
+          specialty,
+          teachingSubject:teachingSubjectFromSpecialty(specialty)
+        });
+      }
+      const seen=new Set();
+      return rows.filter(r=>{if(seen.has(r.username))return false;seen.add(r.username);return true});
+    }
+
     document.getElementById('teacherSpecialtiesInput').onchange=async e=>{
       const file=e.target.files?.[0];
       if(!file) return;
@@ -12321,10 +12447,6 @@ function ensureAdminSettings(){
       const oldText=btn.textContent;
       btn.disabled=true;btn.textContent='جاري استيراد التخصصات...';
       try{
-        const buf=await file.arrayBuffer();
-        const wb=XLSX.read(buf,{type:'array'});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
         const users=getAdminUsers();
         const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
         const pick=(row,names)=>{
@@ -12336,21 +12458,45 @@ function ensureAdminSettings(){
           }
           return '';
         };
+
+        let importRows=[];
+        const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
+        if(isPdf){
+          if(status) status.textContent='جاري تجهيز ملف PDF...';
+          const text=await teacherSpecialtiesPdfText(file,status);
+          importRows=parseTeacherSpecialtiesPdfText(text,users);
+          if(!importRows.length) throw new Error('PDF_NO_MATCHES');
+        }else{
+          const buf=await file.arrayBuffer();
+          const wb=XLSX.read(buf,{type:'array'});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+          importRows=rows.map(row=>({
+            rawUser:pick(row,['اسم المستخدم','رقم الهوية','السجل المدني','رقم المستخدم']),
+            name:pick(row,['الاسم الرباعي','الاسم','اسم المعلم','اسم الموظف']),
+            specialty:pick(row,['التخصص','تخصص']),
+            teachingSubject:pick(row,['مجال التدريس','المادة','المادة الدراسية','التخصص'])
+          }));
+        }
+
         let updated=0,notFound=0,skipped=0;
-        for(const row of rows){
-          const rawUser=pick(row,['اسم المستخدم','رقم الهوية','السجل المدني','رقم المستخدم']);
+        for(const row of importRows){
+          const rawUser=String(row.username||row.rawUser||'');
           const username=normalizeCivilId(rawUser);
-          const name=pick(row,['الاسم الرباعي','الاسم','اسم المعلم','اسم الموظف']);
-          const specialty=pick(row,['التخصص','تخصص']);
-          const teachingSubject=pick(row,['مجال التدريس','المادة','المادة الدراسية','التخصص'])||specialty;
+          const name=String(row.name||'');
+          const specialty=teacherSpecialtyCanonical(row.specialty||row.teachingSubject||'');
+          const teachingSubject=String(row.teachingSubject||teachingSubjectFromSpecialty(specialty)||specialty).trim();
           if(!specialty && !teachingSubject){skipped++;continue}
           let idx=-1;
-          if(username) idx=users.findIndex(u=>normalizeCivilId(u.civilId||u.username||'')===username || normalizeCivilId(u.username||'')===username);
+          if(row.username) idx=users.findIndex(u=>String(u.username||'')===String(row.username));
+          if(idx<0 && username) idx=users.findIndex(u=>normalizeCivilId(u.civilId||u.username||'')===username || normalizeCivilId(u.username||'')===username);
           if(idx<0 && name) idx=users.findIndex(u=>norm(u.name)===norm(name));
           if(idx<0){notFound++;continue}
           users[idx]={...users[idx],specialty:String(specialty||teachingSubject).trim(),teachingSubject:String(teachingSubject||specialty).trim()};
           updated++;
         }
+
+        if(!updated) throw new Error('NO_USERS_UPDATED');
         saveAdminUsers(users);
         const payloadUsers=users.map(u=>({
           username:String(u.username||''),
@@ -12364,11 +12510,14 @@ function ensureAdminSettings(){
         await cloudApi('sync_users',{users:payloadUsers});
         await refreshAdminUsersFromCloud();
         renderAdminUsersSettings();
-        status.textContent='تم تحديث تخصصات '+updated+' معلم'+(notFound?' — لم تتم مطابقة '+notFound:'')+(skipped?' — تم تجاهل '+skipped:'');
-        toast('✅ تم حفظ تخصصات المعلمين وربط المادة تلقائيًا');
+        status.textContent='تم تحديث تخصصات '+updated+' معلم'+(notFound?' — لم تتم مطابقة '+notFound:'')+(skipped?' — تم تجاهل '+skipped:'')+' — الصيغ المدعومة: PDF / Excel / CSV';
+        toast('✅ تم استيراد تخصصات المعلمين');
       }catch(err){
         console.error('teacher specialties import',err);
-        status.textContent='تعذر قراءة ملف التخصصات. استخدم Excel أو CSV بعناوين: اسم المستخدم، التخصص، مجال التدريس.';
+        const code=String(err?.message||err||'');
+        if(code.includes('PDF_NO_MATCHES')) status.textContent='تمت قراءة PDF لكن لم أتمكن من مطابقة المعلمين. تأكد أن الملف يحتوي اسم المستخدم/رقم الهوية أو أسماء المعلمين بوضوح.';
+        else if(code.includes('NO_USERS_UPDATED')) status.textContent='تمت قراءة الملف لكن لم يتم تحديث أي معلم.';
+        else status.textContent='تعذر قراءة ملف التخصصات. الصيغ المدعومة: PDF / Excel / CSV.';
       }finally{
         btn.disabled=false;btn.textContent=oldText;e.target.value='';
       }
