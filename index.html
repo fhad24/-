@@ -18992,8 +18992,9 @@ function printStudents(rows){
   margin-top:14px;padding:14px;border-radius:18px;background:#f8fbfa;border:1px solid #dce9e5
 }
 #activityLeaderPage .nashit-filter-grid{
-  display:grid;grid-template-columns:minmax(180px,.8fr) minmax(180px,.8fr) minmax(280px,1.6fr);gap:12px
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px
 }
+#activityLeaderPage .nashit-filter-field.search{grid-column:1/-1}
 #activityLeaderPage .nashit-filter-field{display:flex;flex-direction:column;gap:6px}
 #activityLeaderPage .nashit-filter-field label{font-size:11px;font-weight:900;color:#55706a;margin:0}
 #activityLeaderPage .nashit-plan-filter,#activityLeaderPage .nashit-plan-search{
@@ -19066,8 +19067,8 @@ function printStudents(rows){
   #activityLeaderPage .nashit-hero-emblem{width:52px;height:52px;flex-basis:52px;border-radius:16px;font-size:24px}
   #activityLeaderPage .nashit-hero h2{font-size:22px!important}
   #activityLeaderPage .nashit-kicker{font-size:10px}
-  #activityLeaderPage .nashit-filter-grid{grid-template-columns:1fr}
-  #activityLeaderPage .nashit-filter-field.search{grid-column:auto}
+  #activityLeaderPage .nashit-filter-grid{grid-template-columns:1fr 1fr}
+  #activityLeaderPage .nashit-filter-field.search{grid-column:1/-1}
   #activityLeaderPage .nashit-section-head{padding:12px}
   #activityLeaderPage .nashit-section-head h3{font-size:21px!important}
   #activityLeaderPage .nashit-toolbar{width:100%}
