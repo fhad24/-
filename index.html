@@ -14018,19 +14018,67 @@ async function renderAttendancePage(){
         </div>`;
 
     document.querySelectorAll('[data-delete-att-index]').forEach(btn=>{
-      btn.onclick=()=>{
+      btn.onclick=async()=>{
         const idx=Number(btn.dataset.deleteAttIndex);
         if(!Number.isFinite(idx)) return;
+
         const logs=getAttendanceLog();
         const row=logs[idx];
         if(!row || !attendanceUserCanModifyRow(row)){
           alert('لا يمكن تعديل أو حذف هذا السجل. السجلات السابقة متاحة للتعديل من الأدمن فقط.');
           return;
         }
-        logs.splice(idx,1);
-        saveAttendanceLog(logs);
-        renderAttendancePage();
-        toast('تم حذف السجل');
+
+        const deletedId=String(row.idno||'').trim();
+        const deletedIsTodayLate=String(row.status||'')==='late' && String(row.date||'')===String(todayKey());
+
+        // احذف التحديد فورًا من لوحة التأخر حتى لا يبقى الطالب محددًا بعد حذف سجله.
+        if(deletedIsTodayLate && deletedId){
+          attendancePresentSelectedIds.delete(deletedId);
+          __attendanceInstantPending?.delete?.(deletedId);
+          __attendanceInstantCancelled?.add?.(deletedId);
+          persistLateSelections();
+        }
+
+        const oldText=btn.textContent;
+        btn.disabled=true;
+        btn.textContent='...';
+
+        try{
+          // الحذف الحقيقي من Supabase، وليس مزامنة القائمة الناقصة فقط.
+          await cloudApi('delete_attendance_rows',{rows:[row]});
+
+          const current=getAttendanceLog();
+          const key=attendanceRecordKey(row);
+          const next=current.filter(x=>attendanceRecordKey(x)!==key);
+          localStorage.setItem('attendanceLog',JSON.stringify(next));
+
+          if(deletedIsTodayLate && deletedId){
+            attendancePresentSelectedIds.delete(deletedId);
+            persistLateSelections();
+          }
+
+          await renderAttendancePage();
+
+          // إذا كانت لوحة إضافة التأخر مفتوحة، حدّثها فورًا لإزالة علامة التحديد.
+          if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden') && attendanceMode==='late'){
+            await renderAttendanceStudentList();
+          }
+
+          toast('✅ تم حذف السجل');
+        }catch(err){
+          console.error('attendance row delete failed',err);
+          // عند فشل الحذف لا ندّعي النجاح، وأعد حالة التحديد كما كانت.
+          if(deletedIsTodayLate && deletedId){
+            attendancePresentSelectedIds.add(deletedId);
+            __attendanceInstantCancelled?.delete?.(deletedId);
+            persistLateSelections();
+          }
+          alert('❌ تعذر حذف السجل من قاعدة البيانات. حاول مرة أخرى.');
+        }finally{
+          btn.disabled=false;
+          btn.textContent=oldText||'🗑';
+        }
       };
     });
 
