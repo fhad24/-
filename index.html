@@ -14435,7 +14435,10 @@ function attendanceLateSelectionStorageKey(){
 }
 function loadPersistedLateSelections(){
   try{
-    const a=JSON.parse(localStorage.getItem(attendanceLateSelectionStorageKey())||'[]');
+    const key=attendanceLateSelectionStorageKey();
+    const raw=localStorage.getItem(key);
+    if(raw===null) return null;
+    const a=JSON.parse(raw);
     return new Set(Array.isArray(a)?a.map(x=>String(x||'').trim()).filter(Boolean):[]);
   }catch(e){ return new Set(); }
 }
@@ -14586,14 +14589,22 @@ function getAttendanceEditedTime(){
 function restoreAttendanceSelectionsForMode(mode){
   const date=ensureAttendanceSelectionDay();
   if(mode==='late'){
-    // أعد التحديد فورًا من التخزين المحلي، ثم ادمج أي سجلات محفوظة فعليًا.
-    const restored=loadPersistedLateSelections();
-    getAttendanceLog()
-      .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
-      .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
-      .map(x=>String(x?.idno||'').trim())
-      .filter(Boolean)
-      .forEach(id=>restored.add(id));
+    // إذا كان لهذا اليوم حفظ محلي للتحديدات، فهو المصدر النهائي ولا نعيد إضافة
+    // طالب ألغى المستخدم تحديده حتى لو بقي سجل قديم لحظيًا في السحابة.
+    const persisted=loadPersistedLateSelections();
+    if(persisted!==null){
+      attendancePresentSelectedIds=new Set(persisted);
+      return;
+    }
+
+    // أول فتح فقط في اليوم: نبني التحديد من سجلات التأخر الموجودة ثم نحفظه.
+    const restored=new Set(
+      getAttendanceLog()
+        .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
+        .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
+        .map(x=>String(x?.idno||'').trim())
+        .filter(Boolean)
+    );
     attendancePresentSelectedIds=restored;
     persistLateSelections();
     return;
