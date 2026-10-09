@@ -4968,6 +4968,7 @@ body.activity-leader-open main{
 
       <div class="weekly-att-actions">
         <button type="button" class="btn btn-primary" id="weeklyAttStudentReportBtn">📄 تقرير الطالب</button>
+        <button type="button" class="btn btn-primary" id="weeklyAttThanksCertificateBtn" style="background:#c99516;border-color:#a87800">🏅 شهادة شكر</button>
         <button type="button" class="btn btn-primary" id="weeklyAttShowBtn">عرض الكشف</button>
         <button type="button" class="btn btn-outline" id="weeklyAttPrintBtn">طباعة الكشف</button>
         <button type="button" class="btn btn-primary" id="weeklyAttPdfBtn">تصدير PDF</button>
@@ -21929,6 +21930,86 @@ setTimeout(refreshStudentDataReviewCount,900);
   new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)apply(n)})))
     .observe(document.documentElement,{childList:true,subtree:true});
   setInterval(refresh,30000);
+})();
+</script>
+
+<script>
+/* DIRECT_WEEKLY_THANKS_CERTIFICATE_V1 */
+(function(){
+  function norm(v){return String(v??'').trim();}
+  function esc(v){return norm(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function students(){
+    try{ if(typeof getStudents==='function') return getStudents()||[]; }catch(e){}
+    try{return JSON.parse(localStorage.getItem('students')||'[]')}catch(e){return []}
+  }
+  function selectedStudents(){
+    const ids=new Set();
+    document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked').forEach(cb=>{
+      const v=norm(cb.dataset?.idno||cb.value);
+      if(v && v!=='on') ids.add(v);
+      if((!v||v==='on') && cb.closest('tr')){
+        const cells=[...cb.closest('tr').querySelectorAll('td')];
+        const civil=cells.map(td=>norm(td.textContent)).find(x=>/^\d{10}$/.test(x));
+        if(civil) ids.add(civil);
+      }
+    });
+    document.querySelectorAll('.weekly-att-student-report-select:checked').forEach(cb=>{
+      const v=norm(cb.dataset?.idno||cb.value);
+      if(v && v!=='on') ids.add(v);
+    });
+    const select=document.getElementById('weeklyAttStudentSelect');
+    if(!ids.size && norm(select?.value)) ids.add(norm(select.value));
+    const list=students();
+    return [...ids].map(id=>list.find(s=>norm(s.idno||s.civil_id)===id)).filter(Boolean);
+  }
+  function settings(){
+    try{ if(typeof getSchoolSettings==='function') return getSchoolSettings()||{}; }catch(e){}
+    for(const k of ['schoolSettings','school_settings']){
+      try{const s=JSON.parse(localStorage.getItem(k)||'{}');if(Object.keys(s).length)return s}catch(e){}
+    }
+    return {};
+  }
+  function openCertificates(){
+    const picked=selectedStudents();
+    if(!picked.length){alert('حدد طالبًا واحدًا أو مجموعة طلاب من الكشف أولًا.');return}
+    const s=settings();
+    const school=norm(s.school||s.schoolName||s.name)||'المدرسة';
+    const manager=norm(s.manager||s.principal||s.schoolManager);
+    const authority=norm(s.authority||s.educationDepartment);
+    const schoolLogo=norm(s.schoolLogo||s.logo);
+    const ministryLogo=norm(s.ministryLogo||s.ministry_logo);
+    const gradeSel=norm(document.getElementById('weeklyAttGrade')?.value);
+    const classSel=norm(document.getElementById('weeklyAttClass')?.value);
+    const week=norm(document.getElementById('weeklyAttWeek')?.value);
+    const dateText=(()=>{try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'long'}).format(new Date())}catch(e){return ''}})();
+    const certs=picked.map((st,i)=>{
+      const grade=norm(st.grade)||gradeSel||'—';
+      const classroom=norm(st.classroom)||classSel||'—';
+      return '<section class="cert '+(i?'break':'')+'">'+
+      '<div class="logos"><span>'+(ministryLogo?'<img src="'+esc(ministryLogo)+'">':'')+'</span><span>'+(schoolLogo?'<img src="'+esc(schoolLogo)+'">':'')+'</span></div>'+
+      '<div class="authority">'+esc(authority)+'</div><div class="school">'+esc(school)+'</div>'+
+      '<h1>شهادة شكر وتقدير</h1><div class="medal">🏅</div>'+
+      '<p class="intro">تتقدم إدارة المدرسة بخالص الشكر والتقدير للطالب</p>'+
+      '<div class="name">'+esc(st.name||'')+'</div>'+
+      '<div class="meta">الصف: <b>'+esc(grade)+'</b> &nbsp; | &nbsp; الفصل: <b>'+esc(classroom)+'</b></div>'+
+      '<p class="body">تقديرًا لانتظامه وحرصه على الحضور والانضباط خلال الفترة السابقة'+(week?' وحتى الأسبوع الدراسي '+esc(week):'')+'، متمنين له دوام التوفيق والتميز والنجاح.</p>'+
+      '<div class="foot"><span>'+esc(dateText)+'</span><span>مدير المدرسة<br><b>'+esc(manager)+'</b></span></div>'+
+      '</section>';
+    }).join('');
+    const w=window.open('','_blank');
+    if(!w){alert('اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');return}
+    w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
+    '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.bar{text-align:center;padding:10px;background:#fff}.bar button{background:#0f7665;color:#fff;border:0;border-radius:10px;padding:12px 26px;font-size:18px;font-weight:800}.cert{width:277mm;min-height:190mm;margin:10mm auto;background:#fff;border:3px solid #c49a2c;padding:16mm 20mm;text-align:center;position:relative}.logos{display:flex;justify-content:space-between;height:25mm}.logos img{max-width:28mm;max-height:24mm}.authority{font-size:16px}.school{font-size:20px;font-weight:800}h1{font-size:38px;color:#98700b;margin:12px 0 4px}.medal{font-size:42px}.intro{font-size:21px}.name{font-size:34px;font-weight:900;color:#0f6f60;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:18px;margin-top:10px}.body{font-size:21px;line-height:2;max-width:900px;margin:18px auto}.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px;font-size:17px}.break{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.bar{display:none}.cert{width:auto;min-height:185mm;margin:0;page-break-after:always}.cert:last-child{page-break-after:auto}}'+
+    '</style></head><body><div class="bar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
+    w.document.close();
+  }
+  function bind(){
+    const btn=document.getElementById('weeklyAttThanksCertificateBtn');
+    if(btn && !btn.dataset.boundThanks){btn.dataset.boundThanks='1';btn.addEventListener('click',openCertificates);}
+  }
+  bind();
+  document.addEventListener('DOMContentLoaded',bind,{once:true});
+  setTimeout(bind,300);
 })();
 </script>
 </body>
