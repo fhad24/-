@@ -14422,7 +14422,9 @@ async function renderAttendancePage(){
       return;
     }
 
-    if(attendanceListView==='present'){
+    // الأدمن/المشرف يرى الحضور مجمعًا حسب الفصل.
+    // المستخدم العادي يرى الطلاب كسجلات فردية حتى يظهر مربع التحديد بجانب كل طالب مثل التأخر اليومي.
+    if(attendanceListView==='present' && ownerView){
       const classMap=new Map();
 
       rows.forEach(x=>{
