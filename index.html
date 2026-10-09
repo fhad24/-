@@ -15756,16 +15756,18 @@ async function renderAttendanceStudentList(){
     return `
     <div class="att-student-row ${(attendanceMode==='present'||attendanceMode==='late')?'has-present-select':''} ${String(attendanceSelectedId)===String(s.idno)?'selected':''}" data-id="${s.idno}">
       <div class="att-student-main">
-        <div class="att-name-line"><b>${s.name}</b></div>
+        <div class="att-name-line">
+          ${(attendanceMode==='present'||attendanceMode==='late')?`<label class="att-student-select-check att-name-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
+          <b>${s.name}</b>
+        </div>
         <span class="att-inline-performance">
           <span class="att-inline-late">⏰ ${perf.late}</span>
           <span class="att-inline-absent">✕ ${perf.absent}</span>
         </span>
       </div>
       <div class="att-student-class-cell">${s.grade||'—'} / ${displayStudentClassroom(s.classroom)}</div>
-      <div class="att-student-photo-wrap ${(attendanceMode==='present'||attendanceMode==='late')?'with-select':''}">
+      <div class="att-student-photo-wrap">
         ${photoHTML}
-        ${(attendanceMode==='present'||attendanceMode==='late')?`<label class="att-student-select-check" title="تحديد الطالب"><input type="checkbox" class="attendance-present-student-select" data-select-id="${s.idno}" ${attendancePresentSelectedIds.has(String(s.idno))?'checked':''}></label>`:''}
       </div>
       <div class="att-student-id-cell">${s.idno||'—'}</div>
     </div>`;
@@ -21298,5 +21300,42 @@ setTimeout(refreshStudentDataReviewCount,900);
 }
 @media(max-width:760px){
   .attendance-session-controls{grid-template-columns:1fr!important}
+}
+</style>
+
+<style id="attendance-checkbox-name-fix">
+#attendanceStudentList .att-name-line{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  direction:rtl!important;
+}
+#attendanceStudentList .att-name-select-check{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:24px!important;
+  min-width:24px!important;
+  height:24px!important;
+  margin:0!important;
+  padding:0!important;
+  position:static!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+#attendanceStudentList .att-name-select-check input.attendance-present-student-select{
+  display:block!important;
+  width:22px!important;
+  min-width:22px!important;
+  height:22px!important;
+  min-height:22px!important;
+  margin:0!important;
+  opacity:1!important;
+  visibility:visible!important;
+  appearance:auto!important;
+  -webkit-appearance:checkbox!important;
+  accent-color:#0f7665!important;
+  cursor:pointer!important;
 }
 </style>
