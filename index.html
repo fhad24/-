@@ -19975,6 +19975,36 @@ setTimeout(refreshStudentDataReviewCount,900);
     const style=document.createElement('style');
     style.id='globalViewportCloseStyle';
     style.textContent=`
+      /* الزر الأصلي داخل كل نافذة يبقى مثبتًا داخل منطقة التمرير */
+      .attendance-modal-card > .attendance-modal-close,
+      .add-student-modal-card > .modal-close-x,
+      .camera-live-card > .modal-close-x,
+      .pending-photo-close,
+      .present-attendance-group-close {
+        position:sticky!important;
+        top:8px!important;
+        left:8px!important;
+        right:auto!important;
+        float:left!important;
+        z-index:2147483646!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        width:46px!important;
+        height:46px!important;
+        min-width:46px!important;
+        min-height:46px!important;
+        margin:0 0 8px 0!important;
+        background:#fff!important;
+        color:#173b34!important;
+        border:2px solid #0f7665!important;
+        border-radius:50%!important;
+        box-shadow:0 6px 18px rgba(0,0,0,.28)!important;
+        opacity:1!important;
+        visibility:visible!important;
+        pointer-events:auto!important;
+      }
+
       #globalViewportClose{
         position:fixed!important;
         top:12px!important;
@@ -20074,6 +20104,11 @@ setTimeout(refreshStudentDataReviewCount,900);
     proxy.onclick=(e)=>{
       e.preventDefault();
       e.stopPropagation();
+      const attendance=document.getElementById('attendanceStudentModal');
+      if(attendance && !attendance.classList.contains('hidden')){
+        const btn=document.getElementById('closeAttendanceModal');
+        if(btn){ btn.click(); setTimeout(refreshProxy,0); return; }
+      }
       const target=activeClose&&isVisible(activeClose)?activeClose:findActiveClose();
       if(target) target.click();
       setTimeout(refreshProxy,0);
@@ -20096,7 +20131,13 @@ setTimeout(refreshStudentDataReviewCount,900);
         return s.display!=='none' && s.visibility!=='hidden';
       });
 
-    proxy.classList.toggle('show',!!activeClose || anyOpenModal);
+    const attendanceOpen=(()=>{
+      const m=document.getElementById('attendanceStudentModal');
+      if(!m || m.classList.contains('hidden')) return false;
+      const s=getComputedStyle(m);
+      return s.display!=='none' && s.visibility!=='hidden';
+    })();
+    proxy.classList.toggle('show',!!activeClose || anyOpenModal || attendanceOpen);
 
     // في حال تعذر العثور على زر أصلي مؤقتًا، اربطه مباشرة بلوحة الحضور المفتوحة.
     if(!activeClose && anyOpenModal){
