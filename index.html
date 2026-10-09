@@ -3582,6 +3582,16 @@
     .teacher-photo-preview{display:none;max-width:100%;max-height:420px;margin:12px auto 0;border-radius:14px;border:1px solid #d5e5e0}
     .teacher-followup-history{display:grid;gap:12px}
     .manager-followup-list{margin-top:14px;overflow-x:auto}
+    .teacher-manager-live-badge{
+      display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;
+      background:#e8f7f1;border:1px solid #bfe3d7;color:#0b6b5d;font-size:11px;font-weight:900
+    }
+    .manager-followup-table td:nth-child(4),
+    .manager-followup-table td:nth-child(5),
+    .manager-followup-table td:nth-child(6),
+    .manager-followup-table td:nth-child(7){
+      font-weight:900;color:#173b34;background:#fbfefd
+    }
     .manager-followup-table{width:100%;min-width:1220px;border-collapse:separate;border-spacing:0;border:1px solid #d4e3df;border-radius:14px;overflow:hidden;background:#fff}
     .manager-followup-table th{background:#eaf6f2;color:#17483f;font-size:12px;font-weight:900;padding:10px 8px;border-bottom:1px solid #cfe1dc;white-space:nowrap;text-align:center}
     .manager-followup-table td{padding:9px 8px;border-bottom:1px solid #e4ece9;border-left:1px solid #edf2f0;vertical-align:middle;text-align:center;font-size:11px;color:#36564f}
@@ -4982,10 +4992,10 @@ body.activity-leader-open main{
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
-          <h2 style="margin:0">متابعة المدير للمعلمين</h2>
-          <div class="hint" style="text-align:right;font-size:12px">تظهر هنا المتابعات المرسلة من المعلمين مع صورة السبورة والملاحظات، ويمكن إرسال رسالة شكر للمعلم.</div>
+          <h2 style="margin:0">متابعة المعلمين داخل الفصول</h2>
+          <div class="hint" style="text-align:right;font-size:12px">تظهر هنا تلقائيًا جميع إدخالات المعلمين: المادة، الحصة، الصف، الفصل، التاريخ والوقت، الملاحظات وصورة السبورة. هذه شاشة اطلاع للمدير والأدمن والوكلاء ولا تحتوي على تشغيل كاميرا.</div>
         </div>
-        <button type="button" class="btn btn-soft" id="teacherClassManagerRefresh">تحديث المتابعات</button>
+        <div class="teacher-manager-live-badge">● تحديث تلقائي</div>
       </div>
       <div id="teacherClassManagerList" class="manager-followup-list">
         <div class="hint">جاري تحميل المتابعات...</div>
@@ -7378,6 +7388,30 @@ function removeVisibleReportButtons(){
   }catch(e){}
 }
 
+function isTeacherClassSupervisor(){
+  const u=getCurrentLoggedAdminUser?.()||{};
+  const role=String(u.role||'').trim();
+  const perms=new Set(Array.isArray(u.permissions)?u.permissions:[]);
+  return !!(isCurrentOwner?.() || role==='مدير' || role==='وكيل' || perms.has('teacherFollowupManager'));
+}
+
+let teacherClassManagerAutoRefreshTimer=null;
+function startTeacherClassManagerAutoRefresh(){
+  if(teacherClassManagerAutoRefreshTimer) clearInterval(teacherClassManagerAutoRefreshTimer);
+  teacherClassManagerAutoRefreshTimer=setInterval(()=>{
+    const page=$('teacherClassManager');
+    if(page && !page.classList.contains('hidden') && typeof loadTeacherClassManagerFollowups==='function'){
+      loadTeacherClassManagerFollowups().catch(()=>{});
+    }
+  },15000);
+}
+function stopTeacherClassManagerAutoRefresh(){
+  if(teacherClassManagerAutoRefreshTimer){
+    clearInterval(teacherClassManagerAutoRefreshTimer);
+    teacherClassManagerAutoRefreshTimer=null;
+  }
+}
+
 function configureUserDashboard(){
   removeVisibleReportButtons();
   const portal=$('userPermissionPortal');
@@ -7493,7 +7527,7 @@ function configureUserDashboard(){
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
-    ['teacherFollowup','متابعة المعلم داخل الفصل 📸','teacherFollowup'],
+    ['teacherFollowup','متابعة المعلم داخل الفصل 👨‍🏫','teacherFollowup'],
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
@@ -7581,7 +7615,7 @@ function configureUserDashboard(){
       return;
     }
     if(action==='teacherFollowup'){
-      openInternalPage('teacherClassFollowup');
+      openInternalPage(isTeacherClassSupervisor()?'teacherClassManager':'teacherClassFollowup');
       return;
     }
     if(action==='teacherFollowupManager'){
@@ -9783,24 +9817,33 @@ function openInternalPage(pageId){
   if(pageId==='teacherClassFollowup'){
     const u=getCurrentLoggedAdminUser();
     const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
+    if(isTeacherClassSupervisor()){
+      $('teacherClassFollowup')?.classList.add('hidden');
+      setTimeout(()=>openInternalPage('teacherClassManager'),0);
+      return;
+    }
     if(!isCurrentOwner() && !perms.has('teacherFollowup')){
       $('teacherClassFollowup')?.classList.add('hidden');
       alert('لا توجد لديك صلاحية متابعة المعلم داخل الفصل.');
       openAdminDashboardInternal();
       return;
     }
+    stopTeacherClassManagerAutoRefresh();
     if(typeof initTeacherClassFollowupPage==='function') setTimeout(initTeacherClassFollowupPage,0);
   }
   if(pageId==='teacherClassManager'){
     const u=getCurrentLoggedAdminUser();
     const perms=new Set(Array.isArray(u?.permissions)?u.permissions:[]);
-    if(!isCurrentOwner() && !perms.has('teacherFollowupManager')){
+    if(!isTeacherClassSupervisor() && !perms.has('teacherFollowupManager')){
       $('teacherClassManager')?.classList.add('hidden');
-      alert('لا توجد لديك صلاحية متابعة المدير للمعلمين.');
+      alert('لا توجد لديك صلاحية الاطلاع على متابعات المعلمين.');
       openAdminDashboardInternal();
       return;
     }
-    if(typeof loadTeacherClassManagerFollowups==='function') setTimeout(loadTeacherClassManagerFollowups,0);
+    if(typeof loadTeacherClassManagerFollowups==='function') setTimeout(async()=>{
+      await loadTeacherClassManagerFollowups();
+      startTeacherClassManagerAutoRefresh();
+    },0);
   }
   if(pageId==='followup'){
     const u=getCurrentLoggedAdminUser();
@@ -20353,7 +20396,12 @@ async function restoreLastAppLocation(){
     studentTransferManager:'addStudent',
     activityLeaderPage:'activityLeader'
   };
-  if(!owner && allowedMap[page] && !perms.has(allowedMap[page])) page='admin';
+  if(!owner && allowedMap[page] && !perms.has(allowedMap[page])){
+    const role=String(u.role||'').trim();
+    const supervisorPage=(page==='teacherClassManager' || page==='teacherClassFollowup') && (role==='مدير'||role==='وكيل');
+    if(!supervisorPage) page='admin';
+    else if(page==='teacherClassFollowup') page='teacherClassManager';
+  }
 
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   if(page==='admin'){
@@ -20383,6 +20431,9 @@ let cloudPeriodicSyncTimer=setInterval(()=>{
 },600000);
 let lastFocusCloudRefresh=0;
 window.addEventListener('focus',()=>{
+  if($('teacherClassManager') && !$('teacherClassManager').classList.contains('hidden') && typeof loadTeacherClassManagerFollowups==='function'){
+    loadTeacherClassManagerFollowups().catch(()=>{});
+  }
   if(Date.now()-lastFocusCloudRefresh<120000) return;
   lastFocusCloudRefresh=Date.now();
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
