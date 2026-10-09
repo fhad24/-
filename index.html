@@ -13389,31 +13389,75 @@ function weeklyAttWeekDates(anchorValue){
     const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;
   });
 }
+const WEEKLY_FIXED_HIJRI_WEEKS={
+  '1':['1448-03-10','1448-03-11','1448-03-12','1448-03-13','1448-03-14'],
+  '2':['1448-03-17','1448-03-18','1448-03-19','1448-03-20','1448-03-21'],
+  '3':['1448-03-24','1448-03-25','1448-03-26','1448-03-27','1448-03-28'],
+  '4':['1448-04-02','1448-04-03','1448-04-04','1448-04-05','1448-04-06'],
+  '5':['1448-04-09','1448-04-10','1448-04-11','1448-04-12','1448-04-13'],
+  '6':['1448-04-16','1448-04-17','1448-04-18','1448-04-19','1448-04-20'],
+  '7':['1448-04-23','1448-04-24','1448-04-25','1448-04-26','1448-04-27'],
+  '8':['1448-04-30','1448-05-01','1448-05-02','1448-05-03','1448-05-04'],
+  '9':['1448-05-07','1448-05-08','1448-05-09','1448-05-10','1448-05-11'],
+  '10':['1448-05-14','1448-05-15','1448-05-16','1448-05-17','1448-05-18'],
+  '11':['1448-05-21','1448-05-22','1448-05-23','1448-05-24','1448-05-25'],
+  '12':['1448-05-28','1448-05-29','1448-05-30','1448-06-01','1448-06-02'],
+  '13':['1448-06-05','1448-06-06','1448-06-07','1448-06-08','1448-06-09'],
+  '14':['1448-06-19','1448-06-20','1448-06-21','1448-06-22','1448-06-23'],
+  '15':['1448-06-26','1448-06-27','1448-06-28','1448-06-29','1448-07-01'],
+  '16':['1448-07-04','1448-07-05','1448-07-06','1448-07-07','1448-07-08'],
+  '17':['1448-07-11','1448-07-12','1448-07-13','1448-07-14','1448-07-15'],
+  '18':['1448-07-18','1448-07-19','1448-07-20','1448-07-21','1448-07-22'],
+  '19':['1448-07-25','1448-07-26','1448-07-27','1448-07-28','1448-07-29']
+};
+let __weeklyHijriToGregorianCache={};
+function weeklyAttGregorianFromHijri(hijriKey){
+  const key=String(hijriKey||'');
+  if(__weeklyHijriToGregorianCache[key]) return __weeklyHijriToGregorianCache[key];
+  const fmt=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit'});
+  const start=new Date('2026-08-01T12:00:00');
+  const end=new Date('2027-02-28T12:00:00');
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+    const parts=fmt.formatToParts(d);
+    const y=parts.find(p=>p.type==='year')?.value||'';
+    const m=String(parts.find(p=>p.type==='month')?.value||'').padStart(2,'0');
+    const day=String(parts.find(p=>p.type==='day')?.value||'').padStart(2,'0');
+    if(y+'-'+m+'-'+day===key){
+      const out=weeklyAttDateKey(d);
+      __weeklyHijriToGregorianCache[key]=out;
+      return out;
+    }
+  }
+  return '';
+}
+function weeklyAttFixedWeekGregorianDates(week){
+  return (WEEKLY_FIXED_HIJRI_WEEKS[String(week)]||[]).map(weeklyAttGregorianFromHijri).filter(Boolean);
+}
 const WEEKLY_IMPORTED_WEEK_ANCHORS={
-  '1':'2026-08-23',
-  '2':'2026-08-30',
-  '3':'2026-09-06'
+  '1':weeklyAttGregorianFromHijri('1448-03-10'),
+  '2':weeklyAttGregorianFromHijri('1448-03-17'),
+  '3':weeklyAttGregorianFromHijri('1448-03-24')
 };
 function weeklyAttApplySelectedWeekDate(){
   const week=String($('weeklyAttWeek')?.value||'');
-  const anchor=WEEKLY_IMPORTED_WEEK_ANCHORS[week];
-  if(!anchor) return false;
+  const dates=weeklyAttFixedWeekGregorianDates(week);
+  if(!dates.length) return false;
 
   // الأسابيع 1-3 المستوردة تخص الصف الثاني الثانوي.
-  const gradeEl=$('weeklyAttGrade');
-  if(gradeEl && gradeEl.value!=='الثاني الثانوي'){
-    const hasSecond=[...gradeEl.options].some(o=>o.value==='الثاني الثانوي');
-    if(hasSecond){
-      gradeEl.value='الثاني الثانوي';
-      populateWeeklyAttendanceClasses();
+  if(['1','2','3'].includes(week)){
+    const gradeEl=$('weeklyAttGrade');
+    if(gradeEl && gradeEl.value!=='الثاني الثانوي'){
+      const hasSecond=[...gradeEl.options].some(o=>o.value==='الثاني الثانوي');
+      if(hasSecond){
+        gradeEl.value='الثاني الثانوي';
+        populateWeeklyAttendanceClasses();
+      }
     }
   }
 
   const day=Math.max(0,Math.min(4,Number($('weeklyAttDay')?.value||0)));
-  const d=new Date(anchor+'T12:00:00');
-  d.setDate(d.getDate()+day);
   const input=$('weeklyAttDate');
-  if(input) input.value=weeklyAttDateKey(d);
+  if(input) input.value=dates[day]||dates[0];
   updateWeeklyAttHijriDisplay();
   return true;
 }
@@ -13488,7 +13532,10 @@ function weeklyAttStudentInScope(student){
 }
 function weeklyAttActiveDates(){
   const today=weeklyAttDateKey(new Date());
+  const fixedDates=Object.keys(WEEKLY_FIXED_HIJRI_WEEKS)
+    .flatMap(week=>weeklyAttFixedWeekGregorianDates(week));
   return [...new Set([
+    ...fixedDates,
     ...weeklyAttScopedRows().map(x=>String(x.date||'')),
     ...WEEKLY_IMPORTED_ABSENCE_DATES
   ].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d) && d<=today))].sort();
@@ -13502,19 +13549,16 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   if(importedStatus==='absent') return true;
   if(importedStatus==='present') return false;
 
-  // للمستخدم العادي نعتمد فقط تحضيره هو ومادته، فلا يؤثر تحضير أي معلم آخر.
-  const cohortIds=new Set(
-    allStudents
-      .filter(s=>studentGradeKey(s.grade)===studentGradeKey(student.grade) &&
-                 studentClassKey(s.classroom)===studentClassKey(student.classroom))
-      .map(s=>String(s.idno))
-  );
-  const dayRows=weeklyAttScopedRows().filter(x=>String(x.date)===key);
-  const cohortAttendanceStarted=dayRows.some(x=>cohortIds.has(String(x.idno)));
-  if(!cohortAttendanceStarted) return false;
+  const rows=weeklyAttScopedRows().filter(x=>String(x.idno)===String(idno) && String(x.date)===key);
+  if(rows.some(x=>x.status==='present'||x.status==='late')) return false;
+  if(rows.some(x=>x.status==='absent')) return true;
 
-  const rows=dayRows.filter(x=>String(x.idno)===String(idno));
-  return !rows.some(x=>x.status==='present'||x.status==='late');
+  // أي يوم دراسي سابق في التقويم الثابت بلا حضور أو تأخر يُحسب غيابًا.
+  const today=weeklyAttDateKey(new Date());
+  if(key>today) return false;
+  const fixedDay=Object.keys(WEEKLY_FIXED_HIJRI_WEEKS)
+    .some(week=>weeklyAttFixedWeekGregorianDates(week).includes(key));
+  return fixedDay;
 }
 function weeklyAttStatusForStudent(idno,dateKey){
   const student=getStudents().find(s=>String(s.idno)===String(idno));
@@ -13718,7 +13762,8 @@ function renderWeeklyAttendanceReport(){
   const week=String($('weeklyAttWeek')?.value||'1');
   const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
   const selectedDay=Number($('weeklyAttDay')?.value||0);
-  const dates=weeklyAttWeekDates(anchor);
+  const fixedDates=weeklyAttFixedWeekGregorianDates(week);
+  const dates=fixedDates.length?fixedDates.map(x=>new Date(x+'T12:00:00')):weeklyAttWeekDates(anchor);
   const searchRaw=String($('weeklyAttStudentSearch')?.value||'').trim();
   const searchNorm=searchRaw.toLowerCase().replace(/\s+/g,' ');
   const students=getStudents()
