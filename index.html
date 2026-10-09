@@ -3565,7 +3565,7 @@
     }
 
 
-    /* متابعة المعلم داخل الفصل */
+    /* شواهد المعلم داخل الفصل */
     .teacher-class-page{max-width:1250px;margin:0 auto}
     .teacher-class-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
     .teacher-class-grid .wide{grid-column:span 2}
@@ -4156,7 +4156,7 @@ body.activity-leader-open main{
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
-    <button type="button" id="headerTeacherClassFollowupBtn">متابعة المعلم داخل الفصل 📸</button>
+    <button type="button" id="headerTeacherClassFollowupBtn">شواهد المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerActivityLeaderBtn">رائد النشاط ⭐</button>
     <button type="button" id="headerSettingsBtn">الإعدادات ⚙️</button>
@@ -4900,7 +4900,7 @@ body.activity-leader-open main{
 <section id="teacherClassFollowup" class="page hidden">
   <div class="teacher-class-page">
     <div class="card">
-      <h2 style="text-align:center;margin-bottom:6px">متابعة المعلم داخل الفصل</h2>
+      <h2 style="text-align:center;margin-bottom:6px">شواهد المعلم داخل الفصل</h2>
       <div class="hint" style="font-size:12px;margin-bottom:16px">أدخل بيانات الحصة وأرفق صورة من السبورة بالجوال، وسيتم تسجيل اسم المعلم والتاريخ والوقت تلقائيًا.</div>
 
       <div class="teacher-class-auto">
@@ -7527,7 +7527,7 @@ function configureUserDashboard(){
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
-    ['teacherFollowup','متابعة المعلم داخل الفصل 👨‍🏫','teacherFollowup'],
+    ['teacherFollowup','شواهد المعلم داخل الفصل 👨‍🏫','teacherFollowup'],
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
     ['referralReview','ردود الوكلاء 📬','referralReview'],
@@ -9824,7 +9824,7 @@ function openInternalPage(pageId){
     }
     if(!isCurrentOwner() && !perms.has('teacherFollowup')){
       $('teacherClassFollowup')?.classList.add('hidden');
-      alert('لا توجد لديك صلاحية متابعة المعلم داخل الفصل.');
+      alert('لا توجد لديك صلاحية شواهد المعلم داخل الفصل.');
       openAdminDashboardInternal();
       return;
     }
@@ -11863,7 +11863,7 @@ function ensureAdminSettings(){
           <label class="admin-permission">متابعة دخول منصة مدرستي <input class="admin-new-perm" value="madrasati" type="checkbox" checked></label>
           <label class="admin-permission">كشوف متابعة الطلاب <input class="admin-new-perm" value="followupSheets" type="checkbox"></label>
           <label class="admin-permission">تحويل طالب لوكيل شؤون الطلاب <input class="admin-new-perm" value="referralSubmit" type="checkbox"></label>
-          <label class="admin-permission">متابعة المعلم داخل الفصل <input class="admin-new-perm" value="teacherFollowup" type="checkbox"></label>
+          <label class="admin-permission">شواهد المعلم داخل الفصل <input class="admin-new-perm" value="teacherFollowup" type="checkbox"></label>
           <label class="admin-permission">متابعة المدير للمعلمين <input class="admin-new-perm" value="teacherFollowupManager" type="checkbox"></label>
           <label class="admin-permission">ردود الوكلاء <input class="admin-new-perm" id="newReferralReviewPerm" value="referralReview" type="checkbox"></label>
           <label class="admin-permission">نسخة احتياطية ZIP <input class="admin-new-perm" value="backupZip" type="checkbox"></label>
@@ -12491,7 +12491,7 @@ function renderAdminUsersSettings(){
     photos:'تصوير الطلاب لإضافة الصور',
     followupSheets:'كشوف متابعة الطلاب',
     referralSubmit:'تحويل طالب لوكيل شؤون الطلاب',
-    teacherFollowup:'متابعة المعلم داخل الفصل',
+    teacherFollowup:'شواهد المعلم داخل الفصل',
     teacherFollowupManager:'متابعة المدير للمعلمين',
     referralReview:'ردود الوكلاء',
     backupZip:'نسخة احتياطية ZIP',
@@ -12600,7 +12600,7 @@ function openUserPermissionEditor(username){
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
     ['followupSheets','كشوف متابعة الطلاب'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب'],
-    ['teacherFollowup','متابعة المعلم داخل الفصل'],
+    ['teacherFollowup','شواهد المعلم داخل الفصل'],
     ['teacherFollowupManager','متابعة المدير للمعلمين'],
     ['referralReview','رد وكيل شؤون الطلاب على التحويلات'],
     ['backupZip','نسخة احتياطية ZIP']
