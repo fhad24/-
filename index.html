@@ -1286,7 +1286,8 @@
     }
 
 
-    .admin-settings-overlay{position:fixed;inset:0;z-index:1000;background:#fff;overflow:auto;padding:28px 22px 48px;direction:rtl}
+    .admin-settings-overlay{position:fixed;inset:0;z-index:1000;background:#fff;overflow:auto;padding:28px 22px 48px;direction:rtl;scrollbar-width:none;-ms-overflow-style:none}
+    .admin-settings-overlay::-webkit-scrollbar{width:0;height:0;display:none}
     .admin-settings-wrap{max-width:980px;margin:auto}
     .admin-settings-head{position:relative;text-align:center}
     .admin-settings-head h2{font-size:30px;margin:0 0 18px;color:#082d29}
