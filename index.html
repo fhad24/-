@@ -1395,7 +1395,9 @@
     .attendance-bulk-tools button{border:1px solid #0f7665;background:#fff;color:#0f7665;border-radius:12px;padding:9px 13px;font-family:inherit;font-weight:800;cursor:pointer}
     .attendance-bulk-tools .wa{background:#18a558;color:#fff;border-color:#18a558}
     .attendance-row-check{display:flex;align-items:center;justify-content:center}
-    .attendance-row-check input{width:18px;height:18px;accent-color:#0f7665}
+    .attendance-row-check input{width:20px;height:20px;accent-color:#0f7665;cursor:pointer}
+    .attendance-present-select-cell{width:70px;min-width:70px;text-align:center}
+    .attendance-present-select-cell .attendance-row-check{width:100%;min-height:42px;display:flex;align-items:center;justify-content:center}
     .attendance-period-chip{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:999px;background:#eef5f3;color:#0f7665;font-size:11px;font-weight:800}
     .attendance-edit-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
     .attendance-edit-grid label{display:block;font-weight:700;margin-bottom:6px}
@@ -14570,7 +14572,7 @@ async function renderAttendancePage(){
       const isAbsentRow=attendanceListView==='absent';
       const canModify=x._autoAbsent?ownerView:attendanceUserCanModifyRow(x);
       const nameCheck=isPresentRow
-        ? (canModify?`<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`:'')
+        ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-present-select" data-att-index="${x._index}"></label>`
         : ((isLateRow||isAbsentRow) && !x._autoAbsent)
           ? `<label class="attendance-row-check attendance-name-check" title="تحديد"><input type="checkbox" class="attendance-wa-select" data-att-index="${x._index}"></label>`
           : '';
