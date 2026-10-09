@@ -5856,6 +5856,61 @@ body.activity-leader-open main{
 
 
     <div class="attendance-session-controls hidden">
+      <div class="attendance-session-field attendance-session-period">
+        <label for="attendancePeriodSelect">🕒 الحصة</label>
+        <select id="attendancePeriodSelect">
+          <option value="">اختر الحصة</option>
+          <option value="1">الحصة الأولى</option>
+          <option value="2">الحصة الثانية</option>
+          <option value="3">الحصة الثالثة</option>
+          <option value="4">الحصة الرابعة</option>
+          <option value="5">الحصة الخامسة</option>
+          <option value="6">الحصة السادسة</option>
+          <option value="7">الحصة السابعة</option>
+        </select>
+      </div>
+      <div class="attendance-session-field attendance-session-subject">
+        <label for="attendanceSubjectSelect">📚 المادة</label>
+        <select id="attendanceSubjectSelect">
+          <option value="">اختر المادة</option>
+          <option>كفايات لغوية</option>
+          <option>الكفايات اللغوية</option>
+          <option>القرآن الكريم وتفسيره</option>
+          <option>الرياضيات</option>
+          <option>الكيمياء</option>
+          <option>الأحياء</option>
+          <option>اللغة الإنجليزية</option>
+          <option>التفكير الناقد</option>
+          <option>التقنية الرقمية</option>
+          <option>التربية الصحية والبدنية</option>
+          <option>الفيزياء</option>
+          <option>التاريخ</option>
+          <option>التوحيد</option>
+          <option>الفنون</option>
+          <option>اللياقة</option>
+          <option>الثقافة الصحية</option>
+          <option>مواد متقدمة في البرمجة</option>
+          <option>هندسة البرمجيات</option>
+          <option>العلوم الطبية الحيوية</option>
+          <option>الأحياء المتقدمة</option>
+          <option>التشريح</option>
+          <option>الصحة العامة</option>
+          <option>مبادئ الإدارة</option>
+          <option>الاقتصاد</option>
+          <option>المحاسبة</option>
+          <option>التقنية الرقمية للأعمال</option>
+          <option>الفقه</option>
+          <option>التفسير</option>
+          <option>الحديث</option>
+          <option>الأصول</option>
+          <option>الدراسات الإسلامية</option>
+          <option>اللغة العربية</option>
+          <option>الحاسب الآلي</option>
+          <option>مكتبات</option>
+          <option>التربية الاجتماعية والوطنية</option>
+          <option>أخرى</option>
+        </select>
+      </div>
       <div class="attendance-session-field attendance-session-teacher">
         <label for="attendanceTeacherSelect">👤 اسم المعلم</label>
         <select id="attendanceTeacherSelect">
@@ -21221,3 +21276,11 @@ setTimeout(refreshStudentDataReviewCount,900);
 </script>
 </body>
 </html>
+<style id="attendance-admin-session-fields-fix">
+.attendance-session-controls{
+  grid-template-columns:minmax(160px,.75fr) minmax(240px,1.15fr) minmax(220px,1fr)!important;
+}
+@media(max-width:760px){
+  .attendance-session-controls{grid-template-columns:1fr!important}
+}
+</style>
