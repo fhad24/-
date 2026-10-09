@@ -4614,7 +4614,7 @@ body.activity-leader-open main{
         <div>
           <label>الأسبوع الدراسي</label>
           <select id="followupWeek">
-            <option value="1">الأسبوع 1</option><option value="2">الأسبوع 2</option><option value="3">الأسبوع 3</option><option value="4">الأسبوع 4</option><option value="5">الأسبوع 5</option><option value="6">الأسبوع 6</option><option value="7">الأسبوع 7</option><option value="8">الأسبوع 8</option><option value="9">الأسبوع 9</option><option value="10">الأسبوع 10</option><option value="11">الأسبوع 11</option><option value="12">الأسبوع 12</option><option value="13">الأسبوع 13</option><option value="14">الأسبوع 14</option><option value="15">الأسبوع 15</option><option value="16">الأسبوع 16</option><option value="17">الأسبوع 17</option><option value="18">الأسبوع 18</option><option value="19">الأسبوع 19</option><option value="20">الأسبوع 20</option>
+            <option value="1">الأسبوع 1 — 10 إلى 14/3/1448هـ</option><option value="2">الأسبوع 2 — 17 إلى 21/3/1448هـ</option><option value="3">الأسبوع 3 — 24 إلى 28/3/1448هـ</option><option value="4">الأسبوع 4</option><option value="5">الأسبوع 5</option><option value="6">الأسبوع 6</option><option value="7">الأسبوع 7</option><option value="8">الأسبوع 8</option><option value="9">الأسبوع 9</option><option value="10">الأسبوع 10</option><option value="11">الأسبوع 11</option><option value="12">الأسبوع 12</option><option value="13">الأسبوع 13</option><option value="14">الأسبوع 14</option><option value="15">الأسبوع 15</option><option value="16">الأسبوع 16</option><option value="17">الأسبوع 17</option><option value="18">الأسبوع 18</option><option value="19">الأسبوع 19</option><option value="20">الأسبوع 20</option>
           </select>
         </div>
         <div>
@@ -13378,6 +13378,23 @@ function weeklyAttWeekDates(anchorValue){
     const d=new Date(sunday);d.setDate(sunday.getDate()+i);return d;
   });
 }
+const WEEKLY_IMPORTED_WEEK_ANCHORS={
+  '1':'2026-08-23',
+  '2':'2026-08-30',
+  '3':'2026-09-06'
+};
+function weeklyAttApplySelectedWeekDate(){
+  const week=String($('weeklyAttWeek')?.value||'');
+  const anchor=WEEKLY_IMPORTED_WEEK_ANCHORS[week];
+  if(!anchor) return false;
+  const day=Math.max(0,Math.min(4,Number($('weeklyAttDay')?.value||0)));
+  const d=new Date(anchor+'T12:00:00');
+  d.setDate(d.getDate()+day);
+  const input=$('weeklyAttDate');
+  if(input) input.value=weeklyAttDateKey(d);
+  updateWeeklyAttHijriDisplay();
+  return true;
+}
 const WEEKLY_IMPORTED_ABSENCE_DATES=[
   '2026-08-23','2026-08-24','2026-08-25','2026-08-26','2026-08-27',
   '2026-08-30','2026-08-31','2026-09-01','2026-09-02','2026-09-03',
@@ -13649,9 +13666,14 @@ function setWeeklyAttDayFromDate(){
 }
 function adjustWeeklyAttDateToDay(){
   const dateEl=$('weeklyAttDate'); if(!dateEl)return;
+  if(weeklyAttApplySelectedWeekDate()){
+    renderWeeklyAttendanceReport();
+    return;
+  }
   const dates=weeklyAttWeekDates(dateEl.value);
   const idx=Number($('weeklyAttDay')?.value||0);
   dateEl.value=weeklyAttDateKey(dates[Math.max(0,Math.min(4,idx))]);
+  updateWeeklyAttHijriDisplay();
   renderWeeklyAttendanceReport();
 }
 function renderWeeklyAttendanceReport(){
@@ -14042,7 +14064,11 @@ if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeek
 if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{populateWeeklyAttendanceClasses();populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{populateWeeklyAttAnalyticsStudents();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
-if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=renderWeeklyAttendanceReport;
+if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
+  weeklyAttApplySelectedWeekDate();
+  renderWeeklyAttendanceReport();
+  renderWeeklyAttAnalytics();
+};
 if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{updateWeeklyAttHijriDisplay();setWeeklyAttDayFromDate();renderWeeklyAttendanceReport();renderWeeklyAttAnalytics()};
 if($('weeklyAttHijriOpen')) $('weeklyAttHijriOpen').onclick=()=>{
   const popup=$('weeklyAttHijriPopup');
