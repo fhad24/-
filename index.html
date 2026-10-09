@@ -11845,6 +11845,16 @@ function ensureAdminSettings(){
       <div class="admin-settings-pane" data-settings-pane="users">
         <p class="admin-settings-desc">كل من لديه اسم مستخدم وكلمة مرور من هذه القائمة يستطيع الدخول إلى لوحة الإدارة بحسب صلاحياته.</p>
 
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 14px">
+          <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+          <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin:0">📥 استيراد معلمين من Excel</button>
+          <input id="teacherSpecialtiesInput" class="hidden" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf">
+          <button class="admin-settings-save" id="importTeacherSpecialtiesBtn" type="button" style="background:#e8f0ff;color:#234a91;margin:0">📚 استيراد تخصصات المعلمين<br><small style="font-weight:700">PDF + Excel + CSV</small></button>
+          <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin:0">🔐 جعل كلمة المرور = السجل المدني</button>
+        </div>
+        <div id="teacherSpecialtiesStatus" class="hint" style="font-size:13px;text-align:center;margin:0 0 8px"></div>
+        <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin:0 0 8px"></div>
+
         <div class="admin-user-tools">
           <input id="adminUserSearch" placeholder="🔎 ابحث باسم المعلم أو السجل المدني">
           <select id="importedTeacherSelect">
@@ -11853,14 +11863,6 @@ function ensureAdminSettings(){
         </div>
 
         <div id="adminUsersList" class="admin-users-list"></div>
-
-        <input id="teachersExcelInput" class="hidden" type="file" accept=".xlsx,.xls,.csv">
-        <button class="admin-settings-save" id="importTeachersExcelBtn" type="button" style="background:#dff2ed;color:#0f7665;margin-top:0">📥 استيراد معلمين من Excel</button>
-        <input id="teacherSpecialtiesInput" class="hidden" type="file" accept=".pdf,.xlsx,.xls,.csv,application/pdf">
-        <button class="admin-settings-save" id="importTeacherSpecialtiesBtn" type="button" style="background:#e8f0ff;color:#234a91;margin-top:8px">📚 استيراد تخصصات المعلمين</button>
-        <div id="teacherSpecialtiesStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
-        <button class="admin-settings-save" id="resetLockedUsersPasswords" type="button" style="background:#fff3cd;color:#6b5200;margin-top:8px">🔐 جعل كلمة المرور = السجل المدني لجميع المستخدمين</button>
-        <div id="teachersExcelStatus" class="hint" style="font-size:13px;text-align:center;margin-top:8px"></div>
 
         <h3 style="text-align:center;font-size:22px;margin-top:28px">تسجيل يدوي لمعلم أو إداري غير موجود</h3>
         <div class="row">
