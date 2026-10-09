@@ -20724,5 +20724,97 @@ setTimeout(refreshStudentDataReviewCount,900);
   }).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+
+<script>
+/* SHURAHBIL_SUMMER_PERIOD_SCHEDULE_V1 */
+(function(){
+  const slots=[
+    {kind:'assembly',label:'الاصطفاف الصباحي',start:'06:45',end:'07:00'},
+    {kind:'period',n:1,label:'الحصة الأولى',start:'07:00',end:'07:45'},
+    {kind:'period',n:2,label:'الحصة الثانية',start:'07:45',end:'08:30'},
+    {kind:'period',n:3,label:'الحصة الثالثة',start:'08:30',end:'09:15'},
+    {kind:'break',label:'الفسحة (40 دقيقة)',start:'09:15',end:'09:55'},
+    {kind:'period',n:4,label:'الحصة الرابعة',start:'09:55',end:'10:40'},
+    {kind:'period',n:5,label:'الحصة الخامسة',start:'10:40',end:'11:25'},
+    {kind:'period',n:6,label:'الحصة السادسة',start:'11:25',end:'12:10'},
+    {kind:'period',n:7,label:'الحصة السابعة',start:'12:10',end:'12:55'}
+  ];
+  const arabicNames={1:'الأولى',2:'الثانية',3:'الثالثة',4:'الرابعة',5:'الخامسة',6:'السادسة',7:'السابعة'};
+  const toMin=s=>{const [h,m]=s.split(':').map(Number);return h*60+m};
+  function currentSlot(){
+    const d=new Date(), now=d.getHours()*60+d.getMinutes();
+    return slots.find(x=>now>=toMin(x.start)&&now<toMin(x.end))||null;
+  }
+  function periodNumberFromOption(opt){
+    const raw=(String(opt.value||'')+' '+String(opt.textContent||'')).trim();
+    const direct=Number(String(opt.value||'').replace(/\D/g,''));
+    if(direct>=1&&direct<=7) return direct;
+    for(const [n,name] of Object.entries(arabicNames)){
+      if(raw.includes(name)||raw.includes('الحصة '+name)) return Number(n);
+    }
+    return null;
+  }
+  function isPeriodSelect(sel){
+    if(!sel||sel.tagName!=='SELECT') return false;
+    const key=(String(sel.id||'')+' '+String(sel.name||'')+' '+String(sel.className||'')).toLowerCase();
+    if(key.includes('period')||key.includes('lesson')) return true;
+    const box=sel.closest('div,td,th,label,section,article,form');
+    const lab=String(box?.querySelector?.('label')?.textContent||'').trim();
+    return lab==='الحصة'||lab.includes('الحصة الدراسية');
+  }
+  function enhance(sel){
+    if(!isPeriodSelect(sel)) return;
+    [...sel.options].forEach(opt=>{
+      const n=periodNumberFromOption(opt);
+      if(!n) return;
+      const slot=slots.find(x=>x.kind==='period'&&x.n===n);
+      if(!slot) return;
+      if(!opt.dataset.summerOriginal) opt.dataset.summerOriginal=String(opt.textContent||'').trim();
+      const base=opt.dataset.summerOriginal||arabicNames[n];
+      opt.textContent=base+' — '+slot.start+' إلى '+slot.end;
+      opt.dataset.summerPeriod=String(n);
+    });
+    sel.dataset.summerSchedule='1';
+    ensureBadge(sel);
+    autoSelectCurrentPeriod(sel);
+  }
+  function ensureBadge(sel){
+    let badge=sel.nextElementSibling;
+    if(!badge||!badge.classList?.contains('summer-period-now')){
+      badge=document.createElement('div');
+      badge.className='summer-period-now';
+      badge.style.cssText='margin-top:6px;padding:7px 10px;border:1px solid #b8d6cf;border-radius:10px;background:#f5fbf9;color:#155e52;font:700 12px Tahoma,Arial,sans-serif;line-height:1.5';
+      sel.insertAdjacentElement('afterend',badge);
+    }
+    updateBadge(badge);
+  }
+  function updateBadge(badge){
+    const s=currentSlot();
+    if(!s){badge.textContent='☀️ التوقيت الصيفي: خارج وقت الدوام';return}
+    const icon=s.kind==='assembly'?'🔔':s.kind==='break'?'🍔':'📝';
+    badge.textContent='☀️ التوقيت الصيفي الآن: '+icon+' '+s.label+' — '+s.start+' إلى '+s.end;
+  }
+  function autoSelectCurrentPeriod(sel){
+    if(sel.value) return;
+    const s=currentSlot();
+    if(!s||s.kind!=='period') return;
+    const opt=[...sel.options].find(o=>Number(o.dataset.summerPeriod||0)===s.n);
+    if(opt) sel.value=opt.value;
+  }
+  function apply(root=document){
+    if(root?.matches?.('select')) enhance(root);
+    root?.querySelectorAll?.('select').forEach(enhance);
+  }
+  function refresh(){
+    document.querySelectorAll('.summer-period-now').forEach(updateBadge);
+    document.querySelectorAll('select[data-summer-schedule="1"]').forEach(autoSelectCurrentPeriod);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
+  else apply();
+  new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)apply(n)})))
+    .observe(document.documentElement,{childList:true,subtree:true});
+  setInterval(refresh,30000);
+})();
+</script>
 </body>
 </html>
