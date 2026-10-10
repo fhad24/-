@@ -32,12 +32,7 @@
   }
 
   function vacationWeek5Dates(){
-    try{
-      if(typeof weeklyAttFixedWeekGregorianDates==='function'){
-        return new Set(weeklyAttFixedWeekGregorianDates('5'));
-      }
-    }catch(e){}
-    return new Set();
+    return new Set(['2026-09-20','2026-09-21','2026-09-22','2026-09-23','2026-09-24']);
   }
 
   function buildExtraAttendanceMap(E,selectedMode,selectedMonth){
