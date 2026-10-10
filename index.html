@@ -13661,7 +13661,9 @@ function attendanceRowBelongsToCurrentUser(row){
 }
 function attendanceUserCanModifyRow(row){
   if(isAttendanceSupervisor()) return true;
-  return String(row?.date||'')===todayKey() && attendanceRowBelongsToCurrentUser(row);
+  const isToday=String(row?.date||'')===todayKey();
+  if(isToday && String(row?.status||'')==='late') return true;
+  return isToday && attendanceRowBelongsToCurrentUser(row);
 }
 
 function getAttendanceLog(){
