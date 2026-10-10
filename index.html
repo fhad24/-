@@ -13550,14 +13550,20 @@ function getSelectedAttendanceTeacher(){
 
 function getCurrentAttendanceRecorder(){
   let cloud={};
-  try{cloud=JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')}catch(e){}
+  try{cloud=getCurrentLoggedAdminUser?.()||JSON.parse(localStorage.getItem('cloudAdminUser')||'{}')||{}}catch(e){}
   const p=getAdminProfile();
   const users=getAdminUsers();
-  const u=users.find(x=>String(x.username)===String(cloud.username||p.username||''))||{};
+  const lookup=String(cloud.username||cloud.civil_id||cloud.civilId||p.username||'');
+  const u=users.find(x=>
+    String(x.username||'')===lookup ||
+    String(x.civilId||x.civil_id||'')===lookup
+  )||{};
+  const username=String(cloud.username||u.username||p.username||'').trim();
+  const civilId=String(cloud.civil_id||cloud.civilId||u.civilId||u.civil_id||u.username||p.username||'').trim();
   return {
-    name:String(cloud.name||u.name||p.displayName||''),
-    username:String(cloud.username||u.username||p.username||''),
-    civilId:String(cloud.civil_id||u.civilId||u.username||p.username||'')
+    name:String(cloud.name||cloud.displayName||u.name||p.displayName||username||civilId||'').trim(),
+    username,
+    civilId
   };
 }
 function isAttendanceSupervisor(){
@@ -13638,12 +13644,19 @@ function applyAutomaticAttendanceSessionForTeacher(){
 function attendanceRowBelongsToCurrentUser(row){
   if(isAttendanceSupervisor()) return true;
   const recorder=getCurrentAttendanceRecorder();
-  const currentUser=String(recorder.username||'').trim();
-  const currentCivil=String(recorder.civilId||'').trim();
-  const rowUser=String(row?.teacherUsername||row?.teacher_username||'').trim();
-  const rowCivil=String(row?.teacherCivilId||row?.teacher_civil_id||'').trim();
+  const norm=v=>String(v||'').trim().replace(/\s+/g,' ').toLowerCase();
+  const currentUser=norm(recorder.username);
+  const currentCivil=norm(recorder.civilId);
+  const currentName=norm(recorder.name);
+  const rowUser=norm(row?.teacherUsername||row?.teacher_username);
+  const rowCivil=norm(row?.teacherCivilId||row?.teacher_civil_id);
+  const rowName=norm(row?.teacherName||row?.teacher_name);
   if(currentUser && rowUser && currentUser===rowUser) return true;
   if(currentCivil && rowCivil && currentCivil===rowCivil) return true;
+  if(currentName && rowName && currentName===rowName) return true;
+  // بعض السجلات القديمة تحفظ السجل المدني داخل username فقط والعكس.
+  if(currentCivil && rowUser && currentCivil===rowUser) return true;
+  if(currentUser && rowCivil && currentUser===rowCivil) return true;
   return false;
 }
 function attendanceUserCanModifyRow(row){
@@ -15691,8 +15704,8 @@ async function renderAttendanceMonitoring(){
 
 async function renderAttendancePage(){
   syncAdminWholeClassAttendanceButton();
-  if(attendanceListView==='present' && localStorage.getItem('cloudAdminToken')){
-    try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('present attendance cloud refresh',e); }
+  if((attendanceListView==='present'||attendanceListView==='late') && localStorage.getItem('cloudAdminToken')){
+    try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('attendance cloud refresh',e); }
   }
   if($('attendanceSelectAllRows')){
     $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
@@ -17642,7 +17655,10 @@ async function flushAttendanceInstantSave(){
     }else if(attendanceMode==='late'){
       persistLateSelections();
       attendanceListView='late';
-      try{ await renderAttendancePage(); }catch(e){ console.warn('late register refresh',e); }
+      try{
+        await cloudPullAttendanceFast();
+        await renderAttendancePage();
+      }catch(e){ console.warn('late register refresh',e); }
       showAttendanceSavedMessage('✅ تم حفظ '+cloudRows.length+' طالب في سجل التأخر');
     }
     const n=cloudRows.length;
