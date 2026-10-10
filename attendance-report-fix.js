@@ -84,14 +84,15 @@
       const id=String(td[ci].textContent||'').replace(/\D/g,'');
       if(!id) continue;
       const mask=E.map.get(id);
-      if(!mask) continue;
 
       let present=0,absent=0;
+      let scopedExcelDays=0;
       (E.dates||[]).forEach((d,i)=>{
         if(selectedMode==='monthly'&&selectedMonth&&monthByDate.get(d)!==selectedMonth) return;
+        scopedExcelDays++;
         const bit=1<<i;
-        // اليوم الدراسي المحتسب: حاضر إذا توجد علامة حضور، وإلا غائب.
-        if(mask[0]&bit) present++;
+        // حتى لو لم يكن للطالب صف في ملف المصدر: كل يوم دراسي في النطاق يجب أن يكون حاضرًا أو غائبًا.
+        if(mask && (mask[0]&bit)) present++;
         else absent++;
       });
 
