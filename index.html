@@ -22081,141 +22081,40 @@ setTimeout(refreshStudentDataReviewCount,900);
   setTimeout(bind,300);
 })();
 </script>
-<script id="weekly-grade-class-hard-fix-20261010">
+<script id="weekly-lightweight-fix-20261010">
 (function(){
   const gradeMap={
     'الأول الثانوي':['أ','ب','ج','د','هـ','و'],
     'الثاني الثانوي':['أ','ب','ج','د','هـ'],
     'الثالث الثانوي':['أ','ب','ج','د','هـ']
   };
-  function fillGrades(){
+  function ensureLists(){
     const g=document.getElementById('weeklyAttGrade');
     const c=document.getElementById('weeklyAttClass');
-    if(!g||!c) return false;
-    const gv=g.value;
+    if(!g||!c) return;
+    const gv=g.value, cv=c.value;
     const grades=Object.keys(gradeMap);
-    if(g.options.length<=1 || !grades.some(x=>[...g.options].some(o=>o.value===x))){
+    if(g.options.length<=1){
       g.innerHTML='<option value="">اختر الصف</option>'+grades.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
       if(grades.includes(gv)) g.value=gv;
     }
-    const fillClasses=()=>{
-      const cv=c.value;
+    if(g.value && c.options.length<=1){
       const classes=gradeMap[g.value]||[];
       c.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
       if(classes.includes(cv)) c.value=cv;
-    };
-    if(!g.dataset.hardFixBound){
-      g.dataset.hardFixBound='1';
-      g.addEventListener('change',fillClasses);
     }
-    if(g.value && c.options.length<=1) fillClasses();
-    return true;
   }
-  function run(){
-    fillGrades();
-    let n=0;
-    const t=setInterval(()=>{n++;fillGrades();if(n>40)clearInterval(t)},500);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
-  new MutationObserver(()=>fillGrades()).observe(document.documentElement,{childList:true,subtree:true});
-})();
-</script>
-<script id="weekly-names-scope-fix-20261010">console.log('weekly student names scope fix active');</script>
-<script id="weekly-force-cloud-students-20261010">
-(function(){
-  let busy=false;
-  async function forceWeeklyStudents(){
-    if(busy) return;
-    const grade=document.getElementById('weeklyAttGrade');
-    const cls=document.getElementById('weeklyAttClass');
-    if(!grade||!cls||!grade.value||!cls.value) return;
-    busy=true;
-    try{
-      if(typeof cloudPullToLocal==='function' && localStorage.getItem('cloudAdminToken')){
-        await cloudPullToLocal();
-      }
-      if(typeof populateWeeklyAttStudentSelect==='function') populateWeeklyAttStudentSelect();
-      if(typeof renderWeeklyAttendanceReport==='function') renderWeeklyAttendanceReport();
-    }catch(e){ console.warn('weekly force students',e); }
-    finally{busy=false;}
-  }
-  function bind(){
-    const grade=document.getElementById('weeklyAttGrade');
-    const cls=document.getElementById('weeklyAttClass');
-    if(grade && !grade.dataset.cloudStudentFix){
-      grade.dataset.cloudStudentFix='1';
-      grade.addEventListener('change',()=>setTimeout(forceWeeklyStudents,50));
-    }
-    if(cls && !cls.dataset.cloudStudentFix){
-      cls.dataset.cloudStudentFix='1';
-      cls.addEventListener('change',()=>setTimeout(forceWeeklyStudents,50));
-    }
-    if(grade?.value && cls?.value) setTimeout(forceWeeklyStudents,100);
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
-  setInterval(bind,1500);
-})();
-</script>
-<script id="weekly-direct-pull-students-20261010">
-(function(){
-  const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
-  let running=false,lastKey='';
-  async function pullAndRender(){
+  function boot(){
+    ensureLists();
     const g=document.getElementById('weeklyAttGrade');
     const c=document.getElementById('weeklyAttClass');
-    if(!g||!c||!g.value||!c.value||running) return;
-    const key=g.value+'|'+c.value;
-    const token=localStorage.getItem('cloudAdminToken')||'';
-    if(!token) return;
-    running=true;
-    try{
-      const res=await fetch(API,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-app-token':token},
-        body:JSON.stringify({action:'pull_all'})
-      });
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
-      const students=(data.students||[]).map(s=>({
-        name:s.name||'',
-        idno:String(s.idno||''),
-        phone:s.phone||'',
-        grade:s.grade||'',
-        classroom:s.classroom||'',
-        calendar:s.calendar||'',
-        birth:s.birth||'',
-        verification:s.verification||'مؤكد',
-        registered:s.registered!==false,
-        hasFace:!!s.has_face,
-        hasId:!!s.has_id,
-        cropStatus:s.crop_status||'',
-        referenceNo:s.reference_no||'',
-        registrationDate:s.registration_date||'',
-        faceImage:'',
-        idImage:''
-      }));
-      localStorage.setItem('students',JSON.stringify(students));
-      lastKey=key;
-      if(typeof populateWeeklyAttStudentSelect==='function') populateWeeklyAttStudentSelect();
-      if(typeof renderWeeklyAttendanceReport==='function') renderWeeklyAttendanceReport();
-    }catch(e){console.warn('direct weekly students pull',e)}
-    finally{running=false;}
-  }
-  function bind(){
-    const g=document.getElementById('weeklyAttGrade');
-    const c=document.getElementById('weeklyAttClass');
-    if(g&&!g.dataset.directStudents){
-      g.dataset.directStudents='1';
-      g.addEventListener('change',()=>setTimeout(pullAndRender,120));
+    if(g&&!g.dataset.lightFix){
+      g.dataset.lightFix='1';
+      g.addEventListener('change',()=>setTimeout(ensureLists,0));
     }
-    if(c&&!c.dataset.directStudents){
-      c.dataset.directStudents='1';
-      c.addEventListener('change',()=>setTimeout(pullAndRender,120));
-    }
-    if(g?.value&&c?.value&&(g.value+'|'+c.value)!==lastKey) setTimeout(pullAndRender,200);
+    if(c&&!c.dataset.lightFix)c.dataset.lightFix='1';
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
-  setInterval(bind,1200);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 })();
 </script>
 </body>
