@@ -91,20 +91,35 @@
       if(!id) continue;
       const mask=E.map.get(id);
 
-      let present=0,absent=0;
-      let scopedExcelDays=0;
+      const byDate=new Map();
       (E.dates||[]).forEach((d,i)=>{
         if(VACATION_WEEK_5.has(d)) return;
-        if(selectedMode==='monthly'&&selectedMonth&&monthByDate.get(d)!==selectedMonth) return;
-        scopedExcelDays++;
         const bit=1<<i;
-        // حتى لو لم يكن للطالب صف في ملف المصدر: كل يوم دراسي في النطاق يجب أن يكون حاضرًا أو غائبًا.
-        if(mask && (mask[0]&bit)) present++;
-        else absent++;
+        byDate.set(d,(mask && (mask[0]&bit))?'present':'absent');
       });
 
       const extra=extraById.get(id);
-      if(extra) extra.forEach(v=>{ if(v==='present') present++; else if(v==='absent') absent++; });
+      if(extra) extra.forEach((v,d)=>byDate.set(d,v));
+
+      // التحضير الآلي ليوم الخميس: إذا حضر الطالب يومًا واحدًا على الأقل من الأحد إلى الأربعاء
+      // في نفس الأسبوع، يُحتسب الخميس حاضرًا. الأسبوع الخامس إجازة ولا يدخل.
+      try{
+        for(const week of Object.keys(window.WEEKLY_FIXED_HIJRI_WEEKS||{})){
+          if(String(week)==='5') continue;
+          const wd=typeof weeklyAttFixedWeekGregorianDates==='function'?weeklyAttFixedWeekGregorianDates(week):[];
+          if(!wd||wd.length!==5) continue;
+          const thu=String(wd[4]);
+          if(wd.slice(0,4).some(d=>byDate.get(String(d))==='present')) byDate.set(thu,'present');
+        }
+      }catch(e){}
+
+      let present=0,absent=0;
+      byDate.forEach((v,d)=>{
+        if(VACATION_WEEK_5.has(String(d))) return;
+        if(selectedMode==='monthly'&&selectedMonth&&hijriMonthKey(String(d))!==selectedMonth) return;
+        if(v==='present') present++;
+        else if(v==='absent') absent++;
+      });
 
       const counted=present+absent;
       const rate=counted?Math.round(present/counted*100):0;
