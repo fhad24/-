@@ -3,7 +3,7 @@
   function weekDatesForThursday(dateKey){
     const key=String(dateKey||'');
     try{
-      for(const week of Object.keys(window.WEEKLY_FIXED_HIJRI_WEEKS||{})){
+      for(let n=1;n<=19;n++){ const week=String(n);
         if(String(week)==='5') continue;
         const dates=typeof weeklyAttFixedWeekGregorianDates==='function'?weeklyAttFixedWeekGregorianDates(week):[];
         if(dates?.length===5 && String(dates[4])===key) return dates;
