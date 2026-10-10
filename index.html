@@ -572,8 +572,29 @@
       }catch(e){}
       /* SHURAHBIL_LATE_TAB_HIDE_SESSION_PATCH */
       {
-        const latePatch='<style id="shurahbilLateNoSessionStyle">.attendance-session-controls.shurahbil-late-hide{display:none!important}</style>'+
-          '<script>(function(){function f(){var late=document.getElementById("attendanceLateTab");var isLate=!!late&&late.classList.contains("active");document.querySelectorAll(".attendance-session-controls").forEach(function(box){box.classList.toggle("shurahbil-late-hide",isLate);if(isLate){box.style.setProperty("display","none","important")}else if(document.getElementById("attendancePresentTab")?.classList.contains("active")){box.style.removeProperty("display")}});}document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#attendanceLateTab,#attendancePresentTab"))setTimeout(f,0)},true);new MutationObserver(f).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",f,{once:true});else f();setTimeout(f,200);})();<'+'/script>';
+        const latePatch='<style id="shurahbilLateNoSessionStyle">'+
+          '#attendanceStudentModal.shurahbil-late-mode .attendance-session-period,'+
+          '#attendanceStudentModal.shurahbil-late-mode .attendance-session-subject{display:none!important}'+
+          '#attendanceStudentModal.shurahbil-late-mode .attendance-session-controls{grid-template-columns:1fr!important}'+
+          '</style>'+
+          '<script>(function(){'+
+          'function applyLateUi(){'+
+            'var modal=document.getElementById("attendanceStudentModal");if(!modal)return;'+
+            'var title=String(document.getElementById("attendanceModalTitle")?.textContent||"");'+
+            'var lateTab=document.getElementById("attendanceLateTab");'+
+            'var isLate=/متأخر|تأخر/.test(title)||(lateTab&&lateTab.classList.contains("active"));'+
+            'modal.classList.toggle("shurahbil-late-mode",!!isLate);'+
+            'var p=document.getElementById("attendancePeriodSelect")?.closest(".attendance-session-field");'+
+            'var s=document.getElementById("attendanceSubjectSelect")?.closest(".attendance-session-field");'+
+            '[p,s].forEach(function(el){if(!el)return;if(isLate)el.style.setProperty("display","none","important");else el.style.removeProperty("display")});'+
+            'if(isLate){var ps=document.getElementById("attendancePeriodSelect"),ss=document.getElementById("attendanceSubjectSelect");if(ps)ps.value="";if(ss)ss.value="";}'+
+          '}'+
+          'document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#attendanceLateTab,#attendancePresentTab"))setTimeout(applyLateUi,0)},true);'+
+          'var mo=new MutationObserver(applyLateUi);'+
+          'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});applyLateUi()},{once:true});'+
+          'else{mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});applyLateUi()}'+
+          'setInterval(applyLateUi,500);'+
+          '})();<'+'/script>';
         const closeHead=html.toLowerCase().lastIndexOf('</head>');
         html=closeHead>=0 ? html.slice(0,closeHead)+latePatch+html.slice(closeHead) : latePatch+html;
       }
