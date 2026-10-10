@@ -8,8 +8,8 @@
    const id=String(student&&student.idno||'').trim(), m=M.get(id); if(!m)return null;
    const bit=1<<idx;
    if(m[0]&bit)return 'present';
-   if(m[1]&bit)return 'absent';
-   return 'blank';
+   // في ملف Excel: أي يوم دراسي بلا علامة حضور يُحسب غيابًا.
+   return 'absent';
  }
  window.__EXCEL_ATTENDANCE_TRUTH_20261010={dates:D,map:M,status:truth};
  function install(){
@@ -21,7 +21,7 @@
       const s=(typeof getStudents==='function'?getStudents():[]).find(x=>String(x.idno)===String(idno));
       const t=truth(s,dateKey);
       if(t==='absent')return true;
-      if(t==='present'||t==='blank')return false;
+      if(t==='present')return false;
       return old(idno,dateKey);
     }; fn.__excelTruthPatched=true; weeklyAttIsAbsentOnDate=fn;
    }
@@ -32,7 +32,7 @@
       const t=truth(s,dateKey);
       if(t==='present')return {mark:'✓',cls:'present-mark',label:'حاضر — مطابق لملف Excel'};
       if(t==='absent')return {mark:'✕',cls:'absent-mark',label:'غائب — مطابق لملف Excel'};
-      if(t==='blank')return {mark:'',cls:'',label:'لا توجد حالة مسجلة في ملف Excel'};
+      
       return old(idno,dateKey);
     }; fn.__excelTruthPatched=true; weeklyAttStatusForStudent=fn;
    }
@@ -42,7 +42,7 @@
     const fn=function(student,dateKey,ctx){
       const t=truth(student,dateKey);
       if(t==='present'||t==='absent')return t;
-      if(t==='blank')return '';
+      
       return old(student,dateKey,ctx);
     }; fn.__excelTruthPatched=true; weeklyAttFastStatus=fn;
    }
