@@ -329,7 +329,7 @@
         '<div class="logos"><div>'+(logoMinistry?'<img src="'+esc(logoMinistry)+'" alt="شعار الوزارة">':'')+'</div><div>'+(logoSchool?'<img src="'+esc(logoSchool)+'" alt="شعار المدرسة">':'')+'</div></div>'+
         '<div class="authority">'+esc(authority)+'</div>'+
         '<div class="school">'+esc(schoolName)+'</div>'+
-        '<h1>شهادة شكر وتقدير</h1><div class="medal">🏅</div>'+
+        '<h1>شهادة شكر وتقدير</h1>'+
         '<p class="lead">تتقدم إدارة المدرسة بالشكر والتقدير للطالب</p>'+
         '<div class="student">'+esc(st.name||'')+'</div>'+
         '<div class="meta">الصف: <b>'+esc(grade)+'</b> &nbsp;&nbsp; | &nbsp;&nbsp; الفصل: <b>'+esc(classroom)+'</b></div>'+
@@ -341,7 +341,7 @@
     if(!w){alert('اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة.');return}
     w.document.open();
     w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
-      '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.toolbar{position:sticky;top:0;z-index:3;background:#fff;padding:12px;text-align:center;border-bottom:1px solid #d6e2de}.toolbar button{background:#0f806c;color:#fff;border:0;border-radius:10px;padding:11px 24px;font-size:18px;font-weight:800;cursor:pointer}.certificate{position:relative;width:277mm;min-height:190mm;margin:12mm auto;background:#fff;border:3px solid #b88916;padding:16mm 20mm;text-align:center;box-shadow:0 4px 18px #0002;overflow:hidden}.certificate:before,.certificate:after{content:"";position:absolute;width:46mm;height:46mm;border:2px solid #d7b75e;transform:rotate(45deg);opacity:.35}.certificate:before{right:-24mm;top:-24mm}.certificate:after{left:-24mm;bottom:-24mm}.logos{display:flex;justify-content:space-between;align-items:center;height:25mm}.logos img{max-width:28mm;max-height:24mm;object-fit:contain}.authority{font-size:16px}.school{font-size:20px;font-weight:800;margin-top:3px}h1{font-size:38px;color:#9b6f07;margin:14px 0 4px}.medal{font-size:42px}.lead{font-size:22px;margin:8px}.student{font-size:34px;font-weight:900;color:#0f6f60;margin:8px 0 10px;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:19px;margin:8px}.body{font-size:22px;line-height:2;max-width:900px;margin:18px auto}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:18px}.pagebreak{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.toolbar{display:none}.certificate{width:auto;min-height:185mm;margin:0;box-shadow:none;page-break-after:always}.certificate:last-child{page-break-after:auto}}'+
+      '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.toolbar{position:sticky;top:0;z-index:3;background:#fff;padding:12px;text-align:center;border-bottom:1px solid #d6e2de}.toolbar button{background:#0f806c;color:#fff;border:0;border-radius:10px;padding:11px 24px;font-size:18px;font-weight:800;cursor:pointer}.certificate{position:relative;width:277mm;min-height:190mm;margin:12mm auto;background:#fff;border:3px solid #b88916;padding:16mm 20mm;text-align:center;box-shadow:0 4px 18px #0002;overflow:hidden}.certificate:before,.certificate:after{content:"";position:absolute;width:46mm;height:46mm;border:2px solid #d7b75e;transform:rotate(45deg);opacity:.35}.certificate:before{right:-24mm;top:-24mm}.certificate:after{left:-24mm;bottom:-24mm}.logos{display:flex;justify-content:space-between;align-items:center;height:25mm}.logos img{max-width:28mm;max-height:24mm;object-fit:contain}.authority{font-size:16px}.school{font-size:20px;font-weight:800;margin-top:3px}h1{font-size:38px;color:#9b6f07;margin:14px 0 4px}.medal{display:none!important}.lead{font-size:22px;margin:8px}.student{font-size:34px;font-weight:900;color:#0f6f60;margin:8px 0 10px;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:19px;margin:8px}.body{font-size:22px;line-height:2;max-width:900px;margin:18px auto}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:18px}.pagebreak{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.toolbar{display:none}.certificate{width:auto;min-height:185mm;margin:0;box-shadow:none;page-break-after:always}.certificate:last-child{page-break-after:auto}}'+
       '</style><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+
     '<script>'+
     'async function shareCertificateByWhatsApp(id){'+
@@ -22045,7 +22045,7 @@ setTimeout(refreshStudentDataReviewCount,900);
     if(!w){alert('اسمح بالنوافذ المنبثقة ثم أعد المحاولة.');return}
     w.document.write('<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شهادات شكر وتقدير</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+
       '*{box-sizing:border-box}'+
-      '.medallion{display:none!important}'+
+      '.medallion,.medal{display:none!important}'+
       'body{margin:0;background:linear-gradient(135deg,#e9efec,#f7f3e8);font-family:Tahoma,Arial,sans-serif;color:#173c35;padding:16px}'+
       '.toolbar{position:sticky;top:0;z-index:20;text-align:center;padding:10px;margin:-16px -16px 18px;background:#ffffffee;backdrop-filter:blur(8px);border-bottom:1px solid #d8e2df}'+
       '.toolbar button{border:0;border-radius:14px;padding:13px 30px;background:linear-gradient(135deg,#0a6f5c,#0f8b72);color:#fff;font-size:18px;font-weight:900;box-shadow:0 7px 18px #0f766533;cursor:pointer}'+
@@ -22070,7 +22070,7 @@ setTimeout(refreshStudentDataReviewCount,900);
       '@media(max-width:900px){body{padding:0}.cert{transform-origin:top center;width:277mm;margin:0 auto}.toolbar{margin:0 0 10px}}'+
     '</style></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+'</body></html>');
     /* REMOVE_LEGACY_CERT_MEDALLION */
-    try{w.document.querySelectorAll('.medallion').forEach(x=>x.remove());}catch(e){}
+    try{w.document.querySelectorAll('.medallion,.medal').forEach(x=>x.remove());}catch(e){}
     w.document.close();
   }
 
