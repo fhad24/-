@@ -22121,6 +22121,41 @@ setTimeout(refreshStudentDataReviewCount,900);
 })();
 </script>
 <script id="weekly-names-scope-fix-20261010">console.log('weekly student names scope fix active');</script>
+<script id="weekly-force-cloud-students-20261010">
+(function(){
+  let busy=false;
+  async function forceWeeklyStudents(){
+    if(busy) return;
+    const grade=document.getElementById('weeklyAttGrade');
+    const cls=document.getElementById('weeklyAttClass');
+    if(!grade||!cls||!grade.value||!cls.value) return;
+    busy=true;
+    try{
+      if(typeof cloudPullToLocal==='function' && localStorage.getItem('cloudAdminToken')){
+        await cloudPullToLocal();
+      }
+      if(typeof populateWeeklyAttStudentSelect==='function') populateWeeklyAttStudentSelect();
+      if(typeof renderWeeklyAttendanceReport==='function') renderWeeklyAttendanceReport();
+    }catch(e){ console.warn('weekly force students',e); }
+    finally{busy=false;}
+  }
+  function bind(){
+    const grade=document.getElementById('weeklyAttGrade');
+    const cls=document.getElementById('weeklyAttClass');
+    if(grade && !grade.dataset.cloudStudentFix){
+      grade.dataset.cloudStudentFix='1';
+      grade.addEventListener('change',()=>setTimeout(forceWeeklyStudents,50));
+    }
+    if(cls && !cls.dataset.cloudStudentFix){
+      cls.dataset.cloudStudentFix='1';
+      cls.addEventListener('change',()=>setTimeout(forceWeeklyStudents,50));
+    }
+    if(grade?.value && cls?.value) setTimeout(forceWeeklyStudents,100);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
+  setInterval(bind,1500);
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
