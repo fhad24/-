@@ -14315,7 +14315,7 @@ function startWeeklyAttBulkStatsJob(students,scopeDateKeys,key){
   const ctx=buildWeeklyAttFastContext();
   const stats=new Map();
   let index=0;
-  const chunkSize=160;
+  const chunkSize=40;
 
   const step=()=>{
     if(seq!==weeklyAttBulkJobSeq) return;
