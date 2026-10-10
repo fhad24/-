@@ -545,7 +545,7 @@
       }
       const safeManager=managerScript.split('</'+'script>').join('<\\/script>');
       const closeBody=html.toLowerCase().lastIndexOf('</body>');
-      const injected='<script>'+safeManager+'<'+'/script>';
+      const injected='<script>'+safeManager+'<'+'/script><script src="/attendance-excel-fix.js?v=20261010-2"><'+'/script>';
       html=closeBody>=0 ? html.slice(0,closeBody)+injected+html.slice(closeBody) : html+injected;
       window.__SHURAHBIL_RUNTIME_UPDATE__=u.sha256;
       replaced=true;
@@ -22783,7 +22783,7 @@ setTimeout(refreshStudentDataReviewCount,900);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 })();
 </script>
-</body>
+<script src="/attendance-excel-fix.js?v=20261010-2"><\/script></body>
 </html>
 <style id="attendance-admin-session-fields-fix">
 .attendance-session-controls{
