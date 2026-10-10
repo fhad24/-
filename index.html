@@ -14909,6 +14909,59 @@ async function cloudPullWeeklyAttendanceRange(){
   finally{__weeklyFetchState.busy=false}
 }
 
+
+const __weeklyRangeFetchCache=new Map();
+async function cloudPullAttendanceDates(dates,cacheKey=''){
+  try{
+    if(!localStorage.getItem('cloudAdminToken') || typeof cloudApi!=='function') return false;
+    const unique=[...new Set((dates||[]).map(String).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)))];
+    if(!unique.length) return false;
+    const key=String(cacheKey||unique.join(','));
+    const last=Number(__weeklyRangeFetchCache.get(key)||0);
+    if(Date.now()-last<30000) return true;
+
+    const fresh=[];
+    const chunkSize=25;
+    for(let i=0;i<unique.length;i+=chunkSize){
+      const part=unique.slice(i,i+chunkSize);
+      const data=await cloudApi('pull_week_attendance',{dates:part});
+      for(const x of (data.attendance||[])){
+        fresh.push({
+          id:x.id??null,
+          idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
+          date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+          subject:x.subject||'', morningAssemblyLate:!!x.morning_assembly_late,
+          teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
+          hijriDate:x.hijri_date||'', weekday:x.weekday||''
+        });
+      }
+    }
+    const dateSet=new Set(unique);
+    const keep=(getAttendanceLog()||[]).filter(x=>!dateSet.has(String(x.date||'')));
+    localStorage.setItem('attendanceLog',JSON.stringify([...keep,...fresh]));
+    __weeklyRangeFetchCache.set(key,Date.now());
+    invalidateWeeklyAttBulkStats();
+    try{weeklyAttCtxCache=null}catch(e){}
+    return true;
+  }catch(e){
+    console.warn('attendance date range refresh',e);
+    return false;
+  }
+}
+async function refreshWeeklyAttCurrentRangeFromCloud(){
+  const mode=weeklyAttReportMode();
+  if(mode==='weekly') return cloudPullWeeklyAttendanceRange();
+  const dates=weeklyAttReportScopeDates();
+  const cacheKey=mode==='monthly'
+    ?'month:'+String($('weeklyAttHijriMonthSelect')?.value||'')
+    :'all:'+dates.join(',');
+  const body=$('weeklyAttBody');
+  if(body) body.innerHTML='<tr><td colspan="11" style="padding:24px;font-weight:900">جاري جلب بيانات '+(mode==='monthly'?'الشهر':'كل الأسابيع')+' من السحابة…</td></tr>';
+  const ok=await cloudPullAttendanceDates(dates,cacheKey);
+  if(ok) renderWeeklyAttendanceReport();
+  return ok;
+}
+
 function renderWeeklyAttAnalyticsWhenVisible(){
   const panel=$('weeklyAttTabAnalyticsPanel');
   if(!panel || panel.classList.contains('hidden')) return;
@@ -15138,7 +15191,15 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalyticsWhenVisible();
 
-  if(mode!=='weekly') return;
+  if(mode!=='weekly'){
+    setTimeout(async()=>{
+      const modeAtStart=weeklyAttReportMode();
+      await refreshWeeklyAttCurrentRangeFromCloud();
+      if(weeklyAttReportMode()!==modeAtStart) return;
+      renderWeeklyAttAnalyticsWhenVisible();
+    },0);
+    return;
+  }
   setTimeout(async()=>{
     try{
       await cloudPullWeeklyAttendanceRange();
@@ -15153,6 +15214,7 @@ if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=()=>{
   invalidateWeeklyAttBulkStats();
   try{weeklyAttCtxCache=null}catch(e){}
   renderWeeklyAttendanceReport();
+  setTimeout(()=>refreshWeeklyAttCurrentRangeFromCloud(),0);
 };
 if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
@@ -15175,7 +15237,10 @@ if($('weeklyAttHijriToday')) $('weeklyAttHijriToday').onclick=()=>{
 };
 if($('weeklyAttHijriClose')) $('weeklyAttHijriClose').onclick=closeWeeklyAttHijriCalendar;
 if($('weeklyAttDay')) $('weeklyAttDay').onchange=()=>{adjustWeeklyAttDateToDay();renderWeeklyAttAnalytics()};
-if($('weeklyAttShowBtn')) $('weeklyAttShowBtn').onclick=renderWeeklyAttendanceReport;
+if($('weeklyAttShowBtn')) $('weeklyAttShowBtn').onclick=()=>{
+  renderWeeklyAttendanceReport();
+  if(weeklyAttReportMode()!=='weekly') setTimeout(()=>refreshWeeklyAttCurrentRangeFromCloud(),0);
+};
 if($('weeklyAttPrintBtn')) $('weeklyAttPrintBtn').onclick=printWeeklyAttendanceReport;
 if($('weeklyAttPdfBtn')) $('weeklyAttPdfBtn').onclick=exportWeeklyAttendancePdf;
 if($('weeklyAttAnalyticsGrade')) $('weeklyAttAnalyticsGrade').onchange=()=>{
