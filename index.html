@@ -16880,8 +16880,9 @@ function setAttendanceMode(mode){
 
   const sessionControls=document.querySelector('.attendance-session-controls');
   const manualSession=attendanceManualSelectorsAllowed();
-  if(sessionControls) sessionControls.classList.toggle('hidden',!(late||present)||!manualSession);
-  if((late||present) && !manualSession) applyAutomaticAttendanceSessionForTeacher();
+  // تبويب التأخر لا يحتاج الحصة أو المادة نهائيًا؛ تبقى الأدوات للحضور فقط.
+  if(sessionControls) sessionControls.classList.toggle('hidden',!present||!manualSession);
+  if(present && !manualSession) applyAutomaticAttendanceSessionForTeacher();
   const morningField=$('attendanceMorningLateField');
   if(morningField) morningField.style.display=late?'':'none';
   if(!late && $('attendanceMorningLate')) $('attendanceMorningLate').checked=false;
@@ -17720,13 +17721,13 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
     const manualSession=attendanceManualSelectorsAllowed();
     if(attendanceMode==='present' && !manualSession) applyAutomaticAttendanceSessionForTeacher();
-    const selectedPeriod=morningLate
+    const selectedPeriod=attendanceMode==='late'
       ? null
       : (manualSession ? attendancePeriodNumber($('attendancePeriodSelect')?.value) : getAutomaticAttendancePeriod(now));
-    const selectedSubject=morningLate
-      ? 'تأخر عن الطابور الصباحي'
+    const selectedSubject=attendanceMode==='late'
+      ? (morningLate ? 'تأخر عن الطابور الصباحي' : '')
       : (manualSession ? String($('attendanceSubjectSelect')?.value||'').trim() : getAutomaticAttendanceSubject());
-    if(manualSession && (attendanceMode==='present'||attendanceMode==='late') && !morningLate && !selectedPeriod){
+    if(manualSession && attendanceMode==='present' && !selectedPeriod){
       alert('اختر الحصة قبل الحفظ.');
       return;
     }
