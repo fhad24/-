@@ -1,43 +1,94 @@
-/* Auto-prepare Thursday: if student was present at least once Sun-Wed, Thursday is present. Week 5 vacation excluded. */
+/* Auto-prepare Thursday, optimized: one cached attendance index instead of rescanning all rows per cell. */
 (function(){
-  function weekDatesForThursday(dateKey){
-    const key=String(dateKey||'');
+  const cache={stamp:'',studentById:new Map(),presentByIdDate:new Set(),thursdayWeekByDate:new Map(),weekDates:new Map()};
+
+  function currentStamp(){
+    let students=0,rows=0;
+    try{students=(typeof getStudents==='function'?(getStudents()||[]):[]).length}catch(e){}
+    try{rows=(typeof getAttendanceLog==='function'?(getAttendanceLog()||[]):[]).length}catch(e){}
+    return students+'|'+rows;
+  }
+
+  function rebuild(){
+    const stamp=currentStamp();
+    if(cache.stamp===stamp && cache.thursdayWeekByDate.size) return;
+    cache.stamp=stamp;
+    cache.studentById=new Map();
+    cache.presentByIdDate=new Set();
+    cache.thursdayWeekByDate=new Map();
+    cache.weekDates=new Map();
+
     try{
-      for(let n=1;n<=19;n++){ const week=String(n);
-        if(String(week)==='5') continue;
-        const dates=typeof weeklyAttFixedWeekGregorianDates==='function'?weeklyAttFixedWeekGregorianDates(week):[];
-        if(dates?.length===5 && String(dates[4])===key) return dates;
+      for(const s of (typeof getStudents==='function'?(getStudents()||[]):[])){
+        cache.studentById.set(String(s?.idno||''),s);
       }
     }catch(e){}
-    return null;
+
+    try{
+      for(const r of (typeof getAttendanceLog==='function'?(getAttendanceLog()||[]):[])){
+        if(r?.status!=='present' && r?.status!=='late') continue;
+        const id=String(r?.idno||''), d=String(r?.date||'');
+        if(id&&d) cache.presentByIdDate.add(id+'|'+d);
+      }
+    }catch(e){}
+
+    try{
+      for(let n=1;n<=19;n++){
+        const week=String(n);
+        if(week==='5') continue;
+        const dates=typeof weeklyAttFixedWeekGregorianDates==='function'?weeklyAttFixedWeekGregorianDates(week):[];
+        if(dates?.length===5){
+          cache.weekDates.set(week,[...dates]);
+          cache.thursdayWeekByDate.set(String(dates[4]),week);
+        }
+      }
+    }catch(e){}
   }
 
   function basicPresent(student,dateKey,ctx){
     const id=String(student?.idno||'');
-    if(!id) return false;
+    const d=String(dateKey||'');
+    if(!id||!d) return false;
+
     try{
-      const excel=window.__EXCEL_ATTENDANCE_TRUTH_20261010?.status?.(student,String(dateKey||''));
+      const excel=window.__EXCEL_ATTENDANCE_TRUTH_20261010?.status?.(student,d);
       if(excel==='present') return true;
     }catch(e){}
+
     try{
-      const rec=ctx?.statusByIdDate?.get(id+'|'+String(dateKey||''));
+      const rec=ctx?.statusByIdDate?.get(id+'|'+d);
       if(rec?.present||rec?.late) return true;
     }catch(e){}
-    try{
-      const rows=typeof weeklyAttScopedRows==='function'?weeklyAttScopedRows():[];
-      return rows.some(r=>String(r?.idno||'')===id && String(r?.date||'')===String(dateKey||'') && (r?.status==='present'||r?.status==='late'));
-    }catch(e){ return false; }
+
+    rebuild();
+    return cache.presentByIdDate.has(id+'|'+d);
   }
 
   function autoThursday(student,dateKey,ctx){
-    const dates=weekDatesForThursday(dateKey);
+    rebuild();
+    const week=cache.thursdayWeekByDate.get(String(dateKey||''));
+    if(!week) return false;
+    const dates=cache.weekDates.get(week);
     if(!dates) return false;
-    return dates.slice(0,4).some(d=>basicPresent(student,d,ctx));
+    for(let i=0;i<4;i++){
+      if(basicPresent(student,dates[i],ctx)) return true;
+    }
+    return false;
+  }
+
+  function findStudent(idno){
+    rebuild();
+    return cache.studentById.get(String(idno||''))||null;
+  }
+
+  function invalidate(){
+    cache.stamp='';
+    try{ if(typeof invalidateWeeklyAttBulkStats==='function') invalidateWeeklyAttBulkStats(); }catch(e){}
   }
 
   function install(){
-    if(window.__AUTO_THURSDAY_INSTALLED__) return;
-    window.__AUTO_THURSDAY_INSTALLED__=true;
+    if(window.__AUTO_THURSDAY_OPTIMIZED__) return;
+    window.__AUTO_THURSDAY_OPTIMIZED__=true;
 
     if(typeof window.weeklyAttFastStatus==='function'){
       const originalFast=window.weeklyAttFastStatus;
@@ -50,8 +101,7 @@
     if(typeof window.weeklyAttStatusForStudent==='function'){
       const originalStatus=window.weeklyAttStatusForStudent;
       window.weeklyAttStatusForStudent=function(idno,dateKey){
-        let student=null;
-        try{ student=(typeof getStudents==='function'?getStudents():[]).find(s=>String(s?.idno||'')===String(idno)); }catch(e){}
+        const student=findStudent(idno);
         if(student && autoThursday(student,dateKey,null)){
           return {mark:'✓',cls:'present-mark',label:'حاضر آليًا يوم الخميس لوجود حضور من الأحد إلى الأربعاء'};
         }
@@ -62,17 +112,17 @@
     if(typeof window.weeklyAttIsAbsentOnDate==='function'){
       const originalAbsent=window.weeklyAttIsAbsentOnDate;
       window.weeklyAttIsAbsentOnDate=function(idno,dateKey){
-        let student=null;
-        try{ student=(typeof getStudents==='function'?getStudents():[]).find(s=>String(s?.idno||'')===String(idno)); }catch(e){}
+        const student=findStudent(idno);
         if(student && autoThursday(student,dateKey,null)) return false;
         return originalAbsent.apply(this,arguments);
       };
     }
 
-    try{ if(typeof invalidateWeeklyAttBulkStats==='function') invalidateWeeklyAttBulkStats(); }catch(e){}
+    ['storage','attendance-updated'].forEach(evt=>window.addEventListener(evt,invalidate));
+    invalidate();
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
-  setTimeout(install,300);
+  setTimeout(install,250);
 })();
