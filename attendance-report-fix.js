@@ -104,7 +104,7 @@
       // التحضير الآلي ليوم الخميس: إذا حضر الطالب يومًا واحدًا على الأقل من الأحد إلى الأربعاء
       // في نفس الأسبوع، يُحتسب الخميس حاضرًا. الأسبوع الخامس إجازة ولا يدخل.
       try{
-        for(const week of Object.keys(window.WEEKLY_FIXED_HIJRI_WEEKS||{})){
+        for(let n=1;n<=19;n++){ const week=String(n);
           if(String(week)==='5') continue;
           const wd=typeof weeklyAttFixedWeekGregorianDates==='function'?weeklyAttFixedWeekGregorianDates(week):[];
           if(!wd||wd.length!==5) continue;
