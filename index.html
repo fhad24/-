@@ -342,7 +342,31 @@
     w.document.open();
     w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
       '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.toolbar{position:sticky;top:0;z-index:3;background:#fff;padding:12px;text-align:center;border-bottom:1px solid #d6e2de}.toolbar button{background:#0f806c;color:#fff;border:0;border-radius:10px;padding:11px 24px;font-size:18px;font-weight:800;cursor:pointer}.certificate{position:relative;width:277mm;min-height:190mm;margin:12mm auto;background:#fff;border:3px solid #b88916;padding:16mm 20mm;text-align:center;box-shadow:0 4px 18px #0002;overflow:hidden}.certificate:before,.certificate:after{content:"";position:absolute;width:46mm;height:46mm;border:2px solid #d7b75e;transform:rotate(45deg);opacity:.35}.certificate:before{right:-24mm;top:-24mm}.certificate:after{left:-24mm;bottom:-24mm}.logos{display:flex;justify-content:space-between;align-items:center;height:25mm}.logos img{max-width:28mm;max-height:24mm;object-fit:contain}.authority{font-size:16px}.school{font-size:20px;font-weight:800;margin-top:3px}h1{font-size:38px;color:#9b6f07;margin:14px 0 4px}.medal{display:none!important}.lead{font-size:22px;margin:8px}.student{font-size:34px;font-weight:900;color:#0f6f60;margin:8px 0 10px;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:19px;margin:8px}.body{font-size:22px;line-height:2;max-width:900px;margin:18px auto}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:18px}.pagebreak{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.toolbar{display:none}.certificate{width:auto;min-height:185mm;margin:0;box-shadow:none;page-break-after:always}.certificate:last-child{page-break-after:auto}}'+
-      '</style><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+
+      '
+/* SHURAHBIL_WEEKLY_REPORT_LARGE_TEXT_20261010 */
+#weeklyAttendanceReport .weekly-att-controls label{font-size:18px!important;font-weight:900!important}
+#weeklyAttendanceReport .weekly-att-controls select,
+#weeklyAttendanceReport .weekly-att-controls input{font-size:19px!important;font-weight:700!important;min-height:54px!important}
+#weeklyAttendanceReport .weekly-att-actions .btn{font-size:19px!important;font-weight:900!important;min-height:52px!important;padding:10px 18px!important}
+#weeklyAttendanceReport .weekly-att-summary .box{font-size:24px!important;font-weight:900!important}
+#weeklyAttendanceReport .weekly-att-summary .box b{font-size:34px!important;line-height:1.15!important}
+#weeklyAttSheet .weekly-att-head h2{font-size:32px!important;font-weight:900!important}
+#weeklyAttSheet .weekly-att-head .meta{font-size:20px!important;font-weight:900!important;line-height:1.8!important}
+#weeklyAttSheet .weekly-att-table{font-size:20px!important}
+#weeklyAttSheet .weekly-att-table th{font-size:20px!important;font-weight:900!important;padding:12px 8px!important;line-height:1.45!important}
+#weeklyAttSheet .weekly-att-table td{font-size:20px!important;font-weight:700!important;padding:12px 8px!important;line-height:1.55!important}
+#weeklyAttSheet .weekly-att-table .student-name{font-size:21px!important;font-weight:900!important}
+#weeklyAttSheet .weekly-att-table .civil{font-size:20px!important}
+#weeklyAttSheet .weekly-att-table td b{font-size:21px!important;font-weight:900!important}
+#weeklyAttSheet .status-mark{font-size:26px!important;font-weight:900!important}
+#weeklyAttSheet .weekly-att-footer{font-size:19px!important;font-weight:900!important}
+@media(max-width:900px){
+ #weeklyAttSheet .weekly-att-table{font-size:18px!important}
+ #weeklyAttSheet .weekly-att-table th,#weeklyAttSheet .weekly-att-table td{font-size:18px!important;padding:10px 7px!important}
+ #weeklyAttSheet .weekly-att-head h2{font-size:28px!important}
+ #weeklyAttSheet .weekly-att-head .meta{font-size:18px!important}
+}
+</style><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+
     '<script>'+
     'async function shareCertificateByWhatsApp(id){'+
       'const cert=document.getElementById(id);if(!cert)return;'+
@@ -14936,9 +14960,28 @@ async function cloudPullAttendanceDates(dates,cacheKey=''){
         });
       }
     }
-    const dateSet=new Set(unique);
-    const keep=(getAttendanceLog()||[]).filter(x=>!dateSet.has(String(x.date||'')));
-    localStorage.setItem('attendanceLog',JSON.stringify([...keep,...fresh]));
+    const current=getAttendanceLog()||[];
+    const identity=row=>[
+      String(row?.idno||''),
+      String(row?.date||''),
+      String(row?.period??''),
+      weeklyAttNormalizeSubject(row?.subject||''),
+      String(row?.teacherCivilId||row?.teacher_civil_id||'')
+    ].join('|');
+
+    // مهم: لا نمسح بيانات الشهر المحلية لمجرد أن رد السحابة ناقص.
+    // نستبدل فقط السجل المطابق الذي وصل من الخادم ونحتفظ ببقية الأيام والسجلات.
+    const freshIds=new Set(fresh.map(identity));
+    const keep=current.filter(row=>!freshIds.has(identity(row)));
+    const merged=[...keep,...fresh];
+
+    // إزالة التكرار الحرفي مع إبقاء آخر نسخة.
+    const dedup=new Map();
+    for(const row of merged){
+      const k=identity(row)+'|'+String(row?.status||'');
+      dedup.set(k,row);
+    }
+    localStorage.setItem('attendanceLog',JSON.stringify([...dedup.values()]));
     __weeklyRangeFetchCache.set(key,Date.now());
     invalidateWeeklyAttBulkStats();
     try{weeklyAttCtxCache=null}catch(e){}
@@ -14948,16 +14991,25 @@ async function cloudPullAttendanceDates(dates,cacheKey=''){
     return false;
   }
 }
+let __weeklyRangeRefreshSeq=0;
 async function refreshWeeklyAttCurrentRangeFromCloud(){
+  const seq=++__weeklyRangeRefreshSeq;
   const mode=weeklyAttReportMode();
   if(mode==='weekly') return cloudPullWeeklyAttendanceRange();
+
+  const monthAtStart=String($('weeklyAttHijriMonthSelect')?.value||'');
   const dates=weeklyAttReportScopeDates();
-  const cacheKey=mode==='monthly'
-    ?'month:'+String($('weeklyAttHijriMonthSelect')?.value||'')
-    :'all:'+dates.join(',');
+  const cacheKey=mode==='monthly'?'month:'+monthAtStart:'all:'+dates.join(',');
   const body=$('weeklyAttBody');
-  if(body) body.innerHTML='<tr><td colspan="11" style="padding:24px;font-weight:900">جاري جلب بيانات '+(mode==='monthly'?'الشهر':'كل الأسابيع')+' من السحابة…</td></tr>';
+  if(body) body.innerHTML='<tr><td colspan="11" style="padding:24px;font-weight:900;font-size:20px">جاري جلب بيانات '+(mode==='monthly'?'الشهر':'كل الأسابيع')+' من السحابة…</td></tr>';
+
   const ok=await cloudPullAttendanceDates(dates,cacheKey);
+
+  // إذا غيّر المستخدم الشهر أثناء وصول البيانات، لا تسمح للطلب القديم بمسح/إعادة رسم الشهر الجديد.
+  if(seq!==__weeklyRangeRefreshSeq) return ok;
+  if(weeklyAttReportMode()!==mode) return ok;
+  if(mode==='monthly' && String($('weeklyAttHijriMonthSelect')?.value||'')!==monthAtStart) return ok;
+
   if(ok) renderWeeklyAttendanceReport();
   return ok;
 }
@@ -15210,11 +15262,19 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 };
-if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=()=>{
+if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=async()=>{
   invalidateWeeklyAttBulkStats();
   try{weeklyAttCtxCache=null}catch(e){}
+  const selectedMonth=String($('weeklyAttHijriMonthSelect')?.value||'');
+
+  // اعرض النسخة المحلية فورًا، ثم حدّث من السحابة دون مسحها.
   renderWeeklyAttendanceReport();
-  setTimeout(()=>refreshWeeklyAttCurrentRangeFromCloud(),0);
+  await refreshWeeklyAttCurrentRangeFromCloud();
+
+  // لا تعيد الرسم إذا تغيّر الشهر أثناء الطلب.
+  if(weeklyAttReportMode()==='monthly' && String($('weeklyAttHijriMonthSelect')?.value||'')===selectedMonth){
+    renderWeeklyAttendanceReport();
+  }
 };
 if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
