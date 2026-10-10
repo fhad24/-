@@ -5049,7 +5049,7 @@ body.activity-leader-open main{
             <th style="width:42px">م</th>
             <th style="width:125px;cursor:pointer;user-select:none" data-weekly-sort="idno">السجل المدني <span class="weekly-sort-icon">↕</span></th>
             <th style="width:260px;cursor:pointer;user-select:none" data-weekly-sort="name">اسم الطالب <span class="weekly-sort-icon">↕</span></th>
-            <th style="width:95px;cursor:pointer;user-select:none" data-weekly-sort="classroom">الفصل <span class="weekly-sort-icon">↕</span></th>
+            <th style="width:150px;cursor:pointer;user-select:none" data-weekly-sort="classroom">الصف / الفصل <span class="weekly-sort-icon">↕</span></th>
             <th style="width:130px;cursor:pointer;user-select:none" data-weekly-sort="phone">رقم الجوال <span class="weekly-sort-icon">↕</span></th>
             <th data-weekday="0">الأحد</th>
             <th data-weekday="1">الاثنين</th>
@@ -14484,7 +14484,7 @@ function renderWeeklyAttendanceReport(){
         '<td class="student-name"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">'+
           '<input type="checkbox" class="weekly-att-student-report-select" data-idno="'+escapeFollowupHtml(String(s.idno||''))+'" '+(String($('weeklyAttStudentSelect')?.value||'')===String(s.idno||'')?'checked':'')+' style="width:19px;height:19px;accent-color:#0f7665">'+
           '<span>'+escapeFollowupHtml(s.name||'')+'</span></label></td>'+
-        '<td>'+escapeFollowupHtml(displayStudentClassroom(s.classroom)||'')+'</td>'+
+        '<td>'+escapeFollowupHtml((s.grade||'')+' / '+(displayStudentClassroom(s.classroom)||''))+'</td>'+
         '<td dir="ltr">'+escapeFollowupHtml(s.phone||'')+'</td>'+
         middle+
         '<td><b style="color:#b42318">'+finalAbsence+'</b></td>'+
