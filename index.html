@@ -14335,10 +14335,30 @@ function switchWeeklyAttendanceTab(tab){
   }
 }
 
+async function cloudPullWeeklyAttendanceRange(){
+  try{
+    if(!localStorage.getItem('cloudAdminToken') || typeof cloudApi!=='function') return;
+    const week=String($('weeklyAttWeek')?.value||'1');
+    const dates=weeklyAttFixedWeekGregorianDates(week);
+    if(!dates.length) return;
+    const data=await cloudApi('pull_week_attendance',{dates});
+    const fresh=(data.attendance||[]).map(x=>({
+      id:x.id??null,
+      idno:String(x.idno||''), name:x.student_name||'', status:x.status||'',
+      date:x.date||'', time:x.time||'', grade:x.grade||'', classroom:x.classroom||'', period:x.period??'',
+      subject:x.subject||'', morningAssemblyLate:!!x.morning_assembly_late,
+      teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
+      hijriDate:x.hijri_date||'', weekday:x.weekday||''
+    }));
+    const keep=(getAttendanceLog()||[]).filter(x=>!dates.includes(String(x.date||'')));
+    localStorage.setItem('attendanceLog',JSON.stringify([...keep,...fresh]));
+  }catch(e){console.warn('weekly range refresh',e)}
+}
+
 async function initWeeklyAttendanceReport(){
   try{
-    if(localStorage.getItem('cloudAdminToken')) await cloudPullAttendanceFast();
-  }catch(e){console.warn('weekly attendance fast refresh',e)}
+    await cloudPullWeeklyAttendanceRange();
+  }catch(e){console.warn('weekly attendance range refresh',e)}
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
   populateWeeklyAttendanceGrades();
