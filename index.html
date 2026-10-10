@@ -14130,8 +14130,26 @@ function buildWeeklyAttFastContext(){
 
     const week=weekByDate.get(date);
     if(week){
-      const g=studentGradeKey(row.grade)||String(row.grade||'').trim();
-      const c=studentClassKey(row.classroom)||String(row.classroom||'').trim();
+      // السجلات القديمة قد لا تحتوي الصف/الفصل؛ استخدم بيانات الطالب الحالية كمرجع احتياطي.
+      const student=studentById.get(id);
+      const g=studentGradeKey(row.grade)||String(row.grade||'').trim()
+        ||studentGradeKey(student?.grade)||String(student?.grade||'').trim();
+      const c=studentClassKey(row.classroom)||String(row.classroom||'').trim()
+        ||studentClassKey(student?.classroom)||String(student?.classroom||'').trim();
+      if(g&&c && !weeklyAttExcludedRemoteClass(c)) cohortWeekHas.add(g+'|'+c+'|'+week);
+    }
+  }
+
+  // بيانات الاستيراد القديمة تعتبر أيضًا تحضيرًا فعليًا للأسبوع إذا أمكن مطابقتها بطالب حالي.
+  for(const student of students){
+    if(!weeklyAttStudentInScope(student)) continue;
+    const entry=weeklyAttImportedEntryForStudent(student);
+    if(!entry) continue;
+    for(const date of WEEKLY_IMPORTED_ABSENCE_DATES){
+      const week=weekByDate.get(String(date));
+      if(!week) continue;
+      const g=studentGradeKey(student.grade)||String(student.grade||'').trim();
+      const c=studentClassKey(student.classroom)||String(student.classroom||'').trim();
       if(g&&c) cohortWeekHas.add(g+'|'+c+'|'+week);
     }
   }
