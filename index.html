@@ -7361,7 +7361,18 @@ async function cloudPullToLocal(){
     teacherName:x.teacher_name||'', teacherUsername:x.teacher_username||'', teacherCivilId:x.teacher_civil_id||'',
     hijriDate:x.hijri_date||'', weekday:x.weekday||''
   }));
-  localStorage.setItem('attendanceLog',JSON.stringify(attendance));
+  // عند فتح كشف أسبوع محدد: المزامنة العامة لا تلمس بيانات أيام ذلك الأسبوع.
+  const weeklyLock=window.__weeklyAttLockedRange;
+  if(Array.isArray(weeklyLock?.dates) && weeklyLock.dates.length){
+    const protectedDates=new Set(weeklyLock.dates.map(String));
+    const localRows=getAttendanceLog();
+    const protectedRows=localRows.filter(x=>protectedDates.has(String(x.date||'')));
+    const outsideRows=attendance.filter(x=>!protectedDates.has(String(x.date||'')));
+    localStorage.setItem('attendanceLog',JSON.stringify([...outsideRows,...protectedRows]));
+  }else{
+    localStorage.setItem('attendanceLog',JSON.stringify(attendance));
+  }
+  try{weeklyAttCtxCache=null}catch(e){}
 
   if(Array.isArray(data.referrals)){
     const nextReferralRows=data.referrals;
@@ -13661,6 +13672,9 @@ function weeklyAttApplySelectedWeekDate(){
 
   const display=$('weeklyAttHijriDisplay');
   if(display) display.textContent=weeklyAttFixedHijriDisplay(week,day);
+
+  // اقفل أيام الأسبوع المختار حتى لا يستبدلها pull_all عام بعد وصولها.
+  window.__weeklyAttLockedRange={week,dates:[...dates]};
   return true;
 }
 const WEEKLY_IMPORTED_ABSENCE_DATES=[
@@ -14351,11 +14365,9 @@ async function cloudPullWeeklyAttendanceRange(){
 }
 
 async function initWeeklyAttendanceReport(){
-  try{
-    setTimeout(async()=>{try{await cloudPullWeeklyAttendanceRange();renderWeeklyAttendanceReport()}catch(e){console.warn('weekly attendance range refresh',e)}},0);
-  }catch(e){console.warn('weekly attendance range refresh',e)}
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
+  weeklyAttApplySelectedWeekDate();
   populateWeeklyAttendanceGrades();
   populateWeeklyAttendanceClasses();
   populateWeeklyAttAnalyticsMonths();
@@ -14364,30 +14376,24 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
+
   const reportPanel=$('weeklyAttTabReportPanel');
   const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
   if(reportPanel) reportPanel.classList.remove('hidden');
   if(analyticsPanel) analyticsPanel.classList.add('hidden');
-  // تحديث السحابة في الخلفية ثم إعادة الرسم إذا وصلت بيانات أحدث.
+
+  // لا pull_all هنا: بعد العرض الفوري نسحب الأسبوع المفتوح فقط.
   setTimeout(async()=>{
+    const requestedWeek=String($('weeklyAttWeek')?.value||'1');
     try{
-      if(isCurrentOwner()){
-        const ready=await ensureOwnerCloudSession();
-        if(ready) await cloudPullToLocal();
-      }
-      populateWeeklyAttendanceGrades();
-      populateWeeklyAttendanceClasses();
-      populateWeeklyAttHijriDates();
-      populateWeeklyAttAnalyticsMonths();
-      populateWeeklyAttAnalyticsGrades();
-      populateWeeklyAttAnalyticsClasses();
-      populateWeeklyAttAnalyticsStudents();
+      await cloudPullWeeklyAttendanceRange();
+      if(String($('weeklyAttWeek')?.value||'1')!==requestedWeek) return;
+      try{weeklyAttCtxCache=null}catch(e){}
       renderWeeklyAttendanceReport();
       renderWeeklyAttAnalytics();
-    }catch(e){console.warn('weekly attendance sync',e)}
+    }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 }
-
 function weeklyAttWeekNumberForDate(dateKey){
   for(const [week,anchor] of Object.entries(WEEKLY_IMPORTED_WEEK_ANCHORS)){
     const dates=weeklyAttWeekDates(anchor).map(weeklyAttDateKey);
@@ -14554,6 +14560,9 @@ if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
 };
 if($('weeklyAttStudentReportBtn')) $('weeklyAttStudentReportBtn').onclick=openWeeklyAttStudentDetailedReport;
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
+  const requestedWeek=String($('weeklyAttWeek')?.value||'1');
+
+  // اعرض الأسبوع فورًا من البيانات المحلية.
   weeklyAttApplySelectedWeekDate();
   populateWeeklyAttendanceClasses();
   const classEl=$('weeklyAttClass');
@@ -14562,8 +14571,20 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     if(first) classEl.value=first.value;
   }
   populateWeeklyAttStudentSelect();
+  try{weeklyAttCtxCache=null}catch(e){}
   renderWeeklyAttendanceReport();
   renderWeeklyAttAnalytics();
+
+  // ثم اسحب الأسبوع المختار فقط، من دون pull_all.
+  setTimeout(async()=>{
+    try{
+      await cloudPullWeeklyAttendanceRange();
+      if(String($('weeklyAttWeek')?.value||'1')!==requestedWeek) return;
+      try{weeklyAttCtxCache=null}catch(e){}
+      renderWeeklyAttendanceReport();
+      renderWeeklyAttAnalytics();
+    }catch(e){console.warn('weekly attendance range refresh',e)}
+  },0);
 };
 if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
