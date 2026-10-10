@@ -14315,7 +14315,7 @@ function startWeeklyAttBulkStatsJob(students,scopeDateKeys,key){
   const ctx=buildWeeklyAttFastContext();
   const stats=new Map();
   let index=0;
-  const chunkSize=40;
+  const chunkSize=160;
 
   const step=()=>{
     if(seq!==weeklyAttBulkJobSeq) return;
@@ -15249,9 +15249,13 @@ if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
 if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').onchange=()=>{
   renderWeeklyAttendanceReport();
 };
+let __weeklyAttSearchTimer=null;
 if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
-  invalidateWeeklyAttBulkStats();
-  renderWeeklyAttendanceReport();
+  clearTimeout(__weeklyAttSearchTimer);
+  __weeklyAttSearchTimer=setTimeout(()=>{
+    invalidateWeeklyAttBulkStats();
+    renderWeeklyAttendanceReport();
+  },180);
 };
 if($('weeklyAttStudentReportBtn')) $('weeklyAttStudentReportBtn').onclick=openWeeklyAttStudentDetailedReport;
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
@@ -15269,12 +15273,8 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   renderWeeklyAttAnalyticsWhenVisible();
 
   if(mode!=='weekly'){
-    setTimeout(async()=>{
-      const modeAtStart=weeklyAttReportMode();
-      await refreshWeeklyAttCurrentRangeFromCloud();
-      if(weeklyAttReportMode()!==modeAtStart) return;
-      renderWeeklyAttAnalyticsWhenVisible();
-    },0);
+    // أداء: لا نسحب عشرات الأيام من السحابة تلقائيًا عند كل تغيير.
+    // نعرض النسخة المحلية فورًا، والتحديث السحابي يتم فقط عند الضغط على "عرض الكشف".
     return;
   }
   setTimeout(async()=>{
@@ -15287,19 +15287,10 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 };
-if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=async()=>{
+if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=()=>{
   invalidateWeeklyAttBulkStats();
   try{weeklyAttCtxCache=null}catch(e){}
-  const selectedMonth=String($('weeklyAttHijriMonthSelect')?.value||'');
-
-  // اعرض النسخة المحلية فورًا، ثم حدّث من السحابة دون مسحها.
   renderWeeklyAttendanceReport();
-  await refreshWeeklyAttCurrentRangeFromCloud();
-
-  // لا تعيد الرسم إذا تغيّر الشهر أثناء الطلب.
-  if(weeklyAttReportMode()==='monthly' && String($('weeklyAttHijriMonthSelect')?.value||'')===selectedMonth){
-    renderWeeklyAttendanceReport();
-  }
 };
 if($('weeklyAttDate')) $('weeklyAttDate').onchange=()=>{
   weeklyAttApplySelectedWeekDate();
@@ -15324,7 +15315,9 @@ if($('weeklyAttHijriClose')) $('weeklyAttHijriClose').onclick=closeWeeklyAttHijr
 if($('weeklyAttDay')) $('weeklyAttDay').onchange=()=>{adjustWeeklyAttDateToDay();renderWeeklyAttAnalytics()};
 if($('weeklyAttShowBtn')) $('weeklyAttShowBtn').onclick=()=>{
   renderWeeklyAttendanceReport();
-  if(weeklyAttReportMode()!=='weekly') setTimeout(()=>refreshWeeklyAttCurrentRangeFromCloud(),0);
+  if(weeklyAttReportMode()!=='weekly'){
+    setTimeout(()=>refreshWeeklyAttCurrentRangeFromCloud(),250);
+  }
 };
 if($('weeklyAttPrintBtn')) $('weeklyAttPrintBtn').onclick=printWeeklyAttendanceReport;
 if($('weeklyAttPdfBtn')) $('weeklyAttPdfBtn').onclick=exportWeeklyAttendancePdf;
