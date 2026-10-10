@@ -13725,7 +13725,9 @@ function weeklyAttGregorianFromHijri(hijriKey){
   }
   return '';
 }
+const WEEKLY_WEEK5_VACATION_DATES=new Set(['2026-09-20','2026-09-21','2026-09-22','2026-09-23','2026-09-24']);
 function weeklyAttFixedWeekGregorianDates(week){
+  if(String(week)==='5') return [];
   return (WEEKLY_FIXED_HIJRI_WEEKS[String(week)]||[]).map(weeklyAttGregorianFromHijri).filter(Boolean);
 }
 const WEEKLY_IMPORTED_WEEK_ANCHORS={
@@ -13834,10 +13836,11 @@ function weeklyAttActiveDates(){
     ...fixedDates,
     ...weeklyAttScopedRows().map(x=>String(x.date||'')),
     ...WEEKLY_IMPORTED_ABSENCE_DATES
-  ].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d) && d<=today))].sort();
+  ].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d) && d<=today && !WEEKLY_WEEK5_VACATION_DATES.has(d)))].sort();
 }
 function weeklyAttIsAbsentOnDate(idno,dateKey){
   const key=String(dateKey||'');
+  if(WEEKLY_WEEK5_VACATION_DATES.has(key)) return false;
   const allStudents=getStudents();
   const student=allStudents.find(s=>String(s.idno)===String(idno));
   if(!student || !weeklyAttStudentInScope(student)) return false;
@@ -13871,6 +13874,7 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   return true;
 }
 function weeklyAttStatusForStudent(idno,dateKey){
+  if(WEEKLY_WEEK5_VACATION_DATES.has(String(dateKey||''))) return {mark:'',cls:'',label:'إجازة الأسبوع الخامس'};
   const student=getStudents().find(s=>String(s.idno)===String(idno));
   const importedStatus=weeklyAttImportedStatus(student,dateKey);
   if(importedStatus==='present') return {mark:'✓',cls:'present-mark',label:'حاضر — مستورد من ملف Excel'};
@@ -14395,6 +14399,23 @@ function renderWeeklyAttendanceReport(){
         String(s.phone||'').toLowerCase()
       ].some(v=>v.includes(searchNorm));
     });
+
+  if(mode==='weekly' && week==='5'){
+    const body=$('weeklyAttBody');
+    if(body) body.innerHTML='<tr><td colspan="11" style="padding:28px;font-size:22px;font-weight:900;color:#8a6100;background:#fff8db">الأسبوع الخامس إجازة كاملة — لا يُحتسب حضور ولا غياب لجميع الصفوف والفصول.</td></tr>';
+    if($('weeklyAttStudentCount')) $('weeklyAttStudentCount').textContent=String(students.length);
+    if($('weeklyAttPresentCount')) $('weeklyAttPresentCount').textContent='0';
+    if($('weeklyAttAbsentCount')) $('weeklyAttAbsentCount').textContent='0';
+    if($('weeklyAttNoStatusCount')) $('weeklyAttNoStatusCount').textContent='0';
+    if($('weeklyAttPresentLabel')) $('weeklyAttPresentLabel').textContent='حاضر في الأسبوع';
+    if($('weeklyAttAbsentLabel')) $('weeklyAttAbsentLabel').textContent='غائب في الأسبوع';
+    if($('weeklyAttNoStatusLabel')) $('weeklyAttNoStatusLabel').textContent='بدون تسجيل';
+    if($('weeklyAttHeadRight')) $('weeklyAttHeadRight').textContent='الأسبوع الدراسي: 5 — إجازة';
+    if($('weeklyAttHeadCenter')) $('weeklyAttHeadCenter').textContent='إجازة كاملة — غير محتسبة';
+    const settings=getSchoolSettings?.()||{};
+    if($('weeklyAttManager')) $('weeklyAttManager').textContent=settings.manager||'';
+    return;
+  }
 
   let scopedStatsById=new Map();
   if(mode!=='weekly'){
