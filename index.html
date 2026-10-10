@@ -14034,6 +14034,10 @@ function adjustWeeklyAttDateToDay(){
   updateWeeklyAttHijriDisplay();
   renderWeeklyAttendanceReport();
 }
+function invalidateWeeklyAttBulkStats(){
+  weeklyAttBulkJobSeq++;
+  weeklyAttBulkStatsCache={key:'',stats:null};
+}
 function weeklyAttReportMode(){
   const v=String($('weeklyAttWeek')?.value||'1');
   return v==='monthly'?'monthly':v==='all'?'all':'weekly';
@@ -14196,6 +14200,50 @@ function populateWeeklyAttStudentSelect(){
   if(students.some(s=>String(s.idno||'')===current)) el.value=current;
 }
 let weeklyAttAbsenceSortDir='';
+let weeklyAttBulkJobSeq=0;
+let weeklyAttBulkStatsCache={key:'',stats:null};
+
+function weeklyAttBulkStatsKey(mode,scopeDateKeys,students,grade,classroom,searchNorm){
+  return [
+    mode,
+    String($('weeklyAttHijriMonthSelect')?.value||''),
+    (scopeDateKeys||[]).join(','),
+    String(grade||''),
+    String(classroom||''),
+    String(searchNorm||''),
+    String(students.length),
+    String((getAttendanceLog()||[]).length)
+  ].join('||');
+}
+function startWeeklyAttBulkStatsJob(students,scopeDateKeys,key){
+  const seq=++weeklyAttBulkJobSeq;
+  weeklyAttBulkStatsCache={key:'',stats:null};
+  const ctx=buildWeeklyAttFastContext();
+  const stats=new Map();
+  let index=0;
+  const chunkSize=40;
+
+  const step=()=>{
+    if(seq!==weeklyAttBulkJobSeq) return;
+    const end=Math.min(students.length,index+chunkSize);
+    for(;index<end;index++){
+      const s=students[index];
+      stats.set(String(s.idno||''),weeklyAttScopedStatsForStudent(s,scopeDateKeys,ctx));
+    }
+    const body=$('weeklyAttBody');
+    if(body && seq===weeklyAttBulkJobSeq){
+      const pct=students.length?Math.round((index/students.length)*100):100;
+      body.innerHTML='<tr><td colspan="11" style="padding:24px;font-weight:900">جاري تجهيز النتائج… '+pct+'%</td></tr>';
+    }
+    if(index<students.length){
+      setTimeout(step,0);
+    }else{
+      weeklyAttBulkStatsCache={key,stats};
+      if(seq===weeklyAttBulkJobSeq) requestAnimationFrame(()=>renderWeeklyAttendanceReport());
+    }
+  };
+  setTimeout(step,0);
+}
 function toggleWeeklyAttAbsenceSort(){
   weeklyAttAbsenceSortDir=weeklyAttAbsenceSortDir==='asc'?'desc':'asc';
   renderWeeklyAttendanceReport();
@@ -14228,11 +14276,21 @@ function renderWeeklyAttendanceReport(){
       ].some(v=>v.includes(searchNorm));
     });
 
-  const scopedStatsById=new Map();
-  let fastCtx=null;
+  let scopedStatsById=new Map();
   if(mode!=='weekly'){
-    fastCtx=buildWeeklyAttFastContext();
-    students.forEach(s=>scopedStatsById.set(String(s.idno||''),weeklyAttScopedStatsForStudent(s,scopeDateKeys,fastCtx)));
+    const bulkKey=weeklyAttBulkStatsKey(mode,scopeDateKeys,students,grade,classroom,searchNorm);
+    if(weeklyAttBulkStatsCache.key===bulkKey && weeklyAttBulkStatsCache.stats){
+      scopedStatsById=weeklyAttBulkStatsCache.stats;
+    }else{
+      const body=$('weeklyAttBody');
+      if(body) body.innerHTML='<tr><td colspan="11" style="padding:24px;font-weight:900">جاري تجهيز النتائج… 0%</td></tr>';
+      if($('weeklyAttStudentCount')) $('weeklyAttStudentCount').textContent=String(students.length);
+      if($('weeklyAttPresentCount')) $('weeklyAttPresentCount').textContent='…';
+      if($('weeklyAttAbsentCount')) $('weeklyAttAbsentCount').textContent='…';
+      if($('weeklyAttNoStatusCount')) $('weeklyAttNoStatusCount').textContent='…';
+      startWeeklyAttBulkStatsJob(students,scopeDateKeys,bulkKey);
+      return;
+    }
   }
 
   const absenceCountById=new Map();
@@ -14912,6 +14970,7 @@ async function exportWeeklyAttendancePdf(){
 if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeeklyAttendanceTab('report');
 if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
+  invalidateWeeklyAttBulkStats();
   populateWeeklyAttendanceClasses();
   populateWeeklyAttStudentSelect();
   populateWeeklyAttAnalyticsStudents();
@@ -14919,6 +14978,7 @@ if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
   renderWeeklyAttAnalyticsWhenVisible()
 };
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
+  invalidateWeeklyAttBulkStats();
   populateWeeklyAttStudentSelect();
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
@@ -14928,10 +14988,12 @@ if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').onchange=()=>{
   renderWeeklyAttendanceReport();
 };
 if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
+  invalidateWeeklyAttBulkStats();
   renderWeeklyAttendanceReport();
 };
 if($('weeklyAttStudentReportBtn')) $('weeklyAttStudentReportBtn').onclick=openWeeklyAttStudentDetailedReport;
 if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
+  invalidateWeeklyAttBulkStats();
   const requestedWeek=String($('weeklyAttWeek')?.value||'1');
   const mode=weeklyAttReportMode();
   updateWeeklyAttRangeControls();
@@ -14956,6 +15018,7 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
   },0);
 };
 if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=()=>{
+  invalidateWeeklyAttBulkStats();
   try{weeklyAttCtxCache=null}catch(e){}
   renderWeeklyAttendanceReport();
 };
