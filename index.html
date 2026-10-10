@@ -14335,10 +14335,15 @@ function switchWeeklyAttendanceTab(tab){
   }
 }
 
+const __weeklyFetchState={week:'',busy:false,loadedAt:0};
 async function cloudPullWeeklyAttendanceRange(){
   try{
     if(!localStorage.getItem('cloudAdminToken') || typeof cloudApi!=='function') return;
     const week=String($('weeklyAttWeek')?.value||'1');
+    if(__weeklyFetchState.busy && __weeklyFetchState.week===week) return;
+    if(__weeklyFetchState.week===week && Date.now()-__weeklyFetchState.loadedAt<30000) return;
+    __weeklyFetchState.week=week;
+    __weeklyFetchState.busy=true;
     const dates=weeklyAttFixedWeekGregorianDates(week);
     if(!dates.length) return;
     const data=await cloudApi('pull_week_attendance',{dates});
@@ -14352,12 +14357,14 @@ async function cloudPullWeeklyAttendanceRange(){
     }));
     const keep=(getAttendanceLog()||[]).filter(x=>!dates.includes(String(x.date||'')));
     localStorage.setItem('attendanceLog',JSON.stringify([...keep,...fresh]));
+    __weeklyFetchState.loadedAt=Date.now();
   }catch(e){console.warn('weekly range refresh',e)}
+  finally{__weeklyFetchState.busy=false}
 }
 
 async function initWeeklyAttendanceReport(){
   try{
-    await cloudPullWeeklyAttendanceRange();
+    setTimeout(async()=>{try{await cloudPullWeeklyAttendanceRange();renderWeeklyAttendanceReport()}catch(e){console.warn('weekly attendance range refresh',e)}},0);
   }catch(e){console.warn('weekly attendance range refresh',e)}
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
