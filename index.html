@@ -22083,6 +22083,45 @@ setTimeout(refreshStudentDataReviewCount,900);
   setTimeout(bind,300);
 })();
 </script>
+<script id="weekly-grade-class-hard-fix-20261010">
+(function(){
+  const gradeMap={
+    'الأول الثانوي':['أ','ب','ج','د','هـ','و'],
+    'الثاني الثانوي':['أ','ب','ج','د','هـ'],
+    'الثالث الثانوي':['أ','ب','ج','د','هـ']
+  };
+  function fillGrades(){
+    const g=document.getElementById('weeklyAttGrade');
+    const c=document.getElementById('weeklyAttClass');
+    if(!g||!c) return false;
+    const gv=g.value;
+    const grades=Object.keys(gradeMap);
+    if(g.options.length<=1 || !grades.some(x=>[...g.options].some(o=>o.value===x))){
+      g.innerHTML='<option value="">اختر الصف</option>'+grades.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
+      if(grades.includes(gv)) g.value=gv;
+    }
+    const fillClasses=()=>{
+      const cv=c.value;
+      const classes=gradeMap[g.value]||[];
+      c.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>'<option value="'+x+'">'+x+'</option>').join('');
+      if(classes.includes(cv)) c.value=cv;
+    };
+    if(!g.dataset.hardFixBound){
+      g.dataset.hardFixBound='1';
+      g.addEventListener('change',fillClasses);
+    }
+    if(g.value && c.options.length<=1) fillClasses();
+    return true;
+  }
+  function run(){
+    fillGrades();
+    let n=0;
+    const t=setInterval(()=>{n++;fillGrades();if(n>40)clearInterval(t)},500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
+  new MutationObserver(()=>fillGrades()).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
