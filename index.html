@@ -17162,7 +17162,9 @@ async function makeSharpAttendanceThumb(blob,key=''){
   }
 }
 
+let __attendanceStudentListRenderSeq=0;
 async function renderAttendanceStudentList(){
+  const __renderSeq=++__attendanceStudentListRenderSeq;
   ensureAttendanceSelectionDay();
   const rawQ=$('attendanceStudentSearch')?.value||'';
   const q=normalizeSearchText(rawQ);
@@ -17240,6 +17242,9 @@ async function renderAttendanceStudentList(){
     </div>`;
   }));
 
+  // إذا بدأ رسم أحدث أثناء تحميل الصور فلا تسمح للرسم القديم أن يكتب فوقه
+  // ويزيل علامات التحديد التي اختارها المستخدم للتو.
+  if(__renderSeq!==__attendanceStudentListRenderSeq) return;
   $('attendanceStudentList').innerHTML=rendered.join('') || '<div class="hint" style="padding:14px">لا توجد أسماء مطابقة</div>';
   if(attendanceMode==='present'||attendanceMode==='late'){
     const selectedVisible=list.filter(s=>attendancePresentSelectedIds.has(String(s.idno))).length;
@@ -17265,7 +17270,9 @@ async function renderAttendanceStudentList(){
         attendancePresentSelectedIds.add(id);
         if(attendanceMode==='late') persistLateSelections();
         updateAttendanceSelectedCount();
-        // في التأخر نظهر رسالة الحفظ فورًا عند التحديد، بدون انتظار الشبكة.
+        // ثبّت علامة التحديد فورًا ولا تسمح لأي إعادة رسم متأخرة بإزالتها.
+        box.checked=true;
+        box.setAttribute('checked','checked');
         if(attendanceMode==='late') showAttendanceSavedMessage('✅ تم الحفظ');
         queueAttendanceInstantSave(id);
       }else{
@@ -17657,11 +17664,20 @@ async function flushAttendanceInstantSave(){
     if(attendanceMode==='present'){
       showAttendanceSavedMessage('✅ تم الحفظ');
     }else if(attendanceMode==='late'){
+      // حافظ على التحديد الحالي قبل أي مزامنة أو إعادة رسم.
+      ids.forEach(id=>attendancePresentSelectedIds.add(String(id)));
       persistLateSelections();
       attendanceListView='late';
       try{
         await cloudPullAttendanceFast();
         await renderAttendancePage();
+        // أعد مزامنة مربعات التحديد المفتوحة مع الحالة المحفوظة.
+        document.querySelectorAll('.attendance-present-student-select').forEach(box=>{
+          const bid=String(box.dataset.selectId||'');
+          const on=attendancePresentSelectedIds.has(bid);
+          box.checked=on;
+          if(on) box.setAttribute('checked','checked'); else box.removeAttribute('checked');
+        });
       }catch(e){ console.warn('late register refresh',e); }
       showAttendanceSavedMessage('✅ تم حفظ '+cloudRows.length+' طالب في سجل التأخر');
     }
