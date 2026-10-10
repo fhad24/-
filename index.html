@@ -13704,19 +13704,9 @@ function weeklyAttCurrentTeacherSubject(){
   return String(getCurrentTeacherDefaultSubject?.()||'').trim();
 }
 function weeklyAttScopedRows(){
-  const rows=getAttendanceLog();
-  if(isAttendanceSupervisor()) return rows;
-  const subject=weeklyAttNormalizeSubject(weeklyAttCurrentTeacherSubject());
-  return rows.filter(row=>{
-    if(!attendanceRowBelongsToCurrentUser(row)) return false;
-    // إذا كانت مادة المعلم محددة فلا يدخل في كشفه أي سجل لمادة أخرى.
-    if(subject){
-      const rowSubject=weeklyAttNormalizeSubject(row?.subject||'');
-      if(!rowSubject || rowSubject!==subject) return false;
-    }
-    return true;
-  });
+  return getAttendanceLog();
 }
+
 function weeklyAttScopedCohorts(){
   const set=new Set();
   weeklyAttScopedRows().forEach(r=>{
@@ -13727,11 +13717,9 @@ function weeklyAttScopedCohorts(){
   return set;
 }
 function weeklyAttStudentInScope(student){
-  if(isAttendanceSupervisor()) return true;
-  const key=(studentGradeKey(student?.grade)||String(student?.grade||'').trim())+'|'+
-            (studentClassKey(student?.classroom)||String(student?.classroom||'').trim());
-  return weeklyAttScopedCohorts().has(key);
+  return true;
 }
+
 function weeklyAttActiveDates(){
   const today=weeklyAttDateKey(new Date());
   const fixedDates=Object.keys(WEEKLY_FIXED_HIJRI_WEEKS)
