@@ -6241,16 +6241,38 @@ function dedupeStudents(rows){
   }
   return [...by.values()];
 }
+function saveStudentRosterSafetyBackup(rows){
+  try{
+    const slim=dedupeStudents(Array.isArray(rows)?rows:[]).map(s=>({
+      name:s.name||'', idno:String(s.idno||''), phone:s.phone||'',
+      grade:s.grade||'', classroom:s.classroom||'',
+      calendar:s.calendar||'', birth:s.birth||'',
+      verification:s.verification||'مؤكد', registered:s.registered!==false
+    }));
+    if(slim.length) localStorage.setItem('studentRosterSafetyBackup:v1',JSON.stringify(slim));
+  }catch(e){}
+}
 function getStudents(){
   try{
     const raw=JSON.parse(localStorage.getItem('students')||'[]');
-    return dedupeStudents(Array.isArray(raw)?raw:[]);
+    const current=dedupeStudents(Array.isArray(raw)?raw:[]);
+    if(current.length) return current;
+
+    // استرجاع فوري من نسخة خفيفة محلية بدل انتظار الشبكة.
+    const backup=JSON.parse(localStorage.getItem('studentRosterSafetyBackup:v1')||'[]');
+    const safe=dedupeStudents(Array.isArray(backup)?backup:[]);
+    if(safe.length){
+      localStorage.setItem('students',JSON.stringify(safe));
+      return safe;
+    }
+    return [];
   }catch(e){return []}
 }
 async function saveStudents(rows){
   const before=getStudents();
   const clean=dedupeStudents(rows);
   localStorage.setItem('students',JSON.stringify(clean));
+  saveStudentRosterSafetyBackup(clean);
   if(!localStorage.getItem('cloudAdminToken')) return clean;
   const oldBy=new Map(before.map(x=>[String(x.idno||''),JSON.stringify({...x,faceImage:'',idImage:''})]));
   const changed=clean.filter(x=>{
@@ -7327,6 +7349,30 @@ async function recoverLocalAttendance14480425(){ return {restored:0,found:0}; }
 async function reconcileFirstSecondaryBOnce(students){return students;}
 async function reconcileFirstSecondaryCOnce(students){return students;}
 
+async function cloudPullStudentRosterFast(){
+  const token=localStorage.getItem('cloudAdminToken');
+  if(!token) return false;
+  try{
+    const data=await cloudApi('pull_all');
+    const incoming=Array.isArray(data?.students)?data.students:[];
+    if(!incoming.length) return false;
+    const students=incoming.map(s=>({
+      name:s.name||'', idno:String(s.idno||''), phone:s.phone||'',
+      grade:s.grade||'', classroom:studentClassKey(s.classroom)||s.classroom||'',
+      calendar:s.calendar||'', birth:s.birth||'', verification:s.verification||'مؤكد',
+      registered:s.registered!==false, hasFace:!!s.has_face, hasId:!!s.has_id,
+      cropStatus:s.crop_status||'', referenceNo:s.reference_no||'', registrationDate:s.registration_date||''
+    }));
+    const clean=dedupeStudents(students);
+    localStorage.setItem('students',JSON.stringify(clean));
+    saveStudentRosterSafetyBackup(clean);
+    return true;
+  }catch(e){
+    console.warn('fast roster refresh',e);
+    return false;
+  }
+}
+
 async function cloudPullToLocal(){
   const token=localStorage.getItem('cloudAdminToken');
   if(!token) return null;
@@ -7343,7 +7389,9 @@ async function cloudPullToLocal(){
 
   // لا تسمح لرد pull_all ناقص/فارغ أن يمسح قائمة الطلاب المحلية.
   if(students.length){
-    localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+    const cleanStudents=dedupeStudents(students);
+    localStorage.setItem('students',JSON.stringify(cleanStudents));
+    saveStudentRosterSafetyBackup(cleanStudents);
   }else{
     console.warn('pull_all returned no students; preserving local student roster');
   }
@@ -14448,14 +14496,8 @@ function renderWeeklyAttAnalyticsWhenVisible(){
 }
 
 async function initWeeklyAttendanceReport(){
-  // استرجاع تلقائي مرة واحدة إذا كانت قائمة الطلاب قد اختفت محليًا.
-  if(!getStudents().length && localStorage.getItem('cloudAdminToken') && typeof cloudPullToLocal==='function'){
-    try{
-      await cloudPullToLocal();
-    }catch(e){
-      console.warn('weekly roster recovery',e);
-    }
-  }
+  // لا ننتظر الشبكة أبدًا عند فتح الكشف؛ getStudents يعيد النسخة المحلية فورًا.
+  const rosterMissing=!getStudents().length;
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
   weeklyAttApplySelectedWeekDate();
@@ -14473,6 +14515,19 @@ async function initWeeklyAttendanceReport(){
   if(reportPanel) reportPanel.classList.remove('hidden');
   if(analyticsPanel) analyticsPanel.classList.add('hidden');
 
+  // إذا لم توجد حتى النسخة المحلية، اجلب قائمة الطلاب في الخلفية بدون إيقاف الصفحة.
+  if(rosterMissing && localStorage.getItem('cloudAdminToken')){
+    setTimeout(async()=>{
+      const ok=await cloudPullStudentRosterFast();
+      if(!ok) return;
+      populateWeeklyAttendanceGrades();
+      populateWeeklyAttendanceClasses();
+      populateWeeklyAttStudentSelect();
+      try{weeklyAttCtxCache=null}catch(e){}
+      renderWeeklyAttendanceReport();
+    },0);
+  }
+
   // لا pull_all هنا: بعد العرض الفوري نسحب الأسبوع المفتوح فقط.
   setTimeout(async()=>{
     const requestedWeek=String($('weeklyAttWeek')?.value||'1');
@@ -14481,7 +14536,7 @@ async function initWeeklyAttendanceReport(){
       if(String($('weeklyAttWeek')?.value||'1')!==requestedWeek) return;
       try{weeklyAttCtxCache=null}catch(e){}
       renderWeeklyAttendanceReport();
-      renderWeeklyAttAnalytics();
+      renderWeeklyAttAnalyticsWhenVisible();
     }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 }
