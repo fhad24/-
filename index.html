@@ -14091,21 +14091,95 @@ function updateWeeklyAttRangeControls(){
     if(dateLabel) dateLabel.textContent='الفترة';
   }
 }
-function weeklyAttScopedStatsForStudent(student,dates){
-  const unique=[...new Set((dates||[]).map(String))];
-  let present=0,absent=0;
-  unique.forEach(key=>{
-    const st=weeklyAttStatusForStudent(student.idno,key);
-    if(st.mark==='✓') present++;
-    else if(st.mark==='✕') absent++;
+function buildWeeklyAttFastContext(){
+  const students=getStudents();
+  const rows=weeklyAttScopedRows();
+  const studentById=new Map(students.map(s=>[String(s.idno||''),s]));
+  const statusByIdDate=new Map();
+  const cohortWeekHas=new Set();
+  const weekByDate=new Map();
+
+  Object.keys(WEEKLY_FIXED_HIJRI_WEEKS).forEach(week=>{
+    weeklyAttFixedWeekGregorianDates(week).forEach(date=>weekByDate.set(String(date),String(week)));
   });
-  const dateSet=new Set(unique);
-  const lateDays=new Set(weeklyAttScopedRows()
-    .filter(x=>String(x.idno)===String(student.idno) && x.status==='late' && dateSet.has(String(x.date||'')))
-    .map(x=>String(x.date||''))).size;
+
+  for(const row of rows){
+    const id=String(row.idno||'');
+    const date=String(row.date||'');
+    if(!id||!date) continue;
+    const key=id+'|'+date;
+    let rec=statusByIdDate.get(key);
+    if(!rec){
+      rec={present:false,late:false,absent:false};
+      statusByIdDate.set(key,rec);
+    }
+    if(row.status==='present') rec.present=true;
+    else if(row.status==='late') rec.late=true;
+    else if(row.status==='absent') rec.absent=true;
+
+    const week=weekByDate.get(date);
+    if(week){
+      const g=studentGradeKey(row.grade)||String(row.grade||'').trim();
+      const c=studentClassKey(row.classroom)||String(row.classroom||'').trim();
+      if(g&&c) cohortWeekHas.add(g+'|'+c+'|'+week);
+    }
+  }
+
+  const importedDateSet=new Set(WEEKLY_IMPORTED_ABSENCE_DATES.map(String));
+  const importedById=new Map();
+  const importedByNameClass=new Map();
+  for(const r of WEEKLY_IMPORTED_ABSENCE_ROSTER){
+    const id=String(r[0]||'').trim();
+    if(id && !/^0+$/.test(id)) importedById.set(id,r);
+    const name=weeklyAttImportedNormName(r[1]||'');
+    const cls=studentClassKey(r[2])||String(r[2]||'').trim();
+    if(name) importedByNameClass.set(name+'|'+cls,r);
+  }
+
+  return {studentById,statusByIdDate,cohortWeekHas,weekByDate,importedDateSet,importedById,importedByNameClass,today:weeklyAttDateKey(new Date())};
+}
+function weeklyAttFastImportedStatus(student,dateKey,ctx){
+  if(!student || !ctx.importedDateSet.has(String(dateKey))) return null;
+  const idx=WEEKLY_IMPORTED_ABSENCE_DATES.indexOf(String(dateKey));
+  if(idx<0) return null;
+  const id=String(student.idno||'').trim();
+  const cls=studentClassKey(student.classroom)||String(student.classroom||'').trim();
+  const entry=(id&&!/^0+$/.test(id)?ctx.importedById.get(id):null)
+    ||ctx.importedByNameClass.get(weeklyAttImportedNormName(student.name||'')+'|'+cls);
+  if(!entry) return null;
+  const mask=parseInt(String(entry[3]||'0'),16)||0;
+  return (mask & (1<<idx))?'present':'absent';
+}
+function weeklyAttFastStatus(student,dateKey,ctx){
+  const key=String(dateKey||'');
+  const imported=weeklyAttFastImportedStatus(student,key,ctx);
+  if(imported==='present') return 'present';
+  if(imported==='absent') return 'absent';
+
+  const rec=ctx.statusByIdDate.get(String(student.idno||'')+'|'+key);
+  if(rec?.present || rec?.late) return 'present';
+  if(rec?.absent) return 'absent';
+  if(key>ctx.today) return '';
+
+  const week=ctx.weekByDate.get(key);
+  if(!week) return '';
+  const g=studentGradeKey(student.grade)||String(student.grade||'').trim();
+  const c=studentClassKey(student.classroom)||String(student.classroom||'').trim();
+  return ctx.cohortWeekHas.has(g+'|'+c+'|'+week)?'absent':'';
+}
+function weeklyAttScopedStatsForStudent(student,dates,ctx){
+  const unique=[...new Set((dates||[]).map(String))];
+  let present=0,absent=0,late=0;
+  for(const key of unique){
+    const status=weeklyAttFastStatus(student,key,ctx);
+    if(status==='present') present++;
+    else if(status==='absent') absent++;
+    const rec=ctx.statusByIdDate.get(String(student.idno||'')+'|'+key);
+    if(rec?.late) late++;
+  }
   const counted=present+absent;
   const rate=counted?Math.round((present/counted)*100):0;
-  return {present,absent,late:lateDays,counted,rate};
+  return {present,absent,late,counted,rate};
 }
 
 function populateWeeklyAttStudentSelect(){
@@ -14155,8 +14229,10 @@ function renderWeeklyAttendanceReport(){
     });
 
   const scopedStatsById=new Map();
+  let fastCtx=null;
   if(mode!=='weekly'){
-    students.forEach(s=>scopedStatsById.set(String(s.idno||''),weeklyAttScopedStatsForStudent(s,scopeDateKeys)));
+    fastCtx=buildWeeklyAttFastContext();
+    students.forEach(s=>scopedStatsById.set(String(s.idno||''),weeklyAttScopedStatsForStudent(s,scopeDateKeys,fastCtx)));
   }
 
   const absenceCountById=new Map();
@@ -14846,18 +14922,12 @@ if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
   populateWeeklyAttStudentSelect();
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
-  renderWeeklyAttAnalytics()
+  renderWeeklyAttAnalyticsWhenVisible()
 };
 if($('weeklyAttStudentSelect')) $('weeklyAttStudentSelect').onchange=()=>{
   renderWeeklyAttendanceReport();
 };
 if($('weeklyAttStudentSearch')) $('weeklyAttStudentSearch').oninput=()=>{
-  const q=String($('weeklyAttStudentSearch').value||'').trim().toLowerCase();
-  if($('weeklyAttStudentSelect')){
-    const match=[...$('weeklyAttStudentSelect').options].find(o=>o.value && o.textContent.toLowerCase().includes(q));
-    if(match) $('weeklyAttStudentSelect').value=match.value;
-    else if(!q) $('weeklyAttStudentSelect').value='';
-  }
   renderWeeklyAttendanceReport();
 };
 if($('weeklyAttStudentReportBtn')) $('weeklyAttStudentReportBtn').onclick=openWeeklyAttStudentDetailedReport;
