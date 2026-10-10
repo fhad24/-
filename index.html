@@ -22156,6 +22156,68 @@ setTimeout(refreshStudentDataReviewCount,900);
   setInterval(bind,1500);
 })();
 </script>
+<script id="weekly-direct-pull-students-20261010">
+(function(){
+  const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
+  let running=false,lastKey='';
+  async function pullAndRender(){
+    const g=document.getElementById('weeklyAttGrade');
+    const c=document.getElementById('weeklyAttClass');
+    if(!g||!c||!g.value||!c.value||running) return;
+    const key=g.value+'|'+c.value;
+    const token=localStorage.getItem('cloudAdminToken')||'';
+    if(!token) return;
+    running=true;
+    try{
+      const res=await fetch(API,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-app-token':token},
+        body:JSON.stringify({action:'pull_all'})
+      });
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+      const students=(data.students||[]).map(s=>({
+        name:s.name||'',
+        idno:String(s.idno||''),
+        phone:s.phone||'',
+        grade:s.grade||'',
+        classroom:s.classroom||'',
+        calendar:s.calendar||'',
+        birth:s.birth||'',
+        verification:s.verification||'مؤكد',
+        registered:s.registered!==false,
+        hasFace:!!s.has_face,
+        hasId:!!s.has_id,
+        cropStatus:s.crop_status||'',
+        referenceNo:s.reference_no||'',
+        registrationDate:s.registration_date||'',
+        faceImage:'',
+        idImage:''
+      }));
+      localStorage.setItem('students',JSON.stringify(students));
+      lastKey=key;
+      if(typeof populateWeeklyAttStudentSelect==='function') populateWeeklyAttStudentSelect();
+      if(typeof renderWeeklyAttendanceReport==='function') renderWeeklyAttendanceReport();
+    }catch(e){console.warn('direct weekly students pull',e)}
+    finally{running=false;}
+  }
+  function bind(){
+    const g=document.getElementById('weeklyAttGrade');
+    const c=document.getElementById('weeklyAttClass');
+    if(g&&!g.dataset.directStudents){
+      g.dataset.directStudents='1';
+      g.addEventListener('change',()=>setTimeout(pullAndRender,120));
+    }
+    if(c&&!c.dataset.directStudents){
+      c.dataset.directStudents='1';
+      c.addEventListener('change',()=>setTimeout(pullAndRender,120));
+    }
+    if(g?.value&&c?.value&&(g.value+'|'+c.value)!==lastKey) setTimeout(pullAndRender,200);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
+  setInterval(bind,1200);
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
