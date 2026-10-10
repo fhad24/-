@@ -573,7 +573,7 @@
       /* SHURAHBIL_LATE_TAB_HIDE_SESSION_PATCH */
       {
         const latePatch='<style id="shurahbilLateNoSessionStyle">.attendance-session-controls.shurahbil-late-hide{display:none!important}</style>'+
-          '<script>(function(){function f(){var late=document.getElementById("attendanceLateTab");var box=document.querySelector(".attendance-session-controls");if(!box)return;box.classList.toggle("shurahbil-late-hide",!!late&&late.classList.contains("active"));}document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#attendanceLateTab,#attendancePresentTab"))setTimeout(f,0)},true);new MutationObserver(f).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",f,{once:true});else f();setTimeout(f,200);})();<'+'/script>';
+          '<script>(function(){function f(){var late=document.getElementById("attendanceLateTab");var isLate=!!late&&late.classList.contains("active");document.querySelectorAll(".attendance-session-controls").forEach(function(box){box.classList.toggle("shurahbil-late-hide",isLate);if(isLate){box.style.setProperty("display","none","important")}else if(document.getElementById("attendancePresentTab")?.classList.contains("active")){box.style.removeProperty("display")}});}document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#attendanceLateTab,#attendancePresentTab"))setTimeout(f,0)},true);new MutationObserver(f).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",f,{once:true});else f();setTimeout(f,200);})();<'+'/script>';
         const closeHead=html.toLowerCase().lastIndexOf('</head>');
         html=closeHead>=0 ? html.slice(0,closeHead)+latePatch+html.slice(closeHead) : latePatch+html;
       }
@@ -16885,10 +16885,16 @@ function setAttendanceMode(mode){
     else presentSelectAllWrap.style.removeProperty('display');
   }
 
-  const sessionControls=document.querySelector('.attendance-session-controls');
+  const sessionControls=[...document.querySelectorAll('.attendance-session-controls')];
   const manualSession=attendanceManualSelectorsAllowed();
-  // تبويب التأخر لا يحتاج الحصة أو المادة نهائيًا؛ تبقى الأدوات للحضور فقط.
-  if(sessionControls) sessionControls.classList.toggle('hidden',!present||!manualSession);
+  // تبويب التأخر لا يحتاج الحصة أو المادة نهائيًا. نخفيها بأسلوب inline !important
+  // لأن بعض تنسيقات النسخة القديمة كانت تفرض display:grid!important.
+  sessionControls.forEach(box=>{
+    const shouldShow=present && manualSession;
+    box.classList.toggle('hidden',!shouldShow);
+    if(shouldShow) box.style.removeProperty('display');
+    else box.style.setProperty('display','none','important');
+  });
   if(present && !manualSession) applyAutomaticAttendanceSessionForTeacher();
   const morningField=$('attendanceMorningLateField');
   if(morningField) morningField.style.display=late?'':'none';
