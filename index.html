@@ -542,26 +542,34 @@
       const timer=setTimeout(()=>ctrl.abort(),4500);
       let metaRes;
       try{
-        metaRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'program_update_meta'}),signal:ctrl.signal});
+        metaRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},body:JSON.stringify({action:'program_update_meta',_ts:Date.now()}),cache:'no-store',signal:ctrl.signal});
       }finally{clearTimeout(timer)}
       if(!metaRes.ok) return;
       const meta=await metaRes.json().catch(()=>({}));
       const u=meta&&meta.update;
       if(!u||!u.sha256) return;
       let html='';
+      // مهم: لا نستخدم نسخة البرنامج المخزنة كنسخة أولى عند تحديث المتصفح.
+      // نطلب النسخة الحالية من الخادم كل مرة، ونستخدم التخزين المحلي فقط كاحتياط عند فشل الشبكة.
       try{
-        if(localStorage.getItem(CACHE_HASH)===u.sha256) html=localStorage.getItem(CACHE_HTML)||'';
+        const contentRes=await fetch(API,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},
+          body:JSON.stringify({action:'program_update_content',sha256:u.sha256,_ts:Date.now()}),
+          cache:'no-store'
+        });
+        if(contentRes.ok) html=await contentRes.text();
       }catch(e){}
-      if(!html){
-        const contentRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'program_update_content',sha256:u.sha256})});
-        if(!contentRes.ok)return;
-        html=await contentRes.text();
-        if(html.length<100000 || !html.toLowerCase().includes('<html'))return;
+      if(!html || html.length<100000 || !html.toLowerCase().includes('<html')){
         try{
-          localStorage.setItem(CACHE_HASH,u.sha256);
-          localStorage.setItem(CACHE_HTML,html);
+          if(localStorage.getItem(CACHE_HASH)===u.sha256) html=localStorage.getItem(CACHE_HTML)||'';
         }catch(e){}
       }
+      if(!html || html.length<100000 || !html.toLowerCase().includes('<html')) return;
+      try{
+        localStorage.setItem(CACHE_HASH,u.sha256);
+        localStorage.setItem(CACHE_HTML,html);
+      }catch(e){}
       /* SHURAHBIL_THANKS_BUTTON_HTML_PATCH */
       if(!html.includes('weeklyAttThanksCertificateRuntimeBtn')){
         const thanksBtn='<button type="button" class="btn btn-outline" id="weeklyAttThanksCertificateRuntimeBtn" onclick="window.openWeeklyThanksCertificatesRuntime&&window.openWeeklyThanksCertificatesRuntime()" style="display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;border:2px solid #b88916!important;background:#fff3bf!important;color:#6b4f00!important;font-weight:900!important;font-size:16px!important;min-height:52px!important;padding:10px 18px!important;border-radius:10px!important">🏅 شهادة شكر</button>';
