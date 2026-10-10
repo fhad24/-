@@ -17614,6 +17614,11 @@ async function flushAttendanceInstantSave(){
     }
 
     if(!cloudRows.length){
+      // إذا كانت السجلات موجودة مسبقًا، افتح سجل التأخر وحدّثه بدل الخروج بصمت.
+      if(attendanceMode==='late'){
+        attendanceListView='late';
+        try{ await renderAttendancePage(); }catch(e){ console.warn('late register refresh',e); }
+      }
       return;
     }
 
@@ -17631,8 +17636,15 @@ async function flushAttendanceInstantSave(){
       try{ renderAttendancePage(); }catch(e){}
     }
 
-    // الحضور يعرض الرسالة بعد تأكيد الخادم، أما التأخر فظهرت فورًا عند التحديد.
-    if(attendanceMode==='present') showAttendanceSavedMessage('✅ تم الحفظ');
+    // بعد الحفظ الفعلي: حدّث سجل التأخر فورًا ليظهر كل الطلاب المحددين مباشرة.
+    if(attendanceMode==='present'){
+      showAttendanceSavedMessage('✅ تم الحفظ');
+    }else if(attendanceMode==='late'){
+      persistLateSelections();
+      attendanceListView='late';
+      try{ await renderAttendancePage(); }catch(e){ console.warn('late register refresh',e); }
+      showAttendanceSavedMessage('✅ تم حفظ '+cloudRows.length+' طالب في سجل التأخر');
+    }
     const n=cloudRows.length;
   }catch(e){
     console.error('instant attendance save',e);
