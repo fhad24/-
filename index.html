@@ -5019,10 +5019,10 @@ body.activity-leader-open main{
         <thead>
           <tr>
             <th style="width:42px">م</th>
-            <th style="width:125px">السجل المدني</th>
-            <th style="width:260px">اسم الطالب</th>
-            <th style="width:95px">الفصل</th>
-            <th style="width:130px">رقم الجوال</th>
+            <th style="width:125px;cursor:pointer;user-select:none" data-weekly-sort="idno">السجل المدني <span class="weekly-sort-icon">↕</span></th>
+            <th style="width:260px;cursor:pointer;user-select:none" data-weekly-sort="name">اسم الطالب <span class="weekly-sort-icon">↕</span></th>
+            <th style="width:95px;cursor:pointer;user-select:none" data-weekly-sort="classroom">الفصل <span class="weekly-sort-icon">↕</span></th>
+            <th style="width:130px;cursor:pointer;user-select:none" data-weekly-sort="phone">رقم الجوال <span class="weekly-sort-icon">↕</span></th>
             <th data-weekday="0">الأحد</th>
             <th data-weekday="1">الاثنين</th>
             <th data-weekday="2">الثلاثاء</th>
@@ -14224,7 +14224,9 @@ function populateWeeklyAttStudentSelect(){
   ).join('');
   if(students.some(s=>String(s.idno||'')===current)) el.value=current;
 }
-let weeklyAttAbsenceSortDir='';
+let weeklyAttSortKey='';
+let weeklyAttSortDir='';
+
 let weeklyAttBulkJobSeq=0;
 let weeklyAttBulkStatsCache={key:'',stats:null};
 
@@ -14269,9 +14271,38 @@ function startWeeklyAttBulkStatsJob(students,scopeDateKeys,key){
   };
   setTimeout(step,0);
 }
-function toggleWeeklyAttAbsenceSort(){
-  weeklyAttAbsenceSortDir=weeklyAttAbsenceSortDir==='asc'?'desc':'asc';
+function toggleWeeklyAttSort(key){
+  key=String(key||'');
+  if(!key)return;
+  if(weeklyAttSortKey===key) weeklyAttSortDir=weeklyAttSortDir==='asc'?'desc':'asc';
+  else { weeklyAttSortKey=key; weeklyAttSortDir='asc'; }
   renderWeeklyAttendanceReport();
+}
+function weeklyAttSortCompare(a,b,key,statsMap,mode){
+  const aid=String(a.idno||''), bid=String(b.idno||'');
+  const ast=statsMap?.get(aid)||{}, bst=statsMap?.get(bid)||{};
+  const text=(v)=>String(v??'');
+  const num=(v)=>Number(v)||0;
+  let av,bv,numeric=false;
+  switch(key){
+    case 'idno': av=text(a.idno); bv=text(b.idno); break;
+    case 'name': av=text(a.name); bv=text(b.name); break;
+    case 'classroom': av=text(displayStudentClassroom(a.classroom)||a.classroom); bv=text(displayStudentClassroom(b.classroom)||b.classroom); break;
+    case 'phone': av=text(a.phone); bv=text(b.phone); break;
+    case 'present': av=num(ast.present); bv=num(bst.present); numeric=true; break;
+    case 'absent': av=num(ast.absent); bv=num(bst.absent); numeric=true; break;
+    case 'late': av=num(ast.late); bv=num(bst.late); numeric=true; break;
+    case 'counted': av=num(ast.counted); bv=num(bst.counted); numeric=true; break;
+    case 'rate': av=num(ast.rate); bv=num(bst.rate); numeric=true; break;
+    case 'absenceTotal':
+      av=mode==='weekly'?weeklyAttAbsenceCount(a.idno,'',weeklyAttDateKey(new Date())):num(ast.absent);
+      bv=mode==='weekly'?weeklyAttAbsenceCount(b.idno,'',weeklyAttDateKey(new Date())):num(bst.absent);
+      numeric=true; break;
+    default: av=text(a.name); bv=text(b.name);
+  }
+  let cmp=numeric?(av-bv):String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
+  if(!cmp) cmp=String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'});
+  return weeklyAttSortDir==='desc'?-cmp:cmp;
 }
 
 function renderWeeklyAttendanceReport(){
@@ -14320,20 +14351,12 @@ function renderWeeklyAttendanceReport(){
   }
 
   const absenceCountById=new Map();
-  if(weeklyAttAbsenceSortDir){
+  if(mode==='weekly'){
     const todayKey=weeklyAttDateKey(new Date());
-    students.forEach(s=>{
-      const value=mode==='weekly'
-        ?weeklyAttAbsenceCount(s.idno,'',todayKey)
-        :(scopedStatsById.get(String(s.idno||''))?.absent||0);
-      absenceCountById.set(String(s.idno||''),value);
-    });
-    students.sort((a,b)=>{
-      const av=absenceCountById.get(String(a.idno||''))||0;
-      const bv=absenceCountById.get(String(b.idno||''))||0;
-      const diff=weeklyAttAbsenceSortDir==='asc'?(av-bv):(bv-av);
-      return diff || String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'});
-    });
+    students.forEach(s=>absenceCountById.set(String(s.idno||''),weeklyAttAbsenceCount(s.idno,'',todayKey)));
+  }
+  if(weeklyAttSortKey){
+    students.sort((a,b)=>weeklyAttSortCompare(a,b,weeklyAttSortKey,scopedStatsById,mode));
   }else{
     students.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
   }
@@ -14378,11 +14401,12 @@ function renderWeeklyAttendanceReport(){
   const absenceSortTh=$('weeklyAttAbsenceSortTh');
   const absenceSortIcon=$('weeklyAttAbsenceSortIcon');
   if(absenceSortTh){
-    absenceSortTh.onclick=toggleWeeklyAttAbsenceSort;
+    absenceSortTh.dataset.weeklySort='absenceTotal';
+    absenceSortTh.onclick=()=>toggleWeeklyAttSort('absenceTotal');
     const baseLabel=mode==='monthly'?'غياب الشهر':mode==='all'?'الغياب حتى الآن':'الغياب حتى الآن';
     absenceSortTh.childNodes[0].nodeValue=baseLabel+' ';
   }
-  if(absenceSortIcon) absenceSortIcon.textContent=weeklyAttAbsenceSortDir==='asc'?'▲':weeklyAttAbsenceSortDir==='desc'?'▼':'↕';
+  if(absenceSortIcon) absenceSortIcon.textContent=weeklyAttSortKey==='absenceTotal'?(weeklyAttSortDir==='asc'?'▲':'▼'):'↕';
 
   const headers=[...document.querySelectorAll('.weekly-att-table [data-weekday]')];
   if(mode==='weekly'){
@@ -14390,12 +14414,40 @@ function renderWeeklyAttendanceReport(){
       const idx=Number(th.dataset.weekday);
       th.classList.toggle('selected-day',idx===selectedDay);
       const d=dates[idx];
+      th.removeAttribute('data-weekly-sort');
+      th.style.cursor='';
+      th.onclick=null;
       if(d) th.innerHTML=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'][idx]+'<br><small>'+weeklyAttHijriCompactDateLabel(d)+'</small>';
     });
   }else{
-    const labels=['حاضر','غائب','متأخر','أيام محسوبة','نسبة الحضور'];
-    headers.forEach((th,i)=>{th.classList.remove('selected-day');th.textContent=labels[i]||'';});
+    const labels=[
+      {label:'حاضر',key:'present'},
+      {label:'غائب',key:'absent'},
+      {label:'متأخر',key:'late'},
+      {label:'أيام محسوبة',key:'counted'},
+      {label:'نسبة الحضور',key:'rate'}
+    ];
+    headers.forEach((th,i)=>{
+      const item=labels[i];
+      th.classList.remove('selected-day');
+      if(!item)return;
+      th.dataset.weeklySort=item.key;
+      th.style.cursor='pointer';
+      th.style.userSelect='none';
+      const icon=weeklyAttSortKey===item.key?(weeklyAttSortDir==='asc'?'▲':'▼'):'↕';
+      th.innerHTML=item.label+' <span class="weekly-sort-icon">'+icon+'</span>';
+      th.onclick=()=>toggleWeeklyAttSort(item.key);
+    });
   }
+
+  document.querySelectorAll('#weeklyAttSheet thead [data-weekly-sort]').forEach(th=>{
+    const key=String(th.dataset.weeklySort||'');
+    if(key==='absenceTotal') return;
+    if(['present','absent','late','counted','rate'].includes(key) && mode==='weekly') return;
+    th.onclick=()=>toggleWeeklyAttSort(key);
+    const icon=th.querySelector('.weekly-sort-icon');
+    if(icon) icon.textContent=weeklyAttSortKey===key?(weeklyAttSortDir==='asc'?'▲':'▼'):'↕';
+  });
 
   document.querySelectorAll('.weekly-att-student-report-select').forEach(box=>{
     box.onchange=()=>{
