@@ -570,6 +570,13 @@
         localStorage.setItem(CACHE_HASH,u.sha256);
         localStorage.setItem(CACHE_HTML,html);
       }catch(e){}
+      /* SHURAHBIL_LATE_TAB_HIDE_SESSION_PATCH */
+      {
+        const latePatch='<style id="shurahbilLateNoSessionStyle">.attendance-session-controls.shurahbil-late-hide{display:none!important}</style>'+
+          '<script>(function(){function f(){var late=document.getElementById("attendanceLateTab");var box=document.querySelector(".attendance-session-controls");if(!box)return;box.classList.toggle("shurahbil-late-hide",!!late&&late.classList.contains("active"));}document.addEventListener("click",function(e){if(e.target&&e.target.closest&&e.target.closest("#attendanceLateTab,#attendancePresentTab"))setTimeout(f,0)},true);new MutationObserver(f).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:["class"]});if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",f,{once:true});else f();setTimeout(f,200);})();<'+'/script>';
+        const closeHead=html.toLowerCase().lastIndexOf('</head>');
+        html=closeHead>=0 ? html.slice(0,closeHead)+latePatch+html.slice(closeHead) : latePatch+html;
+      }
       /* SHURAHBIL_THANKS_BUTTON_HTML_PATCH */
       if(!html.includes('weeklyAttThanksCertificateRuntimeBtn')){
         const thanksBtn='<button type="button" class="btn btn-outline" id="weeklyAttThanksCertificateRuntimeBtn" onclick="window.openWeeklyThanksCertificatesRuntime&&window.openWeeklyThanksCertificatesRuntime()" style="display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center;justify-content:center;border:2px solid #b88916!important;background:#fff3bf!important;color:#6b4f00!important;font-weight:900!important;font-size:16px!important;min-height:52px!important;padding:10px 18px!important;border-radius:10px!important">🏅 شهادة شكر</button>';
