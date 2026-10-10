@@ -166,6 +166,30 @@
         if(p&&p.textContent!==String(totalP)) p.textContent=String(totalP);
         if(a&&a.textContent!==String(totalA)) a.textContent=String(totalA);
       }
+
+      // بعد تصحيح القيم المعروضة من مصدر Excel، يجب أن يعتمد فرز نسبة الحضور
+      // على النسبة النهائية الظاهرة في الجدول لا على الإحصاء القديم قبل التصحيح.
+      try{
+        if(typeof weeklyAttSortKey!=='undefined' && weeklyAttSortKey==='rate' && ri>=0){
+          const tbody=table.querySelector('tbody');
+          if(tbody){
+            const rows=[...tbody.querySelectorAll('tr')];
+            const dir=(typeof weeklyAttSortDir!=='undefined' && weeklyAttSortDir==='desc')?-1:1;
+            rows.sort((ra,rb)=>{
+              const ac=ra.children[ri], bc=rb.children[ri];
+              const av=parseFloat(String(ac?.textContent||'').replace(/[^0-9.-]/g,''))||0;
+              const bv=parseFloat(String(bc?.textContent||'').replace(/[^0-9.-]/g,''))||0;
+              if(av!==bv) return (av-bv)*dir;
+              const an=String(ra.querySelector('.student-name')?.textContent||'');
+              const bn=String(rb.querySelector('.student-name')?.textContent||'');
+              return an.localeCompare(bn,'ar',{numeric:true,sensitivity:'base'});
+            });
+            const frag=document.createDocumentFragment();
+            rows.forEach(r=>frag.appendChild(r));
+            tbody.appendChild(frag);
+          }
+        }
+      }catch(e){ console.warn('rate sort correction',e); }
     }catch(e){
       console.warn('fast attendance totals patch',e);
     }finally{
