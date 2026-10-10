@@ -90,8 +90,9 @@
       (E.dates||[]).forEach((d,i)=>{
         if(selectedMode==='monthly'&&selectedMonth&&monthByDate.get(d)!==selectedMonth) return;
         const bit=1<<i;
+        // اليوم الدراسي المحتسب: حاضر إذا توجد علامة حضور، وإلا غائب.
         if(mask[0]&bit) present++;
-        else if(mask[1]&bit) absent++;
+        else absent++;
       });
 
       const extra=extraById.get(id);
