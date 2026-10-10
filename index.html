@@ -17701,8 +17701,13 @@ async function cancelInstantAttendanceForStudent(id){
   let rows=getAttendanceLog();
   let matches=rows.filter(isMatch);
   if(matches.some(x=>!attendanceUserCanModifyRow(x))){
-    __attendanceInstantCancelled.delete(id);
-    throw new Error('لا يمكن إلغاء تحضير سجل لا تملك صلاحية تعديله.');
+    // التأخر اليومي حالة مشتركة للطالب في اليوم؛ يسمح للمستخدم بإلغاء التحديد
+    // لنفس اليوم حتى لو كان السجل الأصلي قد أدخله مستخدم آخر.
+    const blocked=matches.some(x=>!(mode==='late' && String(x?.date||'')===String(date)));
+    if(blocked){
+      __attendanceInstantCancelled.delete(id);
+      throw new Error('لا يمكن إلغاء تحضير سجل لا تملك صلاحية تعديله.');
+    }
   }
   if(matches.length){
     rows=rows.filter(x=>!isMatch(x));
@@ -17732,6 +17737,10 @@ async function cancelInstantAttendanceForStudent(id){
   if(cloudMatches.length){
     try{
       await cloudApi('delete_attendance_rows',{rows:cloudMatches});
+      if(mode==='late'){
+        try{ await cloudPullAttendanceFast(); await renderAttendancePage(); }catch(e){}
+        showAttendanceSavedMessage('✅ تم إلغاء التأخر');
+      }
     }catch(err){
       // لا نعيد التحديد للمستخدم بسبب بطء/فشل الشبكة؛ الإلغاء يبقى فوريًا محليًا.
       console.error('instant attendance cloud cancel',err);
