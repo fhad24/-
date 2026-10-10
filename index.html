@@ -16722,10 +16722,6 @@ document.querySelectorAll('.attendance-tabs [data-att-view]').forEach(btn=>{
 
 if($('addLateStudentBtn')) $('addLateStudentBtn').onclick=()=>openAttendanceModal('late');
 if($('addPresentStudentBtn')) $('addPresentStudentBtn').onclick=()=>{
-  if(isCurrentOwner() || isAttendanceSupervisor()){
-    openAttendanceModal('present');
-    return;
-  }
   $('presentEntryChoiceModal')?.classList.remove('hidden');
 };
 if($('adminWholeClassAttendanceBtn')) $('adminWholeClassAttendanceBtn').onclick=()=>{
