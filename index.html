@@ -13973,7 +13973,6 @@ function populateWeeklyAttStudentSelect(){
   const classroom=String($('weeklyAttClass')?.value||'');
   const current=String(el.value||'');
   const students=getStudents()
-    .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
   el.innerHTML='<option value="">اختر الطالب</option>'+students.map(s=>
@@ -13993,7 +13992,6 @@ function renderWeeklyAttendanceReport(){
   const searchRaw=String($('weeklyAttStudentSearch')?.value||'').trim();
   const searchNorm=searchRaw.toLowerCase().replace(/\s+/g,' ');
   const students=getStudents()
-    .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .filter(s=>{
       if(!searchNorm) return true;
@@ -22122,6 +22120,7 @@ setTimeout(refreshStudentDataReviewCount,900);
   new MutationObserver(()=>fillGrades()).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+<script id="weekly-names-scope-fix-20261010">console.log('weekly student names scope fix active');</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
