@@ -14211,6 +14211,23 @@ function weeklyAttScopedStatsForStudent(student,dates,ctx){
   return {present,absent,late,counted,rate};
 }
 
+function weeklyAttFastWeeklyStats(student,weekDates,activeDates,ctx){
+  let present=0,absent=0,late=0,absenceTotal=0;
+  for(const key of weekDates){
+    const status=weeklyAttFastStatus(student,key,ctx);
+    if(status==='present') present++;
+    else if(status==='absent') absent++;
+    const rec=ctx.statusByIdDate.get(String(student.idno||'')+'|'+String(key));
+    if(rec?.late) late++;
+  }
+  for(const key of activeDates){
+    if(weeklyAttFastStatus(student,key,ctx)==='absent') absenceTotal++;
+  }
+  const counted=present+absent;
+  const rate=counted?Math.round((present/counted)*100):0;
+  return {present,absent,late,counted,rate,absenceTotal};
+}
+
 function populateWeeklyAttStudentSelect(){
   const el=$('weeklyAttStudentSelect'); if(!el)return;
   const grade=String($('weeklyAttGrade')?.value||'');
@@ -14295,8 +14312,8 @@ function weeklyAttSortCompare(a,b,key,statsMap,mode){
     case 'counted': av=num(ast.counted); bv=num(bst.counted); numeric=true; break;
     case 'rate': av=num(ast.rate); bv=num(bst.rate); numeric=true; break;
     case 'absenceTotal':
-      av=mode==='weekly'?weeklyAttAbsenceCount(a.idno,'',weeklyAttDateKey(new Date())):num(ast.absent);
-      bv=mode==='weekly'?weeklyAttAbsenceCount(b.idno,'',weeklyAttDateKey(new Date())):num(bst.absent);
+      av=num(ast.absenceTotal ?? ast.absent);
+      bv=num(bst.absenceTotal ?? bst.absent);
       numeric=true; break;
     default: av=text(a.name); bv=text(b.name);
   }
@@ -14348,12 +14365,17 @@ function renderWeeklyAttendanceReport(){
       startWeeklyAttBulkStatsJob(students,scopeDateKeys,bulkKey);
       return;
     }
+  }else{
+    const fastCtx=buildWeeklyAttFastContext();
+    const activeDates=weeklyAttActiveDates();
+    students.forEach(s=>{
+      scopedStatsById.set(String(s.idno||''),weeklyAttFastWeeklyStats(s,scopeDateKeys,activeDates,fastCtx));
+    });
   }
 
   const absenceCountById=new Map();
   if(mode==='weekly'){
-    const todayKey=weeklyAttDateKey(new Date());
-    students.forEach(s=>absenceCountById.set(String(s.idno||''),weeklyAttAbsenceCount(s.idno,'',todayKey)));
+    students.forEach(s=>absenceCountById.set(String(s.idno||''),scopedStatsById.get(String(s.idno||''))?.absenceTotal||0));
   }
   if(weeklyAttSortKey){
     students.sort((a,b)=>weeklyAttSortCompare(a,b,weeklyAttSortKey,scopedStatsById,mode));
@@ -14361,6 +14383,7 @@ function renderWeeklyAttendanceReport(){
     students.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar',{numeric:true,sensitivity:'base'}));
   }
 
+  const weeklyRenderCtx=mode==='weekly'?buildWeeklyAttFastContext():null;
   const body=$('weeklyAttBody');
   if(!body)return;
   if(!students.length){
@@ -14371,10 +14394,14 @@ function renderWeeklyAttendanceReport(){
       let finalAbsence=0;
       if(mode==='weekly'){
         middle=dates.map((d,di)=>{
-          const st=weeklyAttStatusForStudent(s.idno,weeklyAttDateKey(d));
-          return '<td class="'+(di===selectedDay?'selected-day ':'')+'" title="'+escapeFollowupHtml(st.label)+'"><span class="status-mark '+st.cls+'">'+st.mark+'</span></td>';
+          const key=weeklyAttDateKey(d);
+          const status=weeklyAttFastStatus(s,key,weeklyRenderCtx);
+          const mark=status==='present'?'✓':status==='absent'?'✕':'';
+          const cls=status==='present'?'present-mark':status==='absent'?'absent-mark':'';
+          const label=status==='present'?'حاضر':status==='absent'?'غائب':'لا يوجد تحضير مسجل لهذا اليوم';
+          return '<td class="'+(di===selectedDay?'selected-day ':'')+'" title="'+escapeFollowupHtml(label)+'"><span class="status-mark '+cls+'">'+mark+'</span></td>';
         }).join('');
-        finalAbsence=absenceCountById.has(String(s.idno||''))?absenceCountById.get(String(s.idno||'')):weeklyAttAbsenceCount(s.idno,'',weeklyAttDateKey(new Date()));
+        finalAbsence=absenceCountById.get(String(s.idno||''))||0;
       }else{
         const st=scopedStatsById.get(String(s.idno||''))||{present:0,absent:0,late:0,counted:0,rate:0};
         middle='<td><b style="color:#087f5b">'+st.present+'</b></td>'+
@@ -14459,11 +14486,17 @@ function renderWeeklyAttendanceReport(){
 
   if(mode==='weekly'){
     const selectedDate=dates[selectedDay]?weeklyAttDateKey(dates[selectedDay]):'';
-    const statusRows=students.map(s=>weeklyAttStatusForStudent(s.idno,selectedDate));
+    let presentNow=0,absentNow=0,noStatusNow=0;
+    students.forEach(s=>{
+      const status=weeklyAttFastStatus(s,selectedDate,weeklyRenderCtx);
+      if(status==='present') presentNow++;
+      else if(status==='absent') absentNow++;
+      else noStatusNow++;
+    });
     $('weeklyAttStudentCount').textContent=String(students.length);
-    $('weeklyAttPresentCount').textContent=String(statusRows.filter(x=>x.mark==='✓').length);
-    $('weeklyAttAbsentCount').textContent=String(statusRows.filter(x=>x.mark==='✕').length);
-    $('weeklyAttNoStatusCount').textContent=String(statusRows.filter(x=>!x.mark).length);
+    $('weeklyAttPresentCount').textContent=String(presentNow);
+    $('weeklyAttAbsentCount').textContent=String(absentNow);
+    $('weeklyAttNoStatusCount').textContent=String(noStatusNow);
     if($('weeklyAttPresentLabel')) $('weeklyAttPresentLabel').textContent='حاضر في اليوم المختار';
     if($('weeklyAttAbsentLabel')) $('weeklyAttAbsentLabel').textContent='غائب في اليوم المختار';
     if($('weeklyAttNoStatusLabel')) $('weeklyAttNoStatusLabel').textContent='بدون تسجيل';
