@@ -8,8 +8,8 @@
    const id=String(student&&student.idno||'').trim(), m=M.get(id); if(!m)return null;
    const bit=1<<idx;
    if(m[0]&bit)return 'present';
-   // في ملف Excel: أي يوم دراسي بلا علامة حضور يُحسب غيابًا.
-   return 'absent';
+   if(m[1]&bit)return 'absent';
+   return null;
  }
  window.__EXCEL_ATTENDANCE_TRUTH_20261010={dates:D,map:M,status:truth};
  function install(){
