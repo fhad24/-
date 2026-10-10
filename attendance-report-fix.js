@@ -21,3 +21,70 @@ function run(){
 }
 const later=()=>setTimeout(run,60);document.addEventListener('change',later,true);document.addEventListener('click',later,true);new MutationObserver(later).observe(document.documentElement,{childList:true,subtree:true});setTimeout(run,500);setTimeout(run,1500);
 })();
+/* 20261010 final hard refresh: ensure source script exists, then correct monthly/all totals repeatedly. */
+(function(){
+  let loading=false;
+  function ensureSource(){
+    if(window.__EXCEL_ATTENDANCE_TRUTH_20261010) return Promise.resolve(true);
+    if(loading) return Promise.resolve(false);
+    loading=true;
+    return new Promise(resolve=>{
+      const s=document.createElement('script');
+      s.src='/attendance-excel-fix.js?v=20261010-final';
+      s.onload=()=>{loading=false;resolve(!!window.__EXCEL_ATTENDANCE_TRUTH_20261010)};
+      s.onerror=()=>{loading=false;resolve(false)};
+      document.head.appendChild(s);
+    });
+  }
+  function hijriMonthKey(d){
+    try{
+      const p=new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit'}).formatToParts(new Date(d+'T12:00:00'));
+      return (p.find(x=>x.type==='year')?.value||'')+'-'+(p.find(x=>x.type==='month')?.value||'');
+    }catch(e){return''}
+  }
+  function countBits(n){n=Number(n)||0;let c=0;while(n){c+=n&1;n>>>=1}return c}
+  async function applyFinal(){
+    const w=document.getElementById('weeklyAttWeek');
+    const mode=String(w?.value||'');
+    if(mode!=='monthly'&&mode!=='all') return;
+    if(!window.__EXCEL_ATTENDANCE_TRUTH_20261010) await ensureSource();
+    const E=window.__EXCEL_ATTENDANCE_TRUTH_20261010;
+    if(!E) return;
+    const month=String(document.getElementById('weeklyAttHijriMonthSelect')?.value||'');
+    const table=document.querySelector('#weeklyAttSheet table');
+    if(!table) return;
+    const hs=[...table.querySelectorAll('thead th')].map(x=>String(x.textContent||'').replace(/\s+/g,' ').trim());
+    const ci=hs.findIndex(x=>x.includes('السجل المدني'));
+    const pi=hs.findIndex(x=>/^حاضر/.test(x));
+    const ai=hs.findIndex(x=>/^غائب/.test(x));
+    const coi=hs.findIndex(x=>x.includes('أيام محسوبة'));
+    const ri=hs.findIndex(x=>x.includes('نسبة الحضور'));
+    const gi=hs.findIndex(x=>x.includes('غياب الشهر')||x.includes('الغياب حتى الآن'));
+    if(ci<0||pi<0||ai<0)return;
+    let totalP=0,totalA=0,rows=0;
+    table.querySelectorAll('tbody tr').forEach(tr=>{
+      const td=[...tr.children]; if(!td[ci]) return;
+      const id=String(td[ci].textContent||'').replace(/\D/g,'');
+      const m=E.map.get(id); if(!m) return;
+      let p=0,a=0;
+      E.dates.forEach((d,i)=>{
+        if(mode==='monthly'&&month&&hijriMonthKey(d)!==month)return;
+        const bit=1<<i;
+        if(m[0]&bit)p++;
+        else if(m[1]&bit)a++;
+      });
+      const counted=p+a,rate=counted?Math.round(p/counted*100):0;
+      const set=(idx,val)=>{if(idx>=0&&td[idx]){const q=td[idx].querySelector('b')||td[idx];q.textContent=String(val)}};
+      set(pi,p);set(ai,a);set(coi,counted);set(ri,rate+'%');set(gi,a);
+      totalP+=p;totalA+=a;rows++;
+    });
+    if(rows){
+      const p=document.getElementById('weeklyAttPresentCount'),a=document.getElementById('weeklyAttAbsentCount');
+      if(p)p.textContent=String(totalP);if(a)a.textContent=String(totalA);
+    }
+  }
+  setInterval(applyFinal,500);
+  document.addEventListener('change',()=>setTimeout(applyFinal,20),true);
+  document.addEventListener('click',()=>setTimeout(applyFinal,20),true);
+  setTimeout(applyFinal,100);
+})();
