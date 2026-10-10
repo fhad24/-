@@ -13675,12 +13675,6 @@ function weeklyAttApplySelectedWeekDate(){
 
   // اقفل أيام الأسبوع المختار حتى لا يستبدلها pull_all عام بعد وصولها.
   window.__weeklyAttLockedRange={week,dates:[...dates]};
-
-  // إن كانت بيانات الأسبوع موجودة الآن، حدّث نقطة الاستعادة فورًا.
-  try{
-    const rows=weeklyAttRowsForWeek(week);
-    if(rows.length) saveWeeklyAttSafetyBackup(week,rows);
-  }catch(e){}
   return true;
 }
 const WEEKLY_IMPORTED_ABSENCE_DATES=[
@@ -13921,7 +13915,7 @@ function renderWeeklyAttHijriCalendar(){
       updateWeeklyAttHijriDisplay();
       setWeeklyAttDayFromDate();
       renderWeeklyAttendanceReport();
-      renderWeeklyAttAnalytics();
+      renderWeeklyAttAnalyticsWhenVisible();
       closeWeeklyAttHijriCalendar();
     });
   });
@@ -13990,8 +13984,6 @@ function populateWeeklyAttStudentSelect(){
 }
 function renderWeeklyAttendanceReport(){
   weeklyAttApplySelectedWeekDate();
-  const activeWeek=String($('weeklyAttWeek')?.value||'1');
-  restoreWeeklyAttSafetyBackupIfMissing(activeWeek);
   const grade=String($('weeklyAttGrade')?.value||'');
   const classroom=String($('weeklyAttClass')?.value||'');
   const week=String($('weeklyAttWeek')?.value||'1');
@@ -14370,23 +14362,29 @@ function saveWeeklyAttSafetyBackup(week,rows){
     return false;
   }
 }
-function restoreWeeklyAttSafetyBackupIfMissing(week){
-  const dates=weeklyAttFixedWeekGregorianDates(week);
+const __weeklyRestoreChecked=new Set();
+function restoreWeeklyAttSafetyBackupIfMissing(week,force=false){
+  const key=String(week||'1');
+  if(!force && __weeklyRestoreChecked.has(key)) return false;
+  __weeklyRestoreChecked.add(key);
+
+  const dates=weeklyAttFixedWeekGregorianDates(key);
   if(!dates.length) return false;
   const current=getAttendanceLog();
-  const currentWeek=weeklyAttRowsForWeek(week,current);
-  if(currentWeek.length) return false;
+  const dateSet=new Set(dates.map(String));
+
+  // فحص سريع: يكفي وجود سجل واحد من الأسبوع حتى لا نقرأ نسخة الاستعادة.
+  if(current.some(x=>dateSet.has(String(x.date||'')))) return false;
 
   try{
-    const backup=JSON.parse(localStorage.getItem(weeklyAttSafetyBackupKey(week))||'null');
+    const backup=JSON.parse(localStorage.getItem(weeklyAttSafetyBackupKey(key))||'null');
     const rows=Array.isArray(backup?.rows)?backup.rows:[];
     if(!rows.length) return false;
 
-    const dateSet=new Set(dates.map(String));
     const keep=current.filter(x=>!dateSet.has(String(x.date||'')));
     localStorage.setItem('attendanceLog',JSON.stringify([...keep,...rows]));
     try{weeklyAttCtxCache=null}catch(e){}
-    console.warn('weekly attendance restored from safety point',week,rows.length);
+    console.warn('weekly attendance restored from safety point',key,rows.length);
     return true;
   }catch(e){
     console.warn('weekly safety backup restore',e);
@@ -14418,14 +14416,21 @@ async function cloudPullWeeklyAttendanceRange(){
     if(fresh.length){
       const merged=[...keep,...fresh];
       localStorage.setItem('attendanceLog',JSON.stringify(merged));
-      saveWeeklyAttSafetyBackup(week,merged);
+      setTimeout(()=>saveWeeklyAttSafetyBackup(week,fresh),0);
+      __weeklyRestoreChecked.add(String(week));
     }else{
-      restoreWeeklyAttSafetyBackupIfMissing(week);
+      restoreWeeklyAttSafetyBackupIfMissing(week,true);
     }
     try{weeklyAttCtxCache=null}catch(e){}
     __weeklyFetchState.loadedAt=Date.now();
   }catch(e){console.warn('weekly range refresh',e)}
   finally{__weeklyFetchState.busy=false}
+}
+
+function renderWeeklyAttAnalyticsWhenVisible(){
+  const panel=$('weeklyAttTabAnalyticsPanel');
+  if(!panel || panel.classList.contains('hidden')) return;
+  requestAnimationFrame(()=>renderWeeklyAttAnalytics());
 }
 
 async function initWeeklyAttendanceReport(){
@@ -14438,8 +14443,8 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttAnalyticsGrades();
   populateWeeklyAttAnalyticsClasses();
   populateWeeklyAttAnalyticsStudents();
+  restoreWeeklyAttSafetyBackupIfMissing(String($('weeklyAttWeek')?.value||'1'));
   renderWeeklyAttendanceReport();
-  renderWeeklyAttAnalytics();
 
   const reportPanel=$('weeklyAttTabReportPanel');
   const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
@@ -14602,7 +14607,7 @@ if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
   populateWeeklyAttStudentSelect();
   populateWeeklyAttAnalyticsStudents();
   renderWeeklyAttendanceReport();
-  renderWeeklyAttAnalytics()
+  renderWeeklyAttAnalyticsWhenVisible()
 };
 if($('weeklyAttClass')) $('weeklyAttClass').onchange=()=>{
   populateWeeklyAttStudentSelect();
@@ -14635,9 +14640,10 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     if(first) classEl.value=first.value;
   }
   populateWeeklyAttStudentSelect();
+  restoreWeeklyAttSafetyBackupIfMissing(requestedWeek);
   try{weeklyAttCtxCache=null}catch(e){}
   renderWeeklyAttendanceReport();
-  renderWeeklyAttAnalytics();
+  renderWeeklyAttAnalyticsWhenVisible();
 
   // ثم اسحب الأسبوع المختار فقط، من دون pull_all.
   setTimeout(async()=>{
