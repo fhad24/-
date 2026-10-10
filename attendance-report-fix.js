@@ -31,15 +31,25 @@
     });
   }
 
+  function vacationWeek5Dates(){
+    try{
+      if(typeof weeklyAttFixedWeekGregorianDates==='function'){
+        return new Set(weeklyAttFixedWeekGregorianDates('5'));
+      }
+    }catch(e){}
+    return new Set();
+  }
+
   function buildExtraAttendanceMap(E,selectedMode,selectedMonth){
     const byId=new Map();
     let rows=[];
     try{ rows=typeof getAttendanceLog==='function'?(getAttendanceLog()||[]):[]; }catch(e){}
     const sourceDates=new Set(E.dates||[]);
+    const VACATION_WEEK_5=vacationWeek5Dates();
     for(const r of rows){
       const id=String(r?.idno||'').trim();
       const d=String(r?.date||'');
-      if(!id||!/^\d{4}-\d{2}-\d{2}$/.test(d)||sourceDates.has(d)) continue;
+      if(!id||!/^\d{4}-\d{2}-\d{2}$/.test(d)||sourceDates.has(d)||VACATION_WEEK_5.has(d)) continue;
       if(selectedMode==='monthly' && selectedMonth && hijriMonthKey(d)!==selectedMonth) continue;
       let map=byId.get(id);
       if(!map){ map=new Map(); byId.set(id,map); }
@@ -66,6 +76,7 @@
 
     const selectedMonth=String(document.getElementById('weeklyAttHijriMonthSelect')?.value||'');
     const monthByDate=new Map((E.dates||[]).map(d=>[d,hijriMonthKey(d)]));
+    const VACATION_WEEK_5=vacationWeek5Dates();
     const extraById=buildExtraAttendanceMap(E,selectedMode,selectedMonth);
 
     const hs=[...table.querySelectorAll('thead th')].map(x=>String(x.textContent||'').replace(/\s+/g,' ').trim());
@@ -88,6 +99,7 @@
       let present=0,absent=0;
       let scopedExcelDays=0;
       (E.dates||[]).forEach((d,i)=>{
+        if(VACATION_WEEK_5.has(d)) return;
         if(selectedMode==='monthly'&&selectedMonth&&monthByDate.get(d)!==selectedMonth) return;
         scopedExcelDays++;
         const bit=1<<i;
@@ -163,3 +175,5 @@
   else boot();
   setTimeout(boot,300);
 })();
+
+/* VACATION_WEEK_5: week 5 excluded globally from attendance totals. */
