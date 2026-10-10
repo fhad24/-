@@ -1,18 +1,10 @@
 /* Auto-prepare Thursday, optimized: one cached attendance index instead of rescanning all rows per cell. */
 (function(){
-  const cache={stamp:'',studentById:new Map(),presentByIdDate:new Set(),thursdayWeekByDate:new Map(),weekDates:new Map()};
-
-  function currentStamp(){
-    let students=0,rows=0;
-    try{students=(typeof getStudents==='function'?(getStudents()||[]):[]).length}catch(e){}
-    try{rows=(typeof getAttendanceLog==='function'?(getAttendanceLog()||[]):[]).length}catch(e){}
-    return students+'|'+rows;
-  }
+  const cache={valid:false,studentById:new Map(),presentByIdDate:new Set(),thursdayWeekByDate:new Map(),weekDates:new Map()};
 
   function rebuild(){
-    const stamp=currentStamp();
-    if(cache.stamp===stamp && cache.thursdayWeekByDate.size) return;
-    cache.stamp=stamp;
+    if(cache.valid) return;
+    cache.valid=true;
     cache.studentById=new Map();
     cache.presentByIdDate=new Set();
     cache.thursdayWeekByDate=new Map();
@@ -82,7 +74,7 @@
   }
 
   function invalidate(){
-    cache.stamp='';
+    cache.valid=false;
     try{ if(typeof invalidateWeeklyAttBulkStats==='function') invalidateWeeklyAttBulkStats(); }catch(e){}
   }
 
