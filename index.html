@@ -13788,8 +13788,14 @@ function weeklyAttScopedCohorts(){
   });
   return set;
 }
+function weeklyAttExcludedRemoteClass(value){
+  const raw=String(value||'').trim();
+  const key=studentClassKey(raw)||raw;
+  const norm=String(key||raw).replace(/\s+/g,'').toLowerCase();
+  return norm.includes('الوهمي') || norm.includes('وهمي') || norm.includes('الانتساب') || norm.includes('انتساب');
+}
 function weeklyAttStudentInScope(student){
-  return true;
+  return !weeklyAttExcludedRemoteClass(student?.classroom);
 }
 
 function weeklyAttActiveDates(){
@@ -13856,7 +13862,7 @@ function populateWeeklyAttendanceGrades(){
   const roster=getStudents();
   const attendance=weeklyAttScopedRows();
   const source=roster.length?roster:attendance;
-  const grades=[...new Set(source.map(s=>String(s.grade||'').trim()).filter(Boolean))]
+  const grades=[...new Set(source.filter(s=>weeklyAttStudentInScope(s)).map(s=>String(s.grade||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
 
   // إذا كانت البيانات تمر بحالة تحميل مؤقتة، لا تمسح الخيارات الموجودة.
@@ -13874,6 +13880,7 @@ function populateWeeklyAttendanceClasses(){
   const attendance=weeklyAttScopedRows();
   const source=roster.length?roster:attendance;
   const classes=[...new Set(source
+    .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
     .map(s=>String(s.classroom||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
@@ -14266,6 +14273,7 @@ function renderWeeklyAttendanceReport(){
   const searchRaw=String($('weeklyAttStudentSearch')?.value||'').trim();
   const searchNorm=searchRaw.toLowerCase().replace(/\s+/g,' ');
   let students=getStudents()
+    .filter(s=>mode==='weekly' ? true : weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)))
     .filter(s=>{
       if(!searchNorm) return true;
@@ -14527,6 +14535,7 @@ function weeklyAttAnalyticsData(){
   const allStudents=getStudents();
   const cohortById=new Map();
   allStudents.forEach(s=>{
+    if(!weeklyAttStudentInScope(s)) return;
     cohortById.set(String(s.idno),studentGradeKey(s.grade)+'|'+studentClassKey(s.classroom));
   });
 
@@ -14537,6 +14546,8 @@ function weeklyAttAnalyticsData(){
     const date=String(r.date||'');
     const id=String(r.idno||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return;
+    const student=allStudents.find(s=>String(s.idno||'')===id);
+    if(student && !weeklyAttStudentInScope(student)) return;
     activeDatesSet.add(date);
     const cohort=cohortById.get(id);
     if(cohort){
