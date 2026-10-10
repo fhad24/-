@@ -14108,10 +14108,16 @@ function buildWeeklyAttFastContext(){
   const studentById=new Map(students.map(s=>[String(s.idno||''),s]));
   const statusByIdDate=new Map();
   const cohortWeekHas=new Set();
+  const cohortMonthHas=new Set();
   const weekByDate=new Map();
+  const monthByDate=new Map();
 
   Object.keys(WEEKLY_FIXED_HIJRI_WEEKS).forEach(week=>{
-    weeklyAttFixedWeekGregorianDates(week).forEach(date=>weekByDate.set(String(date),String(week)));
+    weeklyAttFixedWeekGregorianDates(week).forEach(date=>{
+      const key=String(date);
+      weekByDate.set(key,String(week));
+      monthByDate.set(key,weeklyAttHijriMonthKey(new Date(key+'T12:00:00')));
+    });
   });
 
   for(const row of rows){
@@ -14136,7 +14142,11 @@ function buildWeeklyAttFastContext(){
         ||studentGradeKey(student?.grade)||String(student?.grade||'').trim();
       const c=studentClassKey(row.classroom)||String(row.classroom||'').trim()
         ||studentClassKey(student?.classroom)||String(student?.classroom||'').trim();
-      if(g&&c && !weeklyAttExcludedRemoteClass(c)) cohortWeekHas.add(g+'|'+c+'|'+week);
+      if(g&&c && !weeklyAttExcludedRemoteClass(c)){
+        cohortWeekHas.add(g+'|'+c+'|'+week);
+        const month=monthByDate.get(date)||weeklyAttHijriMonthKey(new Date(date+'T12:00:00'));
+        if(month) cohortMonthHas.add(g+'|'+c+'|'+month);
+      }
     }
   }
 
@@ -14150,7 +14160,11 @@ function buildWeeklyAttFastContext(){
       if(!week) continue;
       const g=studentGradeKey(student.grade)||String(student.grade||'').trim();
       const c=studentClassKey(student.classroom)||String(student.classroom||'').trim();
-      if(g&&c) cohortWeekHas.add(g+'|'+c+'|'+week);
+      if(g&&c){
+        cohortWeekHas.add(g+'|'+c+'|'+week);
+        const month=monthByDate.get(String(date))||weeklyAttHijriMonthKey(new Date(String(date)+'T12:00:00'));
+        if(month) cohortMonthHas.add(g+'|'+c+'|'+month);
+      }
     }
   }
 
@@ -14165,7 +14179,7 @@ function buildWeeklyAttFastContext(){
     if(name) importedByNameClass.set(name+'|'+cls,r);
   }
 
-  return {studentById,statusByIdDate,cohortWeekHas,weekByDate,importedDateSet,importedById,importedByNameClass,today:weeklyAttDateKey(new Date())};
+  return {studentById,statusByIdDate,cohortWeekHas,cohortMonthHas,weekByDate,monthByDate,importedDateSet,importedById,importedByNameClass,today:weeklyAttDateKey(new Date())};
 }
 function weeklyAttFastImportedStatus(student,dateKey,ctx){
   if(!student || !ctx.importedDateSet.has(String(dateKey))) return null;
@@ -14194,7 +14208,10 @@ function weeklyAttFastStatus(student,dateKey,ctx){
   if(!week) return '';
   const g=studentGradeKey(student.grade)||String(student.grade||'').trim();
   const c=studentClassKey(student.classroom)||String(student.classroom||'').trim();
-  return ctx.cohortWeekHas.has(g+'|'+c+'|'+week)?'absent':'';
+  const cohort=g+'|'+c;
+  if(ctx.cohortWeekHas.has(cohort+'|'+week)) return 'absent';
+  const month=ctx.monthByDate.get(key)||weeklyAttHijriMonthKey(new Date(key+'T12:00:00'));
+  return month && ctx.cohortMonthHas.has(cohort+'|'+month)?'absent':'';
 }
 function weeklyAttScopedStatsForStudent(student,dates,ctx){
   const unique=[...new Set((dates||[]).map(String))];
@@ -14256,7 +14273,8 @@ function weeklyAttBulkStatsKey(mode,scopeDateKeys,students,grade,classroom,searc
     String(classroom||''),
     String(searchNorm||''),
     String(students.length),
-    String((getAttendanceLog()||[]).length)
+    String((getAttendanceLog()||[]).length),
+    'month-cohort-v3'
   ].join('||');
 }
 function startWeeklyAttBulkStatsJob(students,scopeDateKeys,key){
