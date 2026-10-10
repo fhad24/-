@@ -1,6 +1,6 @@
 /* Fast monthly/all-weeks attendance totals. Prevents observer feedback loops and repeated full-table work. */
 (function(){
-  const state={scheduled:false,running:false,rerun:false,wrapped:false,observer:null,observedBody:null};
+  const state={scheduled:false,running:false,rerun:false,wrapped:false};
   const monthCache=new Map();
   let weekCache=null;
 
@@ -72,25 +72,12 @@
     return byId;
   }
 
-  function reconnectObserver(){
-    const body=document.getElementById('weeklyAttBody');
-    if(!body) return;
-    if(body!==state.observedBody){
-      state.observer?.disconnect();
-      state.observedBody=body;
-    }
-    if(!state.observer) state.observer=new MutationObserver(()=>schedule());
-    state.observer.disconnect();
-    state.observer.observe(body,{childList:true});
-  }
-
   async function run(){
     state.scheduled=false;
     if(state.running){ state.rerun=true; return; }
     const selectedMode=mode();
     if(selectedMode==='weekly') return;
     state.running=true;
-    state.observer?.disconnect();
     try{
       if(!window.__EXCEL_ATTENDANCE_TRUTH_20261010){
         const ok=await ensureSource();
@@ -183,7 +170,6 @@
       console.warn('fast attendance totals patch',e);
     }finally{
       state.running=false;
-      reconnectObserver();
       if(state.rerun){ state.rerun=false; schedule(); }
     }
   }
@@ -199,9 +185,7 @@
     if(state.wrapped || typeof window.renderWeeklyAttendanceReport!=='function') return;
     const original=window.renderWeeklyAttendanceReport;
     window.renderWeeklyAttendanceReport=function(){
-      state.observer?.disconnect();
       const out=original.apply(this,arguments);
-      reconnectObserver();
       schedule();
       return out;
     };
@@ -210,7 +194,6 @@
 
   function boot(){
     wrapRenderer();
-    reconnectObserver();
     const ids=['weeklyAttWeek','weeklyAttHijriMonthSelect','weeklyAttGrade','weeklyAttClass','weeklyAttStudentSearch','weeklyAttStudentSelect'];
     ids.forEach(id=>{
       const el=document.getElementById(id);
