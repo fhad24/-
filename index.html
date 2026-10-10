@@ -15803,7 +15803,9 @@ async function renderAttendancePage(){
           if(attendancePresentFilterHijriDate && rowHijri===attendancePresentFilterHijriDate) return true;
           return !!attendancePresentFilterDate && String(x.date||'')===attendancePresentFilterDate;
         }
-        const allowed=(ownerView||attendanceRowBelongsToCurrentUser(x));
+        const selectedLateIds=attendanceListView==='late' ? (loadPersistedLateSelections()||new Set()) : new Set();
+        const allowed=ownerView||attendanceRowBelongsToCurrentUser(x)||
+          (attendanceListView==='late' && selectedLateIds.has(String(x.idno||'')));
         if(!allowed || x.status!==attendanceListView) return false;
         return x.date===todayKey();
       });
