@@ -7332,14 +7332,21 @@ async function cloudPullToLocal(){
   if(!token) return null;
   const data=await cloudApi('pull_all');
 
-  const students=(data.students||[]).map(s=>({
+  const incomingStudents=Array.isArray(data.students)?data.students:[];
+  const students=incomingStudents.map(s=>({
     name:s.name||'', idno:String(s.idno||''), phone:s.phone||'', grade:s.grade||'', classroom:studentClassKey(s.classroom)||s.classroom||'',
     calendar:s.calendar||'', birth:s.birth||'', verification:s.verification||'مؤكد',
     registered:s.registered!==false, hasFace:!!s.has_face, hasId:!!s.has_id,
     cropStatus:s.crop_status||'', referenceNo:s.reference_no||'', registrationDate:s.registration_date||'',
     faceImage:s.face_image||'', idImage:s.id_image||''
   }));
-  localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+
+  // لا تسمح لرد pull_all ناقص/فارغ أن يمسح قائمة الطلاب المحلية.
+  if(students.length){
+    localStorage.setItem('students',JSON.stringify(dedupeStudents(students)));
+  }else{
+    console.warn('pull_all returned no students; preserving local student roster');
+  }
 
   for(const s of students){
     if(s.faceImage){
@@ -13795,11 +13802,15 @@ function weeklyAttAbsenceCount(idno,startDate='',endDate='9999-12-31'){
 function populateWeeklyAttendanceGrades(){
   const el=$('weeklyAttGrade'); if(!el) return;
   const current=el.value;
-  const source=isAttendanceSupervisor()
-    ? getStudents()
-    : weeklyAttScopedRows();
+  const roster=getStudents();
+  const attendance=weeklyAttScopedRows();
+  const source=roster.length?roster:attendance;
   const grades=[...new Set(source.map(s=>String(s.grade||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+
+  // إذا كانت البيانات تمر بحالة تحميل مؤقتة، لا تمسح الخيارات الموجودة.
+  if(!grades.length && el.options.length>1) return;
+
   el.innerHTML='<option value="">اختر الصف</option>'+grades.map(g=>`<option value="${escapeFollowupHtml(g)}">${escapeFollowupHtml(g)}</option>`).join('');
   if(grades.includes(current)) el.value=current;
   else if(!isAttendanceSupervisor() && grades.length===1) el.value=grades[0];
@@ -13808,13 +13819,16 @@ function populateWeeklyAttendanceClasses(){
   const el=$('weeklyAttClass'); if(!el) return;
   const grade=String($('weeklyAttGrade')?.value||'');
   const current=el.value;
-  const source=isAttendanceSupervisor()
-    ? getStudents()
-    : weeklyAttScopedRows();
+  const roster=getStudents();
+  const attendance=weeklyAttScopedRows();
+  const source=roster.length?roster:attendance;
   const classes=[...new Set(source
     .filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade))
     .map(s=>String(s.classroom||'').trim()).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar',{numeric:true}));
+
+  if(!classes.length && el.options.length>1) return;
+
   el.innerHTML='<option value="">اختر الفصل</option>'+classes.map(x=>`<option value="${escapeFollowupHtml(x)}">${escapeFollowupHtml(displayStudentClassroom(x))}</option>`).join('');
   if(classes.includes(current)) el.value=current;
   else if(!isAttendanceSupervisor() && classes.length===1) el.value=classes[0];
@@ -14434,6 +14448,14 @@ function renderWeeklyAttAnalyticsWhenVisible(){
 }
 
 async function initWeeklyAttendanceReport(){
+  // استرجاع تلقائي مرة واحدة إذا كانت قائمة الطلاب قد اختفت محليًا.
+  if(!getStudents().length && localStorage.getItem('cloudAdminToken') && typeof cloudPullToLocal==='function'){
+    try{
+      await cloudPullToLocal();
+    }catch(e){
+      console.warn('weekly roster recovery',e);
+    }
+  }
   populateWeeklyAttHijriDates();
   setWeeklyAttDayFromDate();
   weeklyAttApplySelectedWeekDate();
