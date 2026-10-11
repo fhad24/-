@@ -608,6 +608,11 @@
       const safeManager=managerScript.split('</'+'script>').join('<\\/script>');
       const safeExcelTruth=__exactExcelTruthScript.split('</'+'script>').join('<\\/script>');
       const safeExcelTotalsUi=__excelTotalsUiScript.split('</'+'script>').join('<\\/script>');
+      // ثبّت اسم التطبيق الحقيقي في نسخة Supabase المحمّلة أيضًا.
+      html=html.replace(/<title>[\s\S]*?<\/title>/i,'<title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>');
+      if(!/name=["']application-name["']/i.test(html)){
+        html=html.replace(/<head([^>]*)>/i,'<head$1><meta name="application-name" content="نظام إدارة شؤون الطلاب"><meta name="apple-mobile-web-app-title" content="نظام إدارة شؤون الطلاب"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="/manifest.webmanifest?v=20261011">');
+      }
       const closeBody=html.toLowerCase().lastIndexOf('</body>');
       const injected='<script>'+safeManager+'<'+'/script>';
       html=closeBody>=0 ? html.slice(0,closeBody)+injected+html.slice(closeBody) : html+injected;
@@ -631,7 +636,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#0f7665" />
-  <title>تسجيل بيانات الطلاب</title>
+  <meta name="application-name" content="نظام إدارة شؤون الطلاب" />
+  <meta name="apple-mobile-web-app-title" content="نظام إدارة شؤون الطلاب" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest?v=20261011" />
+  <title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>
   <script>
     try{
       if(localStorage.getItem('activeSessionMode')==='user'){
