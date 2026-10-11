@@ -13895,14 +13895,16 @@ function weeklyAttIsAbsentOnDate(idno,dateKey){
   const allStudents=getStudents();
   const student=allStudents.find(s=>String(s.idno)===String(idno));
   if(!student || !weeklyAttStudentInScope(student)) return false;
-  const importedStatus=weeklyAttImportedStatus(student,key);
-  if(importedStatus==='absent') return true;
-  if(importedStatus==='present') return false;
 
+  // التصحيحات الفعلية المحفوظة في قاعدة البيانات تتقدم على الاستيراد القديم.
   const scopedRows=weeklyAttScopedRows();
   const rows=scopedRows.filter(x=>String(x.idno)===String(idno) && String(x.date)===key);
   if(rows.some(x=>x.status==='present'||x.status==='late')) return false;
   if(rows.some(x=>x.status==='absent')) return true;
+
+  const importedStatus=weeklyAttImportedStatus(student,key);
+  if(importedStatus==='absent') return true;
+  if(importedStatus==='present') return false;
 
   const today=weeklyAttDateKey(new Date());
   if(key>today) return false;
@@ -14278,13 +14280,17 @@ function weeklyAttFastImportedStatus(student,dateKey,ctx){
 }
 function weeklyAttFastStatus(student,dateKey,ctx){
   const key=String(dateKey||'');
-  const imported=weeklyAttFastImportedStatus(student,key,ctx);
-  if(imported==='present') return 'present';
-  if(imported==='absent') return 'absent';
 
+  // السجل الفعلي في قاعدة البيانات هو المرجع الأعلى أولوية.
+  // هذا يسمح لأي تصحيح لاحق (مثل تحويل الغياب إلى حضور) بأن يتغلب
+  // على بيانات الاستيراد القديمة من Excel.
   const rec=ctx.statusByIdDate.get(String(student.idno||'')+'|'+key);
   if(rec?.present || rec?.late) return 'present';
   if(rec?.absent) return 'absent';
+
+  const imported=weeklyAttFastImportedStatus(student,key,ctx);
+  if(imported==='present') return 'present';
+  if(imported==='absent') return 'absent';
   if(key>ctx.today) return '';
 
   const week=ctx.weekByDate.get(key);
