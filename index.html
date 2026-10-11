@@ -608,8 +608,16 @@
       const safeManager=managerScript.split('</'+'script>').join('<\\/script>');
       const safeExcelTruth=__exactExcelTruthScript.split('</'+'script>').join('<\\/script>');
       const safeExcelTotalsUi=__excelTotalsUiScript.split('</'+'script>').join('<\\/script>');
-      // ثبّت اسم التطبيق الحقيقي في نسخة Supabase المحمّلة أيضًا.
-      html=html.replace(/<title>[\s\S]*?<\/title>/i,'<title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>');
+      // ثبّت اسم التطبيق الحقيقي دون لمس <title> الموجودة كنص داخل أكواد JavaScript.
+      {
+        const firstScriptEnd=html.toLowerCase().indexOf('</script>');
+        const titleStart=html.toLowerCase().indexOf('<title>',Math.max(0,firstScriptEnd));
+        const titleEnd=titleStart>=0?html.toLowerCase().indexOf('</title>',titleStart):-1;
+        const appTitle='<title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>';
+        if(titleStart>=0&&titleEnd>titleStart){
+          html=html.slice(0,titleStart)+appTitle+html.slice(titleEnd+8);
+        }
+      }
       if(!/name=["']application-name["']/i.test(html)){
         html=html.replace(/<head([^>]*)>/i,'<head$1><meta name="application-name" content="نظام إدارة شؤون الطلاب"><meta name="apple-mobile-web-app-title" content="نظام إدارة شؤون الطلاب"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="/manifest.webmanifest?v=20261011">');
       }
