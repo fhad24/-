@@ -360,7 +360,7 @@
         'const canvas=await html2canvas(cert,{scale:2.2,useCORS:true,backgroundColor:"#ffffff",logging:false});'+
         'const blob=await new Promise(r=>canvas.toBlob(r,"image/png",0.98));if(!blob)throw new Error("image");'+
         'const safe=student.replace(/[\\/:*?"<>|]/g,"-");const file=new File([blob],"شهادة شكر - "+safe+".png",{type:"image/png"});'+
-        'const msg="يسر إدارة المدرسة أن تشارككم شهادة شكر وتقدير للطالب "+student+" تقديرًا لانتظامه وانضباطه وحضوره المتميز.\n\nhttps://shurahbil-students.onrender.com/";'+
+        'const msg="يسر إدارة المدرسة أن تشارككم شهادة شكر وتقدير للطالب "+student+" تقديرًا لانتظامه وانضباطه وحضوره المتميز.\n\nhttps://shurahbil-students.onrender.com/?app=20261011-2326";'+
         'if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){'+
           'await navigator.share({files:[file],title:"شهادة شكر وتقدير - "+student,text:msg});'+
         '}else{'+
@@ -22886,7 +22886,7 @@ setTimeout(refreshStudentDataReviewCount,900);
     const gradeSel=norm(document.getElementById('weeklyAttGrade')?.value);
     const classSel=norm(document.getElementById('weeklyAttClass')?.value);
     const week=norm(document.getElementById('weeklyAttWeek')?.value);
-    const siteUrl='https://shurahbil-students.onrender.com/';
+    const siteUrl='https://shurahbil-students.onrender.com/?app=20261011-2326';
     const qrUrl='https://quickchart.io/qr?size=180&margin=1&text='+encodeURIComponent(siteUrl);
     const dateText=(()=>{try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'long'}).format(new Date())}catch(e){return ''}})();
 
