@@ -609,7 +609,7 @@
       const safeExcelTruth=__exactExcelTruthScript.split('</'+'script>').join('<\\/script>');
       const safeExcelTotalsUi=__excelTotalsUiScript.split('</'+'script>').join('<\\/script>');
       const closeBody=html.toLowerCase().lastIndexOf('</body>');
-      const injected='<script>'+safeManager+'<'+'/script><script>'+safeExcelTruth+'<'+'/script><script>'+safeExcelTotalsUi+'<'+'/script>';
+      const injected='<script>'+safeManager+'<'+'/script>';
       html=closeBody>=0 ? html.slice(0,closeBody)+injected+html.slice(closeBody) : html+injected;
       window.__SHURAHBIL_RUNTIME_UPDATE__=u.sha256;
       replaced=true;
