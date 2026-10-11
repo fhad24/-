@@ -613,7 +613,28 @@
         const firstScriptEnd=html.toLowerCase().indexOf('</script>');
         const titleStart=html.toLowerCase().indexOf('<title>',Math.max(0,firstScriptEnd));
         const titleEnd=titleStart>=0?html.toLowerCase().indexOf('</title>',titleStart):-1;
-        const appTitle='<title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>';
+        const appTitle='<title>نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية</title>
+<script id="shurahbilTitleGuard">
+(function(){
+  const APP_TITLE='نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية';
+  const APP_SHORT='نظام إدارة شؤون الطلاب';
+  function fix(){
+    try{ if(document.title!==APP_TITLE) document.title=APP_TITLE; }catch(e){}
+    try{
+      let a=document.querySelector('meta[name="application-name"]');
+      if(!a){a=document.createElement('meta');a.name='application-name';document.head.appendChild(a)}
+      a.content=APP_SHORT;
+      let b=document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if(!b){b=document.createElement('meta');b.name='apple-mobile-web-app-title';document.head.appendChild(b)}
+      b.content=APP_SHORT;
+    }catch(e){}
+  }
+  fix();
+  document.addEventListener('DOMContentLoaded',fix,{once:true});
+  setTimeout(fix,100);setTimeout(fix,500);setTimeout(fix,1500);
+  try{new MutationObserver(fix).observe(document.head||document.documentElement,{subtree:true,childList:true,characterData:true});}catch(e){}
+})();
+</script>';
         if(titleStart>=0&&titleEnd>titleStart){
           html=html.slice(0,titleStart)+appTitle+html.slice(titleEnd+8);
         }
