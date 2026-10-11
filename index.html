@@ -17707,7 +17707,7 @@ async function flushAttendanceInstantSave(){
 
 
   try{
-    const recorder=getSelectedAttendanceTeacher();
+    const recorder=attendanceMode==='late' ? getCurrentAttendanceRecorder() : getSelectedAttendanceTeacher();
     const now=new Date();
     const date=todayKey();
     const hp=gregorianToHijriParts(date);
@@ -17936,7 +17936,7 @@ if($('saveAttendanceStudentBtn')) $('saveAttendanceStudentBtn').onclick=async (e
     const editedTime=attendanceEditingIndex>=0
       ? formatAttendanceTimeForDisplay(getAttendanceEditedTime())
       : '';
-    const recorder=getSelectedAttendanceTeacher();
+    const recorder=attendanceMode==='late' ? getCurrentAttendanceRecorder() : getSelectedAttendanceTeacher();
     const morningLate=attendanceMode==='late' && !!$('attendanceMorningLate')?.checked;
     const manualSession=attendanceManualSelectorsAllowed();
     if(attendanceMode==='present' && !manualSession) applyAutomaticAttendanceSessionForTeacher();
