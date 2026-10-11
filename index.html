@@ -15185,8 +15185,14 @@ function weeklyAttFindStudentForReport(){
 }
 function weeklyAttStudentAbsenceDetails(student){
   if(!student) return [];
-  return weeklyAttActiveDates()
-    .filter(date=>weeklyAttIsAbsentOnDate(student.idno,date))
+  // استخدم نفس محرك الحساب السريع ونفس نطاق العرض الموجود في الجدول،
+  // حتى يكون إجمالي التقرير مطابقًا تمامًا لعمود الغياب الظاهر.
+  const mode=weeklyAttReportMode();
+  const ctx=buildWeeklyAttFastContext();
+  const dates=mode==='weekly' ? weeklyAttActiveDates() : weeklyAttReportScopeDates();
+  return [...new Set((dates||[]).map(String))]
+    .filter(date=>!WEEKLY_WEEK5_VACATION_DATES.has(date))
+    .filter(date=>weeklyAttFastStatus(student,date,ctx)==='absent')
     .map(date=>{
       const d=new Date(date+'T12:00:00');
       return {
