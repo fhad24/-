@@ -6045,7 +6045,11 @@ body.activity-leader-open main{
     <div class="attendance-modal-grid">
       <div class="attendance-student-side">
         <h3>الأسماء من قاعدة الطلاب</h3>
-        <input id="attendanceStudentSearch" placeholder="ابحث بالاسم أو رقم الهوية...">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:8px;align-items:center">
+          <input id="attendanceStudentSearch" placeholder="ابحث بالاسم أو رقم الهوية...">
+          <button type="button" id="attendanceVoiceSearchBtn" title="البحث بالصوت" aria-label="البحث بالصوت" style="height:44px;border:1px solid #0f7665;border-radius:9px;background:#fff;color:#0f7665;font-size:21px;cursor:pointer">🎙️</button>
+        </div>
+        <div id="attendanceVoiceSearchStatus" class="hint" style="display:none;margin-top:5px;font-size:11px;color:#0f7665"></div>
         <div class="attendance-filter-row">
           <button type="button" data-grade="" class="att-grade active">الكل</button>
           <button type="button" data-grade="الأول الثانوي" class="att-grade">الأول</button>
@@ -17010,13 +17014,15 @@ function fillAttendanceClasses(){
 }
 
 function getCurrentAttendanceVisibleStudents(){
-  const q=normalizeSearchText($('attendanceStudentSearch')?.value||'');
+  const rawQ=$('attendanceStudentSearch')?.value||'';
+  const q=normalizeAttendanceSearchText(rawQ);
+  const qPlain=normalizeSearchText(rawQ);
   const cls=$('attendanceClassFilter')?.value||'';
   return getStudents().filter(s=>{
-    const matchesSearch=!q ||
-      normalizeSearchText(s.name).includes(q) ||
-      normalizeSearchText(s.idno).includes(q) ||
-      normalizeSearchText(s.phone).includes(q);
+    const matchesSearch=!qPlain ||
+      normalizeAttendanceSearchText(s.name).includes(q) ||
+      normalizeSearchText(s.idno).includes(qPlain) ||
+      normalizeSearchText(s.phone).includes(qPlain);
     return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
       (!cls||studentClassKey(s.classroom)===cls) &&
       matchesSearch;
@@ -17166,6 +17172,13 @@ function normalizeSearchText(value){
     .replace(/\s+/g,' ');
 }
 
+function normalizeAttendanceSearchText(value){
+  return normalizeSearchText(value)
+    .replace(/(^|\s)(?:ابن|بن|بنت)(?=\s|$)/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
 const attendanceThumbCache=new Map();
 async function makeSharpAttendanceThumb(blob,key=''){
   if(key && attendanceThumbCache.has(key)) return attendanceThumbCache.get(key);
@@ -17209,14 +17222,15 @@ async function renderAttendanceStudentList(){
   const __renderSeq=++__attendanceStudentListRenderSeq;
   ensureAttendanceSelectionDay();
   const rawQ=$('attendanceStudentSearch')?.value||'';
-  const q=normalizeSearchText(rawQ);
+  const q=normalizeAttendanceSearchText(rawQ);
+  const qPlain=normalizeSearchText(rawQ);
   const cls=$('attendanceClassFilter').value;
   const todayIds=new Set(getAttendanceLog().filter(x=>x.date===todayKey()).map(x=>String(x.idno)));
   let list=getStudents().filter(s=>{
-    const matchesSearch=!q ||
-      normalizeSearchText(s.name).includes(q) ||
-      normalizeSearchText(s.idno).includes(q) ||
-      normalizeSearchText(s.phone).includes(q);
+    const matchesSearch=!qPlain ||
+      normalizeAttendanceSearchText(s.name).includes(q) ||
+      normalizeSearchText(s.idno).includes(qPlain) ||
+      normalizeSearchText(s.phone).includes(qPlain);
     return (!attendanceGradeFilter||studentGradeKey(s.grade)===attendanceGradeFilter) &&
       (!cls||studentClassKey(s.classroom)===cls) &&
       matchesSearch;
@@ -17460,6 +17474,78 @@ if($('attendanceStudentSearch')){
   const searchInput=$('attendanceStudentSearch');
   ['input','keyup','search','change'].forEach(evt=>searchInput.addEventListener(evt,renderAttendanceStudentList));
   searchInput.addEventListener('paste',()=>setTimeout(renderAttendanceStudentList,0));
+}
+
+if($('attendanceVoiceSearchBtn')){
+  const voiceBtn=$('attendanceVoiceSearchBtn');
+  const voiceStatus=$('attendanceVoiceSearchStatus');
+  const searchInput=$('attendanceStudentSearch');
+  let attendanceVoiceRecognition=null;
+
+  voiceBtn.onclick=()=>{
+    const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!Recognition){
+      toast('البحث الصوتي غير مدعوم في هذا المتصفح. استخدم Chrome على الجوال أو الكمبيوتر.');
+      return;
+    }
+    try{
+      if(attendanceVoiceRecognition){
+        try{attendanceVoiceRecognition.abort();}catch(_){}
+      }
+      const recognition=new Recognition();
+      attendanceVoiceRecognition=recognition;
+      recognition.lang='ar-SA';
+      recognition.interimResults=false;
+      recognition.continuous=false;
+      recognition.maxAlternatives=3;
+
+      recognition.onstart=()=>{
+        voiceBtn.disabled=true;
+        voiceBtn.textContent='🔴';
+        if(voiceStatus){
+          voiceStatus.style.display='block';
+          voiceStatus.textContent='استمع الآن... انطق اسم الطالب';
+        }
+      };
+
+      recognition.onresult=e=>{
+        const result=e.results?.[0];
+        const transcript=String(result?.[0]?.transcript||'').trim();
+        if(!transcript) return;
+        if(searchInput) searchInput.value=transcript;
+        renderAttendanceStudentList();
+        if(voiceStatus){
+          voiceStatus.style.display='block';
+          voiceStatus.textContent='تم سماع: '+transcript+' — يتم تجاهل «ابن / بن / بنت» في المطابقة';
+        }
+      };
+
+      recognition.onerror=e=>{
+        const code=String(e?.error||'');
+        if(voiceStatus){
+          voiceStatus.style.display='block';
+          voiceStatus.textContent=code==='not-allowed'
+            ? 'يلزم السماح للمتصفح باستخدام الميكروفون.'
+            : 'لم أتمكن من سماع الاسم بوضوح. اضغط الميكروفون وحاول مرة أخرى.';
+        }
+      };
+
+      recognition.onend=()=>{
+        voiceBtn.disabled=false;
+        voiceBtn.textContent='🎙️';
+        attendanceVoiceRecognition=null;
+      };
+
+      recognition.start();
+    }catch(err){
+      voiceBtn.disabled=false;
+      voiceBtn.textContent='🎙️';
+      if(voiceStatus){
+        voiceStatus.style.display='block';
+        voiceStatus.textContent='تعذر تشغيل الميكروفون. حاول مرة أخرى.';
+      }
+    }
+  };
 }
 
 if($('attendanceClassFilter')) $('attendanceClassFilter').onchange=()=>{
