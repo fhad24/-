@@ -1,0 +1,11 @@
+{
+  "name": "نظام إدارة شؤون الطلاب - مدرسة شرحبيل بن حسنة الثانوية",
+  "short_name": "شؤون الطلاب",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#0f7665",
+  "lang": "ar",
+  "dir": "rtl"
+}
