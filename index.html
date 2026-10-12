@@ -16865,6 +16865,17 @@ function restoreAttendanceSelectionsForMode(mode){
 function openAttendanceModal(mode){
   ensureAttendanceSelectionDay();
   attendanceEditingIndex=-1;
+
+  // اجلب أحدث الطلاب والحضور فور فتح النافذة، خصوصًا للمستخدمين العاديين.
+  if(localStorage.getItem('cloudAdminToken')){
+    cloudPullToLocal().then(()=>{
+      try{
+        fillAttendanceClasses();
+        restoreAttendanceSelectionsForMode(mode);
+        renderAttendanceStudentList();
+      }catch(e){}
+    }).catch(e=>console.warn('attendance modal live bootstrap',e));
+  }
   attendanceMode=mode;
   attendanceSelectedId='';
   restoreAttendanceSelectionsForMode(mode);
@@ -22564,6 +22575,8 @@ async function checkLiveRevision(){
     if(!rev) return;
     if(!__liveRevision){
       __liveRevision=rev;
+      // أول اتصال: اجلب آخر البيانات فورًا بدل انتظار تعديل جديد.
+      await refreshVisiblePageFromLiveUpdate();
       return;
     }
     if(rev!==__liveRevision){
@@ -22580,6 +22593,29 @@ async function checkLiveRevision(){
 // تحديث حي خفيف كل ثانيتين؛ لا يسحب البيانات إلا إذا حدث تغيير فعلي.
 let cloudLiveRevisionTimer=setInterval(checkLiveRevision,2000);
 setTimeout(checkLiveRevision,500);
+
+let __attendanceLiveBusy=false;
+setInterval(async()=>{
+  if(__attendanceLiveBusy || !localStorage.getItem('cloudAdminToken')) return;
+  const panelOpen=$('attendancePanel') && !$('attendancePanel').classList.contains('hidden');
+  const modalOpen=$('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden');
+  if(!panelOpen && !modalOpen) return;
+  __attendanceLiveBusy=true;
+  try{
+    await cloudPullAttendanceFast();
+    if(panelOpen) await renderAttendancePage();
+    if(modalOpen){
+      try{
+        restoreAttendanceSelectionsForMode(attendanceMode);
+        await renderAttendanceStudentList();
+      }catch(e){}
+    }
+  }catch(e){
+    console.warn('attendance live pull',e);
+  }finally{
+    __attendanceLiveBusy=false;
+  }
+},2000);
 
 let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
