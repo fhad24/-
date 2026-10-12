@@ -5466,7 +5466,7 @@ body.activity-leader-open main{
           </div>
           <div id="attendancePresentStatsPanel" class="attendance-present-stats-panel hidden"></div>
           <div class="attendance-bulk-tools">
-            <button type="button" id="attendanceSelectAllRows">☑ تحديد الكل</button>
+            <button type="button" id="attendanceSelectAllRows">☐ تحديد الكل</button>
             <button type="button" id="attendanceDeleteSelected" class="danger">🗑 حذف المحدد</button>
             <button type="button" id="attendanceWhatsAppSelected" class="wa">🟢 واتساب للمحدد</button>
           </div>
@@ -15759,7 +15759,8 @@ async function renderAttendancePage(){
     try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('attendance cloud refresh',e); }
   }
   if($('attendanceSelectAllRows')){
-    $('attendanceSelectAllRows').textContent='☑ تحديد الكل';
+    $('attendanceSelectAllRows').textContent='☐ تحديد الكل';
+    $('attendanceSelectAllRows').setAttribute('aria-pressed','false');
     $('attendanceSelectAllRows').style.display='';
   }
   const presentTools=$('attendancePresentTools');
@@ -16280,6 +16281,8 @@ async function renderAttendancePage(){
     });
   }
 
+    try{syncAttendanceSelectAllRowsState()}catch(e){}
+
   document.querySelectorAll('img[data-ephemeral-url]').forEach(img=>{
     img.onload=()=>setTimeout(()=>URL.revokeObjectURL(img.src),4000);
   });
@@ -16500,13 +16503,30 @@ if($('attendanceMonitoringRefreshBtn')) $('attendanceMonitoringRefreshBtn').oncl
   }
 };
 
+function syncAttendanceSelectAllRowsState(){
+  const btn=$('attendanceSelectAllRows');
+  if(!btn) return;
+  const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-present-group-select,.attendance-wa-select,.attendance-pending-select')];
+  const checked=boxes.filter(x=>x.checked).length;
+  const all=boxes.length>0 && checked===boxes.length;
+  btn.textContent=all?'☑ إلغاء تحديد الكل':'☐ تحديد الكل';
+  btn.setAttribute('aria-pressed',all?'true':'false');
+}
 if($('attendanceSelectAllRows')) $('attendanceSelectAllRows').onclick=()=>{
   const boxes=[...document.querySelectorAll('.attendance-present-select,.attendance-present-group-select,.attendance-wa-select,.attendance-pending-select')];
-  if(!boxes.length){toast('لا توجد سجلات لتحديدها');return}
+  if(!boxes.length){syncAttendanceSelectAllRowsState();toast('لا توجد سجلات لتحديدها');return}
   const allChecked=boxes.every(x=>x.checked);
-  boxes.forEach(x=>x.checked=!allChecked);
-  $('attendanceSelectAllRows').textContent=!allChecked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+  boxes.forEach(x=>{
+    x.checked=!allChecked;
+    x.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  syncAttendanceSelectAllRowsState();
 };
+document.addEventListener('change',e=>{
+  if(e.target?.matches?.('.attendance-present-select,.attendance-present-group-select,.attendance-wa-select,.attendance-pending-select')){
+    setTimeout(syncAttendanceSelectAllRowsState,0);
+  }
+});
 
 if($('attendanceWhatsAppSelected')) $('attendanceWhatsAppSelected').onclick=()=>{
   if(!canUseAttendanceWhatsApp()){
