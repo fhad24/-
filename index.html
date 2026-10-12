@@ -5010,13 +5010,14 @@ body.activity-leader-open main{
 <section id="weeklyAttendanceReport" class="page hidden">
   <div class="weekly-att-page">
     <div class="weekly-att-actions" id="weeklyAttTabs" style="margin:0 0 16px;justify-content:center">
-      <button type="button" class="btn btn-primary" id="weeklyAttTabReportBtn">📋 كشف الحضور والغياب الأسبوعي</button>
-      <button type="button" class="btn btn-outline" id="weeklyAttTabAnalyticsBtn">📊 الإحصائيات الشهرية والفصلية</button>
+      <button type="button" class="btn btn-primary" id="weeklyAttTabReportBtn">✅ تقارير الحضور</button>
+      <button type="button" class="btn btn-outline" id="weeklyAttTabLateBtn">⏰ تقارير التأخر</button>
+      <button type="button" class="btn btn-outline" id="weeklyAttTabAnalyticsBtn">✕ تقارير الغياب</button>
     </div>
 
     <div id="weeklyAttTabReportPanel">
     <div class="card">
-      <h2 style="text-align:center;margin:0 0 6px">كشف متابعة الحضور والغياب الأسبوعي</h2>
+      <h2 style="text-align:center;margin:0 0 6px">تقارير الحضور والغياب الأسبوعية</h2>
       <div class="hint" style="text-align:center;margin-bottom:14px">✓ حاضر &nbsp;&nbsp; ✕ غائب &nbsp;&nbsp; اليوم الذي لم يُسجل فيه تحضير للفصل يبقى فارغًا ولا يُحسب غيابًا، والمتأخر يُحتسب حاضرًا.</div>
 
       <div class="weekly-att-controls">
@@ -5137,9 +5138,78 @@ body.activity-leader-open main{
 
     </div>
 
+    <div id="weeklyAttTabLatePanel" class="hidden">
+      <div class="card" style="margin-top:0">
+        <h2 style="text-align:center;margin:0 0 6px">تقارير التأخر الأسبوعية والشهرية والفصلية</h2>
+        <div class="hint" style="text-align:center;margin-bottom:14px">يتم احتساب التأخر من السجلات الفعلية المحفوظة في تبويب التأخر اليومي.</div>
+
+        <div class="weekly-att-controls">
+          <div>
+            <label>الصف</label>
+            <select id="weeklyLateGrade"><option value="">جميع الصفوف</option></select>
+          </div>
+          <div>
+            <label>الفصل</label>
+            <select id="weeklyLateClass"><option value="">جميع الفصول</option></select>
+          </div>
+          <div>
+            <label>الطالب</label>
+            <select id="weeklyLateStudent"><option value="">جميع الطلاب</option></select>
+          </div>
+          <div>
+            <label>الشهر المرجعي</label>
+            <select id="weeklyLateMonth"><option value="">الشهر الهجري الحالي</option></select>
+          </div>
+          <div>
+            <label>النطاق</label>
+            <select id="weeklyLateRange">
+              <option value="1">شهر واحد</option>
+              <option value="2">شهران</option>
+              <option value="3">ثلاثة أشهر</option>
+              <option value="4" selected>أربعة أشهر</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="weekly-att-actions">
+          <button type="button" class="btn btn-primary" id="weeklyLateShowBtn">عرض تقرير التأخر</button>
+          <button type="button" class="btn btn-outline" id="weeklyLateSelectAllBtn">☑ تحديد الكل</button>
+          <button type="button" class="btn btn-primary" id="weeklyLateStudentReportBtn">📄 تقرير الطالب</button>
+          <button type="button" class="btn btn-outline" id="weeklyLatePrintBtn">🖨️ طباعة</button>
+          <button type="button" class="btn btn-primary" id="weeklyLatePdfBtn">📄 PDF</button>
+        </div>
+
+        <div class="weekly-att-summary" style="margin-top:12px">
+          <div class="box">تأخر الأسبوع<b id="weeklyLateWeekTotal">0</b></div>
+          <div class="box">تأخر الشهر<b id="weeklyLateMonthTotal">0</b></div>
+          <div class="box"><span id="weeklyLateRangeLabel">تأخر 4 أشهر</span><b id="weeklyLateRangeTotal">0</b></div>
+          <div class="box">عدد الطلاب المعروضين<b id="weeklyLateStudentsCount">0</b></div>
+        </div>
+
+        <div id="weeklyLatePrintable" style="overflow:auto">
+          <table class="weekly-att-table" style="min-width:900px">
+            <thead>
+              <tr>
+                <th style="width:42px">تحديد</th>
+                <th>بيانات الطالب</th>
+                <th style="width:90px">الفصل</th>
+                <th style="width:105px">تأخر الأسبوع</th>
+                <th style="width:105px">تأخر الشهر</th>
+                <th style="width:115px" id="weeklyLateRangeTh">تأخر 4 أشهر</th>
+                <th style="width:115px">التأخر حتى الآن</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyLateBody">
+              <tr><td colspan="7">اختر الصف والفصل لعرض تقرير التأخر.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="weeklyAttTabAnalyticsPanel" class="hidden">
     <div class="card" id="weeklyAttAnalyticsCard" style="margin-top:0">
-      <h2 style="text-align:center;margin:0 0 6px">إحصائيات الغياب الشهرية والفصلية</h2>
+      <h2 style="text-align:center;margin:0 0 6px">تقارير الغياب الشهرية والفصلية</h2>
       <div class="hint" style="text-align:center;margin-bottom:14px">الغياب يُحسب فقط في أيام التحضير الفعلية لنفس الصف والفصل؛ اليوم بدون تحضير يبقى فارغًا ولا يدخل في الإحصاءات.</div>
 
       <div class="weekly-att-controls">
@@ -5378,7 +5448,7 @@ body.activity-leader-open main{
             <button type="button" class="attendance-btn late" id="addLateStudentBtn">+ إضافة متأخر</button>
             <button type="button" class="attendance-btn present" id="addPresentStudentBtn">+ إضافة حاضر</button>
             <button type="button" class="attendance-btn outline">تحديث السجل</button>
-            <button type="button" class="attendance-btn outline" id="attendanceAbsenceReportsBtn">📋 كشوف الغياب</button>
+            <button type="button" class="attendance-btn outline" id="attendanceAbsenceReportsBtn">📊 تقارير الحضور والتأخر والغياب</button>
           </div>
         </div>
 
@@ -14978,21 +15048,30 @@ function openWeeklyAttSummaryWhatsApp(rows){
 
 function switchWeeklyAttendanceTab(tab){
   const reportPanel=$('weeklyAttTabReportPanel');
+  const latePanel=$('weeklyAttTabLatePanel');
   const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
   const reportBtn=$('weeklyAttTabReportBtn');
+  const lateBtn=$('weeklyAttTabLateBtn');
   const analyticsBtn=$('weeklyAttTabAnalyticsBtn');
-  const showAnalytics=tab==='analytics';
-  if(reportPanel) reportPanel.classList.toggle('hidden',showAnalytics);
-  if(analyticsPanel) analyticsPanel.classList.toggle('hidden',!showAnalytics);
-  if(reportBtn){
-    reportBtn.classList.toggle('btn-primary',!showAnalytics);
-    reportBtn.classList.toggle('btn-outline',showAnalytics);
-  }
-  if(analyticsBtn){
-    analyticsBtn.classList.toggle('btn-primary',showAnalytics);
-    analyticsBtn.classList.toggle('btn-outline',!showAnalytics);
-  }
-  if(showAnalytics){
+
+  const isReport=tab==='report';
+  const isLate=tab==='late';
+  const isAbsence=tab==='analytics';
+
+  if(reportPanel) reportPanel.classList.toggle('hidden',!isReport);
+  if(latePanel) latePanel.classList.toggle('hidden',!isLate);
+  if(analyticsPanel) analyticsPanel.classList.toggle('hidden',!isAbsence);
+
+  [[reportBtn,isReport],[lateBtn,isLate],[analyticsBtn,isAbsence]].forEach(([btn,on])=>{
+    if(!btn) return;
+    btn.classList.toggle('btn-primary',!!on);
+    btn.classList.toggle('btn-outline',!on);
+  });
+
+  if(isLate){
+    populateWeeklyLateFilters();
+    renderWeeklyLateReport();
+  }else if(isAbsence){
     populateWeeklyAttAnalyticsGrades();
     populateWeeklyAttAnalyticsClasses();
     populateWeeklyAttAnalyticsStudents();
@@ -15173,6 +15252,156 @@ async function refreshWeeklyAttCurrentRangeFromCloud(){
   return ok;
 }
 
+
+function weeklyLateRangeCount(){
+  const n=Number($('weeklyLateRange')?.value||4);
+  return [1,2,3,4].includes(n)?n:4;
+}
+function weeklyLateStudentsForFilters(){
+  const grade=String($('weeklyLateGrade')?.value||'');
+  const classroom=String($('weeklyLateClass')?.value||'');
+  return getStudents()
+    .filter(s=>weeklyAttStudentInScope(s))
+    .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)));
+}
+function populateWeeklyLateFilters(){
+  const grades=[...new Set(getStudents().filter(s=>weeklyAttStudentInScope(s)).map(s=>String(s.grade||'')).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b,'ar'));
+  const gradeEl=$('weeklyLateGrade');
+  if(gradeEl){
+    const cur=gradeEl.value;
+    gradeEl.innerHTML='<option value="">جميع الصفوف</option>'+grades.map(g=>'<option>'+escapeFollowupHtml(g)+'</option>').join('');
+    if(grades.includes(cur)) gradeEl.value=cur;
+  }
+  const classEl=$('weeklyLateClass');
+  if(classEl){
+    const cur=classEl.value;
+    const grade=String(gradeEl?.value||'');
+    const classes=[...new Set(getStudents().filter(s=>weeklyAttStudentInScope(s)).filter(s=>!grade||studentGradeKey(s.grade)===studentGradeKey(grade)).map(s=>String(s.classroom||'')).filter(Boolean))]
+      .sort((a,b)=>String(displayStudentClassroom(a)||a).localeCompare(String(displayStudentClassroom(b)||b),'ar'));
+    classEl.innerHTML='<option value="">جميع الفصول</option>'+classes.map(x=>'<option value="'+escapeFollowupHtml(x)+'">'+escapeFollowupHtml(displayStudentClassroom(x)||x)+'</option>').join('');
+    if(classes.includes(cur)) classEl.value=cur;
+  }
+  const studentEl=$('weeklyLateStudent');
+  if(studentEl){
+    const cur=studentEl.value;
+    const students=weeklyLateStudentsForFilters().slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    studentEl.innerHTML='<option value="">جميع الطلاب</option>'+students.map(s=>'<option value="'+escapeFollowupHtml(s.idno||'')+'">'+escapeFollowupHtml(s.name||'')+'</option>').join('');
+    if(students.some(s=>String(s.idno)===String(cur))) studentEl.value=cur;
+  }
+  const monthEl=$('weeklyLateMonth');
+  if(monthEl){
+    const cur=monthEl.value;
+    const values=[...new Set(getAttendanceLog().filter(r=>r.status==='late'&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||''))).map(r=>weeklyAttHijriMonthKey(String(r.date||''))))]
+      .filter(Boolean).sort();
+    const now=weeklyAttHijriMonthKey(new Date());
+    if(now&&!values.includes(now)) values.push(now);
+    values.sort();
+    monthEl.innerHTML=values.map(m=>'<option value="'+escapeFollowupHtml(m)+'">'+escapeFollowupHtml(weeklyAttHijriMonthLabel(m))+'</option>').join('');
+    if(cur&&values.includes(cur)) monthEl.value=cur;
+    else if(values.includes(now)) monthEl.value=now;
+    else if(values.length) monthEl.value=values[values.length-1];
+  }
+}
+function weeklyLateReportData(){
+  const all=weeklyLateStudentsForFilters();
+  const selected=String($('weeklyLateStudent')?.value||'');
+  const students=selected?all.filter(s=>String(s.idno)===selected):all;
+  const month=String($('weeklyLateMonth')?.value||weeklyAttHijriMonthKey(new Date()));
+  const rangeCount=weeklyLateRangeCount();
+  const months=weeklyAttHijriMonthWindow(month,rangeCount);
+  const monthSet=new Set(months);
+  const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
+  const weekSet=new Set(weeklyAttWeekDates(anchor).map(weeklyAttDateKey));
+  const logs=getAttendanceLog().filter(r=>r.status==='late');
+  const byId=new Map();
+  logs.forEach(r=>{
+    const id=String(r.idno||'');
+    if(!byId.has(id)) byId.set(id,[]);
+    byId.get(id).push(r);
+  });
+  return students.map(student=>{
+    const rows=(byId.get(String(student.idno||''))||[]).filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||'')));
+    let week=0,currentMonth=0,range=0,total=0;
+    rows.forEach(r=>{
+      const date=String(r.date||'');
+      const hm=weeklyAttHijriMonthKey(date);
+      total++;
+      if(weekSet.has(date)) week++;
+      if(hm===month) currentMonth++;
+      if(monthSet.has(hm)) range++;
+    });
+    return {student,week,month:currentMonth,range,total,rows};
+  });
+}
+async function renderWeeklyLateReport(){
+  const body=$('weeklyLateBody'); if(!body)return;
+  populateWeeklyLateFilters();
+  const data=weeklyLateReportData();
+  const rangeCount=weeklyLateRangeCount();
+  const label='تأخر '+rangeCount+(rangeCount===1?' شهر':' أشهر');
+  if($('weeklyLateRangeLabel')) $('weeklyLateRangeLabel').textContent=label;
+  if($('weeklyLateRangeTh')) $('weeklyLateRangeTh').textContent=label;
+  if(!data.length){
+    body.innerHTML='<tr><td colspan="7">لا توجد بيانات مطابقة.</td></tr>';
+    ['weeklyLateWeekTotal','weeklyLateMonthTotal','weeklyLateRangeTotal','weeklyLateStudentsCount'].forEach(id=>{if($(id))$(id).textContent='0'});
+    return;
+  }
+  const identity=await Promise.all(data.map(r=>weeklyAttStudentIdentityHtml(r.student)));
+  body.innerHTML=data.map((r,i)=>'<tr>'+
+    '<td><input type="checkbox" class="weekly-late-select" data-idno="'+escapeFollowupHtml(r.student.idno||'')+'"></td>'+
+    '<td class="student-name">'+identity[i]+'</td>'+
+    '<td>'+escapeFollowupHtml(displayStudentClassroom(r.student.classroom)||'')+'</td>'+
+    '<td><b>'+r.week+'</b></td>'+
+    '<td><b>'+r.month+'</b></td>'+
+    '<td><b>'+r.range+'</b></td>'+
+    '<td><b style="color:#a85b00">'+r.total+'</b></td>'+
+  '</tr>').join('');
+  $('weeklyLateWeekTotal').textContent=String(data.reduce((s,r)=>s+r.week,0));
+  $('weeklyLateMonthTotal').textContent=String(data.reduce((s,r)=>s+r.month,0));
+  $('weeklyLateRangeTotal').textContent=String(data.reduce((s,r)=>s+r.range,0));
+  $('weeklyLateStudentsCount').textContent=String(data.length);
+}
+function weeklyLateSelectedStudent(){
+  const checked=document.querySelector('.weekly-late-select:checked');
+  const id=String(checked?.dataset?.idno||$('weeklyLateStudent')?.value||'');
+  return getStudents().find(s=>String(s.idno||'')===id)||null;
+}
+function openWeeklyLateStudentReport(){
+  const student=weeklyLateSelectedStudent();
+  if(!student){alert('حدد طالبًا واحدًا أولًا.');return}
+  const rows=getAttendanceLog().filter(r=>r.status==='late'&&String(r.idno||'')===String(student.idno||''))
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.time||'').localeCompare(String(a.time||'')));
+  let modal=$('weeklyLateStudentReportModal'); if(modal)modal.remove();
+  modal=document.createElement('div');
+  modal.id='weeklyLateStudentReportModal';
+  modal.style.cssText='position:fixed;inset:0;z-index:99999;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl';
+  modal.innerHTML='<div style="width:min(980px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:22px">'+
+    '<div id="weeklyLateStudentReportPrintable"><h2 style="text-align:center;margin:0 0 8px">تقرير تفصيلي لتأخر الطالب</h2>'+
+    '<div style="text-align:center;font-weight:900;margin-bottom:14px">'+escapeFollowupHtml(student.name||'')+' — '+escapeFollowupHtml(student.idno||'')+' — '+escapeFollowupHtml(student.grade||'')+' / '+escapeFollowupHtml(displayStudentClassroom(student.classroom)||'')+'</div>'+
+    '<div class="weekly-att-summary"><div class="box">إجمالي التأخر<b>'+rows.length+'</b></div></div>'+
+    '<table class="weekly-att-table"><thead><tr><th>م</th><th>اليوم</th><th>التاريخ الهجري</th><th>التاريخ</th><th>الوقت</th><th>المسجل</th></tr></thead><tbody>'+
+    (rows.length?rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeFollowupHtml(r.weekday||'—')+'</td><td>'+escapeFollowupHtml(r.hijriDate||'—')+'</td><td>'+escapeFollowupHtml(r.date||'—')+'</td><td>'+escapeFollowupHtml(r.time||'—')+'</td><td>'+escapeFollowupHtml(r.teacherName||r.teacherUsername||'—')+'</td></tr>').join(''):'<tr><td colspan="6">لا توجد سجلات تأخر.</td></tr>')+
+    '</tbody></table></div>'+
+    '<div class="weekly-att-actions" style="margin-top:14px"><button type="button" class="btn btn-outline" id="weeklyLateStudentPrint">🖨️ طباعة</button><button type="button" class="btn btn-primary" id="weeklyLateStudentPdf">📄 PDF</button><button type="button" class="btn btn-soft" id="weeklyLateStudentClose">إغلاق</button></div></div>';
+  document.body.appendChild(modal);
+  $('weeklyLateStudentClose').onclick=()=>modal.remove();
+  $('weeklyLateStudentPrint').onclick=()=>printElementById('weeklyLateStudentReportPrintable','تقرير تأخر الطالب');
+  $('weeklyLateStudentPdf').onclick=()=>exportElementToPdf('weeklyLateStudentReportPrintable','تقرير-تأخر-'+String(student.name||'طالب')+'.pdf');
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});
+}
+function printElementById(id,title){
+  const el=$(id); if(!el)return;
+  const w=window.open('','_blank','width=1200,height=800'); if(!w)return;
+  w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+escapeFollowupHtml(title||'تقرير')+'</title><style>body{font-family:Tahoma,Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #222;padding:7px;text-align:center}.student-name{text-align:right}</style></head><body>'+el.outerHTML+'</body></html>');
+  w.document.close(); setTimeout(()=>{w.focus();w.print()},250);
+}
+async function exportElementToPdf(id,filename){
+  const el=$(id); if(!el)return;
+  if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
+  await html2pdf().set({margin:6,filename:filename||'report.pdf',image:{type:'jpeg',quality:.98},html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'}}).from(el).save();
+}
+
 function renderWeeklyAttAnalyticsWhenVisible(){
   const panel=$('weeklyAttTabAnalyticsPanel');
   if(!panel || panel.classList.contains('hidden')) return;
@@ -15193,12 +15422,15 @@ async function initWeeklyAttendanceReport(){
   populateWeeklyAttAnalyticsGrades();
   populateWeeklyAttAnalyticsClasses();
   populateWeeklyAttAnalyticsStudents();
+  populateWeeklyLateFilters();
   if(weeklyAttReportMode()==='weekly') restoreWeeklyAttSafetyBackupIfMissing(String($('weeklyAttWeek')?.value||'1'));
   renderWeeklyAttendanceReport();
 
   const reportPanel=$('weeklyAttTabReportPanel');
+  const latePanel=$('weeklyAttTabLatePanel');
   const analyticsPanel=$('weeklyAttTabAnalyticsPanel');
   if(reportPanel) reportPanel.classList.remove('hidden');
+  if(latePanel) latePanel.classList.add('hidden');
   if(analyticsPanel) analyticsPanel.classList.add('hidden');
 
   // إذا لم توجد حتى النسخة المحلية، اجلب قائمة الطلاب في الخلفية بدون إيقاف الصفحة.
@@ -15370,7 +15602,25 @@ async function exportWeeklyAttendancePdf(){
   }finally{stage.remove()}
 }
 if($('weeklyAttTabReportBtn')) $('weeklyAttTabReportBtn').onclick=()=>switchWeeklyAttendanceTab('report');
+if($('weeklyAttTabLateBtn')) $('weeklyAttTabLateBtn').onclick=()=>switchWeeklyAttendanceTab('late');
 if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>switchWeeklyAttendanceTab('analytics');
+
+if($('weeklyLateGrade')) $('weeklyLateGrade').onchange=()=>{populateWeeklyLateFilters();renderWeeklyLateReport()};
+if($('weeklyLateClass')) $('weeklyLateClass').onchange=()=>{populateWeeklyLateFilters();renderWeeklyLateReport()};
+if($('weeklyLateStudent')) $('weeklyLateStudent').onchange=renderWeeklyLateReport;
+if($('weeklyLateMonth')) $('weeklyLateMonth').onchange=renderWeeklyLateReport;
+if($('weeklyLateRange')) $('weeklyLateRange').onchange=renderWeeklyLateReport;
+if($('weeklyLateShowBtn')) $('weeklyLateShowBtn').onclick=renderWeeklyLateReport;
+if($('weeklyLateSelectAllBtn')) $('weeklyLateSelectAllBtn').onclick=()=>{
+  const boxes=[...document.querySelectorAll('.weekly-late-select')];
+  if(!boxes.length)return;
+  const all=boxes.every(x=>x.checked);
+  boxes.forEach(x=>x.checked=!all);
+  $('weeklyLateSelectAllBtn').textContent=!all?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+};
+if($('weeklyLateStudentReportBtn')) $('weeklyLateStudentReportBtn').onclick=openWeeklyLateStudentReport;
+if($('weeklyLatePrintBtn')) $('weeklyLatePrintBtn').onclick=()=>printElementById('weeklyLatePrintable','تقرير التأخر');
+if($('weeklyLatePdfBtn')) $('weeklyLatePdfBtn').onclick=()=>exportElementToPdf('weeklyLatePrintable','تقرير-التأخر.pdf');
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
   invalidateWeeklyAttBulkStats();
   populateWeeklyAttendanceClasses();
