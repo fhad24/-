@@ -16111,7 +16111,7 @@ async function renderAttendancePage(){
               <div class="attendance-saved-name-line">${nameCheck}<div class="attendance-saved-name">${x.name||''}</div></div>
               ${x.period?`<span class="attendance-period-chip">الحصة ${x.period}</span>`:''}
               ${x.subject?`<span class="attendance-period-chip">📘 ${x.subject}</span>`:''}
-              ${x.teacherName||x.teacherUsername?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
+              ${attendanceListView!=='late' && (x.teacherName||x.teacherUsername)?`<span class="attendance-recorder-chip">سجلها: ${x.teacherName||x.teacherUsername} — ${x.teacherCivilId||x.teacherUsername||''}</span>`:''}
             </div>
           </div>
           <div class="attendance-saved-id">${x.idno||'—'}</div>
@@ -16119,6 +16119,9 @@ async function renderAttendancePage(){
           <div class="attendance-saved-time">${attendanceListView==='late'
             ? ((x.hijriDate||x.date||'—') + (x.time ? ' — ' + x.time : ''))
             : (x._autoAbsent?'غياب تلقائي — لم يسجل حضور أو تأخر':(x.time||'—'))}</div>
+          ${attendanceListView==='late'
+            ? `<div class="attendance-late-recorder"><b>${x.teacherName||x.teacherUsername||'—'}</b>${(x.teacherCivilId||x.teacherUsername)?`<span>${x.teacherCivilId||x.teacherUsername}</span>`:''}</div>`
+            : ''}
           <div class="attendance-saved-actions">
             ${isAbsentRow
               ? (x._autoAbsent
@@ -16165,12 +16168,13 @@ async function renderAttendancePage(){
               </div>
               ${rendered.join('')}
             </div>`)
-      : `<div class="attendance-saved-table">
+      : `<div class="attendance-saved-table ${attendanceListView==='late'?'attendance-late-table':''}">
           <div class="attendance-saved-head">
             <div>الطالب</div>
             <div>السجل المدني</div>
             <div>الصف / الفصل</div>
             <div style="text-align:center">${attendanceListView==='late'?'التاريخ / الزمن':'وقت التسجيل'}</div>
+            ${attendanceListView==='late'?'<div style="text-align:center">المستخدم الذي سجل التأخر</div>':''}
             <div style="text-align:center">إجراء</div>
           </div>
           ${rendered.join('')}
@@ -23092,6 +23096,31 @@ setTimeout(refreshStudentDataReviewCount,900);
 
 <script src="/attendance-excel-fix.js?v=20261010-10"></script>
 <script src="/attendance-report-fix.js?v=20261010-14"></script>\n<script src="/attendance-auto-thursday.js?v=20261010-2"></script>
+<style id="late-recorder-column-fix-20261012">
+.attendance-saved-table.attendance-late-table .attendance-saved-head,
+.attendance-saved-table.attendance-late-table .attendance-saved-row{
+  grid-template-columns:minmax(330px,2.3fr) 145px 190px 115px minmax(210px,1.25fr) 145px!important;
+}
+.attendance-late-recorder{
+  text-align:center!important;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  align-items:center;
+  justify-content:center;
+  color:#173b34;
+}
+.attendance-late-recorder b{font-size:14px;line-height:1.4}
+.attendance-late-recorder span{font-size:11px;color:#60736e;direction:ltr}
+@media(max-width:1150px){
+  .attendance-saved-table.attendance-late-table{overflow-x:auto}
+  .attendance-saved-table.attendance-late-table .attendance-saved-head,
+  .attendance-saved-table.attendance-late-table .attendance-saved-row{
+    min-width:1080px;
+    grid-template-columns:300px 130px 170px 105px 200px 135px!important;
+  }
+}
+</style>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
