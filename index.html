@@ -16837,23 +16837,25 @@ function getAttendanceEditedTime(){
 function restoreAttendanceSelectionsForMode(mode){
   const date=ensureAttendanceSelectionDay();
   if(mode==='late'){
-    // إذا كان لهذا اليوم حفظ محلي للتحديدات، فهو المصدر النهائي ولا نعيد إضافة
-    // طالب ألغى المستخدم تحديده حتى لو بقي سجل قديم لحظيًا في السحابة.
-    const persisted=loadPersistedLateSelections();
-    if(persisted!==null){
-      attendancePresentSelectedIds=new Set(persisted);
-      return;
-    }
-
-    // أول فتح فقط في اليوم: نبني التحديد من سجلات التأخر الموجودة ثم نحفظه.
-    const restored=new Set(
+    // مصدر الحقيقة هو سجل التأخر المحفوظ فعليًا اليوم.
+    // لا نُبقي أي علامة تحديد قديمة من localStorage إذا لم يعد لها سجل حقيقي.
+    const savedToday=new Set(
       getAttendanceLog()
         .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
         .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
         .map(x=>String(x?.idno||'').trim())
         .filter(Boolean)
     );
-    attendancePresentSelectedIds=restored;
+
+    const persisted=loadPersistedLateSelections();
+    if(persisted!==null){
+      const clean=new Set([...persisted].filter(id=>savedToday.has(String(id))));
+      attendancePresentSelectedIds=clean;
+      persistLateSelections();
+      return;
+    }
+
+    attendancePresentSelectedIds=savedToday;
     persistLateSelections();
     return;
   }
