@@ -13229,7 +13229,7 @@ function renderAdminUsersSettings(){
         ${u.owner?'':`<button class="admin-user-btn" type="button" data-perm-admin-user="${u.username}">🔑 الصلاحيات</button>`}
         ${u.owner
           ? `<button class="admin-user-btn" type="button" data-edit-owner-user="1">✎ الاسم/كلمة المرور</button>`
-          : `<button class="admin-user-btn" type="button" data-edit-admin-user="${u.username}">✎ الاسم/كلمة المرور</button>
+          : `<button class="admin-user-btn" type="button" data-edit-admin-user="${u.username}">${String(u.role||'')==='مدير تشغيلي'?'✎ السجل/كلمة المرور':'✎ الاسم/كلمة المرور'}</button>
              <button class="admin-user-btn danger" type="button" data-delete-admin-user="${u.username}">🗑 حذف</button>`}
       </div>
     </div>`;
@@ -13249,6 +13249,40 @@ function renderAdminUsersSettings(){
     const users=getAdminUsers();
     const idx=users.findIndex(x=>String(x.username)===String(btn.dataset.editAdminUser));
     const u=users[idx]; if(!u) return;
+
+    if(String(u.role||'')==='مدير تشغيلي'){
+      if(!isCurrentOwner()){
+        alert('تعديل سجل وكلمة مرور المدير التشغيلي متاح لمالك النظام فقط.');
+        return;
+      }
+      const name=prompt('اسم المدير التشغيلي',u.name||''); if(name===null) return;
+      const civil=normalizeCivilId(prompt('السجل المدني / اسم الدخول الجديد',u.civilId||u.username||'')||'');
+      if(!/^\d{10}$/.test(civil)){
+        alert('السجل المدني يجب أن يكون 10 أرقام.');
+        return;
+      }
+      const password=prompt('كلمة المرور الجديدة\nاتركها فارغة للإبقاء على كلمة المرور الحالية','');
+      if(password===null) return;
+      try{
+        await cloudApi('manage_operational_admin',{
+          oldUsername:u.username,
+          username:civil,
+          civilId:civil,
+          name:name.trim()||u.name,
+          password:String(password||''),
+          permissions:Array.isArray(u.permissions)?u.permissions:[]
+        });
+        await cloudPullToLocal();
+        renderAdminUsersSettings();
+        alert('✅ تم تحديث سجل المدير التشغيلي وكلمة المرور');
+      }catch(e){
+        const msg=String(e?.message||e||'');
+        if(msg.includes('USER_ALREADY_EXISTS')) alert('السجل المدني مستخدم لحساب آخر.');
+        else alert('تعذر حفظ بيانات المدير التشغيلي.');
+      }
+      return;
+    }
+
     const name=prompt('الاسم',u.name||''); if(name===null) return;
     const specialty=prompt('التخصص',u.specialty||''); if(specialty===null) return;
     const teachingSubject=prompt('المادة الافتراضية',u.teachingSubject||u.specialty||''); if(teachingSubject===null) return;
@@ -13309,18 +13343,23 @@ function openUserPermissionEditor(username){
   modal.className='user-perm-modal';
   const current=new Set(Array.isArray(u.permissions)?u.permissions:[]);
   const permItems=[
+    ['editStudents','تعديل بيانات الطلاب'],
     ['addStudent','إدارة الطلاب ونقل الفصول'],
     ['import','استيراد البيانات (Excel/صور/باركود)'],
     ['deleteStudents','حذف الطلاب'],
     ['attendance','تحضير الطلاب'],
+    ['attendanceSupervisor','الإشراف على تحضير جميع المعلمين'],
     ['weeklyAttendance','كشف الحضور والغياب الأسبوعي'],
     ['reports','التقارير والتصدير'],
+    ['settings','بيانات المدرسة والمستخدمون'],
     ['madrasati','متابعة دخول منصة مدرستي (إضافة وتعديل)'],
+    ['photos','إدارة صور الطلاب واعتمادها'],
     ['followupSheets','كشوف متابعة الطلاب'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب'],
     ['teacherFollowup','شواهد المعلم داخل الفصل'],
     ['teacherFollowupManager','متابعة المدير للمعلمين'],
     ['referralReview','رد وكيل شؤون الطلاب على التحويلات'],
+    ['activityLeader','رائد النشاط'],
     ['backupZip','نسخة احتياطية ZIP']
   ];
   modal.innerHTML=`
@@ -13335,11 +13374,12 @@ function openUserPermissionEditor(username){
       </div>
       <div class="user-perm-role">
         <label>نوع المستخدم</label>
-        <select id="userPermRole">
+        <select id="userPermRole" ${String(u.role||'')==='مدير تشغيلي'?'disabled':''}>
           <option ${u.role==='معلم'?'selected':''}>معلم</option>
           <option ${u.role==='إداري'?'selected':''}>إداري</option>
           <option ${u.role==='وكيل'?'selected':''}>وكيل</option>
           <option ${u.role==='مدير'?'selected':''}>مدير</option>
+          <option ${u.role==='مدير تشغيلي'?'selected':''}>مدير تشغيلي</option>
           <option ${u.role==='موظف'?'selected':''}>موظف</option>
         </select>
       </div>
@@ -13390,7 +13430,7 @@ function openUserPermissionEditor(username){
   document.getElementById('userPermClose').onclick=()=>modal.remove();
   modal.addEventListener('click',e=>{if(e.target===modal) modal.remove()});
   document.getElementById('userPermSave').onclick=async()=>{
-    u.role=document.getElementById('userPermRole').value;
+    u.role=String(u.role||'')==='مدير تشغيلي' ? 'مدير تشغيلي' : document.getElementById('userPermRole').value;
     u.permissions=checks().filter(x=>x.checked).map(x=>x.value);
     if(u.permissions.includes('referralReview')){
       const gradePerms=[...modal.querySelectorAll('.user-referral-grade-check:checked')].map(x=>x.value);
