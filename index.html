@@ -5157,11 +5157,23 @@ body.activity-leader-open main{
             <select id="weeklyLateStudent"><option value="">جميع الطلاب</option></select>
           </div>
           <div>
-            <label>الشهر المرجعي</label>
-            <select id="weeklyLateMonth"><option value="">الشهر الهجري الحالي</option></select>
+            <label>نوع العرض</label>
+            <select id="weeklyLateViewMode">
+              <option value="allMonths">كل الشهور</option>
+              <option value="month">شهر محدد</option>
+              <option value="week">أسبوع محدد</option>
+            </select>
           </div>
-          <div>
-            <label>النطاق</label>
+          <div id="weeklyLateMonthWrap">
+            <label>اختر الشهر</label>
+            <select id="weeklyLateMonth"><option value="__all__">كل الشهور</option></select>
+          </div>
+          <div id="weeklyLateWeekWrap" class="hidden">
+            <label>اختر الأسبوع</label>
+            <select id="weeklyLateWeek"><option value="all">كل الأسابيع</option></select>
+          </div>
+          <div id="weeklyLateRangeWrap">
+            <label>النطاق الشهري</label>
             <select id="weeklyLateRange">
               <option value="1">شهر واحد</option>
               <option value="2">شهران</option>
@@ -5193,8 +5205,8 @@ body.activity-leader-open main{
                 <th style="width:42px">تحديد</th>
                 <th style="cursor:pointer;user-select:none" data-late-sort="name">بيانات الطالب <span class="late-sort-icon">↕</span></th>
                 <th style="width:90px;cursor:pointer;user-select:none" data-late-sort="classroom">الفصل <span class="late-sort-icon">↕</span></th>
-                <th style="width:105px;cursor:pointer;user-select:none" data-late-sort="week">تأخر الأسبوع <span class="late-sort-icon">↕</span></th>
-                <th style="width:105px;cursor:pointer;user-select:none" data-late-sort="month">تأخر الشهر <span class="late-sort-icon">↕</span></th>
+                <th style="width:105px;cursor:pointer;user-select:none" id="weeklyLateWeekTh" data-late-sort="week">تأخر الأسبوع <span class="late-sort-icon">↕</span></th>
+                <th style="width:105px;cursor:pointer;user-select:none" id="weeklyLateMonthTh" data-late-sort="month">تأخر الشهر <span class="late-sort-icon">↕</span></th>
                 <th style="width:115px;cursor:pointer;user-select:none" id="weeklyLateRangeTh" data-late-sort="range">تأخر 4 أشهر <span class="late-sort-icon">↕</span></th>
                 <th style="width:115px;cursor:pointer;user-select:none" data-late-sort="total">التأخر حتى الآن <span class="late-sort-icon">↕</span></th>
               </tr>
@@ -15264,6 +15276,29 @@ function weeklyLateStudentsForFilters(){
     .filter(s=>weeklyAttStudentInScope(s))
     .filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)));
 }
+function weeklyLateViewMode(){
+  return String($('weeklyLateViewMode')?.value||'allMonths');
+}
+function populateWeeklyLateWeeks(){
+  const el=$('weeklyLateWeek'); if(!el)return;
+  const cur=String(el.value||'all');
+  const keys=Object.keys(typeof WEEKLY_FIXED_HIJRI_WEEKS==='object'&&WEEKLY_FIXED_HIJRI_WEEKS?WEEKLY_FIXED_HIJRI_WEEKS:{})
+    .filter(k=>Array.isArray(WEEKLY_FIXED_HIJRI_WEEKS[k])&&WEEKLY_FIXED_HIJRI_WEEKS[k].length)
+    .sort((a,b)=>Number(a)-Number(b));
+  el.innerHTML='<option value="all">كل الأسابيع</option>'+keys.map(k=>'<option value="'+k+'">الأسبوع '+k+'</option>').join('');
+  if(cur==='all'||keys.includes(cur)) el.value=cur;
+}
+function syncWeeklyLateViewControls(){
+  const mode=weeklyLateViewMode();
+  const monthWrap=$('weeklyLateMonthWrap');
+  const weekWrap=$('weeklyLateWeekWrap');
+  const rangeWrap=$('weeklyLateRangeWrap');
+  if(monthWrap) monthWrap.classList.toggle('hidden',mode==='week');
+  if(weekWrap) weekWrap.classList.toggle('hidden',mode!=='week');
+  if(rangeWrap) rangeWrap.classList.toggle('hidden',mode!=='month');
+  if(mode==='allMonths' && $('weeklyLateMonth')) $('weeklyLateMonth').value='__all__';
+  if(mode==='week') populateWeeklyLateWeeks();
+}
 function populateWeeklyLateFilters(){
   const grades=[...new Set(getStudents().filter(s=>weeklyAttStudentInScope(s)).map(s=>String(s.grade||'')).filter(Boolean))]
     .sort((a,b)=>a.localeCompare(b,'ar'));
@@ -15291,28 +15326,44 @@ function populateWeeklyLateFilters(){
   }
   const monthEl=$('weeklyLateMonth');
   if(monthEl){
-    const cur=monthEl.value;
-    const values=[...new Set(getAttendanceLog().filter(r=>r.status==='late'&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||''))).map(r=>weeklyAttHijriMonthKey(String(r.date||''))))]
-      .filter(Boolean).sort();
-    const now=weeklyAttHijriMonthKey(new Date());
-    if(now&&!values.includes(now)) values.push(now);
-    values.sort();
-    monthEl.innerHTML=values.map(m=>'<option value="'+escapeFollowupHtml(m)+'">'+escapeFollowupHtml(weeklyAttHijriMonthLabel(m))+'</option>').join('');
-    if(cur&&values.includes(cur)) monthEl.value=cur;
-    else if(values.includes(now)) monthEl.value=now;
-    else if(values.length) monthEl.value=values[values.length-1];
+    const cur=String(monthEl.value||'__all__');
+    const lateMonths=[...new Set(getAttendanceLog()
+      .filter(r=>r.status==='late'&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||'')))
+      .map(r=>weeklyAttHijriMonthKey(String(r.date||''))))]
+      .filter(Boolean);
+    const catalog=weeklyAttHijriMonthCatalog()
+      .filter(x=>x.date<=new Date(Date.now()+35*86400000))
+      .slice(-18)
+      .map(x=>x.key);
+    const values=[...new Set([...catalog,...lateMonths])].sort();
+    monthEl.innerHTML='<option value="__all__">كل الشهور</option>'+
+      values.map(m=>'<option value="'+escapeFollowupHtml(m)+'">'+escapeFollowupHtml(weeklyAttHijriMonthLabel(m))+'</option>').join('');
+    if(cur==='__all__'||values.includes(cur)) monthEl.value=cur;
+    else monthEl.value='__all__';
   }
+  populateWeeklyLateWeeks();
+  syncWeeklyLateViewControls();
 }
 function weeklyLateReportData(){
   const all=weeklyLateStudentsForFilters();
   const selected=String($('weeklyLateStudent')?.value||'');
   const students=selected?all.filter(s=>String(s.idno)===selected):all;
-  const month=String($('weeklyLateMonth')?.value||weeklyAttHijriMonthKey(new Date()));
+  const mode=weeklyLateViewMode();
+  const monthValue=String($('weeklyLateMonth')?.value||'__all__');
   const rangeCount=weeklyLateRangeCount();
-  const months=weeklyAttHijriMonthWindow(month,rangeCount);
+  const referenceMonth=(monthValue&&monthValue!=='__all__')?monthValue:weeklyAttHijriMonthKey(new Date());
+  const months=weeklyAttHijriMonthWindow(referenceMonth,rangeCount);
   const monthSet=new Set(months);
-  const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
-  const weekSet=new Set(weeklyAttWeekDates(anchor).map(weeklyAttDateKey));
+
+  let weekSet=new Set();
+  const selectedWeek=String($('weeklyLateWeek')?.value||'all');
+  if(mode==='week' && selectedWeek!=='all'){
+    weekSet=new Set(weeklyAttFixedWeekGregorianDates(selectedWeek).map(String));
+  }else{
+    const anchor=$('weeklyAttDate')?.value||weeklyAttDateKey(new Date());
+    weekSet=new Set(weeklyAttWeekDates(anchor).map(weeklyAttDateKey));
+  }
+
   const logs=getAttendanceLog().filter(r=>r.status==='late');
   const byId=new Map();
   logs.forEach(r=>{
@@ -15320,6 +15371,7 @@ function weeklyLateReportData(){
     if(!byId.has(id)) byId.set(id,[]);
     byId.get(id).push(r);
   });
+
   return students.map(student=>{
     const rows=(byId.get(String(student.idno||''))||[]).filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||'')));
     let week=0,currentMonth=0,range=0,total=0;
@@ -15327,9 +15379,19 @@ function weeklyLateReportData(){
       const date=String(r.date||'');
       const hm=weeklyAttHijriMonthKey(date);
       total++;
-      if(weekSet.has(date)) week++;
-      if(hm===month) currentMonth++;
-      if(monthSet.has(hm)) range++;
+      if(mode==='week'){
+        if(selectedWeek==='all' || weekSet.has(date)) week++;
+      }else if(weekSet.has(date)){
+        week++;
+      }
+
+      if(mode==='allMonths' || monthValue==='__all__'){
+        currentMonth++;
+        range++;
+      }else{
+        if(hm===monthValue) currentMonth++;
+        if(monthSet.has(hm)) range++;
+      }
     });
     return {student,week,month:currentMonth,range,total,rows};
   });
@@ -15373,10 +15435,28 @@ async function renderWeeklyLateReport(){
   populateWeeklyLateFilters();
   const data=weeklyLateSortData(weeklyLateReportData());
   updateWeeklyLateSortHeaders();
+  const mode=weeklyLateViewMode();
   const rangeCount=weeklyLateRangeCount();
-  const label='تأخر '+rangeCount+(rangeCount===1?' شهر':' أشهر');
-  if($('weeklyLateRangeLabel')) $('weeklyLateRangeLabel').textContent=label;
-  if($('weeklyLateRangeTh')) $('weeklyLateRangeTh').textContent=label;
+  const monthValue=String($('weeklyLateMonth')?.value||'__all__');
+  const selectedWeek=String($('weeklyLateWeek')?.value||'all');
+
+  let rangeLabel='تأخر '+rangeCount+(rangeCount===1?' شهر':' أشهر');
+  let monthLabel='تأخر الشهر';
+  let weekLabel='تأخر الأسبوع';
+
+  if(mode==='allMonths'){
+    monthLabel='كل الشهور';
+    rangeLabel='كل الشهور';
+  }else if(mode==='month'){
+    monthLabel=monthValue==='__all__'?'كل الشهور':('تأخر '+weeklyAttHijriMonthLabel(monthValue));
+  }else if(mode==='week'){
+    weekLabel=selectedWeek==='all'?'كل الأسابيع':('تأخر الأسبوع '+selectedWeek);
+  }
+
+  if($('weeklyLateRangeLabel')) $('weeklyLateRangeLabel').textContent=rangeLabel;
+  if($('weeklyLateRangeTh')) $('weeklyLateRangeTh').childNodes[0].nodeValue=rangeLabel+' ';
+  if($('weeklyLateMonthTh')) $('weeklyLateMonthTh').childNodes[0].nodeValue=monthLabel+' ';
+  if($('weeklyLateWeekTh')) $('weeklyLateWeekTh').childNodes[0].nodeValue=weekLabel+' ';
   if(!data.length){
     body.innerHTML='<tr><td colspan="7">لا توجد بيانات مطابقة.</td></tr>';
     ['weeklyLateWeekTotal','weeklyLateMonthTotal','weeklyLateRangeTotal','weeklyLateStudentsCount'].forEach(id=>{if($(id))$(id).textContent='0'});
@@ -15643,7 +15723,14 @@ if($('weeklyAttTabAnalyticsBtn')) $('weeklyAttTabAnalyticsBtn').onclick=()=>swit
 if($('weeklyLateGrade')) $('weeklyLateGrade').onchange=()=>{populateWeeklyLateFilters();renderWeeklyLateReport()};
 if($('weeklyLateClass')) $('weeklyLateClass').onchange=()=>{populateWeeklyLateFilters();renderWeeklyLateReport()};
 if($('weeklyLateStudent')) $('weeklyLateStudent').onchange=renderWeeklyLateReport;
-if($('weeklyLateMonth')) $('weeklyLateMonth').onchange=renderWeeklyLateReport;
+if($('weeklyLateViewMode')) $('weeklyLateViewMode').onchange=()=>{syncWeeklyLateViewControls();renderWeeklyLateReport()};
+if($('weeklyLateMonth')) $('weeklyLateMonth').onchange=()=>{
+  if($('weeklyLateViewMode') && $('weeklyLateMonth').value==='__all__') $('weeklyLateViewMode').value='allMonths';
+  else if($('weeklyLateViewMode')) $('weeklyLateViewMode').value='month';
+  syncWeeklyLateViewControls();
+  renderWeeklyLateReport();
+};
+if($('weeklyLateWeek')) $('weeklyLateWeek').onchange=renderWeeklyLateReport;
 if($('weeklyLateRange')) $('weeklyLateRange').onchange=renderWeeklyLateReport;
 if($('weeklyLateShowBtn')) $('weeklyLateShowBtn').onclick=async()=>{
   const btn=$('weeklyLateShowBtn');
