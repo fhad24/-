@@ -22498,6 +22498,67 @@ function refreshCurrentDashboardAfterCloudPull(){
     renderAdmin();
   }
 }
+
+let __liveRevision=0;
+let __liveRevisionBusy=false;
+let __liveRefreshBusy=false;
+
+async function refreshVisiblePageFromLiveUpdate(){
+  if(__liveRefreshBusy) return;
+  __liveRefreshBusy=true;
+  try{
+    await cloudPullToLocal();
+
+    // حدّث الصفحة المفتوحة فقط، بدون إعادة تحميل المتصفح.
+    if($('attendancePanel') && !$('attendancePanel').classList.contains('hidden')){
+      try{ await renderAttendancePage(); }catch(e){}
+      if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden')){
+        try{ fillAttendanceClasses(); await renderAttendanceStudentList(); }catch(e){}
+      }
+    }
+    if($('teacherClassManager') && !$('teacherClassManager').classList.contains('hidden') && typeof loadTeacherClassManagerFollowups==='function'){
+      try{ await loadTeacherClassManagerFollowups(); }catch(e){}
+    }
+    if($('deputyReferrals') && !$('deputyReferrals').classList.contains('hidden') && typeof loadDeputyReferrals==='function'){
+      try{ await loadDeputyReferrals(); }catch(e){}
+    }
+    if($('referral') && !$('referral').classList.contains('hidden')){
+      try{ if(typeof renderReferralHistory==='function') renderReferralHistory(); }catch(e){}
+    }
+    try{ refreshCurrentDashboardAfterCloudPull(); }catch(e){}
+  }catch(e){
+    console.warn('live refresh failed',e);
+  }finally{
+    __liveRefreshBusy=false;
+  }
+}
+
+async function checkLiveRevision(){
+  if(__liveRevisionBusy || !localStorage.getItem('cloudAdminToken')) return;
+  __liveRevisionBusy=true;
+  try{
+    const data=await cloudApi('get_revision');
+    const rev=Number(data?.revision||0);
+    if(!rev) return;
+    if(!__liveRevision){
+      __liveRevision=rev;
+      return;
+    }
+    if(rev!==__liveRevision){
+      __liveRevision=rev;
+      await refreshVisiblePageFromLiveUpdate();
+    }
+  }catch(e){
+    // لا نظهر خطأ للمستخدم؛ المحاولة التالية ستعيد الاتصال تلقائيًا.
+  }finally{
+    __liveRevisionBusy=false;
+  }
+}
+
+// تحديث حي خفيف كل ثانيتين؛ لا يسحب البيانات إلا إذا حدث تغيير فعلي.
+let cloudLiveRevisionTimer=setInterval(checkLiveRevision,2000);
+setTimeout(checkLiveRevision,500);
+
 let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
     cloudPullToLocal().then(refreshCurrentDashboardAfterCloudPull).catch(()=>{});
