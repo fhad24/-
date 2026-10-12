@@ -5524,7 +5524,7 @@ body.activity-leader-open main{
               <button type="button" id="attendancePresentHijriOpen" class="attendance-present-hijri-open">
                 <span class="attendance-present-hijri-icon" aria-hidden="true"><i></i></span>
                 <span class="attendance-present-hijri-copy">
-                  <small>اختر التاريخ الهجري</small>
+                  <small>عرض يوم سابق / اختر التاريخ الهجري</small>
                   <b id="attendancePresentHijriDisplay">اختر اليوم</b>
                 </span>
                 <span class="attendance-present-hijri-chevron" aria-hidden="true">⌄</span>
@@ -16301,10 +16301,11 @@ async function renderAttendancePage(){
   const monitoringAboveCalendar=$('attendanceMonitoringAboveCalendarWrap');
   const presentStatsPanel=$('attendancePresentStatsPanel');
   const isPresentView=attendanceListView==='present';
+  const canBrowseAttendanceDates=isAttendanceSupervisor();
   if(presentTools) presentTools.classList.toggle('hidden',!isPresentView);
-  if(presentHijriFilter) presentHijriFilter.classList.toggle('hidden',!isPresentView);
+  if(presentHijriFilter) presentHijriFilter.classList.toggle('hidden',!canBrowseAttendanceDates);
   if(monitoringAboveCalendar) monitoringAboveCalendar.classList.toggle('hidden',!isPresentView);
-  if(isPresentView) setTimeout(initAttendancePresentHijriFilter,0);
+  if(canBrowseAttendanceDates) setTimeout(initAttendancePresentHijriFilter,0);
   if(presentStatsPanel && !isPresentView) presentStatsPanel.classList.add('hidden');
 
   if($('attendanceWhatsAppSelected')){
@@ -16318,7 +16319,10 @@ async function renderAttendancePage(){
   const allLogs=getAttendanceLog();
   const ownerView=isCurrentOwner();
   const visibleLogs=ownerView?allLogs:allLogs.filter(attendanceRowBelongsToCurrentUser);
-  const today=visibleLogs.filter(x=>x.date===todayKey());
+  const selectedDailyDate=(isAttendanceSupervisor() && attendancePresentFilterDate)
+    ? String(attendancePresentFilterDate)
+    : todayKey();
+  const today=visibleLogs.filter(x=>String(x.date||'')===selectedDailyDate);
   const present=today.filter(x=>x.status==='present').length;
   const late=today.filter(x=>x.status==='late').length;
   const explicitAbsent=today.filter(x=>x.status==='absent').length;
@@ -16369,11 +16373,12 @@ async function renderAttendancePage(){
     present:'الحضور اليومي',
     absent:'الغياب اليومي'
   };
+  const selectedDailyHijriLabel=new Date(selectedDailyDate+'T12:00:00').toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   $('attendanceDayTitle').textContent=attendanceListView==='present'
     ? (attendancePresentFilterDate
-        ? 'الحضور المحفوظ — '+new Date(attendancePresentFilterDate+'T12:00:00').toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'})
+        ? 'الحضور المحفوظ — '+selectedDailyHijriLabel
         : 'الحضور المحفوظ — جميع الفصول')
-    : `${labelMap[attendanceListView]} — ${new Date().toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+    : `${labelMap[attendanceListView]} — ${selectedDailyHijriLabel}`;
 
   {
     let rows=allLogs
@@ -16392,7 +16397,7 @@ async function renderAttendancePage(){
         const allowed=ownerView||attendanceRowBelongsToCurrentUser(x)||
           (attendanceListView==='late' && selectedLateIds.has(String(x.idno||'')));
         if(!allowed || x.status!==attendanceListView) return false;
-        return x.date===todayKey();
+        return String(x.date||'')===selectedDailyDate;
       });
 
     // في تبويب الغياب: أي طالب لم يسجل حاضرًا أو متأخرًا اليوم يظهر غائبًا تلقائيًا.
@@ -16408,7 +16413,7 @@ async function renderAttendancePage(){
           grade:s.grade||'',
           classroom:s.classroom||'',
           phone:s.phone||'',
-          date:todayKey(),
+          date:selectedDailyDate,
           time:'تلقائي',
           status:'absent',
           subject:'',
@@ -16420,7 +16425,7 @@ async function renderAttendancePage(){
     if(!rows.length){
       $('attendanceDailyList').innerHTML=attendanceListView==='present'
         ? 'لا توجد سجلات حضور محفوظة في قاعدة البيانات.'
-        : `لا توجد سجلات ${labelMap[attendanceListView]} اليوم.`;
+        : `لا توجد سجلات ${labelMap[attendanceListView]} في التاريخ المختار.`;
       return;
     }
 
