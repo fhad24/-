@@ -17920,18 +17920,34 @@ async function cancelInstantAttendanceForStudent(id){
   const unique=new Map();
   matches.forEach(x=>unique.set(attendanceRecordKey(x),x));
   const cloudMatches=[...unique.values()];
-  if(cloudMatches.length){
+  if(mode==='late'){
     try{
-      await cloudApi('delete_attendance_rows',{rows:cloudMatches});
-      if(mode==='late'){
-        try{ await cloudPullAttendanceFast(); await renderAttendancePage(); }catch(e){}
-        showAttendanceSavedMessage('✅ تم إلغاء التأخر');
+      // مسار مخصص للتأخر: يحذف سجل هذا المستخدم للطالب في تاريخ اليوم
+      // حتى لو اختلفت قيمة الحصة/المفتاح المحلي عن السجل الموجود على الخادم.
+      const out=await cloudApi('cancel_my_late_attendance',{idno:id,date});
+      if(Number(out?.deleted||0)<1 && cloudMatches.length){
+        const fallback=await cloudApi('delete_attendance_rows',{rows:cloudMatches});
+        if(Number(fallback?.deleted||0)<1) throw new Error('LATE_NOT_DELETED');
       }
+      await cloudPullAttendanceFast();
+      try{ await renderAttendancePage(); }catch(e){}
+      showAttendanceSavedMessage('✅ تم إلغاء التأخر');
     }catch(err){
-      // لا نعيد التحديد للمستخدم بسبب بطء/فشل الشبكة؛ الإلغاء يبقى فوريًا محليًا.
       console.error('instant attendance cloud cancel',err);
-      if(mode!=='late') throw err;
+      // إذا فشل الحذف الحقيقي من الخادم، أعد أحدث حالة من السحابة بدل نجاح وهمي.
+      try{
+        await cloudPullAttendanceFast();
+        restoreAttendanceSelectionsForMode('late');
+        await renderAttendanceStudentList();
+        await renderAttendancePage();
+      }catch(e){}
+      throw err;
     }
+    return true;
+  }
+
+  if(cloudMatches.length){
+    await cloudApi('delete_attendance_rows',{rows:cloudMatches});
   }
   return true;
 }
