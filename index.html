@@ -13679,7 +13679,7 @@ function applyAutomaticAttendanceSessionForTeacher(){
 }
 
 function attendanceRowBelongsToCurrentUser(row){
-  if(isAttendanceSupervisor()) return true;
+  if(isCurrentOwner()) return true;
   const recorder=getCurrentAttendanceRecorder();
   const norm=v=>String(v||'').trim().replace(/\s+/g,' ').toLowerCase();
   const currentUser=norm(recorder.username);
@@ -13697,7 +13697,7 @@ function attendanceRowBelongsToCurrentUser(row){
   return false;
 }
 function attendanceUserCanModifyRow(row){
-  if(isAttendanceSupervisor()) return true;
+  if(isCurrentOwner()) return true;
   const isToday=String(row?.date||'')===todayKey();
   if(isToday && String(row?.status||'')==='late') return true;
   return isToday && attendanceRowBelongsToCurrentUser(row);
@@ -15783,7 +15783,7 @@ async function renderAttendancePage(){
   }
   const students=getStudents();
   const allLogs=getAttendanceLog();
-  const ownerView=isAttendanceSupervisor();
+  const ownerView=isCurrentOwner();
   const visibleLogs=ownerView?allLogs:allLogs.filter(attendanceRowBelongsToCurrentUser);
   const today=visibleLogs.filter(x=>x.date===todayKey());
   const present=today.filter(x=>x.status==='present').length;
@@ -16842,7 +16842,7 @@ function restoreAttendanceSelectionsForMode(mode){
     const savedToday=new Set(
       getAttendanceLog()
         .filter(x=>String(x?.date||'')===String(date) && String(x?.status||'')==='late')
-        .filter(x=>isAttendanceSupervisor() || attendanceRowBelongsToCurrentUser(x))
+        .filter(x=>isCurrentOwner() || attendanceRowBelongsToCurrentUser(x))
         .map(x=>String(x?.idno||'').trim())
         .filter(Boolean)
     );
