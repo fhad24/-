@@ -22595,20 +22595,32 @@ let cloudLiveRevisionTimer=setInterval(checkLiveRevision,2000);
 setTimeout(checkLiveRevision,500);
 
 let __attendanceLiveBusy=false;
+let __attendanceLiveSignature='';
+function attendanceLiveSignature(rows){
+  return JSON.stringify((Array.isArray(rows)?rows:[]).map(x=>[
+    x.id??null,x.idno||'',x.status||'',x.date||'',x.time||'',
+    x.period??'',x.teacherUsername||'',x.teacherCivilId||''
+  ]));
+}
 setInterval(async()=>{
   if(__attendanceLiveBusy || !localStorage.getItem('cloudAdminToken')) return;
-  const panelOpen=$('attendancePanel') && !$('attendancePanel').classList.contains('hidden');
-  const modalOpen=$('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden');
-  if(!panelOpen && !modalOpen) return;
   __attendanceLiveBusy=true;
   try{
-    await cloudPullAttendanceFast();
-    if(panelOpen) await renderAttendancePage();
-    if(modalOpen){
-      try{
-        restoreAttendanceSelectionsForMode(attendanceMode);
-        await renderAttendanceStudentList();
-      }catch(e){}
+    const rows=await cloudPullAttendanceFast();
+    const sig=attendanceLiveSignature(rows);
+    const changed=sig!==__attendanceLiveSignature;
+    if(!__attendanceLiveSignature) __attendanceLiveSignature=sig;
+    if(changed){
+      __attendanceLiveSignature=sig;
+      const panelOpen=$('attendancePanel') && !$('attendancePanel').classList.contains('hidden');
+      const modalOpen=$('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden');
+      if(panelOpen) await renderAttendancePage();
+      if(modalOpen){
+        try{
+          restoreAttendanceSelectionsForMode(attendanceMode);
+          await renderAttendanceStudentList();
+        }catch(e){}
+      }
     }
   }catch(e){
     console.warn('attendance live pull',e);
@@ -22616,6 +22628,20 @@ setInterval(async()=>{
     __attendanceLiveBusy=false;
   }
 },2000);
+
+// أول مزامنة حضور مباشرة بعد الدخول بدل انتظار أول دورة.
+setTimeout(async()=>{
+  if(!localStorage.getItem('cloudAdminToken')) return;
+  try{
+    const rows=await cloudPullAttendanceFast();
+    __attendanceLiveSignature=attendanceLiveSignature(rows);
+    if($('attendancePanel') && !$('attendancePanel').classList.contains('hidden')) await renderAttendancePage();
+    if($('attendanceStudentModal') && !$('attendanceStudentModal').classList.contains('hidden')){
+      restoreAttendanceSelectionsForMode(attendanceMode);
+      await renderAttendanceStudentList();
+    }
+  }catch(e){}
+},700);
 
 let cloudPeriodicSyncTimer=setInterval(()=>{
   if(!cloudSyncBusy && localStorage.getItem('cloudAdminToken')){
