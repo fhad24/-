@@ -5191,12 +5191,12 @@ body.activity-leader-open main{
             <thead>
               <tr>
                 <th style="width:42px">تحديد</th>
-                <th>بيانات الطالب</th>
-                <th style="width:90px">الفصل</th>
-                <th style="width:105px">تأخر الأسبوع</th>
-                <th style="width:105px">تأخر الشهر</th>
-                <th style="width:115px" id="weeklyLateRangeTh">تأخر 4 أشهر</th>
-                <th style="width:115px">التأخر حتى الآن</th>
+                <th style="cursor:pointer;user-select:none" data-late-sort="name">بيانات الطالب <span class="late-sort-icon">↕</span></th>
+                <th style="width:90px;cursor:pointer;user-select:none" data-late-sort="classroom">الفصل <span class="late-sort-icon">↕</span></th>
+                <th style="width:105px;cursor:pointer;user-select:none" data-late-sort="week">تأخر الأسبوع <span class="late-sort-icon">↕</span></th>
+                <th style="width:105px;cursor:pointer;user-select:none" data-late-sort="month">تأخر الشهر <span class="late-sort-icon">↕</span></th>
+                <th style="width:115px;cursor:pointer;user-select:none" id="weeklyLateRangeTh" data-late-sort="range">تأخر 4 أشهر <span class="late-sort-icon">↕</span></th>
+                <th style="width:115px;cursor:pointer;user-select:none" data-late-sort="total">التأخر حتى الآن <span class="late-sort-icon">↕</span></th>
               </tr>
             </thead>
             <tbody id="weeklyLateBody">
@@ -15334,10 +15334,45 @@ function weeklyLateReportData(){
     return {student,week,month:currentMonth,range,total,rows};
   });
 }
+let weeklyLateSortKey='total';
+let weeklyLateSortDir='desc';
+
+function weeklyLateSortData(data){
+  const arr=[...(Array.isArray(data)?data:[])];
+  if(!weeklyLateSortKey) return arr;
+  arr.sort((a,b)=>{
+    let av,bv,numeric=false;
+    if(weeklyLateSortKey==='name'){
+      av=String(a?.student?.name||'');
+      bv=String(b?.student?.name||'');
+    }else if(weeklyLateSortKey==='classroom'){
+      av=String(displayStudentClassroom(a?.student?.classroom)||a?.student?.classroom||'');
+      bv=String(displayStudentClassroom(b?.student?.classroom)||b?.student?.classroom||'');
+    }else{
+      av=Number(a?.[weeklyLateSortKey]||0);
+      bv=Number(b?.[weeklyLateSortKey]||0);
+      numeric=true;
+    }
+    let cmp=numeric?(av-bv):String(av).localeCompare(String(bv),'ar',{numeric:true,sensitivity:'base'});
+    if(!cmp) cmp=String(a?.student?.name||'').localeCompare(String(b?.student?.name||''),'ar',{numeric:true,sensitivity:'base'});
+    return weeklyLateSortDir==='desc'?-cmp:cmp;
+  });
+  return arr;
+}
+function updateWeeklyLateSortHeaders(){
+  document.querySelectorAll('[data-late-sort]').forEach(th=>{
+    const key=String(th.dataset.lateSort||'');
+    const icon=th.querySelector('.late-sort-icon');
+    if(!icon) return;
+    icon.textContent=weeklyLateSortKey===key ? (weeklyLateSortDir==='asc'?'↑':'↓') : '↕';
+  });
+}
+
 async function renderWeeklyLateReport(){
   const body=$('weeklyLateBody'); if(!body)return;
   populateWeeklyLateFilters();
-  const data=weeklyLateReportData();
+  const data=weeklyLateSortData(weeklyLateReportData());
+  updateWeeklyLateSortHeaders();
   const rangeCount=weeklyLateRangeCount();
   const label='تأخر '+rangeCount+(rangeCount===1?' شهر':' أشهر');
   if($('weeklyLateRangeLabel')) $('weeklyLateRangeLabel').textContent=label;
@@ -15621,6 +15656,17 @@ if($('weeklyLateSelectAllBtn')) $('weeklyLateSelectAllBtn').onclick=()=>{
 if($('weeklyLateStudentReportBtn')) $('weeklyLateStudentReportBtn').onclick=openWeeklyLateStudentReport;
 if($('weeklyLatePrintBtn')) $('weeklyLatePrintBtn').onclick=()=>printElementById('weeklyLatePrintable','تقرير التأخر');
 if($('weeklyLatePdfBtn')) $('weeklyLatePdfBtn').onclick=()=>exportElementToPdf('weeklyLatePrintable','تقرير-التأخر.pdf');
+
+document.querySelectorAll('[data-late-sort]').forEach(th=>th.onclick=()=>{
+  const key=String(th.dataset.lateSort||'');
+  if(!key) return;
+  if(weeklyLateSortKey===key) weeklyLateSortDir=weeklyLateSortDir==='asc'?'desc':'asc';
+  else{
+    weeklyLateSortKey=key;
+    weeklyLateSortDir=(key==='name'||key==='classroom')?'asc':'desc';
+  }
+  renderWeeklyLateReport();
+});
 if($('weeklyAttGrade')) $('weeklyAttGrade').onchange=()=>{
   invalidateWeeklyAttBulkStats();
   populateWeeklyAttendanceClasses();
