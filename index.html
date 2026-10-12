@@ -5184,7 +5184,7 @@ body.activity-leader-open main{
         </div>
 
         <div class="weekly-att-actions">
-          <button type="button" class="btn btn-primary" id="weeklyLateShowBtn">عرض تقرير التأخر</button>
+          <button type="button" class="btn btn-primary" id="weeklyLateShowBtn" onclick="return showWeeklyLateReportNow(event)">عرض تقرير التأخر</button>
           <button type="button" class="btn btn-outline" id="weeklyLateSelectAllBtn">☑ تحديد الكل</button>
           <button type="button" class="btn btn-primary" id="weeklyLateStudentReportBtn">📄 تقرير الطالب</button>
           <button type="button" class="btn btn-outline" id="weeklyLatePrintBtn">🖨️ طباعة</button>
@@ -15732,31 +15732,69 @@ if($('weeklyLateMonth')) $('weeklyLateMonth').onchange=()=>{
 };
 if($('weeklyLateWeek')) $('weeklyLateWeek').onchange=renderWeeklyLateReport;
 if($('weeklyLateRange')) $('weeklyLateRange').onchange=renderWeeklyLateReport;
-if($('weeklyLateShowBtn')) $('weeklyLateShowBtn').onclick=async()=>{
+async function showWeeklyLateReportNow(ev){
+  try{ ev?.preventDefault?.(); ev?.stopPropagation?.(); }catch(e){}
   const btn=$('weeklyLateShowBtn');
   const oldText=btn?.textContent||'عرض تقرير التأخر';
-  try{
-    if(btn){btn.disabled=true;btn.textContent='جاري عرض التقرير...';}
+  if(btn?.dataset?.loading==='1') return false;
 
-    // اجلب أحدث سجلات التأخر أولًا حتى يعكس التقرير ما هو ظاهر عند الأدمن والمستخدمين.
-    if(localStorage.getItem('cloudAdminToken') && typeof cloudPullAttendanceFast==='function'){
-      try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('late report live refresh',e); }
+  try{
+    if(btn){
+      btn.dataset.loading='1';
+      btn.disabled=true;
+      btn.textContent='جاري عرض التقرير...';
     }
 
+    // اعرض البيانات المحلية فورًا أولًا؛ لا تجعل الشبكة تمنع عمل الزر.
     populateWeeklyLateFilters();
     await renderWeeklyLateReport();
 
-    const rows=document.querySelectorAll('#weeklyLateBody tr').length;
+    // ثم حدّث من الخادم وأعد الرسم إذا نجح التحديث.
+    if(localStorage.getItem('cloudAdminToken') && typeof cloudPullAttendanceFast==='function'){
+      try{
+        await cloudPullAttendanceFast();
+        populateWeeklyLateFilters();
+        await renderWeeklyLateReport();
+      }catch(e){
+        console.warn('late report live refresh',e);
+      }
+    }
+
     const target=$('weeklyLatePrintable');
-    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
-    toast(rows>0?'✅ تم عرض تقرير التأخر':'لا توجد بيانات تأخر مطابقة للاختيارات الحالية');
+    if(target){
+      target.style.outline='3px solid #0f7665';
+      target.style.outlineOffset='4px';
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+      setTimeout(()=>{try{target.style.removeProperty('outline');target.style.removeProperty('outline-offset')}catch(e){}},1400);
+    }
+
+    const total=Number($('weeklyLateStudentsCount')?.textContent||0);
+    if(typeof showAttendanceSavedMessage==='function') showAttendanceSavedMessage('✅ تم عرض تقرير التأخر — '+total+' طالب');
+    else if(typeof toast==='function') toast('✅ تم عرض تقرير التأخر — '+total+' طالب');
+    return false;
   }catch(e){
     console.error('show late report',e);
-    alert('تعذر عرض تقرير التأخر الآن.');
+    alert('تعذر عرض تقرير التأخر: '+String(e?.message||e));
+    return false;
   }finally{
-    if(btn){btn.disabled=false;btn.textContent=oldText;}
+    if(btn){
+      btn.dataset.loading='0';
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
   }
-};
+}
+window.showWeeklyLateReportNow=showWeeklyLateReportNow;
+
+// ربط إضافي بالتفويض حتى يبقى الزر يعمل إذا أعيد رسم جزء من الصفحة.
+document.addEventListener('click',e=>{
+  const target=e.target?.closest?.('#weeklyLateShowBtn');
+  if(!target) return;
+  if(target.dataset.delegatedClick==='1') return;
+  target.dataset.delegatedClick='1';
+  setTimeout(()=>{target.dataset.delegatedClick='0'},0);
+  if(!target.hasAttribute('onclick')) showWeeklyLateReportNow(e);
+},true);
 if($('weeklyLateSelectAllBtn')) $('weeklyLateSelectAllBtn').onclick=()=>{
   const boxes=[...document.querySelectorAll('.weekly-late-select')];
   if(!boxes.length)return;
