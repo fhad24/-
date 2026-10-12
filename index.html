@@ -15645,7 +15645,31 @@ if($('weeklyLateClass')) $('weeklyLateClass').onchange=()=>{populateWeeklyLateFi
 if($('weeklyLateStudent')) $('weeklyLateStudent').onchange=renderWeeklyLateReport;
 if($('weeklyLateMonth')) $('weeklyLateMonth').onchange=renderWeeklyLateReport;
 if($('weeklyLateRange')) $('weeklyLateRange').onchange=renderWeeklyLateReport;
-if($('weeklyLateShowBtn')) $('weeklyLateShowBtn').onclick=renderWeeklyLateReport;
+if($('weeklyLateShowBtn')) $('weeklyLateShowBtn').onclick=async()=>{
+  const btn=$('weeklyLateShowBtn');
+  const oldText=btn?.textContent||'عرض تقرير التأخر';
+  try{
+    if(btn){btn.disabled=true;btn.textContent='جاري عرض التقرير...';}
+
+    // اجلب أحدث سجلات التأخر أولًا حتى يعكس التقرير ما هو ظاهر عند الأدمن والمستخدمين.
+    if(localStorage.getItem('cloudAdminToken') && typeof cloudPullAttendanceFast==='function'){
+      try{ await cloudPullAttendanceFast(); }catch(e){ console.warn('late report live refresh',e); }
+    }
+
+    populateWeeklyLateFilters();
+    await renderWeeklyLateReport();
+
+    const rows=document.querySelectorAll('#weeklyLateBody tr').length;
+    const target=$('weeklyLatePrintable');
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+    toast(rows>0?'✅ تم عرض تقرير التأخر':'لا توجد بيانات تأخر مطابقة للاختيارات الحالية');
+  }catch(e){
+    console.error('show late report',e);
+    alert('تعذر عرض تقرير التأخر الآن.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText;}
+  }
+};
 if($('weeklyLateSelectAllBtn')) $('weeklyLateSelectAllBtn').onclick=()=>{
   const boxes=[...document.querySelectorAll('.weekly-late-select')];
   if(!boxes.length)return;
