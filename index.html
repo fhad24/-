@@ -14940,50 +14940,22 @@ function weeklyAttAnalyticsData(){
 
   const mode=weeklyAbsMode();
   const month=$('weeklyAttAnalyticsMonth')?.value||weeklyAttHijriMonthKey(new Date());
-  const today=weeklyAttDateKey(new Date());
+  const ctx=buildWeeklyAttFastContext();
+  const activeDates=weeklyAttActiveDates().filter(d=>!WEEKLY_WEEK5_VACATION_DATES.has(String(d)));
 
-  const allStudents=getStudents();
-  const cohortById=new Map();
-  allStudents.forEach(s=>{
-    if(!weeklyAttStudentInScope(s)) return;
-    cohortById.set(String(s.idno),studentGradeKey(s.grade)+'|'+studentClassKey(s.classroom));
-  });
-
-  const dayCohorts=new Map();
-  const presentOrLate=new Set();
-  const activeDatesSet=new Set();
-
-  weeklyAttScopedRows().forEach(r=>{
-    const date=String(r.date||'');
-    const id=String(r.idno||'');
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today)return;
-    const student=allStudents.find(s=>String(s.idno||'')===id);
-    if(student && !weeklyAttStudentInScope(student)) return;
-    activeDatesSet.add(date);
-    const cohort=cohortById.get(id);
-    if(cohort){
-      if(!dayCohorts.has(date)) dayCohorts.set(date,new Set());
-      dayCohorts.get(date).add(cohort);
-    }
-    if(r.status==='present'||r.status==='late') presentOrLate.add(date+'|'+id);
-  });
-
-  const active=[...activeDatesSet].sort().filter(d=>!WEEKLY_WEEK5_VACATION_DATES.has(d));
-  let scopeDates=active;
+  let scopeDates=activeDates;
   let scopeLabel='كل الأسابيع';
 
   if(mode==='monthly'){
-    scopeDates=active.filter(d=>weeklyAttHijriMonthKey(d)===month);
+    scopeDates=activeDates.filter(d=>weeklyAttHijriMonthKey(String(d))===month);
     scopeLabel=weeklyAttHijriMonthLabel(month);
   }else if(mode!=='all'){
-    const wanted=new Set(weeklyAttFixedWeekGregorianDates(mode).map(String));
-    scopeDates=active.filter(d=>wanted.has(d));
+    scopeDates=weeklyAttFixedWeekGregorianDates(mode).filter(d=>!WEEKLY_WEEK5_VACATION_DATES.has(String(d)));
     scopeLabel='الأسبوع '+mode;
   }
 
-  const scopeSet=new Set(scopeDates);
+  const scopeSet=new Set(scopeDates.map(String));
 
-  // أسماء المستخدمين الذين رصدوا الغياب فعليًا في الفترة المختارة.
   const explicitAbsenceRecorders=new Map();
   weeklyAttScopedRows().forEach(r=>{
     if(r.status!=='absent') return;
@@ -14997,20 +14969,16 @@ function weeklyAttAnalyticsData(){
     explicitAbsenceRecorders.get(id).add(name);
   });
 
-  const isAbsent=(s,date)=>{
-    const id=String(s.idno||'');
-    const cohort=cohortById.get(id);
-    return !!cohort && !!dayCohorts.get(date)?.has(cohort) && !presentOrLate.has(date+'|'+id);
-  };
-
   return students.map(s=>{
     let scope=0,currentMonth=0,total=0;
-    active.forEach(date=>{
-      if(!isAbsent(s,date)) return;
+    for(const date of activeDates){
+      const status=weeklyAttFastStatus(s,String(date),ctx);
+      if(status!=='absent') continue;
       total++;
-      if(scopeSet.has(date)) scope++;
-      if(weeklyAttHijriMonthKey(date)===month) currentMonth++;
-    });
+      if(scopeSet.has(String(date))) scope++;
+      if(weeklyAttHijriMonthKey(String(date))===month) currentMonth++;
+    }
+
     return {
       student:s,
       week:scope,
