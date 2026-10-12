@@ -15449,7 +15449,16 @@ function weeklyLateReportData(){
         if(monthSet.has(hm)) range++;
       }
     });
-    return {student,week,month:currentMonth,range,total,rows};
+    let recorderRows=rows;
+    if(mode==='week' && selectedWeek!=='all'){
+      recorderRows=rows.filter(r=>weekSet.has(String(r.date||'')));
+    }else if(mode==='month' && monthValue!=='__all__'){
+      recorderRows=rows.filter(r=>weeklyAttHijriMonthKey(String(r.date||''))===monthValue);
+    }
+    const recorderNames=[...new Set(recorderRows.map(r=>
+      String(r.teacherName||r.teacher_name||r.teacherUsername||r.teacher_username||r.teacherCivilId||r.teacher_civil_id||'').trim()
+    ).filter(Boolean))];
+    return {student,week,month:currentMonth,range,total,rows,recorderNames};
   });
 }
 let weeklyLateSortKey='total';
@@ -15484,6 +15493,12 @@ function updateWeeklyLateSortHeaders(){
     if(!icon) return;
     icon.textContent=weeklyLateSortKey===key ? (weeklyLateSortDir==='asc'?'↑':'↓') : '↕';
   });
+}
+
+function weeklyLateRecorderHtml(row){
+  const names=Array.isArray(row?.recorderNames)?row.recorderNames.filter(Boolean):[];
+  if(!names.length) return '<div style="margin-top:6px;font-size:12px;font-weight:800;color:#7a8581">رصد التأخر بواسطة: —</div>';
+  return '<div style="margin-top:6px;font-size:12px;font-weight:900;color:#9b5c00">رصد التأخر بواسطة: '+names.map(escapeFollowupHtml).join('، ')+'</div>';
 }
 
 async function renderWeeklyLateReport(){
@@ -15521,7 +15536,7 @@ async function renderWeeklyLateReport(){
   const identity=await Promise.all(data.map(r=>weeklyAttStudentIdentityHtml(r.student)));
   body.innerHTML=data.map((r,i)=>'<tr>'+
     '<td><input type="checkbox" class="weekly-late-select" data-idno="'+escapeFollowupHtml(r.student.idno||'')+'"></td>'+
-    '<td class="student-name">'+identity[i]+'</td>'+
+    '<td class="student-name">'+identity[i]+weeklyLateRecorderHtml(r)+'</td>'+
     '<td>'+escapeFollowupHtml(displayStudentClassroom(r.student.classroom)||'')+'</td>'+
     '<td><b>'+r.week+'</b></td>'+
     '<td><b>'+r.month+'</b></td>'+
