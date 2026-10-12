@@ -52,3 +52,80 @@
  install();
  setTimeout(()=>{install();try{if(typeof renderWeeklyAttendanceReport==='function')renderWeeklyAttendanceReport();}catch(e){}},250);
 })();
+
+
+/* WEEK7_RESTORE_FROM_BACKUP_20261010 */
+(function(){
+  const D7=new Set(['2026-10-04','2026-10-05','2026-10-06','2026-10-07','2026-10-08']);
+  const P7=new Set('0100495100,1139113698,1140323120,1140625805,1141083418,1141865574,1141869998,1142256856,1142479458,1143008702,1144003009,1144430913,1144751227,1144774369,1144835400,1144919683,1144966155,1145087787,1145150395,1145151039,1145266605,1145425664,1145462717,1145543797,1145616676,1145770713,1145790307,1145879092,1145921613,1145928782,1145956585,1146014269,1146040199,1146053820,1146260813,1146475866,1146487069,1146487747,1146551724,1146553274,1146621055,1146646920,1146656549,1146872773,1147009722,1147041634,1147149759,1147149890,1147199358,1147264442,1147377673,1147412215,1147426306,1147446296,1147549248,1147588659,1147630162,1147634503,1147735490,1147754384,1147806168,1147912644,1147929044,1148059486,1148168675,1148220864,1148221193,1148265406,1148299678,1148320169,1148337593,1148340050,1148364456,1148524950,1148557026,1148568775,1148614934,1148795402,1148811274,1148831405,1148839937,1148864364,1148888009,1148891631,1148895194,1148915943,1148961483,1149179374,1149282814,1149432724,1149449785,1149473850,1149482588,1149483834,1149610659,1149644708,1149700971,1149722835,1149763201,1149875120,1150028908,1150120218,1150172789,1150172888,1150547238,1150682621,1150946141,1150977666,1150977682,1150977815,1151462098,1151462155,1151583976,1151762935,1151804125,1151829007,1151900550,1152056006,1152256101,1152269617,1152270540,1152279152,1152368302,1152407845,1152433874,1152434047,1152515555,1152624423,1152683718,1152707681,1152720650,1152722268,1152817928,1153032238,1153122716,1153236862,1153314412,1153342660,1153372212,1153546138,1153632748,1153943251,1153992522,1154119950,1154160400,1154160442,1154211427,1154215840,1154302572,1154371452,1154547283,1154928004,1155037821,1155243205,1155251323,1155453317,1155753781,1155761271,1155790882,1155795949,1155866435,1155868928,1156034751,1156052977,1156136606,1156164053,1156197038,1156278788,1156425918,1156456202,1156502450,1156506105,1156518332,1156588038,1156647586,1156668228,1156736637,1156776310,1156845958,1156905190,1156980185,1156984526,1157022474,1157132539,1157204288,1157261387,1157275031,1157324615,1157424977,1157527373,1157652866,1157653914,1157658525,1157661792,1157768035,1157772391,1157836162,1157888049,1157973726,1157975366,1157992569,1158086841,1158550770,1158602498,1158708436,1159285970,1159497559,1159763588,1161098411,1161336985,1162282790,1162481889,1162977472,1162977514,1165762434,1166770154,1170757379,1178776306,1184632790,1218956421,2258463674,2276023120,2285804569,2287143651,2289757052,2302689399,2314990983,2315884896,2320811298,2334565732,2334565757,2425587892,2503622751,2503852028,2503852127,4123410088,4123469373,4123470538,4123809032,4123959720,4159011131,4386294740,4923744454,4924297155,9000038485,9350577777'.split(','));
+  const L7=new Set(['1153632748']);
+  const C7=new Set([
+    'الأول الثانوي|أ','الأول الثانوي|ج','الأول الثانوي|د','الأول الثانوي|ز','الأول الثانوي|هـ','الأول الثانوي|و',
+    'الثاني الثانوي|أ','الثاني الثانوي|ب','الثاني الثانوي|ج','الثاني الثانوي|د','الثاني الثانوي|هـ',
+    'الثالث الثانوي|أ','الثالث الثانوي|ب','الثالث الثانوي|ج','الثالث الثانوي|د'
+  ]);
+  function cohort(student){
+    const g=typeof studentGradeKey==='function'?(studentGradeKey(student?.grade)||String(student?.grade||'').trim()):String(student?.grade||'').trim();
+    const c=typeof studentClassKey==='function'?(studentClassKey(student?.classroom)||String(student?.classroom||'').trim()):String(student?.classroom||'').trim();
+    return g+'|'+c;
+  }
+  function truth7(student,dateKey){
+    const d=String(dateKey||'');
+    if(!D7.has(d)||!student)return null;
+    const id=String(student.idno||'').trim();
+    if(P7.has(id)||L7.has(id)) return 'present';
+    return C7.has(cohort(student))?'absent':null;
+  }
+  function install7(){
+    if(window.__WEEK7_RESTORE_PATCH__) return;
+    window.__WEEK7_RESTORE_PATCH__=true;
+
+    if(typeof window.weeklyAttImportedStatus==='function'){
+      const old=window.weeklyAttImportedStatus;
+      window.weeklyAttImportedStatus=function(student,dateKey){
+        const t=truth7(student,dateKey);
+        return t||old.apply(this,arguments);
+      };
+    }
+    if(typeof window.weeklyAttFastImportedStatus==='function'){
+      const old=window.weeklyAttFastImportedStatus;
+      window.weeklyAttFastImportedStatus=function(student,dateKey,ctx){
+        const t=truth7(student,dateKey);
+        return t||old.apply(this,arguments);
+      };
+    }
+    if(typeof window.weeklyAttFastStatus==='function'){
+      const old=window.weeklyAttFastStatus;
+      window.weeklyAttFastStatus=function(student,dateKey,ctx){
+        const rec=ctx?.statusByIdDate?.get(String(student?.idno||'')+'|'+String(dateKey||''));
+        if(rec?.present||rec?.late) return 'present';
+        if(rec?.absent) return 'absent';
+        const t=truth7(student,dateKey);
+        return t||old.apply(this,arguments);
+      };
+    }
+    if(typeof window.weeklyAttStatusForStudent==='function'){
+      const old=window.weeklyAttStatusForStudent;
+      window.weeklyAttStatusForStudent=function(idno,dateKey){
+        const student=(typeof getStudents==='function'?getStudents():[]).find(s=>String(s.idno||'')===String(idno||''));
+        const t=truth7(student,dateKey);
+        if(t==='present') return {mark:'✓',cls:'present-mark',label:L7.has(String(idno))?'حاضر — متأخر — مستعاد من نسخة الأسبوع السابع':'حاضر — مستعاد من نسخة الأسبوع السابع'};
+        if(t==='absent') return {mark:'✕',cls:'absent-mark',label:'غائب — مستعاد من نسخة الأسبوع السابع'};
+        return old.apply(this,arguments);
+      };
+    }
+    if(typeof window.weeklyAttIsAbsentOnDate==='function'){
+      const old=window.weeklyAttIsAbsentOnDate;
+      window.weeklyAttIsAbsentOnDate=function(idno,dateKey){
+        const student=(typeof getStudents==='function'?getStudents():[]).find(s=>String(s.idno||'')===String(idno||''));
+        const t=truth7(student,dateKey);
+        if(t==='present') return false;
+        if(t==='absent') return true;
+        return old.apply(this,arguments);
+      };
+    }
+    try{ if(typeof invalidateWeeklyAttBulkStats==='function') invalidateWeeklyAttBulkStats(); }catch(e){}
+  }
+  install7();
+  setTimeout(()=>{install7();try{if(typeof renderWeeklyAttendanceReport==='function')renderWeeklyAttendanceReport();}catch(e){}},300);
+})();
