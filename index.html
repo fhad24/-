@@ -14982,6 +14982,21 @@ function weeklyAttAnalyticsData(){
   }
 
   const scopeSet=new Set(scopeDates);
+
+  // أسماء المستخدمين الذين رصدوا الغياب فعليًا في الفترة المختارة.
+  const explicitAbsenceRecorders=new Map();
+  weeklyAttScopedRows().forEach(r=>{
+    if(r.status!=='absent') return;
+    const date=String(r.date||'');
+    if(!scopeSet.has(date)) return;
+    const id=String(r.idno||'');
+    if(!id) return;
+    const name=String(r.teacherName||r.teacher_name||r.teacherUsername||r.teacher_username||r.teacherCivilId||r.teacher_civil_id||'').trim();
+    if(!name) return;
+    if(!explicitAbsenceRecorders.has(id)) explicitAbsenceRecorders.set(id,new Set());
+    explicitAbsenceRecorders.get(id).add(name);
+  });
+
   const isAbsent=(s,date)=>{
     const id=String(s.idno||'');
     const cohort=cohortById.get(id);
@@ -15002,7 +15017,8 @@ function weeklyAttAnalyticsData(){
       month:currentMonth,
       four:scope,
       total,
-      scopeLabel
+      scopeLabel,
+      absenceRecorderNames:[...(explicitAbsenceRecorders.get(String(s.idno||''))||new Set())]
     };
   });
 }
@@ -15024,6 +15040,12 @@ async function weeklyAttStudentIdentityHtml(student){
     </div>
   </div>`;
 }
+function weeklyAbsRecorderHtml(row){
+  const names=Array.isArray(row?.absenceRecorderNames)?row.absenceRecorderNames.filter(Boolean):[];
+  if(!names.length) return '<div style="margin-top:6px;font-size:12px;font-weight:800;color:#7a8581">رصد الغياب بواسطة: —</div>';
+  return '<div style="margin-top:6px;font-size:12px;font-weight:900;color:#9b2c2c">رصد الغياب بواسطة: '+names.map(escapeFollowupHtml).join('، ')+'</div>';
+}
+
 async function renderWeeklyAttAnalytics(){
   const body=$('weeklyAttAnalyticsBody'); if(!body)return;
   const data=weeklyAttAnalyticsData();
@@ -15044,7 +15066,7 @@ async function renderWeeklyAttAnalytics(){
   const identityHtml=await Promise.all(data.map(r=>weeklyAttStudentIdentityHtml(r.student)));
   body.innerHTML=data.map((r,i)=>`<tr>
     <td><input type="checkbox" class="weekly-att-analytics-select" data-idno="${escapeFollowupHtml(r.student.idno||'')}"></td>
-    <td class="student-name">${identityHtml[i]}</td>
+    <td class="student-name">${identityHtml[i]}${weeklyAbsRecorderHtml(r)}</td>
     <td>${escapeFollowupHtml(displayStudentClassroom(r.student.classroom)||'')}</td>
     <td><b>${r.week}</b></td>
     <td><b>${r.month}</b></td>
