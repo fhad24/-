@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>استرداد سجلات التأخر</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f3f7f6;margin:0;color:#153b35}
+.wrap{max-width:1100px;margin:24px auto;padding:16px}
+.card{background:#fff;border:1px solid #d9e4e1;border-radius:18px;padding:18px;box-shadow:0 8px 28px #0001;margin-bottom:14px}
+h1{margin:0 0 8px;font-size:28px}.sub{color:#56756e;line-height:1.8}
+button{border:0;border-radius:14px;padding:14px 22px;font-size:18px;font-weight:800;cursor:pointer;background:#0f766e;color:#fff}
+button.secondary{background:#fff;color:#0f766e;border:1px solid #0f766e}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.stat{background:#eef7f5;border-radius:14px;padding:14px}.stat b{display:block;font-size:30px;margin-top:5px}
+.ok{background:#ecfdf5;border:1px solid #a7f3d0}.warn{background:#fff7ed;border:1px solid #fed7aa}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{border-bottom:1px solid #e5ece9;padding:10px;text-align:right;vertical-align:top}
+th{background:#eef5f3;position:sticky;top:0}
+.tablewrap{overflow:auto;max-height:65vh}
+.hidden{display:none}
+.small{font-size:12px;color:#678}
+code{direction:ltr;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>♻️ استرداد سجلات التأخر</h1>
+    <div class="sub">
+      هذه الصفحة تفحص النسخة المحلية المحفوظة في <b>هذا الجهاز وهذا المتصفح فقط</b>.
+      لا تحذف ولا تعدل أي بيانات. تبحث خصوصًا عن تأخرات 11 و12 أكتوبر 2026.
+    </div>
+    <div class="actions">
+      <button id="scanBtn">🔎 فحص واسترداد التأخر</button>
+      <button id="saveBtn" class="secondary hidden">💾 حفظ نسخة من النتائج</button>
+    </div>
+    <div id="status" class="card warn">اضغط زر الفحص.</div>
+    <div id="stats" class="stats hidden"></div>
+  </div>
+  <div id="resultCard" class="card hidden">
+    <h2>السجلات الموجودة في الجهاز</h2>
+    <div id="sources" class="small"></div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>الطالب</th><th>السجل المدني</th><th>التاريخ</th><th>الوقت</th><th>الصف/الفصل</th><th>الراصد</th><th>مصدر النسخة</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+<script>
+(function(){
+  const dates=new Set(['2026-10-11','2026-10-12']);
+  let foundRows=[];
+  const safeJson=s=>{try{return JSON.parse(s)}catch(e){return null}};
+  function normRow(x,source){
+    if(!x||typeof x!=='object') return null;
+    const status=String(x.status||x.state||'').trim().toLowerCase();
+    const date=String(x.date||x.gregorianDate||x.attendance_date||'').trim();
+    if(status!=='late'||!dates.has(date)) return null;
+    return {
+      name:String(x.name||x.student_name||x.studentName||'').trim(),
+      idno:String(x.idno||x.student_idno||x.civil_id||x.studentCivilId||'').trim(),
+      date,
+      time:String(x.time||x.attendance_time||'').trim(),
+      grade:String(x.grade||'').trim(),
+      classroom:String(x.classroom||x.class||'').trim(),
+      teacher:String(x.teacherName||x.teacher_name||x.recorderName||'').trim(),
+      teacherUsername:String(x.teacherUsername||x.teacher_username||x.teacherCivilId||x.teacher_civil_id||'').trim(),
+      period:String(x.period??'').trim(),
+      source
+    };
+  }
+  function addArray(arr,source,out){
+    if(!Array.isArray(arr)) return;
+    for(const x of arr){const r=normRow(x,source);if(r) out.push(r)}
+  }
+  function deepScan(v,source,out,depth){
+    if(depth>3||v==null) return;
+    if(Array.isArray(v)){ addArray(v,source,out); for(const x of v) if(x&&typeof x==='object') deepScan(x,source,out,depth+1); return; }
+    if(typeof v==='object'){
+      const r=normRow(v,source); if(r) out.push(r);
+      for(const [k,x] of Object.entries(v)){
+        if(x&&typeof x==='object') deepScan(x,source+' → '+k,out,depth+1);
+      }
+    }
+  }
+  function scan(){
+    const out=[], inspected=[];
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      const raw=localStorage.getItem(key);
+      if(!raw) continue;
+      const likely=/attend|late|حضور|تأخر|backup|recover/i.test(key);
+      const parsed=safeJson(raw);
+      if(parsed!==null && (likely || Array.isArray(parsed))){
+        inspected.push(key);
+        deepScan(parsed,key,out,0);
+      }
+    }
+    const seen=new Set(), uniq=[];
+    for(const r of out){
+      const k=[r.idno,r.name,r.date,r.time,r.period,r.teacherUsername,r.teacher].join('|');
+      if(seen.has(k)) continue; seen.add(k); uniq.push(r);
+    }
+    uniq.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.name.localeCompare(b.name,'ar'));
+    foundRows=uniq;
+    render(uniq,inspected);
+  }
+  function render(rows,inspected){
+    const s=document.getElementById('status'), stats=document.getElementById('stats'), card=document.getElementById('resultCard');
+    const by11=rows.filter(x=>x.date==='2026-10-11').length, by12=rows.filter(x=>x.date==='2026-10-12').length;
+    const named=rows.filter(x=>x.name).length;
+    s.className='card '+(rows.length?'ok':'warn');
+    s.innerHTML=rows.length
+      ? '<b>✅ وجدت '+rows.length+' سجل تأخر محفوظًا في هذا الجهاز.</b><br>لا تمسح بيانات المتصفح قبل حفظ النتائج.'
+      : '<b>لم أجد سجلات تأخر ليومي 11 أو 12 أكتوبر في التخزين المحلي لهذا الأصل.</b>';
+    stats.classList.remove('hidden');
+    stats.innerHTML='<div class="stat">الإجمالي<b>'+rows.length+'</b></div><div class="stat">11 أكتوبر<b>'+by11+'</b></div><div class="stat">12 أكتوبر<b>'+by12+'</b></div><div class="stat">بأسماء واضحة<b>'+named+'</b></div>';
+    card.classList.toggle('hidden',!rows.length);
+    document.getElementById('saveBtn').classList.toggle('hidden',!rows.length);
+    document.getElementById('sources').textContent='مفاتيح التخزين التي تم فحصها: '+(inspected.join('، ')||'لا يوجد');
+    document.getElementById('tbody').innerHTML=rows.map((r,i)=>'<tr>'+
+      '<td>'+(i+1)+'</td><td>'+esc(r.name||'—')+'</td><td>'+esc(r.idno||'—')+'</td><td>'+esc(r.date)+'</td><td>'+esc(r.time||'—')+'</td>'+
+      '<td>'+esc((r.grade||'—')+' / '+(r.classroom||'—'))+'</td><td>'+esc((r.teacher||'—')+(r.teacherUsername?' ('+r.teacherUsername+')':''))+'</td><td>'+esc(r.source)+'</td></tr>').join('');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  document.getElementById('scanBtn').onclick=scan;
+  document.getElementById('saveBtn').onclick=()=>{
+    const blob=new Blob([JSON.stringify({createdAt:new Date().toISOString(),origin:location.origin,rows:foundRows},null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='recovered-late-2026-10-11-12.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  };
+})();
+</script>
+</body></html>
