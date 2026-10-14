@@ -17,6 +17,15 @@
   const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
   const CACHE_HASH='shurahbil_program_update_hash';
   const CACHE_HTML='shurahbil_program_update_html';
+
+  /* SHURAHBIL_DISABLE_STALE_RUNTIME_UPDATE */
+  // استخدم دائمًا نسخة Render الحالية، ولا تسمح لنسخة HTML قديمة محفوظة في المتصفح
+  // أو في نظام التحديث الداخلي أن تستبدل الواجهة بعد النشر.
+  try{
+    localStorage.removeItem(CACHE_HASH);
+    localStorage.removeItem(CACHE_HTML);
+  }catch(e){}
+  return;
   const managerScript = `
 (function(){
   const API='https://mlfvjsfqdmantevamzqz.supabase.co/functions/v1/student-affairs-api';
