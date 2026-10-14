@@ -15478,12 +15478,23 @@ function weeklyLateRecorderHtml(row){
 async function renderWeeklyLateReport(){
   const body=$('weeklyLateBody'); if(!body)return;
   populateWeeklyLateFilters();
-  const data=weeklyLateSortData(weeklyLateReportData());
-  updateWeeklyLateSortHeaders();
   const mode=weeklyLateViewMode();
   const rangeCount=weeklyLateRangeCount();
   const monthValue=String($('weeklyLateMonth')?.value||'__all__');
   const selectedWeek=String($('weeklyLateWeek')?.value||'all');
+
+  // يعرض فقط الطلاب الذين لديهم تأخر فعلي داخل الفترة المحددة.
+  // لا تظهر أسماء الطلاب ذوي القيمة صفر في التقرير.
+  const rawData=weeklyLateReportData();
+  const data=weeklyLateSortData(rawData.filter(r=>{
+    if(mode==='week') return Number(r.week||0)>0;
+    if(mode==='month'){
+      if(monthValue==='__all__') return Number(r.total||0)>0;
+      return Number(rangeCount)>1 ? Number(r.range||0)>0 : Number(r.month||0)>0;
+    }
+    return Number(r.total||0)>0;
+  }));
+  updateWeeklyLateSortHeaders();
 
   let rangeLabel='تأخر '+rangeCount+(rangeCount===1?' شهر':' أشهر');
   let monthLabel='تأخر الشهر';
@@ -23864,6 +23875,38 @@ document.addEventListener('click',function behaviorCasesClickFallback(e){
     e.preventDefault();
     if(window.openBehaviorCasesPage) window.openBehaviorCasesPage();
   },true);
+})();
+</script>
+<script id="late-report-designer-label-fix">
+(function(){
+  const FROM='مستخرج من تقرير التأخر المحفوظ';
+  const TO='محمد الشامي السلامي';
+  function replaceText(root){
+    try{
+      const walker=document.createTreeWalker(root||document.body,NodeFilter.SHOW_TEXT);
+      const nodes=[];
+      while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(n=>{
+        if(String(n.nodeValue||'').includes(FROM)){
+          n.nodeValue=String(n.nodeValue).replaceAll(FROM,TO);
+        }
+      });
+    }catch(e){}
+  }
+  function run(){replaceText(document.body)}
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run,{once:true}); else run();
+  const obs=new MutationObserver(muts=>{
+    for(const m of muts){
+      m.addedNodes?.forEach(n=>{
+        if(n.nodeType===Node.TEXT_NODE){
+          if(String(n.nodeValue||'').includes(FROM)) n.nodeValue=String(n.nodeValue).replaceAll(FROM,TO);
+        }else if(n.nodeType===Node.ELEMENT_NODE){
+          replaceText(n);
+        }
+      });
+    }
+  });
+  try{obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true})}catch(e){}
 })();
 </script>
 </body>
