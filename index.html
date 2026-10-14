@@ -15731,47 +15731,93 @@ function weeklyAttStudentAbsenceDetails(student){
     })
     .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
 }
+function weeklyAttStudentLateDetails(student){
+  if(!student) return [];
+  const mode=weeklyAttReportMode();
+  const scopeDates=new Set((mode==='weekly'?weeklyAttActiveDates():weeklyAttReportScopeDates()).map(String));
+  return getAttendanceLog()
+    .filter(r=>r.status==='late' && String(r.idno||'')===String(student.idno||''))
+    .filter(r=>scopeDates.has(String(r.date||'')))
+    .map(r=>{
+      const date=String(r.date||'');
+      const d=/^\d{4}-\d{2}-\d{2}$/.test(date)?new Date(date+'T12:00:00'):null;
+      return {
+        type:'late',
+        date,
+        day:r.weekday || (d?new Intl.DateTimeFormat('ar-SA',{weekday:'long'}).format(d):'—'),
+        hijri:r.hijriDate || (d?weeklyAttHijriCompactDateLabel(d):'—'),
+        week:weeklyAttWeekNumberForDate(date),
+        time:String(r.time||'—'),
+        recorder:String(r.teacherName||r.teacherUsername||r.teacherCivilId||'—')
+      };
+    })
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time).localeCompare(String(b.time)));
+}
 function openWeeklyAttStudentDetailedReport(){
   const student=weeklyAttFindStudentForReport();
   if(!student){
     alert('حدد طالبًا من علامة التحديد بجانب اسمه، أو اختره من قائمة الطلاب أولًا.');
     return;
   }
-  const rows=weeklyAttStudentAbsenceDetails(student);
+  const absenceRows=weeklyAttStudentAbsenceDetails(student).map(r=>({...r,type:'absent',time:'—',recorder:'—'}));
+  const lateRows=weeklyAttStudentLateDetails(student);
+  const rows=[...absenceRows,...lateRows].sort((a,b)=>
+    String(a.date).localeCompare(String(b.date)) ||
+    (a.type==='absent'?-1:1) ||
+    String(a.time||'').localeCompare(String(b.time||''))
+  );
   const settings=getSchoolSettings?.()||{};
   let modal=$('weeklyAttStudentReportModal');
   if(modal) modal.remove();
   modal=document.createElement('div');
   modal.id='weeklyAttStudentReportModal';
   modal.style.cssText='position:fixed;inset:0;z-index:99999;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px;direction:rtl';
-  const tableRows=rows.length?rows.map((r,i)=>`
-    <tr>
+  const tableRows=rows.length?rows.map((r,i)=>{
+    const isAbsent=r.type==='absent';
+    const stateText=isAbsent?'غياب':'تأخر';
+    const stateColor=isAbsent?'#b42318':'#a85b00';
+    const bg=isAbsent?'#fff2f0':'#fff8e6';
+    return `
+    <tr style="background:${bg}">
       <td>${i+1}</td>
+      <td><b style="color:${stateColor}">${stateText}</b></td>
       <td>${escapeFollowupHtml(r.week?('الأسبوع '+r.week):'—')}</td>
-      <td>${escapeFollowupHtml(r.day)}</td>
-      <td>${escapeFollowupHtml(r.hijri)}</td>
-      <td dir="ltr">${escapeFollowupHtml(r.date)}</td>
-    </tr>`).join(''):'<tr><td colspan="5">لا توجد أيام غياب مسجلة لهذا الطالب.</td></tr>';
+      <td>${escapeFollowupHtml(r.day||'—')}</td>
+      <td>${escapeFollowupHtml(r.hijri||'—')}</td>
+      <td dir="ltr">${escapeFollowupHtml(r.date||'—')}</td>
+      <td>${isAbsent?'—':escapeFollowupHtml(r.time||'—')}</td>
+      <td>${isAbsent?'—':escapeFollowupHtml(r.recorder||'—')}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="8">لا توجد أيام غياب أو تأخر مسجلة لهذا الطالب في الفترة المحددة.</td></tr>';
+
   modal.innerHTML=`
-    <div style="width:min(920px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:22px;border:1px solid #cfded9;box-shadow:0 18px 55px #0003">
+    <div style="width:min(1080px,97vw);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:22px;border:1px solid #cfded9;box-shadow:0 18px 55px #0003">
       <div id="weeklyAttStudentReportPrintable">
         <div style="text-align:center;margin-bottom:16px">
-          <h2 style="margin:0 0 6px">تقرير تفصيلي لغياب الطالب</h2>
+          <h2 style="margin:0 0 6px">تقرير تفصيلي لغياب وتأخر الطالب</h2>
           <div style="font-weight:800">${escapeFollowupHtml(settings.school||'')}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px">
           <div style="border:1px solid #d9e5e1;border-radius:12px;padding:10px"><b>اسم الطالب</b><br>${escapeFollowupHtml(student.name||'—')}</div>
           <div style="border:1px solid #d9e5e1;border-radius:12px;padding:10px"><b>السجل المدني</b><br>${escapeFollowupHtml(student.idno||'—')}</div>
           <div style="border:1px solid #d9e5e1;border-radius:12px;padding:10px"><b>الصف / الفصل</b><br>${escapeFollowupHtml((student.grade||'—')+' / '+displayStudentClassroom(student.classroom||''))}</div>
-          <div style="border:1px solid #d9e5e1;border-radius:12px;padding:10px;text-align:center"><b>إجمالي الغياب</b><br><span style="font-size:30px;font-weight:900;color:#b42318">${rows.length}</span></div>
+          <div style="border:1px solid #f1c7c2;border-radius:12px;padding:10px;text-align:center;background:#fff7f5"><b>إجمالي الغياب</b><br><span style="font-size:30px;font-weight:900;color:#b42318">${absenceRows.length}</span></div>
+          <div style="border:1px solid #efd9a6;border-radius:12px;padding:10px;text-align:center;background:#fffaf0"><b>إجمالي التأخر</b><br><span style="font-size:30px;font-weight:900;color:#a85b00">${lateRows.length}</span></div>
+        </div>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:0 0 12px;font-weight:900">
+          <span style="color:#b42318">■ أيام الغياب باللون الأحمر الفاتح</span>
+          <span style="color:#a85b00">■ أيام التأخر باللون الأصفر الفاتح</span>
         </div>
         <table style="width:100%;border-collapse:collapse;text-align:center">
           <thead><tr>
             <th style="border:1px solid #999;padding:8px">م</th>
+            <th style="border:1px solid #999;padding:8px">الحالة</th>
             <th style="border:1px solid #999;padding:8px">الأسبوع الدراسي</th>
             <th style="border:1px solid #999;padding:8px">اليوم</th>
             <th style="border:1px solid #999;padding:8px">التاريخ الهجري</th>
             <th style="border:1px solid #999;padding:8px">التاريخ الميلادي</th>
+            <th style="border:1px solid #999;padding:8px">وقت التأخر</th>
+            <th style="border:1px solid #999;padding:8px">مسجل التأخر</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
@@ -15782,13 +15828,14 @@ function openWeeklyAttStudentDetailedReport(){
       </div>
     </div>`;
   document.body.appendChild(modal);
-  modal.querySelectorAll('td').forEach(td=>td.style.cssText='border:1px solid #999;padding:8px');
+  modal.querySelectorAll('td').forEach(td=>td.style.border='1px solid #999');
+  modal.querySelectorAll('td').forEach(td=>td.style.padding='8px');
   $('weeklyAttStudentReportClose').onclick=()=>modal.remove();
   $('weeklyAttStudentReportPrint').onclick=()=>{
     const printable=$('weeklyAttStudentReportPrintable');
-    const w=window.open('','_blank','width=1000,height=800');
+    const w=window.open('','_blank','width=1100,height=850');
     if(!w){alert('تعذر فتح نافذة الطباعة');return}
-    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>@page{size:A4 portrait;margin:12mm}body{font-family:Tahoma,Arial,sans-serif}table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:8px;text-align:center}h2{text-align:center}</style></head><body>'+printable.innerHTML+'</body></html>');
+    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:10mm}body{font-family:Tahoma,Arial,sans-serif}table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:7px;text-align:center}h2{text-align:center}</style></head><body>'+printable.innerHTML+'</body></html>');
     w.document.close();
     setTimeout(()=>{w.focus();w.print()},250);
   };
