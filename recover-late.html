@@ -39,7 +39,7 @@ code{direction:ltr;display:inline-block}
     </div>
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
-    <div id="selectionDiag" class="card warn hidden"></div>
+    <div id="selectionDiag" class="card warn hidden"></div><div id="allSelectionsDiag" class="card warn hidden"></div>
     <div id="backupDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
@@ -200,6 +200,26 @@ code{direction:ltr;display:inline-block}
         ' — late: <b>'+(x.hasLate?'نعم':'لا')+'</b>'+
         '<div style="font-size:12px;word-break:break-all;margin:4px 0 10px">'+esc(x.preview)+'</div>'
       ).join(''):'لا توجد نسخ أمان من هذا النوع.');
+
+    const allSel=[];
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(!/^attendanceLateSelections:/.test(String(k||''))) continue;
+      const raw=localStorage.getItem(k);
+      const parsed=safeJson(raw||'[]');
+      const ids=Array.isArray(parsed)?parsed.map(x=>String(x||'').trim()).filter(Boolean):[];
+      allSel.push({key:k,ids});
+    }
+    allSel.sort((a,b)=>a.key.localeCompare(b.key));
+    const allDiag=document.getElementById('allSelectionsDiag');
+    allDiag.classList.remove('hidden');
+    allDiag.className='card '+(allSel.length?'ok':'warn');
+    allDiag.innerHTML='<b>📅 كل مفاتيح تحديدات التأخر</b><br>'+
+      (allSel.length?allSel.map(x=>{
+        const names=x.ids.map(id=>byId.get(id)?.name||id);
+        return '<div style="margin-top:8px"><code>'+esc(x.key)+'</code> — العدد: <b>'+x.ids.length+'</b>'+
+          (names.length?'<br>'+names.map((n,i)=>(i+1)+'. '+esc(n)).join('، '):'')+'</div>';
+      }).join(''):'لا توجد مفاتيح تحديدات تأخر.');
     s.className='card '+(rows.length?'ok':'warn');
     s.innerHTML=rows.length
       ? '<b>✅ وجدت '+rows.length+' سجل تأخر محفوظًا في هذا الجهاز.</b><br>لا تمسح بيانات المتصفح قبل حفظ النتائج.'
