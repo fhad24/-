@@ -40,6 +40,7 @@ code{direction:ltr;display:inline-block}
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
     <div id="selectionDiag" class="card warn hidden"></div>
+    <div id="backupDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
     <h2>السجلات الموجودة في الجهاز</h2>
@@ -78,8 +79,13 @@ code{direction:ltr;display:inline-block}
     for(const x of arr){const r=normRow(x,source);if(r) out.push(r)}
   }
   function deepScan(v,source,out,depth){
-    if(depth>3||v==null) return;
-    if(Array.isArray(v)){ addArray(v,source,out); for(const x of v) if(x&&typeof x==='object') deepScan(x,source,out,depth+1); return; }
+    if(depth>8||v==null) return;
+    if(typeof v==='string'){
+      const p=safeJson(v);
+      if(p!==null) deepScan(p,source+' → JSON',out,depth+1);
+      return;
+    }
+    if(Array.isArray(v)){ addArray(v,source,out); for(const x of v) deepScan(x,source,out,depth+1); return; }
     if(typeof v==='object'){
       const r=normRow(v,source); if(r) out.push(r);
       for(const [k,x] of Object.entries(v)){
@@ -114,6 +120,25 @@ code{direction:ltr;display:inline-block}
       });
     }
     if(selectionRaw!==null) inspected.push(selectionKey);
+
+    const backupInfo=[];
+    for(let n=1;n<=20;n++){
+      const k='weeklyAttendanceSafetyBackup:v1:'+n;
+      const raw=localStorage.getItem(k);
+      if(raw===null) continue;
+      const parsed=safeJson(raw);
+      backupInfo.push({
+        key:k,
+        chars:raw.length,
+        jsonType:Array.isArray(parsed)?'array':(parsed&&typeof parsed==='object'?'object':typeof parsed),
+        hasDate:raw.includes('2026-10-12'),
+        hasLate:/\blate\b/i.test(raw),
+        preview:raw.slice(0,220)
+      });
+      inspected.push(k);
+      if(parsed!==null) deepScan(parsed,k,out,0);
+    }
+    window.__lateBackupInfo=backupInfo;
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
       const raw=localStorage.getItem(key);
@@ -162,6 +187,19 @@ code{direction:ltr;display:inline-block}
       'أسماء مطابقة في قائمة الطلاب: <b>'+matched.filter(x=>x.st).length+'</b><br>'+
       '<div style="margin-top:8px;word-break:break-all">القيمة الخام: <code>'+esc(selectionRaw===null?'(غير موجود)':selectionRaw)+'</code></div>'+
       (selectionIds.length?'<div style="margin-top:8px"><b>المحتويات:</b><br>'+matched.map((x,i)=>(i+1)+'. '+esc(x.st?.name||'غير معروف')+' — '+esc(x.id)).join('<br>')+'</div>':'');
+    const backupDiag=document.getElementById('backupDiag');
+    const infos=Array.isArray(window.__lateBackupInfo)?window.__lateBackupInfo:[];
+    backupDiag.classList.remove('hidden');
+    backupDiag.className='card '+(infos.length?'ok':'warn');
+    backupDiag.innerHTML=
+      '<b>🧰 فحص نسخ الأمان weeklyAttendanceSafetyBackup</b><br>'+
+      'عدد النسخ الموجودة: <b>'+infos.length+'</b><br>'+
+      (infos.length?infos.map((x,i)=>
+        (i+1)+'. <code>'+esc(x.key)+'</code> — '+x.chars+' حرف — '+esc(x.jsonType)+
+        ' — تاريخ 12 أكتوبر: <b>'+(x.hasDate?'نعم':'لا')+'</b>'+
+        ' — late: <b>'+(x.hasLate?'نعم':'لا')+'</b>'+
+        '<div style="font-size:12px;word-break:break-all;margin:4px 0 10px">'+esc(x.preview)+'</div>'
+      ).join(''):'لا توجد نسخ أمان من هذا النوع.');
     s.className='card '+(rows.length?'ok':'warn');
     s.innerHTML=rows.length
       ? '<b>✅ وجدت '+rows.length+' سجل تأخر محفوظًا في هذا الجهاز.</b><br>لا تمسح بيانات المتصفح قبل حفظ النتائج.'
