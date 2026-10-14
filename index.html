@@ -376,6 +376,34 @@
 
   window.openWeeklyThanksCertificatesRuntime=openWeeklyThanksCertificatesRuntime;
 
+  // شهادة الشكر متاحة لكل مستخدم لديه صفحة التقارير، بدون اشتراط صلاحيات الأدمن.
+  function bindThanksForAllUsers(){
+    const ids=['weeklyAttThanksCertificateRuntimeBtn','weeklyAttThanksCertificateBtn'];
+    ids.forEach(id=>{
+      const btn=document.getElementById(id);
+      if(!btn) return;
+      btn.onclick=(e)=>{
+        try{e?.preventDefault?.();e?.stopPropagation?.();}catch(_){}
+        openWeeklyThanksCertificatesRuntime();
+        return false;
+      };
+      btn.dataset.thanksUserBound='1';
+    });
+  }
+  bindThanksForAllUsers();
+  document.addEventListener('click',e=>{
+    const btn=e.target?.closest?.('#weeklyAttThanksCertificateRuntimeBtn,#weeklyAttThanksCertificateBtn');
+    if(!btn) return;
+    if(btn.dataset.thanksCaptureBusy==='1') return;
+    btn.dataset.thanksCaptureBusy='1';
+    setTimeout(()=>{btn.dataset.thanksCaptureBusy='0'},0);
+    try{e.preventDefault();e.stopPropagation();}catch(_){}
+    openWeeklyThanksCertificatesRuntime();
+  },true);
+  const thanksUserObserver=new MutationObserver(()=>bindThanksForAllUsers());
+  try{thanksUserObserver.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+  setInterval(bindThanksForAllUsers,800);
+
   function ensureWeeklyThanksCertificateButton(){
     const report=document.getElementById('weeklyAttStudentReportBtn');
     const show=document.getElementById('weeklyAttShowBtn');
@@ -23784,9 +23812,15 @@ setTimeout(refreshStudentDataReviewCount,900);
     w.document.close();
   }
 
+  window.openWeeklyThanksCertificatesForAllUsers=openCertificates;
   function bind(){
-    const btn=document.getElementById('weeklyAttThanksCertificateBtn');
-    if(btn && !btn.dataset.boundThanks){btn.dataset.boundThanks='1';btn.addEventListener('click',openCertificates);}
+    ['weeklyAttThanksCertificateBtn','weeklyAttThanksCertificateRuntimeBtn'].forEach(id=>{
+      const btn=document.getElementById(id);
+      if(btn && !btn.dataset.boundThanks){
+        btn.dataset.boundThanks='1';
+        btn.addEventListener('click',openCertificates);
+      }
+    });
   }
   bind();
   document.addEventListener('DOMContentLoaded',bind,{once:true});
