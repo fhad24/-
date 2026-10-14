@@ -13881,11 +13881,11 @@ async function saveAttendanceLog(rows,cloudRows=null){
   const rowsToSync=Array.isArray(cloudRows)?cloudRows:rows;
   if(!localStorage.getItem('cloudAdminToken')) throw new Error('انتهت جلسة الدخول');
   const result=await cloudApi('sync_attendance',{attendance:rowsToSync});
-  if(Number(result?.count)!==rowsToSync.length){
-    throw new Error('لم يتم حفظ جميع سجلات التحضير');
+  if(!result || result.ok!==true || result.saved===false){
+    throw new Error(result?.error||'لم يؤكد الخادم حفظ سجلات التحضير');
   }
   localStorage.setItem('attendanceLog',JSON.stringify(rows));
-  return true;
+  return result;
 }
 
 function normalizeCloudAttendanceRow(x){
@@ -18504,7 +18504,7 @@ async function flushAttendanceInstantSave(){
   }catch(e){
     console.error('instant attendance save',e);
     ids.forEach(id=>__attendanceInstantPending.add(id));
-    if(attendanceMode==='late') showAttendanceSavedMessage('❌ تعذر الحفظ');
+    if(attendanceMode==='late') showAttendanceSavedMessage('❌ '+String(e?.message||'تعذر الحفظ'));
 
   }finally{
     __attendanceInstantBusy=false;
