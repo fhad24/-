@@ -57,6 +57,7 @@
         <div class="field">
           <label>اسم الطالب <span class="req">*</span></label>
           <select id="student" class="control studentSelect"><option value="">اختر الطالب...</option></select>
+          <div id="studentCountHint" style="font-size:12px;color:#7b839a;margin-top:6px"></div>
         </div>
 
         <div class="field">
@@ -163,7 +164,12 @@ const CATALOG={
     {name:'الإساءة اللفظية للزملاء',type:'مخالفة سلوكية',degree:'الثالثة',severity:'high'},
     {name:'العبث بممتلكات المدرسة',type:'مخالفة سلوكية',degree:'الثالثة',severity:'high'},
     {name:'استخدام الجوال أثناء اليوم الدراسي',type:'مخالفة سلوكية',degree:'الثالثة',severity:'high'},
-    {name:'المشاجرة أو الاعتداء على طالب',type:'مخالفة سلوكية',degree:'الرابعة',severity:'critical'}
+    {name:'المشاجرة أو الاعتداء على طالب',type:'مخالفة سلوكية',degree:'الرابعة',severity:'critical'},
+    {name:'عدم أداء الواجبات أو المهمات الصفية',type:'مخالفة تعليمية',degree:'الأولى',severity:'low'},
+    {name:'إحضار أدوات أو مواد غير مرتبطة بالدراسة',type:'مخالفة سلوكية',degree:'الثانية',severity:'medium'},
+    {name:'الكتابة أو الرسم على الجدران والمقاعد',type:'مخالفة سلوكية',degree:'الثالثة',severity:'high'},
+    {name:'انتحال صفة الغير أو التوقيع عنه',type:'مخالفة سلوكية',degree:'الثالثة',severity:'high'},
+    {name:'التنمر أو السخرية أو التهديد',type:'مخالفة سلوكية',degree:'الرابعة',severity:'critical'}
   ],
   private:[
     {name:'الإساءة اللفظية للمعلم أو الإداري',type:'مخالفة خاصة',degree:'الرابعة',severity:'critical'},
@@ -203,21 +209,71 @@ function selectedViolation(){
   return (CATALOG[scope()]||[])[idx]||null;
 }
 function updateViolationMeta(){const v=selectedViolation();$('violationType').textContent=v?.type||'-';$('violationDegree').textContent=v?.degree||'-'}
+function normGrade(v){
+  const s=String(v||'').replace(/\s+/g,' ').trim();
+  if(/أول|اول/.test(s)) return 'الأول الثانوي';
+  if(/ثاني/.test(s)) return 'الثاني الثانوي';
+  if(/ثالث/.test(s)) return 'الثالث الثانوي';
+  return s;
+}
+function normClass(v){
+  let s=String(v||'').replace(/فصل|الفصل|الصف/g,'').trim();
+  const m=s.match(/[أابجدهـهو]/);
+  if(m){
+    const x=m[0];
+    if(x==='ا') return 'أ';
+    if(x==='ه') return 'هـ';
+    if(x==='و') return 'و';
+    return x;
+  }
+  return s;
+}
 function fillFilters(){
-  const gs=[...new Set(students.map(s=>s.grade).filter(Boolean))],cs=[...new Set(students.map(s=>s.classroom).filter(Boolean))];
-  $('grade').innerHTML='<option value="">الكل</option>'+gs.map(x=>'<option>'+esc(x)+'</option>').join('');
-  $('classroom').innerHTML='<option value="">الكل</option>'+cs.map(x=>'<option>'+esc(x)+'</option>').join('');
+  const canonicalGrades=['الأول الثانوي','الثاني الثانوي','الثالث الثانوي'];
+  const discoveredGrades=[...new Set(students.map(s=>normGrade(s.grade)).filter(Boolean))];
+  const grades=[...new Set([...canonicalGrades,...discoveredGrades])];
+  const canonicalClasses=['أ','ب','ج','د','هـ','و'];
+  const discoveredClasses=[...new Set(students.map(s=>normClass(s.classroom)).filter(Boolean))];
+  const classes=[...new Set([...canonicalClasses,...discoveredClasses])];
+  $('grade').innerHTML='<option value="">الكل</option>'+grades.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+  $('classroom').innerHTML='<option value="">الكل</option>'+classes.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
   refreshStudents();
 }
 function refreshStudents(){
   const g=$('grade').value,c=$('classroom').value;
-  const rows=students.filter(s=>(!g||s.grade===g)&&(!c||s.classroom===c)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
-  $('student').innerHTML='<option value="">اختر الطالب...</option>'+rows.map(s=>'<option value="'+esc(s.idno)+'">'+esc(s.name)+'</option>').join('');
+  const rows=students.filter(s=>(!g||normGrade(s.grade)===g)&&(!c||normClass(s.classroom)===c)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+  $('student').innerHTML='<option value="">اختر الطالب...</option>'+rows.map(s=>'<option value="'+esc(s.idno)+'">'+esc(s.name)+' — '+esc(normGrade(s.grade))+' / '+esc(normClass(s.classroom))+'</option>').join('');
+  $('studentCountHint').textContent=rows.length?'عدد الطلاب المطابقين: '+rows.length:'لا يوجد طلاب مطابقون لهذا الصف والفصل';
 }
 function clearForm(){
   $('student').value='';$('description').value='';$('actionTaken').value='';$('referralTarget').value='';$('violation').value='';$('violationType').textContent='-';$('violationDegree').textContent='-';
 }
-async function loadStudents(){const d=await api('list_students_with_credentials');students=d.students||[];fillFilters()}
+async function loadStudents(){
+  let local=[];
+  try{
+    const raw=JSON.parse(localStorage.getItem('students')||'[]');
+    if(Array.isArray(raw)) local=raw;
+  }catch(e){}
+  let remote=[];
+  try{
+    const d=await api('list_students_with_credentials');
+    if(Array.isArray(d.students)) remote=d.students;
+  }catch(e){console.warn('students api',e)}
+  const byId=new Map();
+  [...local,...remote].forEach(s=>{
+    const id=String(s.idno||s.civil_id||'').replace(/\D/g,'');
+    if(!id)return;
+    byId.set(id,{
+      idno:id,
+      name:String(s.name||'').trim(),
+      phone:String(s.phone||'').trim(),
+      grade:String(s.grade||'').trim(),
+      classroom:String(s.classroom||'').trim()
+    });
+  });
+  students=[...byId.values()];
+  fillFilters();
+}
 async function loadCases(){const d=await api('list_behavior_cases');cases=d.rows||[];renderCases()}
 function renderCases(){
   const q=$('search').value.trim().toLowerCase(),st=$('statusFilter').value;
@@ -262,7 +318,7 @@ function switchView(v){
   const add=v==='add';$('addView').classList.toggle('hidden',!add);$('listView').classList.toggle('hidden',add);$('navAdd').classList.toggle('active',add);$('navList').classList.toggle('active',!add);if(!add)loadCases().catch(e=>message(e.message));
 }
 $('navAdd').onclick=()=>switchView('add');$('navList').onclick=()=>switchView('list');
-$('grade').onchange=refreshStudents;$('classroom').onchange=refreshStudents;document.querySelectorAll('input[name="scope"]').forEach(r=>r.onchange=fillViolations);$('violation').onchange=updateViolationMeta;
+$('grade').onchange=refreshStudents;$('classroom').onchange=refreshStudents;$('student').onchange=()=>{const s=students.find(x=>String(x.idno)===String($('student').value));if(s){$('grade').value=normGrade(s.grade);$('classroom').value=normClass(s.classroom)}};document.querySelectorAll('input[name="scope"]').forEach(r=>r.onchange=fillViolations);$('violation').onchange=updateViolationMeta;
 $('saveBtn').onclick=()=>save(false);$('saveNotifyBtn').onclick=()=>save(true);$('clearBtn').onclick=clearForm;$('search').oninput=renderCases;$('statusFilter').onchange=renderCases;$('refreshBtn').onclick=()=>loadCases().catch(e=>message(e.message));
 $('violationDate').value=new Date().toISOString().slice(0,10);
 (async()=>{try{if(!token){message('يلزم الدخول إلى النظام أولًا ثم فتح صفحة الحالات السلوكية.');return}await Promise.all([loadStudents(),loadCases()]);fillViolations()}catch(e){message(e.message)}})();
