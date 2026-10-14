@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>إدارة الحالات السلوكية</title>
+<style>
+:root{--bg:#f4f6fb;--side:#1b1c31;--side2:#2a2c4a;--card:#fff;--text:#242a45;--muted:#7d859f;--line:#e6e9f2;--primary:#4c67f0;--danger:#ec3b65;--warning:#e59a22;--success:#1f9d62;--purple:#7258d8}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}button,input,select,textarea{font-family:inherit}
+.app{min-height:100vh;display:grid;grid-template-columns:260px 1fr}.sidebar{background:linear-gradient(180deg,var(--side),#20213a);color:#fff;padding:20px 14px;overflow:auto}
+.logo{background:#fff;color:#177e79;border-radius:18px;padding:16px 10px;text-align:center;font-size:20px;font-weight:900;margin:0 auto 22px;max-width:150px}
+.nav{width:100%;border:0;background:transparent;color:#c7cbdd;border-radius:13px;padding:14px 16px;margin:5px 0;text-align:right;font-size:16px;font-weight:800;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.nav:hover,.nav.active{background:var(--side2);color:#fff}.nav .badge{background:#ff3973;color:#fff;border-radius:99px;min-width:24px;height:24px;display:inline-grid;place-items:center;font-size:12px}
+.back{margin-top:28px;border:1px solid #4b4e71}.main{padding:28px;overflow:auto}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.top h1{margin:0;font-size:30px}.top p{margin:7px 0 0;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:12px;min-height:46px;padding:0 18px;font-size:14px;font-weight:900;cursor:pointer}.primary{background:var(--primary);color:#fff}.ghost{background:#fff;border:1px solid #dfe3ef;color:#313955}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:13px;margin-bottom:16px}.stat{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 8px 24px #1820400a}
+.stat span{display:block;color:var(--muted);font-size:13px}.stat b{display:block;font-size:30px;margin-top:8px}.s1 b{color:var(--primary)}.s2 b{color:var(--danger)}.s3 b{color:var(--warning)}.s4 b{color:var(--purple)}.s5 b{color:var(--success)}
+.card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:0 8px 26px #17203c0a}.filters{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:10px;padding:14px;margin-bottom:16px}
+.filters input,.filters select{height:47px;border:1px solid #dfe3ee;border-radius:11px;padding:0 12px;background:#fbfcff;font-size:14px}
+.tablewrap{overflow:auto;max-height:60vh}.tbl{width:100%;border-collapse:collapse;min-width:1050px}.tbl th,.tbl td{padding:13px 10px;border-bottom:1px solid #edf0f5;text-align:right;font-size:13px}.tbl th{position:sticky;top:0;background:#f8f9fc;z-index:2}
+.chip,.status{display:inline-block;border-radius:99px;padding:6px 10px;font-size:11px;font-weight:900}.low{background:#e8f7ee;color:#18834e}.medium{background:#fff2d9;color:#aa6a00}.high,.critical{background:#ffe7eb;color:#c2294d}
+.status.new{background:#e7edff;color:#3956c9}.status.in_progress{background:#fff2d9;color:#9b6708}.status.referred{background:#efe7ff;color:#6b45b9}.status.closed{background:#e3f7eb;color:#16764a}
+.mini{border:1px solid #dfe3ed;background:#fff;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:800;cursor:pointer;margin-left:4px}.empty{text-align:center;padding:35px;color:#8a91a8}
+.modal{position:fixed;inset:0;background:#11152b80;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}.hidden{display:none!important}.modalcard{width:min(780px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 25px 80px #0004}
+.mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.mhead h2{margin:0}.x{border:0;background:#f1f3f8;width:38px;height:38px;border-radius:50%;font-size:24px;cursor:pointer}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid label,.wide{font-size:12px;font-weight:800;color:#555f7a}.grid select,.wide textarea,.follow textarea,.detailactions select{width:100%;border:1px solid #dce1ec;border-radius:11px;padding:10px;background:#fbfcff;font-size:14px;margin-top:6px}.grid select{height:47px}.wide{display:block;margin-top:12px}
+.check{display:flex;gap:8px;align-items:center;margin:14px 0;font-weight:800;font-size:13px}.check input{width:18px;height:18px}.modalactions,.detailactions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.details{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.detail{background:#f8f9fc;border-radius:12px;padding:12px}.detail small{display:block;color:#8991aa;margin-bottom:5px}.description{background:#f8f9fc;border-radius:12px;padding:14px;margin-top:12px;line-height:1.9}
+.follow{margin-top:18px;border-top:1px solid #edf0f5;padding-top:15px;display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end}.update{border-right:3px solid #6377eb;padding:4px 12px 12px;margin:10px 0}.update small{color:#8b93a9}.error{background:#fff1f3;color:#a6173d;border:1px solid #ffc7d4;border-radius:12px;padding:12px;margin-bottom:14px}.ok{background:#edf9f2;color:#17683f;border:1px solid #ccebd9;border-radius:12px;padding:12px;margin-bottom:14px}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{display:flex;gap:6px;overflow:auto;padding:8px;position:sticky;top:0;z-index:10}.logo{display:none}.nav{min-width:max-content;width:auto;margin:0;padding:10px 12px;font-size:12px}.back{margin-top:0}.main{padding:14px}.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.top{display:block}.actions{margin-top:12px}.filters,.grid,.details,.follow{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="logo">إدارة<br>السلوك</div>
+  <button class="nav active">▦ الرئيسية</button>
+  <button class="nav">🛡️ الحالات السلوكية <span class="badge" id="newBadge">0</span></button>
+  <button class="nav" onclick="location.href='/'">👥 إدارة الطلاب</button>
+  <button class="nav back" onclick="location.href='/'">← العودة للنظام</button>
+</aside>
+<main class="main">
+  <div class="top">
+    <div><h1>إدارة الحالات السلوكية</h1><p>توثيق الحالات ومتابعتها وربطها مباشرة بطلاب النظام الحالي.</p></div>
+    <div class="actions"><button class="btn ghost" id="refreshBtn">↻ تحديث</button><button class="btn primary" id="addBtn">＋ إضافة حالة</button></div>
+  </div>
+  <div id="message"></div>
+  <section class="stats">
+    <div class="stat s1"><span>إجمالي الحالات</span><b id="allStat">0</b></div>
+    <div class="stat s2"><span>جديدة</span><b id="newStat">0</b></div>
+    <div class="stat s3"><span>قيد المعالجة</span><b id="progressStat">0</b></div>
+    <div class="stat s4"><span>محالة</span><b id="referredStat">0</b></div>
+    <div class="stat s5"><span>مغلقة</span><b id="closedStat">0</b></div>
+  </section>
+  <section class="card filters">
+    <input id="search" placeholder="بحث باسم الطالب أو السجل المدني">
+    <select id="grade"><option value="">كل الصفوف</option></select>
+    <select id="classroom"><option value="">كل الفصول</option></select>
+    <select id="status"><option value="">كل الحالات</option><option value="new">جديدة</option><option value="in_progress">قيد المعالجة</option><option value="referred">محالة</option><option value="closed">مغلقة</option></select>
+    <select id="severity"><option value="">كل الدرجات</option><option value="low">منخفضة</option><option value="medium">متوسطة</option><option value="high">مرتفعة</option><option value="critical">حرجة</option></select>
+  </section>
+  <section class="card">
+    <div class="tablewrap"><table class="tbl"><thead><tr><th>#</th><th>الطالب</th><th>الصف / الفصل</th><th>نوع الحالة</th><th>الدرجة</th><th>الراصد</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody id="body"></tbody></table></div>
+    <div id="empty" class="empty hidden">لا توجد حالات مطابقة.</div>
+  </section>
+</main>
+</div>
+
+<div class="modal hidden" id="addModal"><div class="modalcard">
+  <div class="mhead"><h2>إضافة حالة سلوكية</h2><button class="x" id="closeAdd">×</button></div>
+  <div class="grid">
+    <label>الطالب<select id="student"></select></label>
+    <label>نوع الحالة<select id="type"><option>إساءة لفظية</option><option>سلوك عدواني</option><option>مشاجرة</option><option>عدم احترام التعليمات</option><option>عبث بالممتلكات</option><option>استخدام الجوال</option><option>هروب من الحصة</option><option>تأخر متكرر</option><option>غياب متكرر</option><option>تنمر</option><option>أخرى</option></select></label>
+    <label>درجة الحالة<select id="sev"><option value="low">منخفضة</option><option value="medium" selected>متوسطة</option><option value="high">مرتفعة</option><option value="critical">حرجة</option></select></label>
+    <label>تحويل إلى<select id="ref"><option value="">بدون تحويل</option><option>وكيل شؤون الطلاب</option><option>الموجه الطلابي</option><option>مدير المدرسة</option></select></label>
+  </div>
+  <label class="wide">وصف الحالة<textarea id="desc" rows="4"></textarea></label>
+  <label class="wide">الإجراء الأولي<textarea id="action" rows="3"></textarea></label>
+  <label class="check"><input id="guardian" type="checkbox"> تم إشعار ولي الأمر</label>
+  <div class="modalactions"><button class="btn primary" id="saveBtn">حفظ الحالة</button><button class="btn ghost" id="cancelAdd">إلغاء</button></div>
+</div></div>
+
+<div class="modal hidden" id="detailModal"><div class="modalcard">
+  <div class="mhead"><h2>تفاصيل الحالة</h2><button class="x" id="closeDetail">×</button></div>
+  <div id="detail"></div>
+  <div class="detailactions"><button class="btn ghost" id="waBtn">واتساب ولي الأمر</button><select id="detailStatus"><option value="new">جديدة</option><option value="in_progress">قيد المعالجة</option><option value="referred">محالة</option><option value="closed">مغلقة</option></select><button class="btn primary" id="statusBtn">حفظ الحالة</button></div>
+  <div class="follow"><textarea id="note" rows="3" placeholder="أضف متابعة أو إجراء جديد..."></textarea><button class="btn primary" id="noteBtn">إضافة متابعة</button></div>
+  <div id="updates"></div>
+</div></div>
+
+<script>
+const API='https://shurahbil-api.onrender.com/api';
+const token=localStorage.getItem('cloudAdminToken')||'';
+let cases=[],students=[],current=null;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sl=s=>({new:'جديدة',in_progress:'قيد المعالجة',referred:'محالة',closed:'مغلقة'}[s]||s||'—');
+const vl=s=>({low:'منخفضة',medium:'متوسطة',high:'مرتفعة',critical:'حرجة'}[s]||s||'—');
+const fmt=d=>{try{return new Date(d).toLocaleString('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return d||'—'}};
+async function api(action,payload={}){
+  if(!token) throw new Error('يلزم تسجيل الدخول من النظام أولًا');
+  const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-app-token':token},body:JSON.stringify({action,...payload})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||('HTTP '+res.status));
+  return data;
+}
+function msg(t,ok=false){$('message').innerHTML='<div class="'+(ok?'ok':'error')+'">'+esc(t)+'</div>';setTimeout(()=>{$('message').innerHTML=''},5000)}
+async function loadStudents(){
+  const d=await api('list_students_with_credentials');
+  students=d.students||[];
+  $('student').innerHTML='<option value="">اختر الطالب</option>'+students.map(s=>'<option value="'+esc(s.idno)+'">'+esc(s.name)+' — '+esc(s.grade)+' / '+esc(s.classroom)+'</option>').join('');
+  const gs=[...new Set(students.map(x=>x.grade).filter(Boolean))],cs=[...new Set(students.map(x=>x.classroom).filter(Boolean))];
+  $('grade').innerHTML='<option value="">كل الصفوف</option>'+gs.map(x=>'<option>'+esc(x)+'</option>').join('');
+  $('classroom').innerHTML='<option value="">كل الفصول</option>'+cs.map(x=>'<option>'+esc(x)+'</option>').join('');
+}
+async function loadCases(){const d=await api('list_behavior_cases');cases=d.rows||[];render()}
+function filtered(){const q=$('search').value.trim().toLowerCase(),g=$('grade').value,c=$('classroom').value,s=$('status').value,v=$('severity').value;return cases.filter(x=>(!q||[x.student_name,x.student_idno,x.case_type,x.description].join(' ').toLowerCase().includes(q))&&(!g||x.grade===g)&&(!c||x.classroom===c)&&(!s||x.status===s)&&(!v||x.severity===v))}
+function render(){const rows=filtered();$('body').innerHTML=rows.map(x=>'<tr><td>#'+x.id+'</td><td><b>'+esc(x.student_name)+'</b><div>'+esc(x.student_idno)+'</div></td><td>'+esc(x.grade)+' / '+esc(x.classroom)+'</td><td>'+esc(x.case_type)+'</td><td><span class="chip '+esc(x.severity)+'">'+vl(x.severity)+'</span></td><td>'+esc(x.reported_by_name||'—')+'</td><td>'+fmt(x.created_at)+'</td><td><span class="status '+esc(x.status)+'">'+sl(x.status)+'</span></td><td><button class="mini" onclick="openDetail('+x.id+')">عرض</button><button class="mini" onclick="wa('+x.id+')">ولي الأمر</button></td></tr>').join('');$('empty').classList.toggle('hidden',rows.length>0);const c={all:cases.length,new:0,in_progress:0,referred:0,closed:0};cases.forEach(x=>{if(c[x.status]!=null)c[x.status]++});$('allStat').textContent=c.all;$('newStat').textContent=c.new;$('progressStat').textContent=c.in_progress;$('referredStat').textContent=c.referred;$('closedStat').textContent=c.closed;$('newBadge').textContent=c.new}
+async function saveCase(){if(!$('student').value)return alert('اختر الطالب');if(!$('desc').value.trim())return alert('اكتب وصف الحالة');try{await api('create_behavior_case',{student_idno:$('student').value,case_type:$('type').value,description:$('desc').value.trim(),severity:$('sev').value,referral_target:$('ref').value,action_taken:$('action').value.trim(),guardian_notified:$('guardian').checked});$('addModal').classList.add('hidden');await loadCases();msg('تم حفظ الحالة السلوكية',true)}catch(e){msg(e.message)}}
+async function openDetail(id){current=cases.find(x=>+x.id===+id);if(!current)return;const x=current;$('detail').innerHTML='<div class="details"><div class="detail"><small>الطالب</small><b>'+esc(x.student_name)+'</b></div><div class="detail"><small>السجل</small><b>'+esc(x.student_idno)+'</b></div><div class="detail"><small>الصف / الفصل</small><b>'+esc(x.grade)+' / '+esc(x.classroom)+'</b></div><div class="detail"><small>نوع الحالة</small><b>'+esc(x.case_type)+'</b></div><div class="detail"><small>الدرجة</small><b>'+vl(x.severity)+'</b></div><div class="detail"><small>الراصد</small><b>'+esc(x.reported_by_name||'—')+'</b></div></div><div class="description"><b>الوصف</b><br>'+esc(x.description||'')+'</div><div class="description"><b>الإجراء</b><br>'+esc(x.action_taken||'')+'</div>';$('detailStatus').value=x.status;$('detailModal').classList.remove('hidden');const d=await api('list_behavior_case_updates',{case_id:x.id});$('updates').innerHTML=(d.rows||[]).map(u=>'<div class="update"><b>'+esc(u.created_by_name||'')+'</b><small>'+fmt(u.created_at)+'</small><p>'+esc(u.note||'')+'</p></div>').join('')}
+async function saveStatus(){if(!current)return;try{await api('update_behavior_case',{id:current.id,status:$('detailStatus').value});await loadCases();msg('تم تحديث الحالة',true)}catch(e){msg(e.message)}}
+async function addNote(){if(!current)return;const n=$('note').value.trim();if(!n)return alert('اكتب المتابعة');try{await api('add_behavior_case_update',{case_id:current.id,note:n,action_type:'followup'});$('note').value='';await openDetail(current.id)}catch(e){msg(e.message)}}
+function wa(id){const x=cases.find(r=>+r.id===+id);if(!x)return;let p=String(x.student_phone||'').replace(/\D/g,'');if(p.startsWith('05'))p='966'+p.slice(1);else if(p.startsWith('5'))p='966'+p;if(!p)return alert('لا يوجد رقم جوال لولي الأمر');window.open('https://wa.me/'+p+'?text='+encodeURIComponent('السلام عليكم، تم تسجيل حالة سلوكية للطالب '+x.student_name+'، نوع الحالة: '+x.case_type),'_blank')}
+$('addBtn').onclick=()=>{$('desc').value='';$('action').value='';$('guardian').checked=false;$('addModal').classList.remove('hidden')};
+$('closeAdd').onclick=$('cancelAdd').onclick=()=>$('addModal').classList.add('hidden');$('closeDetail').onclick=()=>$('detailModal').classList.add('hidden');$('saveBtn').onclick=saveCase;$('statusBtn').onclick=saveStatus;$('noteBtn').onclick=addNote;$('waBtn').onclick=()=>current&&wa(current.id);$('refreshBtn').onclick=async()=>{try{await loadCases();msg('تم التحديث',true)}catch(e){msg(e.message)}};
+['search','grade','classroom','status','severity'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',render));
+(async()=>{try{if(!token){msg('يلزم تسجيل الدخول من النظام أولًا، ثم فتح صفحة الحالات السلوكية.');return}await Promise.all([loadStudents(),loadCases()])}catch(e){msg(e.message)}})();
+</script>
+</body></html>
