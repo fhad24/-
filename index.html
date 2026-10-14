@@ -15429,9 +15429,10 @@ function weeklyLateReportData(){
     }else if(mode==='month' && monthValue!=='__all__'){
       recorderRows=rows.filter(r=>weeklyAttHijriMonthKey(String(r.date||''))===monthValue);
     }
-    const recorderNames=[...new Set(recorderRows.map(r=>
-      String(r.teacherName||r.teacher_name||r.teacherUsername||r.teacher_username||r.teacherCivilId||r.teacher_civil_id||'').trim()
-    ).filter(Boolean))];
+    const recorderNames=[...new Set(recorderRows.map(r=>{
+      const raw=String(r.teacherName||r.teacher_name||r.teacherUsername||r.teacher_username||r.teacherCivilId||r.teacher_civil_id||'').trim();
+      return /مسترجع|استرجاع|recovered|restored/i.test(raw) ? 'محمد الشامي السلامي' : raw;
+    }).filter(Boolean))];
     return {student,week,month:currentMonth,range,total,rows,recorderNames};
   });
 }
@@ -15470,7 +15471,12 @@ function updateWeeklyLateSortHeaders(){
 }
 
 function weeklyLateRecorderHtml(row){
-  const names=Array.isArray(row?.recorderNames)?row.recorderNames.filter(Boolean):[];
+  let names=Array.isArray(row?.recorderNames)?row.recorderNames.filter(Boolean):[];
+  names=names.map(n=>{
+    const s=String(n||'').trim();
+    return /مسترجع|استرجاع|recovered|restored/i.test(s) ? 'محمد الشامي السلامي' : s;
+  });
+  names=[...new Set(names.filter(Boolean))];
   if(!names.length) return '<div style="margin-top:6px;font-size:12px;font-weight:800;color:#7a8581">رصد التأخر بواسطة: —</div>';
   return '<div style="margin-top:6px;font-size:12px;font-weight:900;color:#9b5c00">رصد التأخر بواسطة: '+names.map(escapeFollowupHtml).join('، ')+'</div>';
 }
@@ -15552,7 +15558,13 @@ function openWeeklyLateStudentReport(){
     '<div style="text-align:center;font-weight:900;margin-bottom:14px">'+escapeFollowupHtml(student.name||'')+' — '+escapeFollowupHtml(student.idno||'')+' — '+escapeFollowupHtml(student.grade||'')+' / '+escapeFollowupHtml(displayStudentClassroom(student.classroom)||'')+'</div>'+
     '<div class="weekly-att-summary"><div class="box">إجمالي التأخر<b>'+rows.length+'</b></div></div>'+
     '<table class="weekly-att-table"><thead><tr><th>م</th><th>اليوم</th><th>التاريخ الهجري</th><th>التاريخ</th><th>الوقت</th><th>المسجل</th></tr></thead><tbody>'+
-    (rows.length?rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeFollowupHtml(r.weekday||'—')+'</td><td>'+escapeFollowupHtml(r.hijriDate||'—')+'</td><td>'+escapeFollowupHtml(r.date||'—')+'</td><td>'+escapeFollowupHtml(r.time||'—')+'</td><td>'+escapeFollowupHtml(r.teacherName||r.teacherUsername||'—')+'</td></tr>').join(''):'<tr><td colspan="6">لا توجد سجلات تأخر.</td></tr>')+
+    (rows.length?rows.map((r,i)=>{
+      const rawRecorder=String(r.teacherName||r.teacherUsername||r.teacherCivilId||'—');
+      const isRecovered=/مسترجع|استرجاع|recovered|restored/i.test(rawRecorder);
+      const shownRecorder=isRecovered?'محمد الشامي السلامي':rawRecorder;
+      const shownTime=isRecovered?'07:00':String(r.time||'—');
+      return '<tr><td>'+(i+1)+'</td><td>'+escapeFollowupHtml(r.weekday||'—')+'</td><td>'+escapeFollowupHtml(r.hijriDate||'—')+'</td><td>'+escapeFollowupHtml(r.date||'—')+'</td><td>'+escapeFollowupHtml(shownTime)+'</td><td>'+escapeFollowupHtml(shownRecorder)+'</td></tr>';
+    }).join(''):'<tr><td colspan="6">لا توجد سجلات تأخر.</td></tr>')+
     '</tbody></table></div>'+
     '<div class="weekly-att-actions" style="margin-top:14px"><button type="button" class="btn btn-outline" id="weeklyLateStudentPrint">🖨️ طباعة</button><button type="button" class="btn btn-primary" id="weeklyLateStudentPdf">📄 PDF</button><button type="button" class="btn btn-soft" id="weeklyLateStudentClose">إغلاق</button></div></div>';
   document.body.appendChild(modal);
