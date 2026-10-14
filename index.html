@@ -5185,7 +5185,7 @@ body.activity-leader-open main{
         </div>
 
         <div class="weekly-att-actions">
-          <button type="button" class="btn btn-primary" id="weeklyLateShowBtn" onclick="return showWeeklyLateReportNow(event)">عرض تقرير التأخر</button>
+          <button type="button" class="btn btn-primary" id="weeklyLateShowBtn">عرض تقرير التأخر</button>
           <button type="button" class="btn btn-outline" id="weeklyLateSelectAllBtn">☑ تحديد الكل</button>
           <button type="button" class="btn btn-primary" id="weeklyLateStudentReportBtn">📄 تقرير الطالب</button>
           <button type="button" class="btn btn-outline" id="weeklyLatePrintBtn">🖨️ طباعة</button>
@@ -23919,6 +23919,81 @@ document.addEventListener('click',function behaviorCasesClickFallback(e){
     }
   });
   try{obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true})}catch(e){}
+})();
+</script>
+
+<script id="weeklyLateShowBtnFinalFix">
+(function(){
+  async function runLateReportButton(ev){
+    try{ev?.preventDefault?.();ev?.stopPropagation?.();}catch(e){}
+    const btn=document.getElementById('weeklyLateShowBtn');
+    if(!btn || btn.dataset.finalBusy==='1') return false;
+
+    const old=btn.textContent;
+    btn.dataset.finalBusy='1';
+    btn.disabled=true;
+    btn.textContent='جاري عرض التقرير...';
+
+    try{
+      // 1) اعرض السجلات الموجودة فورًا بدون انتظار الشبكة.
+      if(typeof populateWeeklyLateFilters==='function') populateWeeklyLateFilters();
+      if(typeof syncWeeklyLateViewControls==='function') syncWeeklyLateViewControls();
+      if(typeof renderWeeklyLateReport==='function') await renderWeeklyLateReport();
+
+      // 2) إذا توجد جلسة سحابية، حدّث التأخر ثم أعد الرسم.
+      try{
+        if(localStorage.getItem('cloudAdminToken') && typeof cloudPullAttendanceFast==='function'){
+          await cloudPullAttendanceFast();
+          if(typeof populateWeeklyLateFilters==='function') populateWeeklyLateFilters();
+          if(typeof renderWeeklyLateReport==='function') await renderWeeklyLateReport();
+        }
+      }catch(refreshErr){
+        console.warn('late report refresh skipped',refreshErr);
+      }
+
+      // 3) انقل المستخدم مباشرة إلى الجدول حتى يرى النتيجة.
+      const target=document.getElementById('weeklyLatePrintable');
+      if(target){
+        target.scrollIntoView({behavior:'smooth',block:'start'});
+        target.style.outline='3px solid #0f7665';
+        target.style.outlineOffset='4px';
+        setTimeout(()=>{try{target.style.outline='';target.style.outlineOffset='';}catch(e){}},1200);
+      }
+
+      const count=Number(document.getElementById('weeklyLateStudentsCount')?.textContent||0);
+      if(typeof showAttendanceSavedMessage==='function'){
+        showAttendanceSavedMessage(count>0 ? ('✅ تم عرض '+count+' طالب متأخر في الفترة المحددة') : 'لا يوجد طلاب متأخرون في الفترة المحددة');
+      }else if(typeof toast==='function'){
+        toast(count>0 ? ('✅ تم عرض '+count+' طالب متأخر في الفترة المحددة') : 'لا يوجد طلاب متأخرون في الفترة المحددة');
+      }
+    }catch(err){
+      console.error('late report final click',err);
+      alert('تعذر عرض تقرير التأخر: '+String(err?.message||err));
+    }finally{
+      btn.dataset.finalBusy='0';
+      btn.disabled=false;
+      btn.textContent=old;
+    }
+    return false;
+  }
+
+  function bind(){
+    const btn=document.getElementById('weeklyLateShowBtn');
+    if(!btn || btn.dataset.finalBound==='1') return;
+    btn.dataset.finalBound='1';
+    btn.onclick=runLateReportButton;
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',bind,{once:true});
+  }else{
+    bind();
+  }
+
+  // في حال أعيد رسم الجزء الذي يحتوي الزر.
+  const obs=new MutationObserver(bind);
+  try{obs.observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+  window.showWeeklyLateReportNow=runLateReportButton;
 })();
 </script>
 </body>
