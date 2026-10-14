@@ -39,6 +39,7 @@ code{direction:ltr;display:inline-block}
     </div>
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
+    <div id="selectionDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
     <h2>السجلات الموجودة في الجهاز</h2>
@@ -137,6 +138,30 @@ code{direction:ltr;display:inline-block}
     const s=document.getElementById('status'), stats=document.getElementById('stats'), card=document.getElementById('resultCard');
     const by11=rows.filter(x=>x.date==='2026-10-11').length, by12=rows.filter(x=>x.date==='2026-10-12').length;
     const named=rows.filter(x=>x.name).length;
+    const selectionKey='attendanceLateSelections:2026-10-12';
+    const selectionRaw=localStorage.getItem(selectionKey);
+    const selectionParsed=safeJson(selectionRaw||'');
+    const selectionIds=Array.isArray(selectionParsed)?selectionParsed.map(x=>String(x||'').trim()).filter(Boolean):[];
+    let students=[];
+    for(const k of ['students','studentRoster','studentRosterSafetyBackup:v1']){
+      const v=safeJson(localStorage.getItem(k)||'');
+      if(Array.isArray(v)){ students=v; break; }
+    }
+    const byId=new Map(students.map(st=>[
+      String(st?.idno||st?.civil_id||st?.studentCivilId||'').trim(),
+      st
+    ]));
+    const matched=selectionIds.map(id=>({id,st:byId.get(id)}));
+    const diag=document.getElementById('selectionDiag');
+    diag.classList.remove('hidden');
+    diag.className='card '+(selectionRaw!==null?'ok':'warn');
+    diag.innerHTML=
+      '<b>🔐 فحص مفتاح الاثنين مباشرة</b><br>'+
+      'المفتاح موجود: <b>'+(selectionRaw!==null?'نعم':'لا')+'</b><br>'+
+      'عدد العناصر داخله: <b>'+selectionIds.length+'</b><br>'+
+      'أسماء مطابقة في قائمة الطلاب: <b>'+matched.filter(x=>x.st).length+'</b><br>'+
+      '<div style="margin-top:8px;word-break:break-all">القيمة الخام: <code>'+esc(selectionRaw===null?'(غير موجود)':selectionRaw)+'</code></div>'+
+      (selectionIds.length?'<div style="margin-top:8px"><b>المحتويات:</b><br>'+matched.map((x,i)=>(i+1)+'. '+esc(x.st?.name||'غير معروف')+' — '+esc(x.id)).join('<br>')+'</div>':'');
     s.className='card '+(rows.length?'ok':'warn');
     s.innerHTML=rows.length
       ? '<b>✅ وجدت '+rows.length+' سجل تأخر محفوظًا في هذا الجهاز.</b><br>لا تمسح بيانات المتصفح قبل حفظ النتائج.'
