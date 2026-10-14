@@ -88,6 +88,31 @@ code{direction:ltr;display:inline-block}
   }
   function scan(){
     const out=[], inspected=[];
+    const selectionKey='attendanceLateSelections:2026-10-12';
+    const selectionRaw=localStorage.getItem(selectionKey);
+    const selectionParsed=safeJson(selectionRaw||'[]');
+    const selectedIds=Array.isArray(selectionParsed)?selectionParsed.map(x=>String(x||'').trim()).filter(Boolean):[];
+    let students=[];
+    for(const k of ['students','studentRoster','studentRosterSafetyBackup:v1']){
+      const v=safeJson(localStorage.getItem(k)||'');
+      if(Array.isArray(v)){ students=v; break; }
+    }
+    const byId=new Map(students.map(st=>[
+      String(st?.idno||st?.civil_id||st?.studentCivilId||'').trim(),
+      st
+    ]));
+    for(const id of selectedIds){
+      const st=byId.get(id)||{};
+      out.push({
+        name:String(st?.name||st?.student_name||'').trim(),
+        idno:id,date:'2026-10-12',time:'',
+        grade:String(st?.grade||'').trim(),
+        classroom:String(st?.classroom||st?.class||'').trim(),
+        teacher:'',teacherUsername:'',period:'',
+        source:selectionKey
+      });
+    }
+    if(selectionRaw!==null) inspected.push(selectionKey);
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
       const raw=localStorage.getItem(key);
