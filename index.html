@@ -349,7 +349,32 @@
     w.document.open();
     w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>شهادات شكر</title><style>'+
       '*{box-sizing:border-box}body{margin:0;background:#eef4f2;font-family:Tahoma,Arial,sans-serif;color:#173d35}.toolbar{position:sticky;top:0;z-index:3;background:#fff;padding:12px;text-align:center;border-bottom:1px solid #d6e2de}.toolbar button{background:#0f806c;color:#fff;border:0;border-radius:10px;padding:11px 24px;font-size:18px;font-weight:800;cursor:pointer}.certificate{position:relative;width:277mm;min-height:190mm;margin:12mm auto;background:#fff;border:3px solid #b88916;padding:16mm 20mm;text-align:center;box-shadow:0 4px 18px #0002;overflow:hidden}.certificate:before,.certificate:after{content:"";position:absolute;width:46mm;height:46mm;border:2px solid #d7b75e;transform:rotate(45deg);opacity:.35}.certificate:before{right:-24mm;top:-24mm}.certificate:after{left:-24mm;bottom:-24mm}.logos{display:flex;justify-content:space-between;align-items:center;height:25mm}.logos img{max-width:28mm;max-height:24mm;object-fit:contain}.authority{font-size:16px}.school{font-size:20px;font-weight:800;margin-top:3px}h1{font-size:38px;color:#9b6f07;margin:14px 0 4px}.medal{display:none!important}.lead{font-size:22px;margin:8px}.student{font-size:34px;font-weight:900;color:#0f6f60;margin:8px 0 10px;border-bottom:2px solid #d7b75e;display:inline-block;padding:0 28px 8px}.meta{font-size:19px;margin:8px}.body{font-size:22px;line-height:2;max-width:900px;margin:18px auto}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:18px}.pagebreak{page-break-before:always}@page{size:A4 landscape;margin:8mm}@media print{body{background:#fff}.toolbar{display:none}.certificate{width:auto;min-height:185mm;margin:0;box-shadow:none;page-break-after:always}.certificate:last-child{page-break-after:auto}}'+
-      '</style><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script></head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+
+      '</style><script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"><\/script>
+<style id="behaviorCasesStyles">
+.behavior-page{position:fixed;inset:0;z-index:99990;background:#f4f6fb;display:grid;grid-template-columns:270px 1fr;direction:rtl;font-family:Tahoma,Arial,sans-serif}
+.behavior-page.hidden,.behavior-modal.hidden{display:none!important}
+.behavior-sidebar{background:#1b1c31;color:#e8e9f4;padding:22px 14px;overflow:auto;box-shadow:4px 0 22px #0002}
+.behavior-logo{width:120px;margin:0 auto 28px;background:#fff;color:#177e79;border-radius:16px;padding:14px 8px;text-align:center;font-size:19px;font-weight:900;line-height:1.25}
+.behavior-nav{width:100%;border:0;background:transparent;color:#c5c8dc;text-align:right;border-radius:13px;padding:14px 16px;margin:4px 0;font:700 16px Tahoma;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.behavior-nav:hover,.behavior-nav.active{background:#2a2c4a;color:#fff}.behavior-nav span{background:#ff3973;color:#fff;border-radius:99px;min-width:25px;height:25px;display:inline-grid;place-items:center;font-size:12px}
+.behavior-back{margin-top:30px;border:1px solid #484b70;color:#fff}
+.behavior-main{padding:28px;overflow:auto}.behavior-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.behavior-top h1{font-size:30px;margin:0;color:#242a45}.behavior-top p{margin:7px 0 0;color:#79819b}
+.behavior-top-actions{display:flex;gap:10px}.behavior-btn{border:0;border-radius:12px;min-height:46px;padding:0 18px;font:800 14px Tahoma;cursor:pointer}.behavior-btn.primary{background:#4c67f0;color:#fff}.behavior-btn.ghost{background:#fff;color:#313955;border:1px solid #dfe3ef}
+.behavior-stats{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:13px;margin-bottom:16px}.behavior-stat{background:#fff;border:1px solid #e7e9f2;border-radius:17px;padding:16px;box-shadow:0 8px 24px #1820400a}.behavior-stat span{display:block;color:#8088a2;font-size:13px}.behavior-stat b{display:block;font-size:30px;margin-top:8px;color:#4255d8}.behavior-stat.red b{color:#ec3b65}.behavior-stat.orange b{color:#e59a22}.behavior-stat.purple b{color:#7258d8}.behavior-stat.green b{color:#1f9d62}
+.behavior-card{background:#fff;border:1px solid #e6e9f2;border-radius:17px;box-shadow:0 8px 26px #17203c0a}.behavior-filters{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:10px;padding:14px;margin-bottom:16px}.behavior-filters input,.behavior-filters select{height:47px;border:1px solid #dfe3ee;border-radius:11px;padding:0 12px;font:14px Tahoma;background:#fbfcff}
+.behavior-table-card{padding:0;overflow:hidden}.behavior-table-wrap{overflow:auto;max-height:58vh}.behavior-table{width:100%;border-collapse:collapse;min-width:1000px}.behavior-table th,.behavior-table td{padding:13px 10px;border-bottom:1px solid #edf0f5;text-align:right;font-size:13px;vertical-align:middle}.behavior-table th{position:sticky;top:0;background:#f8f9fc;color:#6e7690;z-index:1}.behavior-table td b{font-size:14px;color:#252c47}
+.behavior-chip{display:inline-block;border-radius:99px;padding:6px 10px;font-size:11px;font-weight:900}.behavior-chip.low{background:#e8f7ee;color:#18834e}.behavior-chip.medium{background:#fff2d9;color:#aa6a00}.behavior-chip.high{background:#ffe7eb;color:#c2294d}.behavior-chip.critical{background:#ffdfe4;color:#990f34}
+.behavior-status{display:inline-block;border-radius:99px;padding:6px 10px;font-size:11px;font-weight:900}.behavior-status.new{background:#e7edff;color:#3956c9}.behavior-status.in_progress{background:#fff2d9;color:#9b6708}.behavior-status.referred{background:#efe7ff;color:#6b45b9}.behavior-status.closed{background:#e3f7eb;color:#16764a}
+.behavior-row-actions{display:flex;gap:6px;flex-wrap:wrap}.behavior-mini{border:1px solid #dfe3ed;background:#fff;border-radius:9px;padding:7px 9px;font:700 11px Tahoma;cursor:pointer}.behavior-empty{text-align:center;padding:35px;color:#8a91a8}
+.behavior-modal{position:fixed;inset:0;z-index:100000;background:#11152b80;display:flex;align-items:center;justify-content:center;padding:20px;direction:rtl}.behavior-modal-card{width:min(720px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:20px;box-shadow:0 25px 80px #0004}.behavior-details-card{width:min(850px,96vw)}.behavior-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.behavior-modal-head h2{font-size:22px!important;margin:0!important}.behavior-modal-head button{border:0;background:#f1f3f8;width:38px;height:38px;border-radius:50%;font-size:24px;cursor:pointer}
+.behavior-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.behavior-form-grid label,.behavior-wide-label{font-size:12px;font-weight:800;color:#555f7a}.behavior-form-grid select,.behavior-wide-label textarea,.behavior-followup-box textarea,.behavior-details-actions select{width:100%;border:1px solid #dce1ec;border-radius:11px;padding:10px;font:14px Tahoma;background:#fbfcff;margin-top:6px}.behavior-form-grid select{height:47px}.behavior-wide-label{display:block;margin-top:12px}.behavior-check{display:flex;align-items:center;gap:8px;margin:14px 0;font-size:13px;font-weight:800}.behavior-check input{width:18px;height:18px}.behavior-modal-actions,.behavior-details-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.behavior-details-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.behavior-detail{background:#f8f9fc;border-radius:12px;padding:12px}.behavior-detail small{display:block;color:#8a92a8;margin-bottom:5px}.behavior-detail b{font-size:14px}.behavior-description{margin-top:12px;background:#f8f9fc;border-radius:12px;padding:14px;line-height:1.9}
+.behavior-followup-box{margin-top:18px;border-top:1px solid #edf0f5;padding-top:15px;display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end}.behavior-updates{margin-top:14px}.behavior-update{border-right:3px solid #6377eb;padding:4px 12px 12px;margin:10px 0}.behavior-update b{display:block;font-size:13px}.behavior-update small{color:#8b93a9}.behavior-update p{margin:5px 0 0;line-height:1.7}
+@media(max-width:900px){.behavior-page{grid-template-columns:1fr}.behavior-sidebar{display:flex;gap:6px;padding:8px;overflow:auto;position:sticky;top:0;z-index:2}.behavior-logo{display:none}.behavior-nav{min-width:max-content;width:auto;margin:0;padding:10px 12px;font-size:12px}.behavior-back{margin-top:0}.behavior-main{padding:14px}.behavior-stats{grid-template-columns:repeat(2,1fr)}.behavior-filters{grid-template-columns:1fr 1fr}.behavior-top{align-items:flex-start}.behavior-top h1{font-size:23px}}
+@media(max-width:560px){.behavior-top{display:block}.behavior-top-actions{margin-top:12px}.behavior-stats{grid-template-columns:1fr 1fr}.behavior-filters{grid-template-columns:1fr}.behavior-form-grid,.behavior-details-grid{grid-template-columns:1fr}.behavior-followup-box{grid-template-columns:1fr}}
+</style>
+
+</head><body><div class="toolbar"><button onclick="window.print()">🖨️ طباعة الشهادات</button></div>'+certs+
     '<script>'+
     'async function shareCertificateByWhatsApp(id){'+
       'const cert=document.getElementById(id);if(!cert)return;'+
@@ -370,7 +395,372 @@
         '}'+
       '}catch(e){if(e&&e.name!=="AbortError")alert("تعذر تجهيز الشهادة للمشاركة. حاول مرة أخرى.");}finally{if(btn){btn.disabled=false;btn.textContent=old;}}'+
     '}'+
-    '<\/script></body></html>');
+    '<\/script>
+<div id="behaviorCasesPage" class="behavior-page hidden" aria-hidden="true">
+  <aside class="behavior-sidebar">
+    <div class="behavior-logo">إدارة<br>السلوك</div>
+    <button type="button" class="behavior-nav active" data-bview="home">▦ الرئيسية</button>
+    <button type="button" class="behavior-nav" data-bview="cases">🛡️ الحالات السلوكية <span id="behaviorNewBadge">0</span></button>
+    <button type="button" class="behavior-nav" data-bview="referrals">↪ الإحالات</button>
+    <button type="button" class="behavior-nav" data-bview="students">👥 إدارة الطلاب</button>
+    <button type="button" class="behavior-nav" data-bview="reports">📊 التقارير</button>
+    <button type="button" id="behaviorBackBtn" class="behavior-nav behavior-back">← العودة للنظام</button>
+  </aside>
+
+  <main class="behavior-main">
+    <div class="behavior-top">
+      <div>
+        <h1>إدارة الحالات السلوكية</h1>
+        <p>توثيق الحالة ومتابعتها وإشعار ولي الأمر وربطها بالطالب الموجود في النظام.</p>
+      </div>
+      <div class="behavior-top-actions">
+        <button type="button" id="behaviorRefreshBtn" class="behavior-btn ghost">↻ تحديث</button>
+        <button type="button" id="behaviorAddBtn" class="behavior-btn primary">＋ إضافة حالة</button>
+      </div>
+    </div>
+
+    <section class="behavior-stats">
+      <div class="behavior-stat"><span>إجمالي الحالات</span><b id="behaviorStatAll">0</b></div>
+      <div class="behavior-stat red"><span>حالات جديدة</span><b id="behaviorStatNew">0</b></div>
+      <div class="behavior-stat orange"><span>قيد المعالجة</span><b id="behaviorStatProgress">0</b></div>
+      <div class="behavior-stat purple"><span>محالة</span><b id="behaviorStatReferred">0</b></div>
+      <div class="behavior-stat green"><span>مغلقة</span><b id="behaviorStatClosed">0</b></div>
+    </section>
+
+    <section class="behavior-card behavior-filters">
+      <input id="behaviorSearch" placeholder="بحث باسم الطالب أو السجل المدني">
+      <select id="behaviorGradeFilter"><option value="">كل الصفوف</option></select>
+      <select id="behaviorClassFilter"><option value="">كل الفصول</option></select>
+      <select id="behaviorStatusFilter">
+        <option value="">كل الحالات</option>
+        <option value="new">جديدة</option>
+        <option value="in_progress">قيد المعالجة</option>
+        <option value="referred">محالة</option>
+        <option value="closed">مغلقة</option>
+      </select>
+      <select id="behaviorSeverityFilter">
+        <option value="">كل الدرجات</option>
+        <option value="low">منخفضة</option>
+        <option value="medium">متوسطة</option>
+        <option value="high">مرتفعة</option>
+        <option value="critical">حرجة</option>
+      </select>
+    </section>
+
+    <section class="behavior-card behavior-table-card">
+      <div class="behavior-table-wrap">
+        <table class="behavior-table">
+          <thead><tr>
+            <th>#</th><th>الطالب</th><th>الصف / الفصل</th><th>نوع الحالة</th><th>الدرجة</th>
+            <th>الراصد</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th>
+          </tr></thead>
+          <tbody id="behaviorCasesBody"></tbody>
+        </table>
+      </div>
+      <div id="behaviorEmpty" class="behavior-empty hidden">لا توجد حالات مطابقة.</div>
+    </section>
+  </main>
+</div>
+
+<div id="behaviorModal" class="behavior-modal hidden">
+  <div class="behavior-modal-card">
+    <div class="behavior-modal-head">
+      <h2 id="behaviorModalTitle">إضافة حالة سلوكية</h2>
+      <button type="button" id="behaviorModalClose">×</button>
+    </div>
+    <div class="behavior-form-grid">
+      <label>الطالب
+        <select id="behaviorStudent"></select>
+      </label>
+      <label>نوع الحالة
+        <select id="behaviorType">
+          <option>إساءة لفظية</option>
+          <option>سلوك عدواني</option>
+          <option>مشاجرة</option>
+          <option>عدم احترام التعليمات</option>
+          <option>عبث بالممتلكات</option>
+          <option>استخدام الجوال</option>
+          <option>هروب من الحصة</option>
+          <option>تأخر متكرر</option>
+          <option>غياب متكرر</option>
+          <option>تنمر</option>
+          <option>أخرى</option>
+        </select>
+      </label>
+      <label>درجة الحالة
+        <select id="behaviorSeverity">
+          <option value="low">منخفضة</option>
+          <option value="medium" selected>متوسطة</option>
+          <option value="high">مرتفعة</option>
+          <option value="critical">حرجة</option>
+        </select>
+      </label>
+      <label>تحويل إلى
+        <select id="behaviorReferralTarget">
+          <option value="">بدون تحويل</option>
+          <option>وكيل شؤون الطلاب</option>
+          <option>الموجه الطلابي</option>
+          <option>مدير المدرسة</option>
+        </select>
+      </label>
+    </div>
+    <label class="behavior-wide-label">وصف الحالة
+      <textarea id="behaviorDescription" rows="4" placeholder="اكتب وصفًا واضحًا للحالة..."></textarea>
+    </label>
+    <label class="behavior-wide-label">الإجراء الأولي
+      <textarea id="behaviorAction" rows="3" placeholder="مثال: تنبيه الطالب، استدعاؤه، أخذ تعهد..."></textarea>
+    </label>
+    <label class="behavior-check"><input id="behaviorGuardianNotified" type="checkbox"> تم إشعار ولي الأمر</label>
+    <div class="behavior-modal-actions">
+      <button type="button" id="behaviorSaveBtn" class="behavior-btn primary">حفظ الحالة</button>
+      <button type="button" id="behaviorCancelBtn" class="behavior-btn ghost">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div id="behaviorDetailsModal" class="behavior-modal hidden">
+  <div class="behavior-modal-card behavior-details-card">
+    <div class="behavior-modal-head">
+      <h2>تفاصيل الحالة</h2>
+      <button type="button" id="behaviorDetailsClose">×</button>
+    </div>
+    <div id="behaviorDetailsContent"></div>
+    <div class="behavior-details-actions">
+      <button type="button" id="behaviorNotifyGuardianBtn" class="behavior-btn ghost">واتساب ولي الأمر</button>
+      <button type="button" id="behaviorPrintBtn" class="behavior-btn ghost">طباعة</button>
+      <select id="behaviorDetailStatus">
+        <option value="new">جديدة</option>
+        <option value="in_progress">قيد المعالجة</option>
+        <option value="referred">محالة</option>
+        <option value="closed">مغلقة</option>
+      </select>
+      <button type="button" id="behaviorStatusSaveBtn" class="behavior-btn primary">حفظ الحالة</button>
+    </div>
+    <div class="behavior-followup-box">
+      <textarea id="behaviorFollowupNote" rows="3" placeholder="أضف متابعة أو إجراء جديد..."></textarea>
+      <button type="button" id="behaviorAddFollowupBtn" class="behavior-btn primary">إضافة متابعة</button>
+    </div>
+    <div id="behaviorUpdatesList" class="behavior-updates"></div>
+  </div>
+</div>
+
+
+<script id="behaviorCasesLogic">
+(function(){
+  let cases=[], currentCase=null;
+  const $b=id=>document.getElementById(id);
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const statusLabel=s=>({new:'جديدة',in_progress:'قيد المعالجة',referred:'محالة',closed:'مغلقة'}[s]||s||'—');
+  const severityLabel=s=>({low:'منخفضة',medium:'متوسطة',high:'مرتفعة',critical:'حرجة'}[s]||s||'—');
+  const fmt=d=>{try{return new Date(d).toLocaleString('ar-SA-u-ca-islamic-umalqura',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return d||'—'}};
+
+  function getLocalStudents(){
+    try{
+      if(typeof getStudents==='function') return getStudents()||[];
+      return JSON.parse(localStorage.getItem('students')||'[]');
+    }catch(e){return []}
+  }
+  function fillStudents(){
+    const rows=getLocalStudents().slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    const sel=$b('behaviorStudent');
+    if(sel) sel.innerHTML='<option value="">اختر الطالب</option>'+rows.map(s=>`<option value="${esc(s.idno)}">${esc(s.name)} — ${esc(s.grade)} / ${esc(s.classroom)}</option>`).join('');
+    const grades=[...new Set(rows.map(x=>String(x.grade||'')).filter(Boolean))];
+    const classes=[...new Set(rows.map(x=>String(x.classroom||'')).filter(Boolean))];
+    const g=$b('behaviorGradeFilter'), c=$b('behaviorClassFilter');
+    if(g) g.innerHTML='<option value="">كل الصفوف</option>'+grades.map(x=>`<option>${esc(x)}</option>`).join('');
+    if(c) c.innerHTML='<option value="">كل الفصول</option>'+classes.map(x=>`<option>${esc(x)}</option>`).join('');
+  }
+  async function loadCases(){
+    try{
+      const d=await cloudApi('list_behavior_cases');
+      cases=Array.isArray(d.rows)?d.rows:[];
+      renderCases();
+    }catch(e){
+      console.error('behavior cases load',e);
+      if(typeof toast==='function') toast('تعذر تحميل الحالات السلوكية');
+    }
+  }
+  function filtered(){
+    const q=String($b('behaviorSearch')?.value||'').trim().toLowerCase();
+    const g=$b('behaviorGradeFilter')?.value||'', c=$b('behaviorClassFilter')?.value||'';
+    const st=$b('behaviorStatusFilter')?.value||'', sv=$b('behaviorSeverityFilter')?.value||'';
+    return cases.filter(x=>{
+      const hay=[x.student_name,x.student_idno,x.case_type,x.description].join(' ').toLowerCase();
+      return (!q||hay.includes(q))&&(!g||x.grade===g)&&(!c||x.classroom===c)&&(!st||x.status===st)&&(!sv||x.severity===sv);
+    });
+  }
+  function renderCases(){
+    const rows=filtered();
+    const body=$b('behaviorCasesBody');
+    if(body) body.innerHTML=rows.map(x=>`<tr>
+      <td>#${x.id}</td>
+      <td><b>${esc(x.student_name)}</b><div style="color:#8a91a8;font-size:11px">${esc(x.student_idno)}</div></td>
+      <td>${esc(x.grade)} / ${esc(x.classroom)}</td>
+      <td>${esc(x.case_type)}</td>
+      <td><span class="behavior-chip ${esc(x.severity)}">${severityLabel(x.severity)}</span></td>
+      <td>${esc(x.reported_by_name||'—')}</td>
+      <td>${fmt(x.created_at)}</td>
+      <td><span class="behavior-status ${esc(x.status)}">${statusLabel(x.status)}</span></td>
+      <td><div class="behavior-row-actions">
+        <button class="behavior-mini" data-behavior-view="${x.id}">عرض</button>
+        <button class="behavior-mini" data-behavior-whatsapp="${x.id}">ولي الأمر</button>
+      </div></td>
+    </tr>`).join('');
+    $b('behaviorEmpty')?.classList.toggle('hidden',rows.length>0);
+    const counts={all:cases.length,new:0,in_progress:0,referred:0,closed:0};
+    cases.forEach(x=>{if(counts[x.status]!==undefined) counts[x.status]++});
+    if($b('behaviorStatAll')) $b('behaviorStatAll').textContent=counts.all;
+    if($b('behaviorStatNew')) $b('behaviorStatNew').textContent=counts.new;
+    if($b('behaviorStatProgress')) $b('behaviorStatProgress').textContent=counts.in_progress;
+    if($b('behaviorStatReferred')) $b('behaviorStatReferred').textContent=counts.referred;
+    if($b('behaviorStatClosed')) $b('behaviorStatClosed').textContent=counts.closed;
+    if($b('behaviorNewBadge')) $b('behaviorNewBadge').textContent=counts.new;
+    body?.querySelectorAll('[data-behavior-view]').forEach(btn=>btn.onclick=()=>openDetails(Number(btn.dataset.behaviorView)));
+    body?.querySelectorAll('[data-behavior-whatsapp]').forEach(btn=>btn.onclick=()=>notifyGuardian(Number(btn.dataset.behaviorWhatsapp)));
+  }
+  function openAdd(){
+    fillStudents();
+    $b('behaviorStudent').value='';
+    $b('behaviorType').selectedIndex=0;
+    $b('behaviorSeverity').value='medium';
+    $b('behaviorReferralTarget').value='';
+    $b('behaviorDescription').value='';
+    $b('behaviorAction').value='';
+    $b('behaviorGuardianNotified').checked=false;
+    $b('behaviorModal').classList.remove('hidden');
+  }
+  function closeAdd(){ $b('behaviorModal')?.classList.add('hidden'); }
+  async function saveCase(){
+    const student_idno=$b('behaviorStudent').value;
+    const case_type=$b('behaviorType').value;
+    const description=$b('behaviorDescription').value.trim();
+    if(!student_idno){alert('اختر الطالب.');return}
+    if(!description){alert('اكتب وصف الحالة.');return}
+    const btn=$b('behaviorSaveBtn'); btn.disabled=true; btn.textContent='جاري الحفظ...';
+    try{
+      await cloudApi('create_behavior_case',{
+        student_idno,case_type,description,severity:$b('behaviorSeverity').value,
+        referral_target:$b('behaviorReferralTarget').value,
+        action_taken:$b('behaviorAction').value.trim(),
+        guardian_notified:$b('behaviorGuardianNotified').checked
+      });
+      closeAdd(); await loadCases();
+      if(typeof toast==='function') toast('✅ تم حفظ الحالة السلوكية');
+    }catch(e){alert('تعذر حفظ الحالة: '+(e?.message||e))}
+    finally{btn.disabled=false;btn.textContent='حفظ الحالة'}
+  }
+  async function openDetails(id){
+    currentCase=cases.find(x=>Number(x.id)===Number(id));
+    if(!currentCase)return;
+    const x=currentCase;
+    $b('behaviorDetailsContent').innerHTML=`
+      <div class="behavior-details-grid">
+        <div class="behavior-detail"><small>الطالب</small><b>${esc(x.student_name)}</b></div>
+        <div class="behavior-detail"><small>السجل المدني</small><b>${esc(x.student_idno)}</b></div>
+        <div class="behavior-detail"><small>الصف / الفصل</small><b>${esc(x.grade)} / ${esc(x.classroom)}</b></div>
+        <div class="behavior-detail"><small>نوع الحالة</small><b>${esc(x.case_type)}</b></div>
+        <div class="behavior-detail"><small>الدرجة</small><b>${severityLabel(x.severity)}</b></div>
+        <div class="behavior-detail"><small>الراصد</small><b>${esc(x.reported_by_name||'—')}</b></div>
+        <div class="behavior-detail"><small>التحويل</small><b>${esc(x.referral_target||'بدون تحويل')}</b></div>
+        <div class="behavior-detail"><small>ولي الأمر</small><b>${x.guardian_notified?'تم الإشعار':'لم يتم الإشعار'}</b></div>
+      </div>
+      <div class="behavior-description"><b>وصف الحالة</b><br>${esc(x.description||'—')}</div>
+      <div class="behavior-description"><b>الإجراء المتخذ</b><br>${esc(x.action_taken||'—')}</div>`;
+    $b('behaviorDetailStatus').value=x.status||'new';
+    $b('behaviorFollowupNote').value='';
+    $b('behaviorDetailsModal').classList.remove('hidden');
+    await loadUpdates(id);
+  }
+  async function loadUpdates(id){
+    try{
+      const d=await cloudApi('list_behavior_case_updates',{case_id:id});
+      const rows=Array.isArray(d.rows)?d.rows:[];
+      $b('behaviorUpdatesList').innerHTML=rows.length?rows.map(u=>`<div class="behavior-update"><b>${esc(u.created_by_name||'')}</b><small>${fmt(u.created_at)}</small><p>${esc(u.note||'')}</p></div>`).join(''):'<div class="behavior-empty">لا توجد متابعات حتى الآن.</div>';
+    }catch(e){$b('behaviorUpdatesList').innerHTML=''}
+  }
+  async function saveStatus(){
+    if(!currentCase)return;
+    try{
+      await cloudApi('update_behavior_case',{id:currentCase.id,status:$b('behaviorDetailStatus').value});
+      await loadCases(); currentCase=cases.find(x=>Number(x.id)===Number(currentCase.id));
+      if(typeof toast==='function') toast('تم تحديث حالة المتابعة');
+    }catch(e){alert('تعذر التحديث: '+(e?.message||e))}
+  }
+  async function addFollowup(){
+    if(!currentCase)return;
+    const note=$b('behaviorFollowupNote').value.trim();
+    if(!note){alert('اكتب المتابعة أولًا.');return}
+    try{
+      await cloudApi('add_behavior_case_update',{case_id:currentCase.id,note,action_type:'followup'});
+      $b('behaviorFollowupNote').value='';
+      await loadUpdates(currentCase.id);
+      if(typeof toast==='function') toast('تمت إضافة المتابعة');
+    }catch(e){alert('تعذر إضافة المتابعة: '+(e?.message||e))}
+  }
+  function notifyGuardian(id){
+    const x=cases.find(r=>Number(r.id)===Number(id)); if(!x)return;
+    let phone=String(x.student_phone||'').replace(/\D/g,'');
+    if(phone.startsWith('05')) phone='966'+phone.slice(1);
+    else if(phone.startsWith('5')) phone='966'+phone;
+    const msg=`السلام عليكم، نفيدكم بأنه تم تسجيل حالة سلوكية للطالب ${x.student_name}. نوع الحالة: ${x.case_type}. نأمل التواصل مع المدرسة للمتابعة.`;
+    if(!phone){alert('لا يوجد رقم جوال مسجل لولي الأمر.');return}
+    window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank');
+  }
+  function printCurrent(){
+    if(!currentCase)return; const x=currentCase;
+    const w=window.open('','_blank','width=900,height=700');
+    w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>الحالة السلوكية #${x.id}</title><style>body{font-family:Tahoma;padding:35px;line-height:2}h1{text-align:center}table{width:100%;border-collapse:collapse}td{border:1px solid #bbb;padding:10px}</style></head><body><h1>تقرير حالة سلوكية</h1><table>
+      <tr><td><b>الطالب</b></td><td>${esc(x.student_name)}</td><td><b>السجل</b></td><td>${esc(x.student_idno)}</td></tr>
+      <tr><td><b>الصف / الفصل</b></td><td>${esc(x.grade)} / ${esc(x.classroom)}</td><td><b>التاريخ</b></td><td>${fmt(x.created_at)}</td></tr>
+      <tr><td><b>نوع الحالة</b></td><td>${esc(x.case_type)}</td><td><b>الراصد</b></td><td>${esc(x.reported_by_name||'')}</td></tr>
+      <tr><td><b>الوصف</b></td><td colspan="3">${esc(x.description||'')}</td></tr>
+      <tr><td><b>الإجراء</b></td><td colspan="3">${esc(x.action_taken||'')}</td></tr>
+    </table></body></html>`);w.document.close();setTimeout(()=>w.print(),250);
+  }
+
+  window.openBehaviorCasesPage=async function(){
+    fillStudents();
+    $b('behaviorCasesPage')?.classList.remove('hidden');
+    $b('behaviorCasesPage')?.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    await loadCases();
+  };
+  window.closeBehaviorCasesPage=function(){
+    $b('behaviorCasesPage')?.classList.add('hidden');
+    $b('behaviorCasesPage')?.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  };
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    $b('headerBehaviorCasesBtn')?.addEventListener('click',window.openBehaviorCasesPage);
+    $b('behaviorBackBtn')?.addEventListener('click',window.closeBehaviorCasesPage);
+    $b('behaviorAddBtn')?.addEventListener('click',openAdd);
+    $b('behaviorRefreshBtn')?.addEventListener('click',loadCases);
+    $b('behaviorModalClose')?.addEventListener('click',closeAdd);
+    $b('behaviorCancelBtn')?.addEventListener('click',closeAdd);
+    $b('behaviorSaveBtn')?.addEventListener('click',saveCase);
+    $b('behaviorDetailsClose')?.addEventListener('click',()=>{$b('behaviorDetailsModal').classList.add('hidden')});
+    $b('behaviorStatusSaveBtn')?.addEventListener('click',saveStatus);
+    $b('behaviorAddFollowupBtn')?.addEventListener('click',addFollowup);
+    $b('behaviorNotifyGuardianBtn')?.addEventListener('click',()=>currentCase&&notifyGuardian(currentCase.id));
+    $b('behaviorPrintBtn')?.addEventListener('click',printCurrent);
+    ['behaviorSearch','behaviorGradeFilter','behaviorClassFilter','behaviorStatusFilter','behaviorSeverityFilter'].forEach(id=>{
+      $b(id)?.addEventListener(id==='behaviorSearch'?'input':'change',renderCases);
+    });
+    document.querySelectorAll('[data-bview]').forEach(btn=>btn.addEventListener('click',()=>{
+      document.querySelectorAll('.behavior-nav[data-bview]').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      const v=btn.dataset.bview;
+      if(v==='cases'||v==='home') return;
+      if(v==='students'){ window.closeBehaviorCasesPage(); try{showAdminView('data')}catch(e){} }
+      else if(v==='referrals'){ window.closeBehaviorCasesPage(); try{document.getElementById('headerDeputyRepliesBtn')?.click()}catch(e){} }
+      else if(v==='reports'){ if(typeof toast==='function') toast('تقارير الحالات السلوكية ستظهر هنا في المرحلة التالية'); }
+    }));
+  });
+})();
+</script>
+
+</body></html>');
     w.document.close();
   }
 
@@ -4450,6 +4840,7 @@ body.activity-leader-open main{
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
+    <button type="button" id="headerBehaviorCasesBtn">الحالات السلوكية 🛡️</button>
     <button type="button" id="headerTeacherClassFollowupBtn">شواهد المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerActivityLeaderBtn">رائد النشاط ⭐</button>
@@ -8053,6 +8444,7 @@ function configureUserDashboard(){
     ['import','استيراد البيانات 📥','import'],
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
+    ['behaviorCases','الحالات السلوكية 🛡️','behaviorCases'],
     ['teacherFollowup','شواهد المعلم داخل الفصل 👨‍🏫','teacherFollowup'],
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
@@ -8069,6 +8461,10 @@ function configureUserDashboard(){
     const action=btn.dataset.userAction;
     document.documentElement.classList.remove('user-session-home');
     document.body.classList.remove('user-permissions-only');
+    if(action==='behaviorCases'){
+      try{ openBehaviorCasesPage(); }catch(e){ console.error(e); }
+      return;
+    }
     if(action==='attendance'){
       // المستخدمون يبدأون دائمًا من تبويب التأخر اليومي.
       attendanceListView='late';
