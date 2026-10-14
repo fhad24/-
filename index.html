@@ -12599,7 +12599,7 @@ function ensureAdminSettings(){
       applySchoolSettings();
 
       // احفظ الشريط أولًا بشكل مستقل حتى لا يتأثر بأي خطأ في حفظ بقية الإعدادات.
-      const tickerSave=await cloudApi('save_ticker',{tickerText},false);
+      const tickerSave=await cloudApi('save_ticker',{tickerText});
       if(!tickerSave?.ok) throw new Error('TICKER_SAVE_FAILED');
 
       // بعد نجاح الشريط، حاول حفظ بقية إعدادات المدرسة.
@@ -12623,7 +12623,7 @@ function ensureAdminSettings(){
       alert('✅ تم حفظ بيانات المدرسة والشريط الإخباري بنجاح');
     }catch(e){
       console.error(e);
-      alert('تعذر حفظ الشعار. تم الاحتفاظ به على هذا الجهاز فقط، وحاول مرة أخرى بعد تحديث الصفحة.');
+      alert('تعذر حفظ بيانات المدرسة في الخادم: '+String(e?.message||e)+'. لم تُفقد التعديلات المحلية.');
     }finally{
       btn.disabled=false;
       btn.textContent=oldText;
