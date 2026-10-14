@@ -40,7 +40,7 @@ code{direction:ltr;display:inline-block}
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
     <div id="selectionDiag" class="card warn hidden"></div><div id="allSelectionsDiag" class="card warn hidden"></div>
-    <div id="backupDiag" class="card warn hidden"></div>
+    <div id="backupDiag" class="card warn hidden"></div><div id="backupLateDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
     <h2>السجلات الموجودة في الجهاز</h2>
@@ -93,8 +93,29 @@ code{direction:ltr;display:inline-block}
       }
     }
   }
+  function collectBackupLateRows(v,source,out,depth=0){
+    if(depth>8||v==null) return;
+    if(typeof v==='string'){
+      const p=safeJson(v);
+      if(p!==null) collectBackupLateRows(p,source+' → JSON',out,depth+1);
+      return;
+    }
+    if(Array.isArray(v)){ for(const x of v) collectBackupLateRows(x,source,out,depth+1); return; }
+    if(typeof v==='object'){
+      if(String(v.status||v.state||'').trim().toLowerCase()==='late'){
+        out.push({
+          name:String(v.name||v.student_name||v.studentName||'').trim(),
+          idno:String(v.idno||v.student_idno||v.civil_id||v.studentCivilId||'').trim(),
+          date:String(v.date||v.gregorianDate||v.attendance_date||'').trim(),
+          time:String(v.time||v.attendance_time||'').trim(),
+          source
+        });
+      }
+      for(const x of Object.values(v)) collectBackupLateRows(x,source,out,depth+1);
+    }
+  }
   function scan(){
-    const out=[], inspected=[];
+    const out=[], inspected=[], backupLateRows=[];
     const selectionKey='attendanceLateSelections:2026-10-12';
     const selectionRaw=localStorage.getItem(selectionKey);
     const selectionParsed=safeJson(selectionRaw||'[]');
@@ -136,9 +157,13 @@ code{direction:ltr;display:inline-block}
         preview:raw.slice(0,220)
       });
       inspected.push(k);
-      if(parsed!==null) deepScan(parsed,k,out,0);
+      if(parsed!==null){
+        deepScan(parsed,k,out,0);
+        collectBackupLateRows(parsed,k,backupLateRows,0);
+      }
     }
     window.__lateBackupInfo=backupInfo;
+    window.__backupLateRows=backupLateRows;
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);
       const raw=localStorage.getItem(key);
@@ -201,6 +226,16 @@ code{direction:ltr;display:inline-block}
         '<div style="font-size:12px;word-break:break-all;margin:4px 0 10px">'+esc(x.preview)+'</div>'
       ).join(''):'لا توجد نسخ أمان من هذا النوع.');
 
+    const backupLateDiag=document.getElementById('backupLateDiag');
+    const backupLateRows=Array.isArray(window.__backupLateRows)?window.__backupLateRows:[];
+    backupLateDiag.classList.remove('hidden');
+    backupLateDiag.className='card '+(backupLateRows.length?'ok':'warn');
+    backupLateDiag.innerHTML='<b>⏰ كل سجلات late داخل نسخ الأمان</b><br>'+
+      'العدد: <b>'+backupLateRows.length+'</b><br>'+
+      (backupLateRows.length?backupLateRows.map((x,i)=>
+        (i+1)+'. '+esc(x.name||'غير معروف')+' — '+esc(x.idno||'—')+' — '+esc(x.date||'بدون تاريخ')+' '+esc(x.time||'')+
+        ' — <code>'+esc(x.source)+'</code>'
+      ).join('<br>'):'لا توجد سجلات late فعلية داخل نسخ الأمان.');
     const allSel=[];
     for(let i=0;i<localStorage.length;i++){
       const k=localStorage.key(i);
