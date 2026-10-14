@@ -4450,7 +4450,7 @@ body.activity-leader-open main{
     <button type="button" id="headerReferralBtn">تحويل طالب لوكيل شؤون الطلاب 📝</button>
     <button type="button" id="headerDeputyRepliesBtn">ردود الوكلاء 📬</button>
     <button type="button" id="headerFollowupBtn">كشوف متابعة الطلاب 📋</button>
-    <button type="button" id="headerBehaviorCasesBtn">الحالات السلوكية 🛡️</button>
+    <button type="button" id="headerBehaviorCasesBtn" onclick="window.openBehaviorCasesPage && window.openBehaviorCasesPage(); return false;">الحالات السلوكية 🛡️</button>
     <button type="button" id="headerTeacherClassFollowupBtn">شواهد المعلم داخل الفصل 📸</button>
     <button type="button" id="headerTeacherClassManagerBtn">متابعة المدير للمعلمين 👨‍🏫</button>
     <button type="button" id="headerActivityLeaderBtn">رائد النشاط ⭐</button>
@@ -8072,7 +8072,7 @@ function configureUserDashboard(){
     document.documentElement.classList.remove('user-session-home');
     document.body.classList.remove('user-permissions-only');
     if(action==='behaviorCases'){
-      try{ openBehaviorCasesPage(); }catch(e){ console.error(e); }
+      try{ if(window.openBehaviorCasesPage) window.openBehaviorCasesPage(); }catch(e){ console.error(e); }
       return;
     }
     if(action==='attendance'){
@@ -23856,8 +23856,14 @@ async function details(id){currentCase=cases.find(x=>+x.id===+id);if(!currentCas
 async function statusSave(){if(!currentCase)return;await cloudApi('update_behavior_case',{id:currentCase.id,status:B('behaviorDetailStatus').value});await load()}
 async function follow(){const n=B('behaviorFollowupNote').value.trim();if(!n)return;await cloudApi('add_behavior_case_update',{case_id:currentCase.id,note:n,action_type:'followup'});B('behaviorFollowupNote').value='';details(currentCase.id)}
 function wa(id){const x=cases.find(r=>+r.id===+id);if(!x)return;let p=String(x.student_phone||'').replace(/\D/g,'');if(p.startsWith('05'))p='966'+p.slice(1);else if(p.startsWith('5'))p='966'+p;if(!p)return alert('لا يوجد رقم جوال');window.open('https://wa.me/'+p+'?text='+encodeURIComponent('السلام عليكم، تم تسجيل حالة سلوكية للطالب '+x.student_name+'، نوع الحالة: '+x.case_type),'_blank')}
-window.openBehaviorCasesPage=async()=>{fill();B('behaviorCasesPage').classList.remove('hidden');document.body.style.overflow='hidden';await load()};window.closeBehaviorCasesPage=()=>{B('behaviorCasesPage').classList.add('hidden');document.body.style.overflow=''};
+window.openBehaviorCasesPage=async()=>{const p=B('behaviorCasesPage');if(!p){alert('تعذر فتح صفحة الحالات السلوكية');return;}p.classList.remove('hidden');p.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';try{fill()}catch(e){console.error('behavior fill',e)}try{await load()}catch(e){console.error('behavior load',e)}};window.closeBehaviorCasesPage=()=>{B('behaviorCasesPage').classList.add('hidden');document.body.style.overflow=''};
 document.addEventListener('DOMContentLoaded',()=>{B('headerBehaviorCasesBtn')?.addEventListener('click',openBehaviorCasesPage);B('behaviorBackBtn')?.addEventListener('click',closeBehaviorCasesPage);B('behaviorAddBtn')?.addEventListener('click',openAdd);B('behaviorRefreshBtn')?.addEventListener('click',load);B('behaviorModalClose')?.addEventListener('click',()=>B('behaviorModal').classList.add('hidden'));B('behaviorCancelBtn')?.addEventListener('click',()=>B('behaviorModal').classList.add('hidden'));B('behaviorSaveBtn')?.addEventListener('click',save);B('behaviorDetailsClose')?.addEventListener('click',()=>B('behaviorDetailsModal').classList.add('hidden'));B('behaviorStatusSaveBtn')?.addEventListener('click',statusSave);B('behaviorAddFollowupBtn')?.addEventListener('click',follow);B('behaviorNotifyGuardianBtn')?.addEventListener('click',()=>currentCase&&wa(currentCase.id));['behaviorSearch','behaviorGradeFilter','behaviorClassFilter','behaviorStatusFilter','behaviorSeverityFilter'].forEach(id=>B(id)?.addEventListener(id==='behaviorSearch'?'input':'change',render))})
+document.addEventListener('click',function behaviorCasesClickFallback(e){
+    const btn=e.target&&e.target.closest?e.target.closest('#headerBehaviorCasesBtn,[data-user-action="behaviorCases"]'):null;
+    if(!btn)return;
+    e.preventDefault();
+    if(window.openBehaviorCasesPage) window.openBehaviorCasesPage();
+  },true);
 })();
 </script>
 </body>
