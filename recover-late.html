@@ -40,7 +40,7 @@ code{direction:ltr;display:inline-block}
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
     <div id="selectionDiag" class="card warn hidden"></div><div id="allSelectionsDiag" class="card warn hidden"></div>
-    <div id="backupDiag" class="card warn hidden"></div><div id="backupLateDiag" class="card warn hidden"></div>
+    <div id="backupDiag" class="card warn hidden"></div><div id="backupLateDiag" class="card warn hidden"></div><div id="rawStorageDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
     <h2>السجلات الموجودة في الجهاز</h2>
@@ -89,7 +89,7 @@ code{direction:ltr;display:inline-block}
     if(typeof v==='object'){
       const r=normRow(v,source); if(r) out.push(r);
       for(const [k,x] of Object.entries(v)){
-        if(x&&typeof x==='object') deepScan(x,source+' → '+k,out,depth+1);
+        deepScan(x,source+' → '+k,out,depth+1);
       }
     }
   }
@@ -164,17 +164,33 @@ code{direction:ltr;display:inline-block}
     }
     window.__lateBackupInfo=backupInfo;
     window.__backupLateRows=backupLateRows;
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i);
-      const raw=localStorage.getItem(key);
-      if(!raw) continue;
-      const likely=/attend|late|حضور|تأخر|backup|recover/i.test(key);
-      const parsed=safeJson(raw);
-      if(parsed!==null && (likely || Array.isArray(parsed))){
-        inspected.push(key);
-        deepScan(parsed,key,out,0);
+    const rawHits=[];
+    function scanStorageArea(store,storeName){
+      for(let i=0;i<store.length;i++){
+        const key=store.key(i);
+        const raw=store.getItem(key);
+        if(raw===null) continue;
+        const source=storeName+':'+key;
+        inspected.push(source);
+        const parsed=safeJson(raw);
+        if(parsed!==null){
+          deepScan(parsed,source,out,0);
+        }else{
+          // even non-JSON text may contain a serialized fragment or direct date/status evidence.
+          if(/2026-10-12|["']?status["']?\s*[:=]\s*["']?late|تأخر/i.test(raw)){
+            rawHits.push({source,chars:raw.length,preview:raw.slice(0,1200)});
+          }
+        }
+        if(/2026-10-12|["']?status["']?\s*[:=]\s*["']?late|attendanceLateSelections/i.test(raw)){
+          if(!rawHits.some(x=>x.source===source)){
+            rawHits.push({source,chars:raw.length,preview:raw.slice(0,1200)});
+          }
+        }
       }
     }
+    scanStorageArea(localStorage,'localStorage');
+    scanStorageArea(sessionStorage,'sessionStorage');
+    window.__rawStorageHits=rawHits;
     const seen=new Set(), uniq=[];
     for(const r of out){
       const k=[r.idno,r.name,r.date,r.time,r.period,r.teacherUsername,r.teacher].join('|');
@@ -255,6 +271,16 @@ code{direction:ltr;display:inline-block}
         return '<div style="margin-top:8px"><code>'+esc(x.key)+'</code> — العدد: <b>'+x.ids.length+'</b>'+
           (names.length?'<br>'+names.map((n,i)=>(i+1)+'. '+esc(n)).join('، '):'')+'</div>';
       }).join(''):'لا توجد مفاتيح تحديدات تأخر.');
+    const rawDiag=document.getElementById('rawStorageDiag');
+    const rawHits=Array.isArray(window.__rawStorageHits)?window.__rawStorageHits:[];
+    rawDiag.classList.remove('hidden');
+    rawDiag.className='card '+(rawHits.length?'ok':'warn');
+    rawDiag.innerHTML='<b>🧪 فحص شامل لكل تخزين المتصفح</b><br>'+
+      'المفاتيح التي تحتوي أثرًا مباشرًا لـ 12 أكتوبر أو late: <b>'+rawHits.length+'</b><br>'+
+      (rawHits.length?rawHits.map((x,i)=>
+        '<div style="margin-top:10px"><b>'+(i+1)+'. '+esc(x.source)+'</b> — '+x.chars+' حرف'+
+        '<div style="font-size:12px;word-break:break-all;margin-top:4px">'+esc(x.preview)+'</div></div>'
+      ).join(''):'لم يظهر أثر خام إضافي خارج السجلات التي استخرجناها.');
     s.className='card '+(rows.length?'ok':'warn');
     s.innerHTML=rows.length
       ? '<b>✅ وجدت '+rows.length+' سجل تأخر محفوظًا في هذا الجهاز.</b><br>لا تمسح بيانات المتصفح قبل حفظ النتائج.'
