@@ -39,7 +39,7 @@ code{direction:ltr;display:inline-block}
     </div>
     <div id="status" class="card warn">اضغط زر الفحص.</div>
     <div id="stats" class="stats hidden"></div>
-    <div id="selectionDiag" class="card warn hidden"></div><div id="allSelectionsDiag" class="card warn hidden"></div>
+    <div id="selectionDiag" class="card warn hidden"></div><div id="preCloudDiag" class="card warn hidden"></div><div id="allSelectionsDiag" class="card warn hidden"></div>
     <div id="backupDiag" class="card warn hidden"></div><div id="backupLateDiag" class="card warn hidden"></div><div id="rawStorageDiag" class="card warn hidden"></div>
   </div>
   <div id="resultCard" class="card hidden">
@@ -228,6 +228,20 @@ code{direction:ltr;display:inline-block}
       'أسماء مطابقة في قائمة الطلاب: <b>'+matched.filter(x=>x.st).length+'</b><br>'+
       '<div style="margin-top:8px;word-break:break-all">القيمة الخام: <code>'+esc(selectionRaw===null?'(غير موجود)':selectionRaw)+'</code></div>'+
       (selectionIds.length?'<div style="margin-top:8px"><b>المحتويات:</b><br>'+matched.map((x,i)=>(i+1)+'. '+esc(x.st?.name||'غير معروف')+' — '+esc(x.id)).join('<br>')+'</div>':'');
+    const preCloudKey='attendanceLogPreCloudRecovery_20261013';
+    const preCloudRaw=localStorage.getItem(preCloudKey);
+    const preCloudParsed=safeJson(preCloudRaw||'');
+    const preCloudRows=Array.isArray(preCloudParsed)?preCloudParsed:[];
+    const preCloudLate12=preCloudRows.filter(x=>String(x?.status||'').toLowerCase()==='late' && String(x?.date||'')==='2026-10-12');
+    const preDiag=document.getElementById('preCloudDiag');
+    preDiag.classList.remove('hidden');
+    preDiag.className='card '+(preCloudRaw!==null?'ok':'warn');
+    preDiag.innerHTML='<b>🧬 فحص نسخة ما قبل المزامنة 13 أكتوبر</b><br>'+
+      'المفتاح موجود: <b>'+(preCloudRaw!==null?'نعم':'لا')+'</b><br>'+
+      'حجم القيمة: <b>'+(preCloudRaw?preCloudRaw.length:0)+'</b> حرف<br>'+
+      'عدد الصفوف داخلها: <b>'+preCloudRows.length+'</b><br>'+
+      'تأخرات 12 أكتوبر داخلها: <b>'+preCloudLate12.length+'</b><br>'+
+      (preCloudLate12.length?'<div style="margin-top:8px">'+preCloudLate12.map((x,i)=>(i+1)+'. '+esc(x.name||x.student_name||'')+' — '+esc(x.idno||'')+' — '+esc(x.time||'')).join('<br>')+'</div>':'');
     const backupDiag=document.getElementById('backupDiag');
     const infos=Array.isArray(window.__lateBackupInfo)?window.__lateBackupInfo:[];
     backupDiag.classList.remove('hidden');
