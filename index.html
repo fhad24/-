@@ -5064,6 +5064,7 @@ body.activity-leader-open main{
           <select id="weeklyAttWeek">
             <option value="all">كل الأسابيع</option>
             <option value="monthly">شهري</option>
+            <option value="custom">من تاريخ إلى تاريخ</option>
             <option value="1">الأسبوع 1</option><option value="2">الأسبوع 2</option><option value="3">الأسبوع 3</option><option value="4">الأسبوع 4</option><option value="5">الأسبوع 5</option><option value="6">الأسبوع 6</option><option value="7">الأسبوع 7</option><option value="8">الأسبوع 8</option><option value="9">الأسبوع 9</option><option value="10">الأسبوع 10</option><option value="11">الأسبوع 11</option><option value="12">الأسبوع 12</option><option value="13">الأسبوع 13</option><option value="14">الأسبوع 14</option><option value="15">الأسبوع 15</option><option value="16">الأسبوع 16</option><option value="17">الأسبوع 17</option><option value="18">الأسبوع 18</option><option value="19">الأسبوع 19</option><option value="20">الأسبوع 20</option>
           </select>
         </div>
@@ -5080,6 +5081,7 @@ body.activity-leader-open main{
         <div id="weeklyAttDateWrap">
           <label id="weeklyAttDateLabel">التاريخ</label>
           <select id="weeklyAttHijriMonthSelect" class="hidden" style="width:100%;height:46px;border:1px solid #cbdad6;border-radius:12px;padding:8px 10px;font-family:inherit;background:#fff"></select>
+          <div id="weeklyAttCustomDates" class="hidden" style="display:none;gap:8px;flex-wrap:wrap"><label>من تاريخ <input type="date" id="weeklyAttCustomFrom"></label><label>إلى تاريخ <input type="date" id="weeklyAttCustomTo"></label></div>
           <div class="weekly-hijri-picker" id="weeklyAttHijriPicker">
             <button type="button" id="weeklyAttHijriOpen" class="weekly-hijri-field" aria-haspopup="dialog" aria-expanded="false">
               <span id="weeklyAttHijriDisplay">اختر التاريخ الهجري</span>
@@ -14340,25 +14342,19 @@ function invalidateWeeklyAttBulkStats(){
 }
 function weeklyAttReportMode(){
   const v=String($('weeklyAttWeek')?.value||'1');
-  return v==='monthly'?'monthly':v==='all'?'all':'weekly';
+  return v==='monthly'?'monthly':v==='all'?'all':v==='custom'?'custom':'weekly';
 }
 function populateWeeklyAttReportMonths(){
-  const el=$('weeklyAttHijriMonthSelect'); if(!el)return;
-  const current=String(el.value||'');
-  const today=weeklyAttDateKey(new Date());
-  const monthMap=new Map();
-  Object.keys(WEEKLY_FIXED_HIJRI_WEEKS).forEach(week=>{
-    weeklyAttFixedWeekGregorianDates(week).forEach(key=>{
-      if(!key || key>today)return;
-      const d=new Date(key+'T12:00:00');
-      const mk=weeklyAttHijriMonthKey(d);
-      if(!monthMap.has(mk)) monthMap.set(mk,d);
-    });
-  });
-  const rows=[...monthMap.entries()].map(([key,date])=>({key,date})).sort((a,b)=>a.date-b.date);
-  el.innerHTML=rows.map(x=>'<option value="'+escapeFollowupHtml(x.key)+'">'+escapeFollowupHtml(weeklyAttHijriMonthLabel(x.key))+'</option>').join('');
-  if(rows.some(x=>x.key===current)) el.value=current;
-  else if(rows.length) el.value=rows[rows.length-1].key;
+ const el=$('weeklyAttHijriMonthSelect');if(!el)return;
+ const current=el.value, months=new Map();
+ for(const key of weeklyAttActiveDates()){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key))continue;
+  const date=new Date(key+'T12:00:00'), month=weeklyAttHijriMonthKey(date);
+  if(!months.has(month))months.set(month,date);
+ }
+ const rows=[...months].map(([key,date])=>({key,date})).sort((a,b)=>b.date-a.date);
+ el.innerHTML=rows.length?rows.map(x=>'<option value="'+escapeFollowupHtml(x.key)+'">'+escapeFollowupHtml(weeklyAttHijriLabelFormatter.format(x.date))+'</option>').join(''):'<option value="">لا توجد شهور بها تحضير</option>';
+ if(rows.some(x=>x.key===current))el.value=current;
 }
 function weeklyAttReportScopeDates(){
   const mode=weeklyAttReportMode();
@@ -14368,6 +14364,11 @@ function weeklyAttReportScopeDates(){
   }
   const all=weeklyAttActiveDates();
   if(mode==='all') return all;
+  if(mode==='custom'){
+   const from=$('weeklyAttCustomFrom')?.value||'',to=$('weeklyAttCustomTo')?.value||'';
+   if(from&&to&&from>to)return [];
+   return all.filter(d=>(!from||d>=from)&&(!to||d<=to));
+  }
   const month=String($('weeklyAttHijriMonthSelect')?.value||'');
   return all.filter(key=>weeklyAttHijriMonthKey(new Date(key+'T12:00:00'))===month);
 }
@@ -14377,6 +14378,8 @@ function updateWeeklyAttRangeControls(){
   const picker=$('weeklyAttHijriPicker');
   const monthSelect=$('weeklyAttHijriMonthSelect');
   const dateLabel=$('weeklyAttDateLabel');
+  const customDates=$('weeklyAttCustomDates');
+  if(customDates){customDates.classList.toggle('hidden',mode!=='custom');customDates.style.display=mode==='custom'?'flex':'none';}
   if(mode==='weekly'){
     if(dayWrap) dayWrap.classList.remove('hidden');
     if(picker) picker.classList.remove('hidden');
@@ -16025,6 +16028,7 @@ if($('weeklyAttWeek')) $('weeklyAttWeek').onchange=()=>{
     }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 };
+['weeklyAttCustomFrom','weeklyAttCustomTo'].forEach(id=>{if($(id))$(id).onchange=()=>{const from=$('weeklyAttCustomFrom')?.value||'',to=$('weeklyAttCustomTo')?.value||'';if(from&&to&&from>to){alert('تاريخ البداية يجب أن يسبق تاريخ النهاية');return;}invalidateWeeklyAttBulkStats();renderWeeklyAttendanceReport();};});
 if($('weeklyAttHijriMonthSelect')) $('weeklyAttHijriMonthSelect').onchange=()=>{
   invalidateWeeklyAttBulkStats();
   try{weeklyAttCtxCache=null}catch(e){}
