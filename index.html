@@ -24225,6 +24225,60 @@ body button:focus-visible{outline:3px solid #5cb8a1!important;outline-offset:3px
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installMenus,{once:true});else installMenus();
 })();
 </script>
+<style id="shurahbil-reference-ui-20261020">
+body.admin-mode #loggedInHeaderNav.sh-reference-nav,html.user-session-home body.admin-mode #loggedInHeaderNav.sh-reference-nav{display:flex!important;visibility:visible!important;flex-wrap:wrap!important;gap:7px!important;background:#006453!important;padding:8px 12px!important;direction:rtl;align-items:center!important;justify-content:center!important;position:relative;z-index:11000}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-group{position:relative;flex:1 1 auto;min-width:98px}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-group>summary{list-style:none;cursor:pointer;display:flex;gap:7px;align-items:center;justify-content:space-between;background:#005747;color:#fff;border-radius:7px;padding:10px 11px;font-weight:800;font-size:12px;min-height:39px;white-space:nowrap}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-group>summary::-webkit-details-marker{display:none}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-group>summary:hover,#loggedInHeaderNav.sh-reference-nav .sh-reference-group[open]>summary{background:#087866}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-items{position:absolute;top:calc(100% + 4px);right:0;min-width:205px;max-width:min(90vw,280px);padding:7px;background:white;border:1px solid #dbeae8;box-shadow:0 12px 30px #123c3930;border-radius:9px;z-index:15000;display:grid;gap:4px}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-items>button{display:block!important;width:100%!important;text-align:right!important;background:white!important;color:#174a44!important;border:0!important;border-radius:7px!important;padding:10px 9px!important;font-size:12px!important;min-height:38px!important;white-space:normal!important}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-items>button:hover{background:#e9f6f3!important}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-items>button[style*="display:none"],#loggedInHeaderNav.sh-reference-nav .sh-reference-items>button[style*="display: none"],#loggedInHeaderNav.sh-reference-nav .sh-reference-items>button.hidden{display:none!important}
+#loggedInHeaderNav.sh-reference-nav>#headerAdminHomeBtn{order:-1!important;display:inline-flex!important;background:#fff!important;color:#07604e!important;border-radius:7px!important;font-size:12px!important;padding:10px!important}
+#loggedInHeaderNav.sh-reference-nav .sh-reference-group.sh-tools{margin-inline-start:auto}
+#dashboard .admin-toolbar.sh-reference-empty{display:none!important}
+#dashboard .admin-top-tabs.sh-reference-source{display:none!important}
+@media(max-width:760px){#loggedInHeaderNav.sh-reference-nav{flex-direction:row!important;flex-wrap:wrap!important}#loggedInHeaderNav.sh-reference-nav .sh-reference-group{min-width:calc(50% - 9px);flex:1 1 calc(50% - 9px)}#loggedInHeaderNav.sh-reference-nav .sh-reference-items{max-width:84vw}}
+</style>
+<script id="shurahbil-reference-ui-20261020-js">
+(function(){
+function setup(){
+const header=document.getElementById('loggedInHeaderNav'),bar=document.querySelector('#dashboard .admin-top-tabs');
+if(!header||!bar||header.dataset.referenceUi==='1')return;
+const config=[
+['الطلاب','👥',['adminAddStudentTab','adminDataReviewBtn','headerFollowupBtn','headerBehaviorCasesBtn']],
+['التحضير والحضور','✅',['adminAttendanceTab']],
+['التقارير','📊',['adminWeeklyAttendanceTab']],
+['شؤون الطلاب','📝',['adminReferralTab','headerReferralBtn','headerDeputyRepliesBtn']],
+['المعلم والمتابعة','📷',['headerTeacherClassFollowupBtn','headerTeacherClassManagerBtn']],
+['النشاط','⭐',['adminActivityLeaderTab','headerActivityLeaderBtn']],
+['أدوات النظام','⚙️',['headerSettingsBtn','adminBackupZipBtn','adminProgramUpdateBtn','adminProgramRollbackBtn','headerLogoutBtn']]
+];
+const groups=[],seen=new Set();
+for(const [label,emoji,ids] of config){
+const items=ids.map(id=>document.getElementById(id)).filter(btn=>btn&&!seen.has(btn.id));
+if(!items.length)continue;
+const group=document.createElement('details');group.className='sh-reference-group'+(label==='أدوات النظام'?' sh-tools':'');
+const summary=document.createElement('summary');summary.textContent=emoji+' '+label+' ⌄';
+const list=document.createElement('div');list.className='sh-reference-items';
+items.forEach(btn=>{seen.add(btn.id);list.appendChild(btn)});
+group.append(summary,list);groups.push(group);
+list.addEventListener('click',e=>{if(e.target.closest('button'))group.open=false});
+group.addEventListener('toggle',()=>{if(group.open)groups.forEach(x=>{if(x!==group)x.open=false})});
+}
+if(groups.length<6)return;
+const home=document.getElementById('headerAdminHomeBtn');if(home)header.prepend(home);
+groups.forEach(group=>header.appendChild(group));
+const left=[...bar.children].filter(el=>el.tagName==='BUTTON'&&!seen.has(el.id)&&getComputedStyle(el).display!=='none');
+if(left.length){const other=groups.find(g=>g.querySelector('summary')?.textContent.includes('أدوات النظام'));left.forEach(el=>other?.querySelector('.sh-reference-items')?.appendChild(el))}
+header.classList.add('sh-reference-nav');bar.classList.add('sh-reference-source');bar.closest('.admin-toolbar')?.classList.add('sh-reference-empty');header.dataset.referenceUi='1';
+document.addEventListener('click',e=>{if(!header.contains(e.target))groups.forEach(g=>g.open=false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')groups.forEach(g=>g.open=false)});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
