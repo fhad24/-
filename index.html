@@ -23653,12 +23653,6 @@ setTimeout(refreshStudentDataReviewCount,900);
     if(root?.matches?.('select')) addOptions(root);
     root?.querySelectorAll?.('select').forEach(addOptions);
   }
-  window.applySchoolScheduleSeason=function(value){
-    activeSeason=value==='winter'?'winter':'summer';
-    document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(renderSelect);
-    document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
-  };
-  activeSeason=readSeason();
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
   else apply();
   new MutationObserver(muts=>{
@@ -23794,6 +23788,12 @@ setTimeout(refreshStudentDataReviewCount,900);
     document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
     document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(autoSelectCurrentPeriod);
   }
+  window.applySchoolScheduleSeason=function(value){
+    activeSeason=value==='winter'?'winter':'summer';
+    document.querySelectorAll('select[data-seasonal-schedule="1"]').forEach(renderSelect);
+    document.querySelectorAll('.seasonal-period-now').forEach(updateBadge);
+  };
+  activeSeason=readSeason();
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>apply(),{once:true});
   else apply();
   new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1)apply(n)})))
