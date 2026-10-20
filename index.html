@@ -15861,19 +15861,21 @@ function openWeeklyAttStudentDetailedReport(){
     setTimeout(()=>{w.focus();w.print()},250);
   };
 }
+const SHURAHBIL_UNIFIED_REPORT_CSS="/* Unified Shurahbil report theme (print/PDF). */\n:root{--report-green:#0b574b;--report-soft:#eaf2ef}\nbody{color:#18332f;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}\nh1,h2,.weekly-att-head{color:var(--report-green)}\n.class-sheet>h1,.class-sheet>h2{background:var(--report-green)!important;color:#fff!important;padding:13px 16px;border-radius:10px}\n.school{color:var(--report-green)}\n.meta,.summary{background:var(--report-soft)!important;border-radius:10px;padding:10px!important}\n.weekly-att-sheet{background:#fff;padding:14px!important}\n.weekly-att-head{background:var(--report-green)!important;color:#fff!important;border-radius:10px;padding:14px!important;margin-bottom:12px}\n.weekly-att-head *{color:#fff!important}\n.weekly-att-table,table{width:100%;border-collapse:collapse}\n.weekly-att-table th,table th{background:var(--report-green)!important;color:#fff!important;padding:8px 6px!important;font-weight:900}\n.weekly-att-table td,table td{padding:7px 6px!important;border-color:#d6e4df!important}\n.weekly-att-table tbody tr:nth-child(odd),table tbody tr:nth-child(odd){background:#edf5f1!important}\n.weekly-att-table tbody tr,.class-sheet tbody tr{break-inside:avoid;page-break-inside:avoid}\n.weekly-att-footer{color:var(--report-green)}\n@media print{thead{display:table-header-group}tr{break-inside:avoid}body{background:#fff!important}}\n";
 function printWeeklyAttendanceReport(){
   const sheet=$('weeklyAttSheet'); if(!sheet)return;
   const w=window.open('','_blank','width=1200,height=800');
   if(!w){alert('تعذر فتح نافذة الطباعة.');return}
   w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
     @page{size:A4 landscape;margin:8mm}body{font-family:Tahoma,Arial,sans-serif;margin:0}.weekly-att-sheet{padding:0}.weekly-att-head{text-align:center;line-height:1.7}.weekly-att-head .meta{display:flex;justify-content:space-between;font-size:11px;font-weight:800}.weekly-att-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}.weekly-att-table th,.weekly-att-table td{border:1px solid #111;padding:4px;text-align:center}.student-name{text-align:right!important;font-weight:800}.status-mark{font-size:16px;font-weight:900}.absent-mark{color:#b42318}.present-mark{color:#087f5b}.weekly-att-footer{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;font-weight:800}.selected-day{background:#fff8d8}
-  </style></head><body>${sheet.outerHTML}</body></html>`);
+  ${SHURAHBIL_UNIFIED_REPORT_CSS}</style></head><body>${sheet.outerHTML}</body></html>`);
   w.document.close();setTimeout(()=>{w.focus();w.print()},300);
 }
 async function exportWeeklyAttendancePdf(){
   if(!window.html2pdf){alert('تعذر تشغيل أداة PDF.');return}
   const sheet=$('weeklyAttSheet'); if(!sheet)return;
   const clone=sheet.cloneNode(true);
+  const theme=document.createElement('style');theme.textContent=SHURAHBIL_UNIFIED_REPORT_CSS;clone.prepend(theme);
   const stage=document.createElement('div');
   stage.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;padding:12px;overflow:auto';
   stage.appendChild(clone);document.body.appendChild(stage);
@@ -18960,7 +18962,7 @@ async function printPresentReport(){
     body{margin:0;font-family:Tahoma,Arial,sans-serif}
     table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:6px;text-align:center}
     th{background:#eef5f3}
-  </style></head><body>${buildPresentReportHtml()}</body></html>`);
+  ${SHURAHBIL_UNIFIED_REPORT_CSS}</style></head><body>${buildPresentReportHtml()}</body></html>`);
   doc.close();
   setTimeout(()=>{frame.contentWindow.focus();frame.contentWindow.print();setTimeout(()=>frame.remove(),3000)},300);
 }
@@ -19091,6 +19093,8 @@ async function exportPresentReportPdf(){
   td.nm{text-align:right;font-weight:700}
   td.abs{font-weight:900}
   td.pre{font-weight:800}
+
+  ${SHURAHBIL_UNIFIED_REPORT_CSS}
 </style>
 </head>
 <body>${reportSections}</body>
