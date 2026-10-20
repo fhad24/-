@@ -24225,57 +24225,6 @@ body button:focus-visible{outline:3px solid #5cb8a1!important;outline-offset:3px
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installMenus,{once:true});else installMenus();
 })();
 </script>
-<style id="shurahbil-unified-header-nav-css">
-#loggedInHeaderNav.shurahbil-integrated-header{display:flex!important;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:12px;background:#0b584d!important}
-#loggedInHeaderNav .admin-top-tabs.shurahbil-menu-bar{display:contents!important}
-#loggedInHeaderNav .shurahbil-menu-group{position:relative!important}
-#loggedInHeaderNav .shurahbil-menu-group>summary{white-space:nowrap}
-#loggedInHeaderNav .shurahbil-menu-items{z-index:100000!important}
-#loggedInHeaderNav .admin-home-btn{background:#fff!important;color:#07584a!important;border-radius:999px!important}
-#dashboard .admin-toolbar:empty{display:none!important}
-#dashboard .admin-toolbar.shurahbil-empty-toolbar{display:none!important}
-@media(max-width:720px){#loggedInHeaderNav.shurahbil-integrated-header{justify-content:stretch!important}}
-</style>
-<script id="shurahbil-unify-header-menus">
-(function(){
- function integrate(){
-  const header=document.getElementById('loggedInHeaderNav');
-  const bar=document.querySelector('#dashboard .admin-top-tabs.shurahbil-menu-bar');
-  if(!header||!bar||header.dataset.integratedMenus==='1')return;
-  const groupByLabel=label=>[...bar.querySelectorAll('.shurahbil-menu-group')].find(x=>x.querySelector('summary')?.textContent.includes(label));
-  const map=[
-   ['الطلاب',['headerFollowupBtn','headerBehaviorCasesBtn']],
-   ['شؤون الطلاب',['headerDeputyRepliesBtn']],
-   ['النشاط',['headerActivityLeaderBtn']],
-   ['أدوات النظام',['headerSettingsBtn']],
-  ];
-  const followGroup=document.createElement('details');followGroup.className='shurahbil-menu-group';
-  const followTitle=document.createElement('summary');followTitle.textContent='📸 المعلم والمتابعة';
-  const followMenu=document.createElement('div');followMenu.className='shurahbil-menu-items';
-  ['headerTeacherClassFollowupBtn','headerTeacherClassManagerBtn'].forEach(id=>{const btn=document.getElementById(id);if(btn)followMenu.appendChild(btn)});
-  followGroup.append(followTitle,followMenu);
-  map.forEach(([name,ids])=>{const menu=groupByLabel(name)?.querySelector('.shurahbil-menu-items');if(!menu)return;ids.forEach(id=>{const btn=document.getElementById(id);if(btn)menu.appendChild(btn)})});
-  const home=document.getElementById('headerAdminHomeBtn');
-  const logout=document.getElementById('headerLogoutBtn');
-  if(home)header.prepend(home);
-  header.appendChild(bar);
-  const tools=groupByLabel('أدوات النظام');
-  if(tools&&logout)tools.querySelector('.shurahbil-menu-items')?.appendChild(logout);
-  if(followMenu.children.length)bar.insertBefore(followGroup,tools||null);
-  // Move duplicate standalone header shortcuts into the existing drop-downs.
-  const leftover=document.getElementById('headerReferralBtn');
-  if(leftover)groupByLabel('شؤون الطلاب')?.querySelector('.shurahbil-menu-items')?.appendChild(leftover);
-  header.classList.add('shurahbil-integrated-header');
-  const oldToolbar=document.querySelector('#dashboard .admin-toolbar');
-  if(oldToolbar)oldToolbar.classList.add('shurahbil-empty-toolbar');
-  header.dataset.integratedMenus='1';
-  const groups=[...header.querySelectorAll('.shurahbil-menu-group')];
-  groups.forEach(g=>{g.addEventListener('toggle',()=>{if(g.open)groups.forEach(other=>{if(other!==g)other.open=false})});g.querySelector('.shurahbil-menu-items')?.addEventListener('click',e=>{if(e.target.closest('button'))g.open=false})});
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(integrate,0),{once:true});
- else setTimeout(integrate,0);
-})();
-</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
