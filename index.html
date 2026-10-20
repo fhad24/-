@@ -24145,6 +24145,34 @@ document.addEventListener('click',function behaviorCasesClickFallback(e){
   window.showWeeklyLateReportNow=runLateReportButton;
 })();
 </script>
+<style id="shurahbil-global-buttons-final">
+/* Consistent pill appearance: every normal action/button/tab on the page. */
+body button:not(.weekly-hijri-nav button):not(.weekly-hijri-days button):not(.weekly-hijri-weekdays button):not(.weekly-hijri-footer button),
+body input[type="button"],body input[type="submit"],
+body .btn,body [role="tab"]{
+  border-radius:999px!important;min-height:42px!important;
+  font-family:inherit!important;font-weight:800!important;
+  padding:9px 18px!important;transition:background-color .15s,color .15s,box-shadow .15s!important;
+}
+body nav,body #weeklyAttTabs,body [role="tablist"]{
+ background:#0c584c!important;display:flex!important;gap:8px!important;flex-wrap:wrap!important;
+ align-items:center!important;border-radius:18px!important;padding:10px!important
+}
+body nav button,body #weeklyAttTabs button,body [role="tablist"] button{
+ border-radius:999px!important;background:transparent!important;color:#fff!important;border:1px solid transparent!important;
+}
+body nav button.active,body #weeklyAttTabs button.btn-primary,body #weeklyAttTabs button.active,
+body [role="tablist"] button.active,body [role="tablist"] button[aria-selected="true"]{
+ background:#fff!important;color:#0c584c!important;border-color:#fff!important;
+}
+body .btn-primary,body button[type="submit"]:not(nav button),body .weekly-att-actions .btn-primary{
+ background:#0f7665!important;color:white!important;border:1px solid #0f7665!important;
+}
+body .btn-outline,body .weekly-att-actions .btn-outline{background:white!important;color:#0c584c!important;border:1px solid #9bbdb4!important}
+body button:focus-visible{outline:3px solid #5cb8a1!important;outline-offset:3px!important}
+@media(max-width:600px){body button,body .btn{font-size:13px!important;padding:8px 12px!important}}
+@media print{body nav,body #weeklyAttTabs{display:none!important}}
+</style>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
