@@ -24287,29 +24287,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 function install(){
  const header=document.getElementById('loggedInHeaderNav');
- if(!header||header.dataset.studentToolsAdded==='1')return;
+ if(!header||header.dataset.studentToolsAdded==='2')return;
  const studentMenu=[...header.querySelectorAll('.sh-reference-group')].find(g=>g.querySelector('summary')?.textContent.includes('الطلاب'))?.querySelector('.sh-reference-items');
  if(!studentMenu)return;
- const buttons=[
-  ['📥 استيراد الصفوف والفصول / قوائم Word','importMadrasatiBtn'],
-  ['📄 استيراد قائمة TXT وربط الصفوف والفصول','importStudentRosterTxtBtn'],
-  ['📤 تصدير قاعدة الطلاب للتعديل','exportStudentEditDatabaseBtn'],
-  ['📄 تصدير قالب فارغ للتعديل','exportEmptyStudentTemplateBtn'],
-  ['📷 استيراد صور الطلاب من Excel','importStudentPhotosBtn'],
-  ['🪪 الباركود (إضافة / عرض الأسماء)',null],
-  ['📶 متابعة دخول منصة مدرستي',null]
- ];
- buttons.forEach(([label,id])=>{
-  const source=id?document.getElementById(id):null;
-  if(id&&!source)return;
-  const btn=document.createElement('button');btn.type='button';
-  btn.className='sh-student-tool-link';
-  btn.textContent=label;
-  if(source){btn.addEventListener('click',()=>{if(!source.disabled)source.click()});}
-  else {btn.disabled=true;btn.title='الوظيفة غير مفعّلة في النسخة الحالية';}
+ const ids=['importMadrasatiBtn','importStudentRosterTxtBtn','exportStudentEditDatabaseBtn','exportEmptyStudentTemplateBtn','importStudentPhotosBtn'];
+ ids.forEach(id=>{
+  const btn=document.getElementById(id);
+  if(!btn)return;
+  btn.classList.add('sh-student-tool-link');
   studentMenu.appendChild(btn);
  });
- header.dataset.studentToolsAdded='1';
+ const labels=['الباركود (إضافة / عرض الأسماء)','متابعة دخول منصة مدرستي'];
+ labels.forEach(label=>{
+  const old=[...document.querySelectorAll('#dashboard .admin-actions-grid button')].find(el=>el.textContent.includes(label));
+  if(old){old.classList.add('sh-student-tool-link');studentMenu.appendChild(old)}
+ });
+ header.dataset.studentToolsAdded='2';
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
