@@ -24173,6 +24173,58 @@ body button:focus-visible{outline:3px solid #5cb8a1!important;outline-offset:3px
 @media(max-width:600px){body button,body .btn{font-size:13px!important;padding:8px 12px!important}}
 @media print{body nav,body #weeklyAttTabs{display:none!important}}
 </style>
+<style id="shurahbil-dropdown-main-menu-css">
+/* Navigation-only grouping: original buttons keep IDs, handlers and permissions. */
+.admin-toolbar:has(.shurahbil-menu-bar){background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.admin-top-tabs.shurahbil-menu-bar{display:flex!important;direction:rtl;flex-wrap:wrap!important;gap:9px!important;background:#09584d!important;border-radius:18px!important;padding:12px 14px!important;align-items:center!important;justify-content:flex-start!important}
+.shurahbil-menu-group{position:relative;display:block;min-width:125px}
+.shurahbil-menu-group>summary{list-style:none;cursor:pointer;user-select:none;color:white;padding:12px 17px;border-radius:999px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:48px}
+.shurahbil-menu-group>summary::-webkit-details-marker{display:none}
+.shurahbil-menu-group[open]>summary,.shurahbil-menu-group>summary:hover,.shurahbil-menu-group>summary:focus-visible{background:#fff!important;color:#075548!important}
+.shurahbil-menu-group>summary:after{content:'⌄';font-size:17px}
+.shurahbil-menu-items{position:absolute;right:0;top:calc(100% + 6px);width:max-content;min-width:255px;max-width:min(90vw,380px);max-height:65vh;overflow-y:auto;background:white;border:1px solid #d4e6df;box-shadow:0 14px 34px #0c423b30;border-radius:16px;padding:8px;z-index:9999;display:grid;gap:5px}
+.shurahbil-menu-items>button{display:block!important;visibility:visible!important;width:100%!important;white-space:normal!important;text-align:right!important;background:transparent!important;color:#103f37!important;border:0!important;border-radius:10px!important;font-size:14px!important;padding:12px!important;min-height:44px!important;box-shadow:none!important}
+.shurahbil-menu-items>button:hover,.shurahbil-menu-items>button:focus-visible{background:#e8f6f0!important;color:#055d4a!important}
+.shurahbil-menu-items>button[style*="display: none"],.shurahbil-menu-items>button.hidden{display:none!important}
+@media(max-width:700px){.shurahbil-menu-group{min-width:auto;flex:1 1 115px}.shurahbil-menu-group>summary{font-size:13px;padding:9px 11px;min-height:40px}.shurahbil-menu-items{right:auto;left:auto;inset-inline-start:0;max-width:90vw}}
+</style>
+<script id="shurahbil-dropdown-main-menu-js">
+(function(){
+  function installMenus(){
+    const bar=document.querySelector('#dashboard .admin-top-tabs');
+    if(!bar||bar.dataset.shurahbilMenusInstalled==='1')return;
+    const config=[
+      ['الطلاب','👥',['adminAddStudentTab','adminDataReviewBtn']],
+      ['التحضير والحضور','✅',['adminAttendanceTab']],
+      ['التقارير','📊',['adminWeeklyAttendanceTab']],
+      ['شؤون الطلاب','📝',['adminReferralTab']],
+      ['النشاط','⭐',['adminActivityLeaderTab']],
+      ['أدوات النظام','⚙️',['adminBackupZipBtn','adminProgramUpdateBtn','adminProgramRollbackBtn']]
+    ];
+    const groups=[];
+    config.forEach(([label,icon,ids])=>{
+      const buttons=ids.map(id=>document.getElementById(id)).filter(el=>el&&el.parentElement===bar);
+      if(!buttons.length)return;
+      const details=document.createElement('details');details.className='shurahbil-menu-group';
+      const title=document.createElement('summary');title.textContent=icon+' '+label;
+      const menu=document.createElement('div');menu.className='shurahbil-menu-items';
+      buttons.forEach(button=>menu.appendChild(button));
+      details.append(title,menu);groups.push(details);
+      details.addEventListener('toggle',()=>{
+        if(details.open)groups.forEach(other=>{if(other!==details)other.open=false});
+      });
+      menu.addEventListener('click',ev=>{if(ev.target.closest('button'))details.open=false});
+    });
+    if(!groups.length)return;
+    bar.classList.add('shurahbil-menu-bar');
+    groups.forEach(g=>bar.appendChild(g));
+    bar.dataset.shurahbilMenusInstalled='1';
+    document.addEventListener('click',ev=>{if(!bar.contains(ev.target))groups.forEach(g=>g.open=false)});
+    document.addEventListener('keydown',ev=>{if(ev.key==='Escape')groups.forEach(g=>g.open=false)});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installMenus,{once:true});else installMenus();
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
