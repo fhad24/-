@@ -24307,6 +24307,56 @@ function install(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
 </script>
+<style id="shurahbil-mobile-menu-overlay-fix">
+/* Keep the navigation's dropdowns above the page content, including on phones. */
+body.admin-mode .app>header{position:relative!important;z-index:214000!important;overflow:visible!important;isolation:auto!important}
+body.admin-mode .app>main{position:relative;z-index:1}
+body.admin-mode #loggedInHeaderNav.sh-reference-nav{overflow:visible!important;z-index:214001!important}
+body.admin-mode #loggedInHeaderNav.sh-reference-nav .sh-reference-group[open]{z-index:214002!important}
+body.admin-mode #loggedInHeaderNav.sh-reference-nav .sh-reference-items{z-index:214003!important;max-height:min(70dvh,580px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+@media(max-width:760px){
+ body.admin-mode #loggedInHeaderNav.sh-reference-nav .sh-reference-items{
+  position:fixed!important;
+  top:var(--sh-menu-top,115px)!important;
+  right:auto!important;
+  left:var(--sh-menu-left,8px)!important;
+  width:min(300px,calc(100vw - 16px))!important;
+  max-width:calc(100vw - 16px)!important;
+  max-height:var(--sh-menu-height,65dvh)!important;
+  box-sizing:border-box!important;
+ }
+}
+</style>
+<script id="shurahbil-mobile-menu-overlay-fix-js">
+(function(){
+function install(){
+ const nav=document.getElementById('loggedInHeaderNav');
+ if(!nav||nav.dataset.mobileMenuFix==='1')return;
+ const groups=[...nav.querySelectorAll('.sh-reference-group')];
+ function place(){
+  if(window.innerWidth>760)return;
+  groups.forEach(group=>{
+   if(!group.open)return;
+   const summary=group.querySelector('summary'),menu=group.querySelector('.sh-reference-items');
+   if(!summary||!menu)return;
+   const bounds=summary.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight;
+   const left=Math.max(8,Math.min(bounds.right-Math.min(300,vw-16),vw-Math.min(300,vw-16)-8));
+   const below=Math.max(0,vh-bounds.bottom-12),above=Math.max(0,bounds.top-12);
+   const useAbove=below<180&&above>below;
+   const height=Math.max(80,Math.min(useAbove?above:below,Math.floor(vh*.7)));
+   menu.style.setProperty('--sh-menu-top',(useAbove?Math.max(8,bounds.top-height-4):bounds.bottom+4)+'px');
+   menu.style.setProperty('--sh-menu-left',left+'px');
+   menu.style.setProperty('--sh-menu-height',height+'px');
+  });
+ }
+ groups.forEach(group=>group.addEventListener('toggle',()=>{if(group.open)requestAnimationFrame(place)}));
+ window.addEventListener('resize',place,{passive:true});
+ window.addEventListener('scroll',place,{passive:true,capture:true});
+ nav.dataset.mobileMenuFix='1';
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
