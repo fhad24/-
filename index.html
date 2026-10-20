@@ -24279,6 +24279,41 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')groups.forEach(g=>g.
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
 })();
 </script>
+<style id="shurahbil-student-tools-menu-style">
+#loggedInHeaderNav .sh-reference-items .sh-student-tool-link{display:flex!important;align-items:center;gap:8px;justify-content:flex-start;text-align:right;white-space:normal!important}
+#loggedInHeaderNav .sh-reference-items .sh-student-tool-link:disabled{opacity:.55!important;cursor:not-allowed!important}
+</style>
+<script id="shurahbil-student-tools-menu-20261020">
+(function(){
+function install(){
+ const header=document.getElementById('loggedInHeaderNav');
+ if(!header||header.dataset.studentToolsAdded==='1')return;
+ const studentMenu=[...header.querySelectorAll('.sh-reference-group')].find(g=>g.querySelector('summary')?.textContent.includes('الطلاب'))?.querySelector('.sh-reference-items');
+ if(!studentMenu)return;
+ const buttons=[
+  ['📥 استيراد الصفوف والفصول / قوائم Word','importMadrasatiBtn'],
+  ['📄 استيراد قائمة TXT وربط الصفوف والفصول','importStudentRosterTxtBtn'],
+  ['📤 تصدير قاعدة الطلاب للتعديل','exportStudentEditDatabaseBtn'],
+  ['📄 تصدير قالب فارغ للتعديل','exportEmptyStudentTemplateBtn'],
+  ['📷 استيراد صور الطلاب من Excel','importStudentPhotosBtn'],
+  ['🪪 الباركود (إضافة / عرض الأسماء)',null],
+  ['📶 متابعة دخول منصة مدرستي',null]
+ ];
+ buttons.forEach(([label,id])=>{
+  const source=id?document.getElementById(id):null;
+  if(id&&!source)return;
+  const btn=document.createElement('button');btn.type='button';
+  btn.className='sh-student-tool-link';
+  btn.textContent=label;
+  if(source){btn.addEventListener('click',()=>{if(!source.disabled)source.click()});}
+  else {btn.disabled=true;btn.title='الوظيفة غير مفعّلة في النسخة الحالية';}
+  studentMenu.appendChild(btn);
+ });
+ header.dataset.studentToolsAdded='1';
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
