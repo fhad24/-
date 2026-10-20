@@ -4166,6 +4166,25 @@
     .nashit-plan-table .plan-program-name{text-align:right;font-weight:900;color:#173b34;min-width:210px}
     .nashit-plan-table tr.plan-selected td{background:#f0faf6}
     .nashit-plan-hours{display:inline-flex;min-width:34px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:#e9f5f1;color:#0f7665;font-weight:900}
+
+/* Shurahbil unified modern pill controls — appearance only, no behavior changes */
+:root{--sh-button-green:#0e6254;--sh-button-deep:#0b5147}
+nav{background:#0d554a;border-radius:18px;padding:9px 12px;gap:8px;align-items:center}
+nav button, .weekly-att-actions button, .btn, button.btn, .weekly-att-page button:not(.weekly-hijri-nav button){
+  font-family:inherit;font-weight:800;letter-spacing:0;border-radius:999px;
+  min-height:42px;padding:9px 19px;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+nav button{background:transparent;color:#ecf8f5;border:1px solid transparent;font-size:clamp(13px,1.2vw,17px)}
+nav button.active,nav button[aria-selected="true"]{background:#fff;color:var(--sh-button-deep);box-shadow:0 3px 10px #003b2d22}
+.btn-primary,.weekly-att-actions .btn-primary,button.submit{background:var(--sh-button-green);color:#fff;border-color:var(--sh-button-green)}
+.btn-outline,.btn-soft,.weekly-att-actions .btn-outline{background:#fff;color:var(--sh-button-deep);border:1px solid #b9d5cd}
+button.active:not(nav button),.btn.active,button[aria-pressed="true"]:not(nav button){border-radius:999px}
+button:not(:disabled):hover{filter:brightness(.97)}
+nav button:hover:not(.active),.btn:hover:not(:disabled){box-shadow:0 3px 12px #0e5d5022}
+button:focus-visible{outline:3px solid #69ae9d;outline-offset:3px}
+button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:640px){nav{gap:5px;padding:7px}nav button,.weekly-att-actions button,.btn{min-height:40px;padding:8px 12px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){nav button,.btn,button.btn{transition:none}}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
