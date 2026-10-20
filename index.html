@@ -4482,6 +4482,29 @@ body.activity-leader-open main{
   overflow:hidden!important
 }
 </style>
+<style id="shurahbil-pill-system-v2">
+/* Applied last in the real application head; overrides old page-specific button styles. */
+:root{--sh-tabs:#0c584c;--sh-accent:#0f7665}
+#weeklyAttTabs,.weekly-att-actions,nav{gap:9px!important;align-items:center;flex-wrap:wrap}
+#weeklyAttTabs{background:var(--sh-tabs)!important;padding:12px!important;border-radius:18px!important}
+#weeklyAttTabs button,nav button,.weekly-att-actions button,button.btn,.btn,.weekly-att-page .btn,
+#weeklyAttTabReportBtn,#weeklyAttTabLateBtn,#weeklyAttTabAnalyticsBtn{
+border-radius:999px!important;min-height:46px!important;padding:10px 22px!important;
+font-family:inherit!important;font-size:clamp(14px,1.1vw,17px)!important;font-weight:800!important;
+transition:background-color .2s,color .2s,box-shadow .2s!important;
+}
+nav{background:var(--sh-tabs)!important;padding:10px!important;border-radius:18px!important}
+nav button{background:transparent!important;border:1px solid transparent!important;color:#f1faf7!important}
+nav button.active,nav button[aria-selected="true"]{background:#fff!important;color:var(--sh-tabs)!important;box-shadow:0 3px 12px #063f3430!important}
+#weeklyAttTabs button{border:1px solid transparent!important;background:transparent!important;color:#f5fcfa!important;box-shadow:none!important}
+#weeklyAttTabs button.btn-primary,#weeklyAttTabs button.active,#weeklyAttTabs button[aria-selected="true"]{background:#fff!important;color:var(--sh-tabs)!important}
+.weekly-att-actions .btn-primary,.btn-primary{background:var(--sh-accent)!important;color:#fff!important;border:1px solid var(--sh-accent)!important}
+.weekly-att-actions .btn-outline,.btn-outline{background:#fff!important;color:var(--sh-tabs)!important;border:1px solid #a8cec2!important}
+button:focus-visible{outline:3px solid #4fa991!important;outline-offset:3px!important}
+button:disabled{opacity:.6!important}
+@media(max-width:600px){#weeklyAttTabs button,nav button,.weekly-att-actions button,.btn{min-height:40px!important;padding:8px 13px!important;font-size:13px!important}}
+@media print{#weeklyAttTabs,nav,.weekly-att-actions{background:none!important}}
+</style>
 </head>
 <body>
   <button type="button" id="globalUserBackToPages" class="global-user-back hidden">⬅ الرجوع إلى صفحاتي</button>
