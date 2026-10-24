@@ -24155,6 +24155,52 @@ document.addEventListener('click',function behaviorCasesClickFallback(e){
 
 
 
+<style id="sh-tools-single-dropdown-css">
+.sh-tools-single-dropdown{position:relative;display:inline-block;vertical-align:middle;z-index:5;direction:rtl}
+.sh-tools-single-dropdown[open]{z-index:90010}
+.sh-tools-single-dropdown>summary{display:inline-flex;align-items:center;gap:12px;cursor:pointer;list-style:none;border:1px solid #254640;background:#fff;color:#123d36;border-radius:20px;min-height:56px;padding:12px 22px;font-size:17px;font-weight:800}
+.sh-tools-single-dropdown>summary::-webkit-details-marker{display:none}
+.sh-tools-single-dropdown>summary:after{content:"⌄";font-size:18px}
+.sh-tools-single-dropdown .sh-tools-items{display:flex;flex-direction:column;gap:5px;position:absolute;right:0;top:calc(100% + 5px);width:min(370px,calc(100vw - 24px));max-height:65dvh;overflow-y:auto;overscroll-behavior:contain;background:white;border:1px solid #d5e5df;border-radius:15px;box-shadow:0 15px 40px #1d3d3740;padding:9px;box-sizing:border-box;z-index:90011}
+.sh-tools-single-dropdown .sh-tools-items>button{display:block;width:100%;text-align:right;white-space:normal;border-radius:10px;min-height:43px;font-size:14px;padding:10px;background:#fff;color:#153c36}
+.sh-tools-single-dropdown .sh-tools-items>button:hover{background:#edf8f3}
+.sh-tools-single-dropdown .sh-tools-items>button[style*="display:none"],.sh-tools-single-dropdown .sh-tools-items>button[style*="display: none"],.sh-tools-single-dropdown .sh-tools-items>button.hidden{display:none!important}
+@media(max-width:700px){.sh-tools-single-dropdown .sh-tools-items{position:fixed;top:var(--tools-dropdown-top,100px);right:12px;max-height:calc(100dvh - var(--tools-dropdown-top,100px) - 10px);z-index:2147480000}}
+</style>
+<script id="sh-tools-single-dropdown-js">
+(function(){
+function init(){
+ if(document.getElementById('shToolsSingleDropdown'))return;
+ const first=document.getElementById('importMadrasatiBtn');
+ if(!first||!first.parentElement)return;
+ const wrapper=document.createElement('details');wrapper.id='shToolsSingleDropdown';wrapper.className='sh-tools-single-dropdown';
+ const caption=document.createElement('summary');caption.textContent='📂 أدوات الاستيراد والتصدير والنظام';
+ const items=document.createElement('div');items.className='sh-tools-items';
+ wrapper.append(caption,items);first.parentNode.insertBefore(wrapper,first);
+ const ids=['importMadrasatiBtn','importStudentRosterTxtBtn','exportStudentEditDatabaseBtn','exportEmptyStudentTemplateBtn','importStudentPhotosBtn'];
+ const move=btn=>{if(btn&&!items.contains(btn))items.appendChild(btn)};
+ ids.forEach(id=>move(document.getElementById(id)));
+ const panel=first.closest('.admin-import-box,.card,section')||document.getElementById('dashboard');
+ ['الباركود (إضافة / عرض الأسماء)','متابعة دخول منصة مدرستي'].forEach(label=>{
+  const b=[...panel.querySelectorAll('button')].find(x=>x.textContent.includes(label));
+  move(b);
+ });
+ ['adminBackupZipBtn','adminProgramUpdateBtn','adminProgramRollbackBtn'].forEach(id=>move(document.getElementById(id)));
+ // Keep original elements, IDs, event listeners, permissions and hidden states unchanged.
+ function place(){
+  if(window.innerWidth>700||!wrapper.open)return;
+  const rect=caption.getBoundingClientRect();
+  items.style.setProperty('--tools-dropdown-top',Math.max(8,Math.min(window.innerHeight-80,rect.bottom+4))+'px');
+ }
+ wrapper.addEventListener('toggle',()=>{if(wrapper.open)requestAnimationFrame(place)});
+ items.addEventListener('click',e=>{if(e.target.closest('button'))wrapper.open=false});
+ document.addEventListener('click',e=>{if(!wrapper.contains(e.target))wrapper.open=false});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')wrapper.open=false});
+ window.addEventListener('resize',place,{passive:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
