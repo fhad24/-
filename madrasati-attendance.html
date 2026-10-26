@@ -1102,7 +1102,7 @@ function renderSettings(app){const al=S.settings.aliases||[];
   <div class="stack" style="gap:6px"><b>النسخ الاحتياطي</b><div class="muted small">احفظ كل البيانات (الطلاب، الجدول، الأيام) في ملف، أو استورد ملفًا محفوظًا. ${STANDALONE?'في هذه النسخة تُحفظ البيانات في هذا المتصفح فقط، فاحفظ نسخة احتياطية باستمرار.':''}</div>
    <div class="row"><button class="btn" id="bex">حفظ نسخة احتياطية</button><button class="btn" id="bim">استيراد نسخة احتياطية</button><input type="file" id="bfile" accept=".json" hidden></div></div>
   ${STANDALONE?`<div class="stack" style="gap:6px"><b>مفتاح Claude API (للتحليل الآلي للصور والملفات)</b><div class="muted small">يُحفظ في هذا المتصفح فقط ويُرسل مباشرة إلى Anthropic. احصل عليه من console.anthropic.com. بدونه تعمل كل الميزات ما عدا التحليل الآلي.</div>
-   <div class="row"><input type="password" id="akey" class="flex1" placeholder="sk-ant-..." value="${esc(getKey())}"><input type="text" id="amodel" placeholder="النموذج" value="${esc((()=>{try{return localStorage.getItem('hudoor_model')||'claude-sonnet-5-5'}catch{return'claude-sonnet-5-5'}})())}"><button class="btn" id="asave">حفظ</button></div></div>`:''}
+   <div class="row"><input type="password" id="akey" class="flex1" placeholder="sk-ant-..." value="${esc(getKey())}"><input type="text" id="amodel" placeholder="النموذج" value="${esc((()=>{try{return localStorage.getItem('hudoor_model')||'claude-sonnet-5-5'}catch{return'claude-sonnet-5-5'}})())}"><button class="btn" id="asave">حفظ</button><button class="btn primary" id="atest" type="button">فحص الاتصال</button></div><div id="atest-result" role="status" class="small muted">قبل رفع صور الغياب، اضغط «فحص الاتصال». لن يرسل صور الطلاب أثناء الفحص.</div></div>`:''}
   <div><b>طريقة الحساب</b><ul class="small muted">
    <li>الغائب في حصة: طالب من الفصل لم يظهر في كشف تلك الحصة ولا في كشف أي فصل آخر في نفس الحصة.</li>
    <li>تُحسب فقط الحصص التي وصل كشفها، والكشوف المعلّمة «جزئي» لا تُحسب.</li>
@@ -1111,6 +1111,12 @@ function renderSettings(app){const al=S.settings.aliases||[];
   const bf=$('#bfile');if(bf)bf.onchange=async()=>{if(bf.files[0]){await backupImport(bf.files[0]);render()}};
   app.onclick=async e=>{if(e.target.id==='bex')backupExport();if(e.target.id==='bim')$('#bfile').click();
     if(e.target.id==='asave'){try{localStorage.setItem('hudoor_key',$('#akey').value.trim());localStorage.setItem('hudoor_model',$('#amodel').value.trim()||'claude-sonnet-5-5');toast('حُفظ المفتاح')}catch{toast('المتصفح يمنع الحفظ')}}
+    if(e.target.id==='atest'){const btn=e.target;const out=$('#atest-result');btn.disabled=true;out.textContent='جارٍ فحص صلاحية المفتاح والنموذج برسالة نصية قصيرة فقط…';try{
+      localStorage.setItem('hudoor_key',$('#akey').value.trim());localStorage.setItem('hudoor_model',$('#amodel').value.trim()||'claude-sonnet-5-5');
+      const answer=await apiSample().json('أعد JSON فقط بالشكل التالي: {"ok":true}',{modelTier:'default'});
+      out.textContent=answer&&answer.ok===true?'✅ الاتصال يعمل. يمكنك بدء تحليل صور الغياب.':'⚠️ الاتصال ردّ بنتيجة غير متوقعة؛ لا ترفع الصور حتى يُحل الخطأ.';
+    }catch(err){const msg=String(err&&err.message||err&&err.code||'خطأ غير معروف');out.textContent='❌ فشل الفحص: '+msg+(err&&err.code==='not_granted'?' — تأكد من صلاحية مفتاح Anthropic API ومشروعه ورصيده.':'');}
+    finally{btn.disabled=false;}}
     if(e.target.id==='aadd'){const f=$('#af').value.trim();if(!f)return;al.push({from:f,to:$('#at').value});S.settings.aliases=al;await setDoc('app/settings',S.settings);render()}
     const b=e.target.closest('[data-rm]');if(b){al.splice(+b.dataset.rm,1);await setDoc('app/settings',S.settings);render()}}}
 
