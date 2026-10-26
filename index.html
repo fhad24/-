@@ -5167,12 +5167,6 @@ button:disabled{opacity:.6!important}
         </div>
       </div>
 
-      <div id="shCardInlineSelector" style="margin:12px 0;padding:14px;border:1px solid #b2d9cb;border-radius:14px;background:#f5faf8;direction:rtl">
- <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between"><strong>☑ تحديد طالب أو مجموعة طلاب للإحصائية</strong><span id="shInlineCount">المحددون: 0</span></div>
- <input type="search" id="shInlineSearch" placeholder="ابحث عن الطلاب بالاسم أو السجل المدني" style="width:100%;padding:10px;margin:10px 0;border:1px solid #c4dbd1;border-radius:9px">
- <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn btn-outline" id="shInlineAll">تحديد جميع المعروضين</button><button type="button" class="btn btn-outline" id="shInlineClear">إلغاء التحديد</button></div>
- <div id="shInlineList" style="max-height:195px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:4px;margin-top:10px"></div>
- </div>
       <div class="weekly-att-actions">
         <button type="button" class="btn btn-primary" id="weeklyAttStudentReportBtn">📄 تقرير الطالب</button>
         <button type="button" class="btn btn-primary" id="weeklyAttMainCardsBtn">📊 إحصائية طالب أو مجموعة طلاب</button>
@@ -15149,8 +15143,7 @@ function shChooseCardStudents(){
 function shOpenStudentCards(){
  const checked=[...document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked,.weekly-att-student-report-select:checked,.weekly-att-analytics-select:checked')].map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
  const fallback=String(document.getElementById('weeklyAttStudentSelect')?.value||document.getElementById('weeklyAttAnalyticsStudent')?.value||'');
- const bulk=[...(window.shCardSelectedIds||[])];
- const ids=[...new Set(bulk.length?bulk:(checked.length?checked:(fallback?[fallback]:[])))];
+ const ids=[...new Set(checked.length?checked:(fallback?[fallback]:[]))];
  if(!ids.length){alert('حدد طالبًا أو مجموعة طلاب من الكشف أولًا.');return}
  const esc=typeof escapeFollowupHtml==='function'?escapeFollowupHtml:(v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])));
  const all=typeof getStudents==='function'?getStudents():[];
@@ -16203,32 +16196,8 @@ if($('weeklyAttAnalyticsStudent')) $('weeklyAttAnalyticsStudent').onchange=rende
 if($('weeklyAttAnalyticsMonth')) $('weeklyAttAnalyticsMonth').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsRange')) $('weeklyAttAnalyticsRange').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsShowBtn')) $('weeklyAttAnalyticsShowBtn').onclick=renderWeeklyAttAnalytics;
-if($('weeklyAttMainCardsBtn')) $('weeklyAttMainCardsBtn').onclick=()=>{if((window.shCardSelectedIds||[]).length)shOpenStudentCards();else shChooseCardStudents()};
+if($('weeklyAttMainCardsBtn')) $('weeklyAttMainCardsBtn').onclick=shOpenStudentCards;
 
-(function(){
- const checked=new Set();
- function mount(){
-  const holder=document.getElementById('shInlineList');
-  if(!holder)return;
-  const students=typeof getStudents==='function'?(getStudents()||[]):[];
-  const grade=String(document.getElementById('weeklyAttGrade')?.value||'');
-  const cls=String(document.getElementById('weeklyAttClass')?.value||'');
-  const search=String(document.getElementById('shInlineSearch')?.value||'').trim();
-  const matched=students.filter(s=>(!grade||String(studentGradeKey(s.grade)||s.grade)===String(studentGradeKey(grade)||grade))&&(!cls||String(studentClassKey(s.classroom)||s.classroom)===String(studentClassKey(cls)||cls))&&(!search||String(s.name||'').includes(search)||String(s.idno||'').includes(search)));
-  const esc=v=>String(v??'').replace(/[&<>"]/g,k=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[k]));
-  holder.innerHTML=matched.map(s=>'<label style="display:flex;gap:9px;align-items:center;padding:8px;border:1px solid #d8eae2;border-radius:8px;background:white"><input type="checkbox" class="sh-inline-student" data-id="'+esc(s.idno||'')+'" '+(checked.has(String(s.idno||''))?'checked':'')+'><span>'+esc(s.name)+' — '+esc(s.idno)+'</span></label>').join('')||'<span>لا توجد أسماء مطابقة</span>';
-  document.getElementById('shInlineCount').textContent='المحددون: '+checked.size;
-  window.shCardSelectedIds=[...checked];
-  holder.dataset.matchids=JSON.stringify(matched.map(s=>String(s.idno||'')));
- }
- document.addEventListener('change',e=>{if(e.target.matches('.sh-inline-student')){e.target.checked?checked.add(e.target.dataset.id):checked.delete(e.target.dataset.id);mount()}else if(e.target.matches('#weeklyAttGrade,#weeklyAttClass'))mount()});
- document.addEventListener('input',e=>{if(e.target.id==='shInlineSearch')mount()});
- document.addEventListener('click',e=>{
-  if(e.target.closest('#shInlineAll')){const el=document.getElementById('shInlineList');JSON.parse(el.dataset.matchids||'[]').forEach(id=>checked.add(id));mount()}
-  if(e.target.closest('#shInlineClear')){checked.clear();mount()}
- },true);
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
-})();
 
 
 
