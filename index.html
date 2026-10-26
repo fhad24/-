@@ -379,7 +379,75 @@
         '}'+
       '}catch(e){if(e&&e.name!=="AbortError")alert("تعذر تجهيز الشهادة للمشاركة. حاول مرة أخرى.");}finally{if(btn){btn.disabled=false;btn.textContent=old;}}'+
     '}'+
-    '<\/script></body></html>');
+    '<\/script>
+<script id="sh-madrasati-main-report">
+(function(){
+'use strict';
+const tag='data-sh-madrasati', tableSelector='#weeklyAttSheet .weekly-att-table';
+let roster=new Map(), days=[],ready=false,timer=0,working=false;
+function getStore(){
+ return new Promise((resolve,reject)=>{
+ const r=indexedDB.open('hudoor',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('docs'))r.result.createObjectStore('docs')};
+ r.onerror=()=>reject(r.error);r.onsuccess=()=>{
+ const db=r.result,store=db.transaction('docs','readonly').objectStore('docs'),entries={};
+ const cur=store.openCursor();cur.onerror=()=>{db.close();reject(cur.error)};cur.onsuccess=()=>{const x=cur.result;if(x){entries[x.key]=x.value;x.continue()}else{db.close();resolve(entries)}};
+ };
+ });
+}
+async function load(){
+ try{const all=await getStore();
+ roster=new Map((all['app/roster']?.students||[]).map(r=>[String(r.i||''),r]));
+ days=Object.entries(all).filter(([k,v])=>k.startsWith('days/')&&Array.isArray(v?.sessions)).map(([k,v])=>({date:String(v.date||k.slice(5)),sessions:v.sessions}));ready=true;refresh();
+ }catch(e){console.warn('مدرستي: تعذر جلب الكشوف المحلية',e);ready=false;refresh()}
+}
+function totals(id){
+ const r=roster.get(id);if(!r)return null;
+ let pres=0,abs=0;
+ for(const day of days){
+ let found=false,attended=false;
+ for(const sess of day.sessions){
+ if(sess.partial||String(sess.g)!==String(r.g)||String(sess.c)!==String(r.c))continue;
+ found=true;
+ if((sess.m||[]).some(m=>String(m.i||'')===id))attended=true;
+ }
+ if(found){if(attended)pres++;else abs++}
+ }
+ return {pres,abs,days:pres+abs};
+}
+function refresh(){
+ if(working)return;working=true;
+ try{
+ const table=document.querySelector(tableSelector),head=table?.querySelector('thead tr'),body=table?.querySelector('tbody');
+ if(!head||!body)return;
+ if(!head.querySelector('th['+tag+']')){
+  const labels=['مدرستي حاضر','مدرستي غائب','نسبة غياب مدرستي'];
+  for(const label of labels){const th=document.createElement('th');th.setAttribute(tag,'1');th.textContent=label;th.style.cssText='min-width:100px;background:#e9f7ef;color:#095b45';head.appendChild(th)}
+ }
+ const ths=[...head.querySelectorAll('th')],idCol=ths.findIndex(th=>th.textContent.includes('السجل المدني'));
+ if(idCol<0)return;
+ for(const tr of body.querySelectorAll('tr')){
+   const td=tr.children;if(td.length<=idCol||td[idCol].colSpan>1)continue;
+   const id=String(td[idCol].textContent||'').replace(/\D/g,'');
+   if(!/^\d{7,12}$/.test(id))continue;
+   let cells=[...tr.querySelectorAll('td['+tag+']')];
+   while(cells.length<3){let c=document.createElement('td');c.setAttribute(tag,'1');c.style.cssText='text-align:center;font-weight:700;color:#086c51';tr.appendChild(c);cells.push(c)}
+   const v=ready?totals(id):null;
+   const values=v?[v.pres,v.abs,v.days?(v.abs/v.days*100).toFixed(1)+'%':'—']:['—','—','—'];
+   cells.forEach((c,i)=>{const str=String(values[i]);if(c.textContent!==str)c.textContent=str});
+ }
+ let info=document.getElementById('shMadrasatiReportNote');
+ if(!info){info=document.createElement('p');info.id='shMadrasatiReportNote';info.style.cssText='margin:8px 0;padding:8px 12px;border-radius:8px;background:#eff7f2;color:#175944;font-size:13px';table.parentElement.insertBefore(info,table)}
+ const caption='بيانات منصة مدرستي: إجمالي الأيام المسجلة محليًا في هذا المتصفح؛ مستقلة عن حضور وغياب المدرسة ولا تُضاف إلى إجمالياته. اليوم الذي لا يوجد فيه كشف مكتمل للفصل لا يُحسب غيابًا.';
+ if(info.textContent!==caption)info.textContent=caption;
+ }finally{working=false}
+}
+function queue(){clearTimeout(timer);timer=setTimeout(refresh,180)}
+const obs=new MutationObserver(queue);
+function start(){obs.observe(document.body,{subtree:true,childList:true});load();setInterval(load,60000);queue()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
+</body></html>');
     w.document.close();
   }
 
