@@ -15189,7 +15189,18 @@ function shOpenStudentCards(){
  document.head.appendChild(css);document.body.appendChild(modal);
  const close=()=>{modal.remove();css.remove()};
  modal.querySelector('#shStatClose').onclick=close;
- modal.querySelector('#shStatPrint').onclick=()=>window.print();
+ modal.querySelector('#shStatPrint').onclick=()=>{
+ const printable=modal.querySelector('.sh-stat-grid');
+ if(!printable)return;
+ const win=window.open('','_blank');
+ if(!win){alert('يرجى السماح بالنوافذ المنبثقة للطباعة.');return}
+ const page='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف إحصائية الطلاب</title>'+
+ '<style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:white;color:#174536;font-family:Tahoma,Arial,sans-serif}h2{text-align:center;margin:0 0 5mm;font-size:20px}.subtitle{text-align:center;margin:0 0 7mm;font-size:12px}.sh-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5mm;direction:rtl;align-items:stretch}.sh-stat-card{border:2px solid #64ab65;border-radius:8px;padding:9px;font-size:12px;line-height:1.7;break-inside:avoid;page-break-inside:avoid;min-height:47mm}.sh-stat-card h3{font-size:13px;margin:2px 0 6px}.sh-stat-card p{margin:4px 0}.sh-stat-card small{float:left}.sh-stat-nums{display:flex;justify-content:space-around;gap:4px;padding:6px;background:#eff8f2;border-radius:6px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+
+ '<h2>كشف إحصائية الطلاب</h2><p class="subtitle">مدرسة شرحبيل بن حسنة الثانوية — أيام التحضير الفعلية</p><main class="sh-stat-grid">'+printable.innerHTML+'</main></body></html>';
+ win.document.open();win.document.write(page);win.document.close();
+ win.focus();
+ setTimeout(()=>win.print(),350);
+};
  modal.addEventListener('click',e=>{if(e.target===modal)close()});
 }
 
