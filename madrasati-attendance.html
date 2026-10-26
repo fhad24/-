@@ -110,6 +110,11 @@ tr.grp td{background:var(--accent-soft);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
+<div id="sh-import-bar" style="position:sticky;top:0;z-index:999999;background:#0b6659;color:white;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;direction:rtl;font:700 14px Tahoma,Arial">
+ <span>📘 بيانات تحضير منصة مدرستي</span>
+ <label style="background:white;color:#075a4f;border-radius:10px;padding:9px 15px;cursor:pointer">📂 تحميل النسخة الاحتياطية <input id="sh-local-backup" type="file" accept=".json,application/json" style="display:none"></label>
+ <span id="sh-import-state" role="status">إذا لم تظهر الأسماء، اختر ملف بيانات التحضير JSON</span>
+ </div>
 
 
 <header class="top">
@@ -1159,6 +1164,22 @@ window.addEventListener('message',async function(event){
   window.parent.postMessage({type:'shurahbil-madrasati-import-result',ok:false,error:String(error.message||error)},location.origin);
  }
 });
+document.getElementById('sh-local-backup')?.addEventListener('change',async function(){
+ const file=this.files?.[0], msg=document.getElementById('sh-import-state'); if(!file)return;
+ try{
+  msg.textContent='جارٍ قراءة ملف البيانات...';
+  const obj=JSON.parse(await file.text()), docs=obj.docs;
+  if(!docs || !Array.isArray(docs['app/roster']?.students) || !Array.isArray(docs['app/timetable']?.entries) || !Array.isArray(docs['app/index']?.days))throw Error('ملف البيانات لا يحتوي على النسخة الاحتياطية المطلوبة');
+  if(!S.db)throw Error('قاعدة بيانات التحضير لم تصبح جاهزة');
+  for(const [path,value] of Object.entries(docs)) await S.db.doc(path).set(value);
+  const check=await S.db.doc('app/roster').get();
+  if(!check.exists || check.data().students.length!==docs['app/roster'].students.length)throw Error('لم يتم التحقق من حفظ سجلات الطلاب');
+  msg.textContent='✓ تم استيراد '+check.data().students.length+' طالب و '+docs['app/timetable'].entries.length+' مدخل جدول و '+docs['app/index'].days.length+' أيام بنجاح';
+  this.value='';
+  setTimeout(()=>location.reload(),700);
+ }catch(err){msg.textContent='تعذر الاستيراد: '+(err?.message||err);this.value=''}
+});
+
 (async function boot(){
   let db,sample,downloads;
   if(STANDALONE){db=localDb();sample=apiSample();downloads=localDownloads}
