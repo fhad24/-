@@ -901,6 +901,10 @@ async function runImport(d){
   IMP.done=IMP.done||new Set();let todo=IMP.files.filter(f=>!IMP.done.has(f));const newText=(IMP.text||'').trim()&&IMP.text.trim()!==IMP.doneText;
   let prev=IMP.result||[];if(!todo.length&&!newText){todo=IMP.files.slice();IMP.doneText=null;prev=[]}
   IMP.todo=todo;IMP.prev=prev;
+  if(STANDALONE&&!getKey()&&todo.some(f=>/\\.(zip|pdf|jpe?g|png|webp|gif)$/i.test(f.name))){
+    toast('تحليل الصور يحتاج مفتاح Claude API من الإعدادات. لم يبدأ الاستيراد ولم تتغير البيانات.',6500);
+    return;
+  }
   IMP.busy=true;IMP.stop=false;IMP.log=prev.length?`محفوظ من الاستيراد السابق: ${toAr(prev.length)} كشف (لن يُحذف). تحليل الملفات الجديدة فقط…`:'';IMP.result=prev.length?prev:null;progStart();renderDayMain();
   try{
     const parts=await gatherParts();chk();progSet(36,'تجهيز الإرسال للتحليل…');const imgs=parts.filter(p=>p.kind==='img'),txts=parts.filter(p=>p.kind==='txt');
@@ -911,7 +915,7 @@ async function runImport(d){
     let use=imgs;if(imgs.length>1){progSet(37,'تجهيز الصور: حذف المكرر ودمج الصور…');const o=await optimizeImages(imgs);use=o.imgs;log(`الصور: ${toAr(use.length)} صورة${o.dup?` (حُذف ${toAr(o.dup)} مكرر مطابق تمامًا)`:''}`)}
     const batches=[];if(S.sample){if(maxN&&use.length){for(let i=0;i<use.length;i+=maxN)batches.push(use.slice(i,i+maxN))}if(txts.length)batches.push('T')}
     const texts=txts.map(t=>`[${t.label}]\n${t.text}`.slice(0,20000));
-    IMP.ctl=new AbortController();const NB=batches.length;let done=0;const all=[];
+    IMP.ctl=new AbortController();const NB=batches.length;let done=0,failed=0;const all=[];
     if(NB){progSet(38,`تحليل ${toAr(NB)} دفعة بالتوازي — Claude يقرأ الكشوف…`);progCreep(38+55*.6/Math.max(1,Math.ceil(NB/2)));log(`إرسال ${toAr(NB)} دفعة للتحليل، دفعتان في وقت واحد.`)}
     const results=await pool(2,batches.map((b,bi)=>async()=>{chk();let r;const isT=b==='T';
       const fast=(()=>{try{return localStorage.getItem('hudoor_fast')!=='0'}catch{return true}})();
@@ -920,7 +924,7 @@ async function runImport(d){
 }
       catch(e0){const c0=e0&&e0.code;if(fast&&c0==='invalid_json'){try{r=await call('default')}catch(e1){throw e1}}else throw e0}}
       catch(e){const c=e&&e.code;if(['cancelled','not_granted','sampling_disabled','session_expired'].includes(c)){IMP.ctl.abort();throw e}
-        done++;log(`الدفعة ${toAr(bi+1)}: تعذّر تحليلها (${c||'خطأ'})، أكملتُ الباقي. يمكنك إعادة رفع صورها لاحقًا.`);return[]}
+        done++;failed++;log(`الدفعة ${toAr(bi+1)}: تعذّر تحليلها (${c||'خطأ'}${e&&e.message?' — '+e.message:''}). لم تُحفظ ضمن الدفعات الناجحة، ويمكن إعادة المحاولة.`);progSet(38+55*done/NB,`فُحصت ${toAr(done)} من ${toAr(NB)} دفعة — فشلت ${toAr(failed)}`);return[]}
       done++;const ss=(r&&r.sessions)||[];all.push(...ss);
       const pct=38+55*done/NB;progSet(pct,`اكتمل ${toAr(done)} من ${toAr(NB)} دفعة — وُجد ${toAr(all.length)} كشف حتى الآن`);progCreep(Math.min(93,pct+55/NB*.8));
       log(`الدفعة ${toAr(bi+1)}: ${toAr(ss.length)} كشف — ${toAr(((performance.now()-tb)/1000).toFixed(0))} ث`);return ss}));
@@ -937,14 +941,14 @@ async function runImport(d){
     const res=[...map.values()].map(s=>{const e=ttFor(d.wd).find(e=>e.g==s.g&&e.c===s.c&&e.p==s.p&&!e.w);if(e){if(!s.s)s.s=e.s;if(!s.t)s.t=e.t}return matchSession(s)});
     const cur=(S.day&&S.day.date===d.date?S.day:d).sessions;const acc=IMP.prev.slice();let added=0;
     for(const r of res){const o=acc.find(x=>skey(x.s)===skey(r));if(o){o.s.m=mergeNames(o.s.m,r.m);if(r.note&&!(o.s.note||'').includes(r.note))o.s.note=[o.s.note,r.note].filter(Boolean).join(' — ');matchSession(o.s)}else{acc.push({s:r,keep:true,mode:cur.some(x=>skey(x)===skey(r))?'merge':'new'});added++}}
-    IMP.result=acc;todo.forEach(f=>IMP.done.add(f));if(newText)IMP.doneText=IMP.text.trim();IMP.todo=null;
+    IMP.result=acc;if(!failed){todo.forEach(f=>IMP.done.add(f));if(newText)IMP.doneText=IMP.text.trim()}IMP.todo=null;
     if(IMP.prev.length)log(`دُمجت النتائج الجديدة مع السابقة: ${toAr(added)} كشف جديد، والمجموع ${toAr(acc.length)}.`);
-    log(`انتهى التحليل في ${toAr(((performance.now()-T0)/1000).toFixed(1))} ث: ${toAr(res.length)} كشف من الملفات الجديدة. راجعها ثم احفظ.`);progEnd(`اكتمل — ${toAr(IMP.result.length)} كشف جاهز للمراجعة`);
+    log(`${failed?'اكتمل جزئيًا':'انتهى التحليل'} في ${toAr(((performance.now()-T0)/1000).toFixed(1))} ث: ${toAr(res.length)} كشف من الملفات الجديدة${failed?`، وتعذّر تحليل ${toAr(failed)} من ${toAr(NB)} دفعة. لن تُعدّ الملفات مكتملة؛ أعد المحاولة بعد مراجعة وحفظ ما استُخرج.`:''}. راجعها ثم احفظ.`);progEnd(failed?`اكتمل جزئيًا — ${toAr(IMP.result.length)} كشف، ${toAr(failed)} دفعة متعثرة`:`اكتمل — ${toAr(IMP.result.length)} كشف جاهز للمراجعة`,!!failed);
   }catch(e){
     IMP.todo=null;if(!IMP.result&&IMP.prev&&IMP.prev.length)IMP.result=IMP.prev;
     const code=e&&e.code;progEnd(code==='cancelled'?'أُوقف الاستيراد':'توقف الاستيراد بسبب خطأ — التفاصيل أدناه',true);
     if(code==='cancelled')log('أُوقف التحليل.');
-    else if(code==='not_granted'||code==='sampling_disabled')log('لم يُسمح للتطبيق باستخدام Claude. يمكنك إضافة الكشوف يدويًا.');
+    else if(code==='not_granted'||code==='sampling_disabled')log('تعذّر تحليل الصور بسبب عدم توفر إذن Claude أو مفتاح API صالح. افتح الإعدادات وتحقق من مفتاح التحليل؛ لم تُحذف أي بيانات. التفاصيل: '+(e&&e.message||code));
     else if(code==='rate_limited')log('طلبات كثيرة الآن. انتظر قليلًا ثم أعد المحاولة.');
     else if(code==='invalid_json')log('لم أفهم الرد. أعد المحاولة أو قلّل عدد الملفات في المرة الواحدة.');
     else if(code==='image_rejected')log('إحدى الصور غير مقبولة (كبيرة جدًا أو نوع غير مدعوم).');
