@@ -5184,7 +5184,8 @@ button:disabled{opacity:.6!important}
       <div class="box"><span id="weeklyAttNoStatusLabel">بدون تسجيل</span><b id="weeklyAttNoStatusCount">0</b></div>
     </div>
 
-    <div class="weekly-att-sheet" id="weeklyAttSheet">
+    <button type="button" id="weeklyAttAll" class="btn btn-outline" onclick="(function(){const b=[...document.querySelectorAll('#weeklyAttBody .weekly-att-student-report-select')];const checked=!b.every(x=>x.checked);window.shReportMultiChecked=window.shReportMultiChecked||new Set();b.forEach(x=>{x.checked=checked;checked?window.shReportMultiChecked.add(x.dataset.idno):window.shReportMultiChecked.delete(x.dataset.idno)});document.getElementById('weeklyAttAll').textContent=checked?'☐ إلغاء تحديد الكل':'☑ تحديد الكل'})()">☑ تحديد الكل</button>
+<div class="weekly-att-sheet" id="weeklyAttSheet">
       <div class="weekly-att-head">
         <h2>كشف متابعة غياب وحضور الطلاب</h2>
         <div class="meta">
