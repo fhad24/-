@@ -900,6 +900,8 @@ async function runImport(d){
   if(IMP.forDay&&IMP.forDay!==d.date){IMP.result=null;IMP.done=new Set();IMP.doneText=null}IMP.forDay=d.date;
   IMP.done=IMP.done||new Set();let todo=IMP.files.filter(f=>!IMP.done.has(f));const newText=(IMP.text||'').trim()&&IMP.text.trim()!==IMP.doneText;
   let prev=IMP.result||[];if(!todo.length&&!newText){todo=IMP.files.slice();IMP.doneText=null;prev=[]}
+  const seenFiles=new Set();
+  todo=todo.filter(f=>{const k=[f.name,f.size,f.lastModified].join('|');if(seenFiles.has(k))return false;seenFiles.add(k);return true});
   IMP.todo=todo;IMP.prev=prev;
   if(STANDALONE&&!getKey()&&todo.some(f=>/\\.(zip|pdf|jpe?g|png|webp|gif)$/i.test(f.name))){
     toast('تحليل الصور يحتاج مفتاح Claude API من الإعدادات. لم يبدأ الاستيراد ولم تتغير البيانات.',6500);
@@ -907,6 +909,17 @@ async function runImport(d){
   }
   IMP.busy=true;IMP.stop=false;IMP.log=prev.length?`محفوظ من الاستيراد السابق: ${toAr(prev.length)} كشف (لن يُحذف). تحليل الملفات الجديدة فقط…`:'';IMP.result=prev.length?prev:null;progStart();renderDayMain();
   try{
+    if(STANDALONE && todo.some(f=>/\\.(zip|pdf|jpe?g|png|webp|gif)$/i.test(f.name))){
+      progSet(1,'التحقق من صلاحية خدمة قراءة الصور قبل فتح الملفات…');
+      try {
+        const check=await S.sample.json('أعد JSON فقط: {"ok":true}',{modelTier:'default'});
+        if(!check || check.ok!==true)throw {code:'invalid_json',message:'فشل اختبار خدمة تحليل الصور؛ يرجى فحص الاتصال من الإعدادات'};
+      } catch(e) {
+        log('فشل فحص خدمة تحليل الصور قبل فك ضغط الملف: '+(e&&e.message||e&&e.code||e));
+        throw e;
+      }
+      log('نجح اختبار خدمة تحليل الصور. بدأ قراءة ملفات ZIP.');
+    }
     const parts=await gatherParts();chk();progSet(36,'تجهيز الإرسال للتحليل…');const imgs=parts.filter(p=>p.kind==='img'),txts=parts.filter(p=>p.kind==='txt');
     const needAI=imgs.length||txts.length;if(needAI&&!S.sample)log('التحليل الآلي للصور غير متاح هنا؛ أُخذت الكشوف النصية فقط.');
     let lim=null;if(needAI&&S.sample)try{lim=await S.sample.limits()}catch{}
