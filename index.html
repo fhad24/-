@@ -5093,8 +5093,16 @@ button:disabled{opacity:.6!important}
       <button type="button" class="btn btn-primary" id="weeklyAttTabReportBtn">✅ تقارير الحضور</button>
       <button type="button" class="btn btn-outline" id="weeklyAttTabLateBtn">⏰ تقارير التأخر</button>
       <button type="button" class="btn btn-outline" id="weeklyAttTabAnalyticsBtn">✕ تقارير الغياب</button>
+      <button type="button" class="btn btn-outline" id="weeklyAttTabMadrasatiBtn" onclick="document.getElementById('madrasatiEmbeddedPanel').style.display='flex'">📘 تحضير منصة مدرستي</button>
     </div>
 
+    <section id="madrasatiEmbeddedPanel" style="display:none;position:fixed;inset:0;z-index:999990;background:white;flex-direction:column;direction:rtl">
+      <div style="background:#096b5c;padding:12px;display:flex;justify-content:space-between;align-items:center">
+        <strong style="color:white">📘 تحضير منصة مدرستي</strong>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('madrasatiEmbeddedPanel').style.display='none'">رجوع إلى التقارير ✕</button>
+      </div>
+      <iframe title="تحضير منصة مدرستي" src="/madrasati-attendance.html" style="width:100%;flex:1;border:none;min-height:0"></iframe>
+    </section>
     <div id="weeklyAttTabReportPanel">
     <div class="card">
       <h2 style="text-align:center;margin:0 0 6px">تقارير الحضور والغياب الأسبوعية</h2>
