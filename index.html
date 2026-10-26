@@ -5169,6 +5169,7 @@ button:disabled{opacity:.6!important}
 
       <div class="weekly-att-actions">
         <button type="button" class="btn btn-primary" id="weeklyAttStudentReportBtn">📄 تقرير الطالب</button>
+        <button type="button" class="btn btn-primary" id="weeklyAttMainCardsBtn">📊 إحصائية طالب أو مجموعة طلاب</button>
         <button type="button" class="btn btn-primary" id="weeklyAttThanksCertificateBtn" style="background:#c99516;border-color:#a87800">🏅 شهادة شكر</button>
         <button type="button" class="btn btn-primary" id="weeklyAttShowBtn">عرض الكشف</button>
         <button type="button" class="btn btn-outline" id="weeklyAttPrintBtn">طباعة الكشف</button>
@@ -5342,7 +5343,6 @@ button:disabled{opacity:.6!important}
 
       <div class="weekly-att-actions">
         <button type="button" class="btn btn-primary" id="weeklyAttAnalyticsShowBtn">عرض الإحصائيات</button>
-        <button type="button" class="btn btn-primary" id="weeklyAttAnalyticsCardsBtn">📊 إحصائية طالب أو مجموعة طلاب</button>
         <button type="button" class="btn btn-outline" id="weeklyAttAnalyticsSelectAllBtn">☑ تحديد الكل</button>
       </div>
 
@@ -15115,10 +15115,10 @@ function weeklyAbsRecorderHtml(row){
 
 /* بطاقات إحصاء الطلاب: عرض فقط ولا يغير سجلات الطلاب. */
 function shOpenStudentCards(){
- const checked=[...document.querySelectorAll('.weekly-att-analytics-select:checked')].map(e=>String(e.dataset.idno||'')).filter(Boolean);
- const fallback=String(document.getElementById('weeklyAttAnalyticsStudent')?.value||'');
+ const checked=[...document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked,.weekly-att-student-report-select:checked,.weekly-att-analytics-select:checked')].map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
+ const fallback=String(document.getElementById('weeklyAttStudentSelect')?.value||document.getElementById('weeklyAttAnalyticsStudent')?.value||'');
  const ids=[...new Set(checked.length?checked:(fallback?[fallback]:[]))];
- if(!ids.length){alert('حدد طالبًا أو مجموعة طلاب من جدول الإحصائيات أولًا.');return}
+ if(!ids.length){alert('حدد طالبًا أو مجموعة طلاب من الكشف أولًا.');return}
  const esc=typeof escapeFollowupHtml==='function'?escapeFollowupHtml:(v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])));
  const all=typeof getStudents==='function'?getStudents():[];
  const students=all.filter(s=>ids.includes(String(s.idno||'')));
@@ -16170,7 +16170,8 @@ if($('weeklyAttAnalyticsStudent')) $('weeklyAttAnalyticsStudent').onchange=rende
 if($('weeklyAttAnalyticsMonth')) $('weeklyAttAnalyticsMonth').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsRange')) $('weeklyAttAnalyticsRange').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsShowBtn')) $('weeklyAttAnalyticsShowBtn').onclick=renderWeeklyAttAnalytics;
-if($('weeklyAttAnalyticsCardsBtn')) $('weeklyAttAnalyticsCardsBtn').onclick=shOpenStudentCards;
+if($('weeklyAttMainCardsBtn')) $('weeklyAttMainCardsBtn').onclick=shOpenStudentCards;
+
 
 if($('weeklyAttAnalyticsSelectAllBtn')) $('weeklyAttAnalyticsSelectAllBtn').onclick=()=>{
   const boxes=[...document.querySelectorAll('.weekly-att-analytics-select')];
