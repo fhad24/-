@@ -1145,6 +1145,20 @@ async function backupExport(){const all=STANDALONE?await S.db.all():null;let dat
   const blob=new Blob([JSON.stringify({app:'hudoor',version:1,exportedAt:new Date().toISOString(),docs:data})],{type:'application/json'});
   try{await (S.downloads||localDownloads).save({filename:`نسخة_احتياطية_الحضور_${new Date().toISOString().slice(0,10)}.json`,data:blob});toast('جاهز للحفظ')}catch(e){if(e&&e.code!=='declined')toast('تعذّر الحفظ')}}
 async function backupImport(file){try{const j=JSON.parse(await file.text());if(!j.docs)throw 0;for(const [p,v] of Object.entries(j.docs))await S.db.doc(p).set(v);toast('تم استيراد النسخة الاحتياطية');S.allDays=null;S.dayDate=null}catch{toast('الملف ليس نسخة احتياطية صحيحة')}}
+window.addEventListener('message',async function(event){
+ if(event.origin!==location.origin || event.data?.type!=='shurahbil-import-madrasati')return;
+ try{
+  const docs=event.data?.payload?.docs;
+  if(!docs || !docs['app/roster'] || !docs['app/timetable'])throw Error('بيانات النسخة غير مكتملة');
+  if(!S.db)throw Error('لم تكتمل تهيئة قاعدة بيانات التحضير');
+  for(const [path,record] of Object.entries(docs)) await S.db.doc(path).set(record);
+  S.allDays=null;S.dayDate=null;
+  window.parent.postMessage({type:'shurahbil-madrasati-import-result',ok:true,students:docs['app/roster']?.students?.length||0,days:Object.keys(docs).filter(k=>k.startsWith('days/')).length},location.origin);
+  location.reload();
+ }catch(error){
+  window.parent.postMessage({type:'shurahbil-madrasati-import-result',ok:false,error:String(error.message||error)},location.origin);
+ }
+});
 (async function boot(){
   let db,sample,downloads;
   if(STANDALONE){db=localDb();sample=apiSample();downloads=localDownloads}
