@@ -5096,9 +5096,33 @@ button:disabled{opacity:.6!important}
       <button type="button" class="btn btn-outline" id="weeklyAttTabMadrasatiBtn" onclick="document.getElementById('madrasatiEmbeddedPanel').style.display='flex'">📘 تحضير منصة مدرستي</button>
     </div>
 
+    <script>
+window.shMadrasatiImportFile=async function(file){
+ if(!file)return;
+ const status=document.getElementById('shMadrasatiImportStatus');
+ try{
+  status.textContent='جارٍ فحص ملف النسخة الاحتياطية...';
+  const data=JSON.parse(await file.text());
+  if(!data.docs?.['app/roster']?.students || !data.docs?.['app/timetable']?.entries)throw Error('الملف ليس نسخة تحضير مدرستي المعتمدة');
+  const frame=document.querySelector('#madrasatiEmbeddedPanel iframe');
+  if(!frame?.contentWindow)throw Error('صفحة التحضير لم تكتمل');
+  status.textContent='جارٍ استيراد '+data.docs['app/roster'].students.length+' طالب...';
+  frame.contentWindow.postMessage({type:'shurahbil-import-madrasati',payload:data},location.origin);
+ }catch(e){status.textContent='تعذر الاستيراد: '+String(e.message||e)}
+};
+window.addEventListener('message',function(e){
+ if(e.origin!==location.origin||e.data?.type!=='shurahbil-madrasati-import-result')return;
+ const status=document.getElementById('shMadrasatiImportStatus');
+ if(status)status.textContent=e.data.ok?'تم الاستيراد: '+e.data.students+' طالب، '+e.data.days+' أيام تحضير': 'فشل الاستيراد: '+e.data.error;
+});
+    </script>
     <section id="madrasatiEmbeddedPanel" style="display:none;position:fixed;inset:0;z-index:999990;background:white;flex-direction:column;direction:rtl">
       <div style="background:#096b5c;padding:12px;display:flex;justify-content:space-between;align-items:center">
         <strong style="color:white">📘 تحضير منصة مدرستي</strong>
+        <label style="background:white;color:#075c4e;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:800">📂 استيراد بيانات التحضير
+          <input type="file" accept=".json,application/json" style="display:none" onchange="window.shMadrasatiImportFile(this.files[0]);this.value=''">
+        </label>
+        <span id="shMadrasatiImportStatus" role="status" style="color:white;font-weight:700;font-size:12px">البيانات تحفظ محليًا على هذا الجهاز</span>
         <button type="button" class="btn btn-outline" onclick="document.getElementById('madrasatiEmbeddedPanel').style.display='none'">رجوع إلى التقارير ✕</button>
       </div>
       <iframe title="تحضير منصة مدرستي" src="/madrasati-attendance.html" style="width:100%;flex:1;border:none;min-height:0"></iframe>
