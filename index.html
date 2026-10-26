@@ -15114,10 +15114,37 @@ function weeklyAbsRecorderHtml(row){
 
 
 /* بطاقات إحصاء الطلاب: عرض فقط ولا يغير سجلات الطلاب. */
+
+function shChooseCardStudents(){
+ const list=(typeof getStudents==='function'?getStudents():[])||[];
+ const g=String(document.getElementById('weeklyAttGrade')?.value||'');
+ const cls=String(document.getElementById('weeklyAttClass')?.value||'');
+ const students=list.filter(s=>(!g||String(studentGradeKey(s.grade)||s.grade)===String(studentGradeKey(g)||g))&&(!cls||String(studentClassKey(s.classroom)||s.classroom)===String(studentClassKey(cls)||cls)));
+ if(!students.length){alert('لا يوجد طلاب في الصف والفصل المحددين');return}
+ const esc=x=>String(x??'').replace(/[&<>"]/g,k=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[k]));
+ const selected=new Set(window.shCardSelectedIds||[]);
+ const backdrop=document.createElement('div');backdrop.style.cssText='position:fixed;inset:0;z-index:999990;background:#0009;display:grid;place-items:center;direction:rtl;padding:12px';
+ backdrop.innerHTML='<div style="background:white;border-radius:16px;padding:18px;width:min(740px,96vw);max-height:90vh;display:flex;flex-direction:column;gap:12px;color:#124b3d"><h2>تحديد طالب أو مجموعة طلاب</h2><input id="shCardSearch" placeholder="بحث عن طالب بالاسم أو السجل المدني" style="padding:12px"><div style="display:flex;gap:12px"><button id="shCardAll">تحديد جميع المعروضين</button><button id="shCardClear">إلغاء التحديد</button><b id="shCardCount"></b></div><div id="shCardNames" style="overflow:auto;min-height:100px;max-height:55vh"></div><div style="display:flex;gap:12px"><button id="shCardGo" style="background:#087765;color:white;padding:12px">عرض البطاقات / طباعة PDF</button><button id="shCardClose">إغلاق</button></div></div>';
+ document.body.appendChild(backdrop);
+ const getVisible=()=>students.filter(s=>{const q=backdrop.querySelector('#shCardSearch').value.trim();return !q||String(s.name||'').includes(q)||String(s.idno||'').includes(q)});
+ function render(){
+  backdrop.querySelector('#shCardNames').innerHTML=getVisible().map(s=>'<label style="display:block;padding:8px;border-bottom:1px solid #ddd"><input type="checkbox" data-id="'+esc(s.idno)+'" '+(selected.has(String(s.idno))?'checked':'')+'> '+esc(s.name)+' — '+esc(s.idno)+'</label>').join('');
+  backdrop.querySelector('#shCardCount').textContent='المحددون: '+selected.size;
+ }
+ backdrop.querySelector('#shCardSearch').oninput=render;
+ backdrop.querySelector('#shCardNames').onchange=e=>{if(e.target.type!=='checkbox')return;e.target.checked?selected.add(e.target.dataset.id):selected.delete(e.target.dataset.id);render()};
+ backdrop.querySelector('#shCardAll').onclick=()=>{getVisible().forEach(s=>selected.add(String(s.idno)));render()};
+ backdrop.querySelector('#shCardClear').onclick=()=>{selected.clear();render()};
+ backdrop.querySelector('#shCardClose').onclick=()=>backdrop.remove();
+ backdrop.querySelector('#shCardGo').onclick=()=>{if(!selected.size){alert('حدد طالبًا أو أكثر');return}window.shCardSelectedIds=[...selected];backdrop.remove();shOpenStudentCards()};
+ render();
+}
+
 function shOpenStudentCards(){
  const checked=[...document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked,.weekly-att-student-report-select:checked,.weekly-att-analytics-select:checked')].map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
  const fallback=String(document.getElementById('weeklyAttStudentSelect')?.value||document.getElementById('weeklyAttAnalyticsStudent')?.value||'');
- const ids=[...new Set(checked.length?checked:(fallback?[fallback]:[]))];
+ const bulk=[...(window.shCardSelectedIds||[])];
+ const ids=[...new Set(bulk.length?bulk:(checked.length?checked:(fallback?[fallback]:[])))];
  if(!ids.length){alert('حدد طالبًا أو مجموعة طلاب من الكشف أولًا.');return}
  const esc=typeof escapeFollowupHtml==='function'?escapeFollowupHtml:(v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])));
  const all=typeof getStudents==='function'?getStudents():[];
@@ -16170,7 +16197,7 @@ if($('weeklyAttAnalyticsStudent')) $('weeklyAttAnalyticsStudent').onchange=rende
 if($('weeklyAttAnalyticsMonth')) $('weeklyAttAnalyticsMonth').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsRange')) $('weeklyAttAnalyticsRange').onchange=renderWeeklyAttAnalytics;
 if($('weeklyAttAnalyticsShowBtn')) $('weeklyAttAnalyticsShowBtn').onclick=renderWeeklyAttAnalytics;
-if($('weeklyAttMainCardsBtn')) $('weeklyAttMainCardsBtn').onclick=shOpenStudentCards;
+if($('weeklyAttMainCardsBtn')) $('weeklyAttMainCardsBtn').onclick=shChooseCardStudents;
 
 
 if($('weeklyAttAnalyticsSelectAllBtn')) $('weeklyAttAnalyticsSelectAllBtn').onclick=()=>{
