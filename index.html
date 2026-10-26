@@ -14865,8 +14865,9 @@ function renderWeeklyAttendanceReport(){
 
   if(!window.shReportMultiChecked) window.shReportMultiChecked=new Set();
   document.querySelectorAll('.weekly-att-student-report-select').forEach(box=>{
+    const id=String(box.dataset.idno||'');
+    box.checked=window.shReportMultiChecked.has(id);
     box.onchange=()=>{
-      const id=String(box.dataset.idno||'');
       if(box.checked) window.shReportMultiChecked.add(id);
       else window.shReportMultiChecked.delete(id);
     };
@@ -15114,6 +15115,25 @@ function weeklyAbsRecorderHtml(row){
 }
 
 
+/* Preserve multiple selections in the report even if another legacy handler redraws rows. */
+(function(){
+ if(window.__shGroupReportSelectionInstalled)return;
+ window.__shGroupReportSelectionInstalled=true;
+ window.shReportMultiChecked=window.shReportMultiChecked||new Set();
+ document.addEventListener('click',function(e){
+   const box=e.target?.closest?.('#weeklyAttBody .weekly-att-student-report-select');
+   if(!box)return;
+   e.stopImmediatePropagation();
+ },true);
+ document.addEventListener('change',function(e){
+   const box=e.target?.closest?.('#weeklyAttBody .weekly-att-student-report-select');
+   if(!box)return;
+   const id=String(box.dataset.idno||'');
+   if(box.checked)window.shReportMultiChecked.add(id);
+   else window.shReportMultiChecked.delete(id);
+   e.stopImmediatePropagation();
+ },true);
+})();
 /* بطاقات إحصاء الطلاب: عرض فقط ولا يغير سجلات الطلاب. */
 
 function shChooseCardStudents(){
