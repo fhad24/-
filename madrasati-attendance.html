@@ -948,7 +948,7 @@ async function runImport(d){
     IMP.todo=null;if(!IMP.result&&IMP.prev&&IMP.prev.length)IMP.result=IMP.prev;
     const code=e&&e.code;progEnd(code==='cancelled'?'أُوقف الاستيراد':'توقف الاستيراد بسبب خطأ — التفاصيل أدناه',true);
     if(code==='cancelled')log('أُوقف التحليل.');
-    else if(code==='not_granted'||code==='sampling_disabled')log('تعذّر تحليل الصور بسبب عدم توفر إذن Claude أو مفتاح API صالح. افتح الإعدادات وتحقق من مفتاح التحليل؛ لم تُحذف أي بيانات. التفاصيل: '+(e&&e.message||code));
+    else if(code==='not_granted'||code==='sampling_disabled')log('تعذّر التحليل: مفتاح Claude API غير صالح أو ليس له إذن. افتح الإعدادات ← مفتاح Claude API وأدخل مفتاحًا صالحًا. اشتراك ChatGPT لا يمنح هذا المفتاح تلقائيًا. لم تُحذف البيانات. التفاصيل: '+(e&&e.message||code));
     else if(code==='rate_limited')log('طلبات كثيرة الآن. انتظر قليلًا ثم أعد المحاولة.');
     else if(code==='invalid_json')log('لم أفهم الرد. أعد المحاولة أو قلّل عدد الملفات في المرة الواحدة.');
     else if(code==='image_rejected')log('إحدى الصور غير مقبولة (كبيرة جدًا أو نوع غير مدعوم).');
@@ -1137,12 +1137,12 @@ function localDb(){
 const localDownloads={async save({filename,data}){const b=data instanceof Blob?data:new Blob([data]);const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove()},4000);return{status:'saved'}}};
 function getKey(){try{return localStorage.getItem('hudoor_key')||''}catch{return''}}
 function apiSample(){
-  const call=async(prompt,opts={})=>{const key=getKey();if(!key)throw{code:'not_granted',message:'أدخل مفتاح Claude API من الإعدادات'};
+  const call=async(prompt,opts={})=>{const key=getKey();if(!key)throw{code:'not_granted',message:'لا يوجد مفتاح تحليل الصور. افتح الإعدادات ← مفتاح Claude API، وأدخل مفتاحًا صالحًا.'};
     const content=[];for(const b of (opts.images?[].concat(opts.images):[])){const buf=new Uint8Array(await b.arrayBuffer());let bin='';for(let i=0;i<buf.length;i+=32768)bin+=String.fromCharCode.apply(null,buf.subarray(i,i+32768));content.push({type:'image',source:{type:'base64',media_type:b.type||'image/jpeg',data:btoa(bin)}})}
     content.push({type:'text',text:prompt});
     let r;try{r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:opts.signal,headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:(opts.modelTier==='quick'?'claude-haiku-5-5':(localStorage.getItem('hudoor_model')||'claude-sonnet-5-5')),max_tokens:16000,messages:[{role:'user',content}]})})}
     catch(e){if(e.name==='AbortError')throw{code:'cancelled'};throw{code:'upstream_error',message:'تعذّر الاتصال بـ Claude'}}
-    const j=await r.json().catch(()=>({}));if(!r.ok){throw{code:r.status===429?'rate_limited':r.status===401?'not_granted':'upstream_error',message:(j.error&&j.error.message)||('HTTP '+r.status)}}
+    const j=await r.json().catch(()=>({}));if(!r.ok){throw{code:r.status===429?'rate_limited':(r.status===401||r.status===403)?'not_granted':'upstream_error',message:(j.error&&j.error.message)||('HTTP '+r.status)}}
     return(j.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('')};
   const f=async(p,o)=>({text:await call(p,o),truncated:false});
   f.json=async(p,o)=>{const t=await call(p+'\n\nأعد JSON فقط.',o);const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);const raw=m?m[1]:t.slice(t.search(/[\[{]/),Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'))+1);try{return JSON.parse(raw)}catch{throw{code:'invalid_json',text:t}}};
