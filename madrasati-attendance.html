@@ -1174,6 +1174,7 @@ document.getElementById('sh-local-backup')?.addEventListener('change',async func
   for(const [path,value] of Object.entries(docs)) await S.db.doc(path).set(value);
   const check=await S.db.doc('app/roster').get();
   if(!check.exists || check.data().students.length!==docs['app/roster'].students.length)throw Error('لم يتم التحقق من حفظ سجلات الطلاب');
+  document.getElementById('sh-empty-import-notice')?.remove();
   msg.textContent='✓ تم استيراد '+check.data().students.length+' طالب و '+docs['app/timetable'].entries.length+' مدخل جدول و '+docs['app/index'].days.length+' أيام بنجاح';
   this.value='';
   setTimeout(()=>location.reload(),700);
@@ -1191,6 +1192,17 @@ document.getElementById('sh-local-backup')?.addEventListener('change',async func
   db.doc('app/settings').onSnapshot(sn=>{S.settings=sn.exists?structuredClone(sn.data()):{aliases:[]}},()=>{});
   db.doc('app/index').onSnapshot(sn=>{S.allDays=null;S.stuStats=null;S.index=sn.exists?structuredClone(sn.data().days||[]):[];if(S.view==='day'&&!S.editing){render()}if(!S.dayDate&&S.index.length){const last=S.index.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];openDay(last.date)}},()=>{});
   render();
+  if(STANDALONE){
+   const snap=await S.db.doc('app/roster').get();
+   if(!snap.exists || !(snap.data()?.students||[]).length){
+     document.getElementById('sh-import-state').textContent='⚠️ لا توجد بيانات محفوظة على هذا المتصفح — يلزم اختيار ملف النسخة الاحتياطية مرة واحدة';
+     const notice=document.createElement('div');notice.id='sh-empty-import-notice';
+     notice.style.cssText='position:fixed;bottom:18px;right:18px;left:18px;z-index:99998;background:#fff8e7;color:#53370b;border:2px solid #e3b34e;border-radius:14px;padding:18px;box-shadow:0 10px 30px #0003;direction:rtl;font:700 16px Tahoma,Arial;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap';
+     notice.innerHTML='<span>لا توجد بيانات طلاب في هذا المتصفح. استورد ملف «بيانات تحضير منصة مدرستي.json» لتظهر الأسماء والجداول.</span><button id="sh-empty-upload" type="button" style="border:0;border-radius:10px;background:#087866;color:white;padding:12px 18px;font-weight:800;cursor:pointer">📂 اختيار ملف بيانات الطلاب</button>';
+     document.body.appendChild(notice);
+     notice.querySelector('#sh-empty-upload').onclick=()=>document.getElementById('sh-local-backup')?.click();
+   }
+  }
 })();
 </script>
 
