@@ -906,14 +906,14 @@ async function runImport(d){
     const parts=await gatherParts();chk();progSet(36,'تجهيز الإرسال للتحليل…');const imgs=parts.filter(p=>p.kind==='img'),txts=parts.filter(p=>p.kind==='txt');
     const needAI=imgs.length||txts.length;if(needAI&&!S.sample)log('التحليل الآلي للصور غير متاح هنا؛ أُخذت الكشوف النصية فقط.');
     let lim=null;if(needAI&&S.sample)try{lim=await S.sample.limits()}catch{}
-    const maxN=lim&&lim.images?Math.max(1,Math.min(lim.images.maxCount,20)):0;
+    const maxN=lim&&lim.images?Math.max(1,Math.min(lim.images.maxCount,4)):0;
     if(imgs.length&&!maxN){log('لا يمكن إرسال الصور للتحليل في هذا العرض.')}
     let use=imgs;if(imgs.length>1){progSet(37,'تجهيز الصور: حذف المكرر ودمج الصور…');const o=await optimizeImages(imgs);use=o.imgs;log(`الصور: ${toAr(use.length)} صورة${o.dup?` (حُذف ${toAr(o.dup)} مكرر مطابق تمامًا)`:''}`)}
     const batches=[];if(S.sample){if(maxN&&use.length){for(let i=0;i<use.length;i+=maxN)batches.push(use.slice(i,i+maxN))}if(txts.length)batches.push('T')}
     const texts=txts.map(t=>`[${t.label}]\n${t.text}`.slice(0,20000));
     IMP.ctl=new AbortController();const NB=batches.length;let done=0;const all=[];
-    if(NB){progSet(38,`تحليل ${toAr(NB)} دفعة بالتوازي — Claude يقرأ الكشوف…`);progCreep(38+55*.6/Math.max(1,Math.ceil(NB/4)));log(`إرسال ${toAr(NB)} دفعة للتحليل، أربع دفعات في وقت واحد.`)}
-    const results=await pool(4,batches.map((b,bi)=>async()=>{chk();let r;const isT=b==='T';
+    if(NB){progSet(38,`تحليل ${toAr(NB)} دفعة بالتوازي — Claude يقرأ الكشوف…`);progCreep(38+55*.6/Math.max(1,Math.ceil(NB/2)));log(`إرسال ${toAr(NB)} دفعة للتحليل، دفعتان في وقت واحد.`)}
+    const results=await pool(2,batches.map((b,bi)=>async()=>{chk();let r;const isT=b==='T';
       const fast=(()=>{try{return localStorage.getItem('hudoor_fast')!=='0'}catch{return true}})();
       const call=tier=>S.sample.json(promptFor(d,isT?texts:[],isT?[]:b.map(x=>x.label)),{images:isT?undefined:b.map(x=>x.blob),signal:IMP.ctl.signal,modelTier:tier,...(tier==='quick'?{}:{effort:'low'})});
       const tb=performance.now();try{try{r=await call(fast?'quick':'default');
