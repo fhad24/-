@@ -558,9 +558,9 @@ async function studentModel(r){
 let IMP={files:[],items:[],log:'',busy:false,result:null,ctl:null};
 function tabImport(t,d){
   t.innerHTML=`<div class="stack">
-   <div class="drop" id="drop"><b>اسحب الملفات هنا أو اضغط للاختيار</b><div class="muted small">تقرير حضور Teams (CSV أو Excel) — الأسرع والأدق، صور، فيديو تسجيل شاشة، PDF، Word، Excel، نص محادثة واتساب، أو تصدير واتساب ZIP كامل — يُؤخذ منه هذا اليوم فقط</div>
-   <input type="file" id="fin" multiple hidden accept="image/*,video/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.zip"></div>
-   <div class="row"><button class="btn" id="wa2">اختيار يوم من محادثة واتساب (ZIP)</button><span class="muted small">أو ارفع ملف ZIP هنا مباشرة وسيُؤخذ منه هذا اليوم فقط.</span></div>
+   <div class="drop" id="drop"><b>اسحب الملفات هنا أو اضغط للاختيار</b><div class="muted small">تقرير حضور Teams (CSV أو Excel) — الأسرع والأدق، صور، فيديو تسجيل شاشة، PDF، Word، Excel، نص محادثة واتساب، أو ملف واتساب ZIP أو RAR — اختر التواريخ من القائمة</div>
+   <input type="file" id="fin" multiple hidden accept="image/*,video/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.zip,.rar"></div>
+   <div class="row"><button class="btn" id="wa2">اختيار يوم من محادثة واتساب (ZIP)</button><span class="muted small">أو ارفع ZIP أو RAR هنا وسيعرض البرنامج التواريخ المتاحة.</span></div>
    <label class="stack" style="gap:4px">نص إضافي (اختياري) — الصق رسائل واتساب أو تعليقًا مثل «حضور ثاني ج الحصة الرابعة»<textarea id="itxt">${esc(IMP.text||'')}</textarea></label>
    <div id="flist" class="small"></div>
    <div class="row"><button class="btn primary" id="go" ${IMP.busy?'disabled':''}>تحليل وإضافة لليوم</button><button class="btn" id="stop" ${IMP.busy?'':'hidden'}>إيقاف</button><button class="btn" id="clr">مسح</button><label class="small" title="السريع يقرأ الصور بنموذج أسرع بعدة مرات، والدقيق أبطأ لكنه أدق في الصور الصعبة"><input type="checkbox" id="ifast" ${(()=>{try{return localStorage.getItem('hudoor_fast')!=='0'}catch{return true}})()?'checked':''}> قراءة سريعة</label></div>
@@ -579,7 +579,7 @@ function tabImport(t,d){
   $('#stop').onclick=()=>{IMP.stop=true;IMP.ctl&&IMP.ctl.abort();PG.label='جارٍ الإيقاف…';progDraw()};
   drawFiles();progDraw();if(IMP.result)drawResult(d);
 }
-function addFiles(fl){const files=[...fl];const zip=files.find(f=>/\.zip$/i.test(f.name));if(zip){if(files.length>1)toast('اختر ملف واتساب ZIP واحدًا في كل مرة، ثم حدد التواريخ من القائمة.');waImport(zip);return}for(const f of files)if(!IMP.files.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified))IMP.files.push(f);drawFiles()}
+function addFiles(fl){const files=[...fl];const rar=files.find(f=>/\.rar$/i.test(f.name));if(rar){if(files.length>1)toast('سيتم فتح ملف RAR وحده أولًا.');window.shMadrasatiRarImport(rar);return}const zip=files.find(f=>/\.zip$/i.test(f.name));if(zip){if(files.length>1)toast('اختر ملف واتساب ZIP واحدًا في كل مرة، ثم حدد التواريخ من القائمة.');waImport(zip);return}for(const f of files)if(!IMP.files.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified))IMP.files.push(f);drawFiles()}
 function drawFiles(){const el=$('#flist');if(!el)return;el.innerHTML=IMP.files.length?IMP.files.map((f,i)=>`<span class="pill mut">${esc(f.name)} · ${(f.size/1024/1024).toFixed(1)} م.ب <button class="btn small" data-rm="${i}">×</button></span>`).join(' '):'';
   el.onclick=e=>{const b=e.target.closest('[data-rm]');if(b){IMP.files.splice(+b.dataset.rm,1);drawFiles()}}}
 function log(s){IMP.log+=(IMP.log?'\n':'')+s;const e=$('#ilog');if(e){e.hidden=false;e.textContent=IMP.log;e.scrollTop=1e9}}
@@ -635,7 +635,7 @@ async function waImport(initialFile=null){
   const m=$('#modal');m.hidden=false;
   m.innerHTML=`<div class="card stack" style="max-width:560px"><h2>استيراد من محادثة واتساب</h2>
    <div class="muted small">صدّر محادثة واتساب مع الوسائط وارفع ZIP هنا. استيراد الصور مجاني داخل المتصفح افتراضيًا، ولا يستخدم مفتاح Anthropic. تُراجع الكشوف والتواريخ قبل اعتماد الحفظ.</div>
-   <div class="row"><button class="btn primary" id="wpick">اختيار ملف ZIP أو TXT</button><input type="file" id="wfile" accept=".zip,.txt" hidden><button class="btn" id="wx">إلغاء</button></div>
+   <div class="row"><button class="btn primary" id="wpick">اختيار ملف ZIP أو TXT</button><input type="file" id="wfile" accept=".zip,.txt,.rar" hidden><button class="btn" id="wx">إلغاء</button></div>
    <div id="wdays"></div></div>`;
   let file=null;
   m.onclick=async e=>{const id=e.target.id;if(id==='wx'){m.hidden=true;return}if(id==='wpick'){$('#wfile').click();return}
@@ -643,7 +643,7 @@ async function waImport(initialFile=null){
     if(id==='wcloud'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
     if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await window.shMadrasatiOfflineImport(file,dates);return}
     const b=e.target.closest('[data-wd]');if(b&&file){m.hidden=true;await waStart(file,b.dataset.wd)}};
-  const inspectWhatsAppFile=async selected=>{file=selected;if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة وتحديد أيامها ومرفقاتها…</div>';
+  const inspectWhatsAppFile=async selected=>{file=selected;if(!file)return;if(/\.rar$/i.test(file.name)){m.hidden=true;await window.shMadrasatiRarImport(file);return}$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة وتحديد أيامها ومرفقاتها…</div>';
     try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map(),names=[];
       if(n.endsWith('.zip')){await lib('zip');const z=await JSZip.loadAsync(file);names=Object.keys(z.files).filter(k=>!z.files[k].dir);
         const t=names.find(k=>k.toLowerCase().endsWith('.txt'));if(t)raw=await z.files[t].async('string');
@@ -1272,5 +1272,6 @@ document.getElementById('sh-local-backup')?.addEventListener('change',async func
 })();
 </script>
 <script src="./madrasati-offline-import.js"></script>
+<script src="./madrasati-rar-import.js"></script>
 
 </body></html>
