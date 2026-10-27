@@ -16,10 +16,19 @@ async function extract(f){
 }
 function match(){
  const grade=q('#grade').value,cls=q('#cls').value,eligible=roster.filter(r=>String(r.g)===grade&&String(r.c)===cls);
- const tokens=tidy(textOfChat(scanned)).split(/\n/).map(tidy);const blob=tidy(scanned);
- preview=eligible.filter(r=>{const n=tidy(r.n);return n.length>=8&&(tokens.some(t=>t===n||t.includes(n))||blob.includes(n))});
- q('#fileImportMatches').textContent='أسماء مطابقة داخل الفصل المختار: '+preview.length+' من '+eligible.length+'. راجع الأسماء قبل اعتماد الحضور.';
- q('#fileImportNames').innerHTML=preview.map(r=>'<label style="display:block;padding:6px"><input type="checkbox" checked data-import-id="'+r.i+'"> '+r.n+'</label>').join('')||'لا توجد أسماء مطابقة تلقائيًا.';
+ const lines=textOfChat(scanned).split(/\r?\n/).map(tidy).filter(Boolean);
+ const normName=v=>tidy(v).replace(/\b(بن|ابن|بنت)\b/g,' ').replace(/\s+/g,' ').trim();
+ const score=(name,line)=>{
+  const n=normName(name),l=normName(line);
+  if(n.length<7||l.length<5)return 0;
+  if(l===n||l.includes(n))return 1;
+  const words=n.split(' ').filter(x=>x.length>1),found=words.filter(w=>l.split(' ').includes(w));
+  if(words.length>=3&&found.length>=3&&found[0]===words[0]&&found.includes(words[words.length-1]))return found.length/words.length;
+  return 0;
+ };
+ preview=eligible.map(r=>({student:r,score:Math.max(0,...lines.map(line=>score(r.n,line)))})).filter(x=>x.score>=.78);
+ q('#fileImportMatches').textContent='مطابقة '+preview.length+' من '+eligible.length+' طالبًا. نتائج القراءة الجزئية تحتاج تدقيقًا يدويًا. تم استخراج النص من '+lines.length+' سطر.';
+ q('#fileImportNames').innerHTML=preview.map(({student:r,score:v})=>'<label style="display:block;padding:6px"><input type="checkbox" '+(v===1?'checked':'')+' data-import-id="'+String(r.i).replace(/[^\d]/g,'')+'"> '+r.n+' <small>('+Math.round(v*100)+'% تطابق)</small></label>').join('')||'لم تُطابق أسماء موثوقة. استخدم قراءة الصور ثم راجع نتيجة OCR، ولا تعتمد الغياب من هذه النتيجة.';
 }
 async function ocr(){
  if(!images.length)return msg('لا توجد صور للتحليل.');if(!confirm('تحليل '+images.length+' صورة على جهازك قد يكون بطيئًا. هل تواصل؟'))return;
