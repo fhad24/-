@@ -6,14 +6,13 @@ const fmt=x=>String(x||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace
 function words(x){return fmt(x).split(/\s+/).filter(w=>w.length>1&&!['بن','ابن','بنت'].includes(w))}
 function sameName(text,r){
  const name=words(r.n).join(' ');if(name.length<9)return false;
- const t=fmt(text);if(t.includes(name))return true;
+ const lines=String(text).split(/\r?\n/).map(fmt);if(lines.some(v=>v.includes(name)))return true;
  const w=words(r.n);if(w.length<4)return false;
- const lines=t.split(/\n/);
  for(const v of lines){const toks=new Set(v.split(' '));const hits=w.filter(z=>toks.has(z));if(hits.length>=Math.max(3,Math.ceil(w.length*.75))&&hits.includes(w[0])&&hits.includes(w[w.length-1]))return true}
  return false;
 }
 function rosterMatches(raw){
- const text=String(raw||'').split(/\r?\n/).map(x=>fmt(x)).join('\n');
+ const text=String(raw||'');
  return S.roster.filter(r=>sameName(text,r));
 }
 function contextFor(msgs,idx,studentRows,date){
@@ -79,7 +78,6 @@ async function prepare(file,dates,update){
 }
 function showResult(file,dates,items,issues,scanned,failed){
  const m=document.querySelector('#modal');m.hidden=false;
- const all=mergeSessions(items.map(x=>x.session));
  const dated=new Map();for(const a of items){const key=a.date+'|'+skey(a.session);if(!dated.has(key))dated.set(key,{date:a.date,session:a.session,type:a.type});else{const prev=dated.get(key);prev.session.m=mergeNames(prev.session.m,a.session.m);prev.session.partial=prev.session.partial&&a.session.partial}}
  const sessions=[...dated.values()];
  const safe=s=>esc(String(s??''));
