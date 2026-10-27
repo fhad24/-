@@ -579,7 +579,7 @@ function tabImport(t,d){
   $('#stop').onclick=()=>{IMP.stop=true;IMP.ctl&&IMP.ctl.abort();PG.label='جارٍ الإيقاف…';progDraw()};
   drawFiles();progDraw();if(IMP.result)drawResult(d);
 }
-function addFiles(fl){for(const f of fl)IMP.files.push(f);drawFiles()}
+function addFiles(fl){const files=[...fl];const zip=files.find(f=>/\.zip$/i.test(f.name));if(zip){if(files.length>1)toast('اختر ملف واتساب ZIP واحدًا في كل مرة، ثم حدد التواريخ من القائمة.');waImport(zip);return}for(const f of files)if(!IMP.files.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified))IMP.files.push(f);drawFiles()}
 function drawFiles(){const el=$('#flist');if(!el)return;el.innerHTML=IMP.files.length?IMP.files.map((f,i)=>`<span class="pill mut">${esc(f.name)} · ${(f.size/1024/1024).toFixed(1)} م.ب <button class="btn small" data-rm="${i}">×</button></span>`).join(' '):'';
   el.onclick=e=>{const b=e.target.closest('[data-rm]');if(b){IMP.files.splice(+b.dataset.rm,1);drawFiles()}}}
 function log(s){IMP.log+=(IMP.log?'\n':'')+s;const e=$('#ilog');if(e){e.hidden=false;e.textContent=IMP.log;e.scrollTop=1e9}}
@@ -631,7 +631,7 @@ function chatDates(raw){
     if(cur&&/\.(jpe?g|png|webp|gif|pdf|mp4|mov)\b/i.test(t))out.get(cur).files++}
   return out;
 }
-async function waImport(){
+async function waImport(initialFile=null){
   const m=$('#modal');m.hidden=false;
   m.innerHTML=`<div class="card stack" style="max-width:560px"><h2>استيراد من محادثة واتساب</h2>
    <div class="muted small">صدّر المحادثة من واتساب: المزيد ← تصدير الدردشة ← إرفاق الوسائط، ثم اختر ملف ZIP هنا. سيعرض التطبيق الأيام الموجودة فيه لتختار اليوم المطلوب، ويأخذ رسائله ومرفقاته فقط.</div>
@@ -642,7 +642,7 @@ async function waImport(){
     if(id==='wselectall'||id==='wselectnone'){m.querySelectorAll('[data-wa-date]').forEach(x=>x.checked=id==='wselectall');return}
     if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
     const b=e.target.closest('[data-wd]');if(b&&file){m.hidden=true;await waStart(file,b.dataset.wd)}};
-  $('#wfile').onchange=async ev=>{file=ev.target.files[0];if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة…</div>';
+  const inspectWhatsAppFile=async selected=>{file=selected;if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة وتحديد أيامها ومرفقاتها…</div>';
     try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map();
       if(n.endsWith('.zip')){await lib('zip');const z=await JSZip.loadAsync(file);const names=Object.keys(z.files).filter(k=>!z.files[k].dir);
         const t=names.find(k=>k.toLowerCase().endsWith('.txt'));if(t)raw=await z.files[t].async('string');
@@ -653,7 +653,9 @@ async function waImport(){
       if(!list.length){$('#wdays').innerHTML='<div class="empty">لم أجد رسائل بتواريخ في هذا الملف. تأكد أنه ملف تصدير محادثة واتساب.</div>';return}
       const have=new Set(S.index.map(x=>x.date));
       $('#wdays').innerHTML=`<div class="muted small">حدد تاريخًا واحدًا أو عدة تواريخ. الأيام المسجلة ستُدمج مع كشوفها، والجديدة تُنشأ عند الحفظ فقط.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">تحليل التواريخ المحددة ومراجعتها</button></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}" checked><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||o.files||0)} مرفق</small></label>`).join('')}</div>`}
-    catch(err){$('#wdays').innerHTML='<div class="empty">تعذّرت قراءة الملف.</div>'}};
+    catch(err){$('#wdays').innerHTML='<div class="empty">تعذّرت قراءة الملف: '+esc(err?.message||err)+'</div>'}};
+  $('#wfile').onchange=async ev=>inspectWhatsAppFile(ev.target.files[0]);
+  if(initialFile)await inspectWhatsAppFile(initialFile);
 }
 async function waStart(file,date){
   const ex0=await getDoc('days/'+date);
