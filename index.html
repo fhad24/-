@@ -15148,24 +15148,22 @@ function weeklyAbsRecorderHtml(row){
 }
 
 
-/* Preserve multiple selections in the report even if another legacy handler redraws rows. */
+/* Report selection: never cancel capture-phase clicks, or checkboxes cannot toggle. */
 (function(){
  if(window.__shGroupReportSelectionInstalled)return;
  window.__shGroupReportSelectionInstalled=true;
  window.shReportMultiChecked=window.shReportMultiChecked||new Set();
- document.addEventListener('click',function(e){
-   const box=e.target?.closest?.('#weeklyAttBody .weekly-att-student-report-select');
-   if(!box)return;
-   e.stopImmediatePropagation();
- },true);
  document.addEventListener('change',function(e){
    const box=e.target?.closest?.('#weeklyAttBody .weekly-att-student-report-select');
    if(!box)return;
    const id=String(box.dataset.idno||'');
+   if(!id)return;
    if(box.checked)window.shReportMultiChecked.add(id);
    else window.shReportMultiChecked.delete(id);
-   e.stopImmediatePropagation();
- },true);
+   const boxes=[...document.querySelectorAll('#weeklyAttBody .weekly-att-student-report-select')];
+   const button=document.getElementById('weeklyAttAll');
+   if(button)button.textContent=(boxes.length&&boxes.every(x=>x.checked))?'☐ إلغاء تحديد الكل':'☑ تحديد الكل';
+ });
 })();
 /* بطاقات إحصاء الطلاب: عرض فقط ولا يغير سجلات الطلاب. */
 
