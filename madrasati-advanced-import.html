@@ -639,6 +639,8 @@ async function waImport(){
    <div id="wdays"></div></div>`;
   let file=null;
   m.onclick=async e=>{const id=e.target.id;if(id==='wx'){m.hidden=true;return}if(id==='wpick'){$('#wfile').click();return}
+    if(id==='wselectall'||id==='wselectnone'){m.querySelectorAll('[data-wa-date]').forEach(x=>x.checked=id==='wselectall');return}
+    if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
     const b=e.target.closest('[data-wd]');if(b&&file){m.hidden=true;await waStart(file,b.dataset.wd)}};
   $('#wfile').onchange=async ev=>{file=ev.target.files[0];if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة…</div>';
     try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map();
@@ -650,7 +652,7 @@ async function waImport(){
       const list=[...ds.entries()].filter(([d])=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(gd(d))).sort((a,b)=>b[0].localeCompare(a[0]));
       if(!list.length){$('#wdays').innerHTML='<div class="empty">لم أجد رسائل بتواريخ في هذا الملف. تأكد أنه ملف تصدير محادثة واتساب.</div>';return}
       const have=new Set(S.index.map(x=>x.date));
-      $('#wdays').innerHTML=`<div class="muted small">الأيام الموجودة في المحادثة — اختر اليوم المطلوب:</div><div class="daylist">${list.map(([d,o])=>`<button class="dayitem" data-wd="${d}"><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">مسجّل</span>':''}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||o.files||0)} مرفق</small></button>`).join('')}</div>`}
+      $('#wdays').innerHTML=`<div class="muted small">حدد تاريخًا واحدًا أو عدة تواريخ. الأيام المسجلة ستُدمج مع كشوفها، والجديدة تُنشأ عند الحفظ فقط.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">تحليل التواريخ المحددة ومراجعتها</button></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}" checked><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||o.files||0)} مرفق</small></label>`).join('')}</div>`}
     catch(err){$('#wdays').innerHTML='<div class="empty">تعذّرت قراءة الملف.</div>'}};
 }
 async function waStart(file,date){
@@ -662,6 +664,49 @@ async function waStart(file,date){
   if(S.day&&S.day.date===date){renderDayMain();runImport(S.day)}
 }
 
+async function waBatchImport(file,dates){
+  const results=[],failed=[];const sorted=[...new Set(dates)].sort();
+  for(let i=0;i<sorted.length;i++){
+    const date=sorted[i];
+    const existing=await getDoc('days/'+date);
+    const day=existing||{date,wd:gd(date).getDay(),label:hijri(date),sessions:[]};
+    S.day=day;S.dayDate=date;IMP={files:[file],items:[],log:'',busy:false,result:null,text:'',forDay:date};S.dayTab='import';
+    renderDayMain();
+    try{await runImport(day);
+      if(PG.bad||!IMP.result?.length){failed.push({date,reason:'لم يستخرج كشفًا صالحًا'});continue}
+      const sessions=IMP.result.filter(x=>x.keep&&x.s&&x.s.g&&x.s.c&&x.s.p).map(x=>structuredClone(x.s));
+      if(sessions.length)results.push({date,sessions,exists:!!existing});else failed.push({date,reason:'لا توجد كشوف للمراجعة'});
+    }catch(err){failed.push({date,reason:String(err.message||err)})}
+  }
+  const m=$('#modal');m.hidden=false;
+  m.innerHTML=`<div class="card stack" style="max-width:660px"><h2>مراجعة استيراد عدة أيام</h2><div class="muted small">لن تُحفظ أي بيانات حتى تضغط اعتماد وحفظ. سيتم دمج أسماء الكشوف المتكررة دون حذف الحضور السابق.</div>
+  <div class="daylist">${results.map(x=>`<label class="dayitem"><input type="checkbox" data-batch-save value="${x.date}" checked><span>${esc(hijri(x.date))} — ${x.exists?'إضافة إلى يوم موجود':'إنشاء يوم جديد'}</span><b>${toAr(x.sessions.length)} كشف</b></label>`).join('')||'<div class="notice">لا توجد نتائج صالحة للحفظ.</div>'}</div>
+  ${failed.length?`<div class="notice">أيام لم تُحلل (لن يتم حفظها): ${failed.map(x=>esc(hijri(x.date))).join('، ')}</div>`:''}
+  <div class="row"><button class="btn primary" id="batchSave" ${results.length?'':'disabled'}>اعتماد وحفظ الأيام المحددة</button><button class="btn" id="batchCancel">إغلاق دون حفظ</button></div><div id="batchStatus" class="muted"></div></div>`;
+  m.onclick=async e=>{
+    if(e.target.id==='batchCancel'){m.hidden=true;return}
+    if(e.target.id!=='batchSave')return;
+    const button=e.target;button.disabled=true;let created=0,updated=0,count=0;const errors=[];
+    for(const x of results.filter(x=>m.querySelector('[data-batch-save][value="'+x.date+'"]')?.checked)){
+      try{
+       const old=await getDoc('days/'+x.date),day=old||{date:x.date,wd:gd(x.date).getDay(),label:hijri(x.date),sessions:[]};
+       for(const incoming of x.sessions){const k=skey(incoming),target=day.sessions.find(y=>skey(y)===k);
+        if(target){target.m=mergeNames(target.m||[],incoming.m||[]);if(!target.s)target.s=incoming.s||'';if(!target.t)target.t=incoming.t||'';if(incoming.note&&!String(target.note||'').includes(incoming.note))target.note=[target.note,incoming.note].filter(Boolean).join(' — ')}
+        else day.sessions.push(incoming);count++;
+       }
+       day.updatedAt=new Date().toISOString();
+       if(!await setDoc('days/'+x.date,day))throw Error('تعذر حفظ اليوم');
+       const idx=S.index.find(d=>d.date===x.date);
+       if(idx)idx.count=day.sessions.length;else S.index.push({date:x.date,label:day.label,wd:day.wd,count:day.sessions.length});
+       if(old)updated++;else created++;
+      }catch(err){errors.push(hijri(x.date)+': '+String(err.message||err))}
+    }
+    try{if(!await saveIndex())errors.push('تعذر حفظ فهرس الأيام')}catch(err){errors.push('فهرس الأيام: '+err.message)}
+    $('#batchStatus').textContent='أُنشئ '+toAr(created)+' يوم، وحُدّث '+toAr(updated)+' يوم، وأُضيف '+toAr(count)+' كشف. '+(errors.length?'أخطاء: '+errors.join('؛ '):'تم الحفظ.');
+    if(!errors.length){S.dayDate=null;toast('تم حفظ التواريخ المحددة بنجاح',5000)}
+    else button.disabled=false;
+  };
+}
 /* ---------- import progress ---------- */
 const PG={pct:0,label:'',t0:0,timer:null,goal:0};
 function progSet(pct,label){PG.pct=Math.max(PG.pct,Math.min(100,pct));if(label)PG.label=label;progDraw()}
