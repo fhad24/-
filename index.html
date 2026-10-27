@@ -15856,10 +15856,23 @@ async function initWeeklyAttendanceReport(){
     }catch(e){console.warn('weekly attendance range refresh',e)}
   },0);
 }
+/* Week anchors taken from the supplied 1448-1449 semester-one school calendar. */
+const SHURAHBIL_1448_WEEK_STARTS=[
+ ['1','2026-08-23'],['2','2026-08-30'],['3','2026-09-06'],['4','2026-09-13'],
+ ['5','2026-09-20'],['6','2026-09-27'],['7','2026-10-04'],['8','2026-10-11'],
+ ['9','2026-10-18'],['10','2026-10-25'],['11','2026-11-01'],['12','2026-11-08'],
+ ['13','2026-11-15'],['14','2026-11-29'],['15','2026-12-06'],['16','2026-12-13'],
+ ['17','2026-12-20'],['18','2026-12-27'],['19','2027-01-03']
+];
 function weeklyAttWeekNumberForDate(dateKey){
-  for(const [week,anchor] of Object.entries(WEEKLY_IMPORTED_WEEK_ANCHORS)){
-    const dates=weeklyAttWeekDates(anchor).map(weeklyAttDateKey);
-    if(dates.includes(String(dateKey||''))) return week;
+  const key=String(dateKey||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return '';
+  if(key>='2026-11-22'&&key<='2026-11-26')return 'إجازة الخريف';
+  const time=Date.parse(key+'T12:00:00Z');
+  if(!Number.isFinite(time))return '';
+  for(const [week,start] of SHURAHBIL_1448_WEEK_STARTS){
+    const diff=Math.round((time-Date.parse(start+'T12:00:00Z'))/86400000);
+    if(diff>=0&&diff<=4)return week;
   }
   return '';
 }
@@ -16014,6 +16027,9 @@ function openWeeklyAttStudentDetailedReport(){
       </div>
     </div>`;
   document.body.appendChild(modal);
+  if(window.shEnhanceMadrasatiStudentReport){
+    window.shEnhanceMadrasatiStudentReport(modal,student);
+  }
   modal.querySelectorAll('td').forEach(td=>td.style.border='1px solid #999');
   modal.querySelectorAll('td').forEach(td=>td.style.padding='8px');
   $('weeklyAttStudentReportClose').onclick=()=>modal.remove();
@@ -24330,6 +24346,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 <script defer src="./madrasati-report-extra.js"></script>
+<script defer src="./shurahbil-student-madrasati-detail.js"></script>
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
