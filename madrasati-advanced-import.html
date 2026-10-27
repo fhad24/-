@@ -852,7 +852,7 @@ async function gatherParts(){
         const txtName=names.find(k=>k.toLowerCase().endsWith('.txt'));
         if(txtName){const raw=await z.files[txtName].async('string');if(day){const r=filterChat(raw,day);chat=r.text;refs=r.files}else chat=raw.slice(-60000);
           if(chat&&chat.trim()){const lr=localChat(chat,txtName.split('/').pop(),parts);if(!lr.sessions.length&&!Object.keys(lr.ctx).length)parts.push({kind:'txt',text:chat.slice(-60000),label:txtName})}}
-        const ymd=day?day.replace(/-/g,''):'';const useAll=!day||(!txtName&&!names.some(k=>k.includes(ymd)));
+        const ymd=day?day.replace(/-/g,''):'';const useAll=!day||(!txtName&&!names.some(k=>k.includes(ymd)));if(day&&txtName&&refs.size===0&&!useAll){const available=chatDates(await z.files[txtName].async('string'));log('تنبيه: لا توجد مرفقات مرتبطة باليوم المحدد. الأيام المتوفرة في محادثة واتساب: '+[...available.keys()].slice(0,15).map(x=>hijri(x)).join('، ')+'. اختر اليوم المناسب من زر «اختيار يوم من محادثة واتساب (ZIP)». لم أخلط صور أيام مختلفة.');}
         let used=0,skipped=0,zi=0;const NZ=Math.max(1,names.length);
         for(const nm of names){zi++;chk();if(PG.span)progSet(PG.span[0]+PG.span[1]*zi/NZ,`قراءة مرفقات ${f.name}: ${toAr(zi)} من ${toAr(NZ)}`);const l=nm.toLowerCase();const base=nm.split('/').pop();if(l.endsWith('.txt'))continue;
           const ok=useAll||refs.has(base)||base.includes(ymd);if(!ok){skipped++;continue}
@@ -939,7 +939,7 @@ async function runImport(d){
     for(const r of res){const o=acc.find(x=>skey(x.s)===skey(r));if(o){o.s.m=mergeNames(o.s.m,r.m);if(r.note&&!(o.s.note||'').includes(r.note))o.s.note=[o.s.note,r.note].filter(Boolean).join(' — ');matchSession(o.s)}else{acc.push({s:r,keep:true,mode:cur.some(x=>skey(x)===skey(r))?'merge':'new'});added++}}
     IMP.result=acc;todo.forEach(f=>IMP.done.add(f));if(newText)IMP.doneText=IMP.text.trim();IMP.todo=null;
     if(IMP.prev.length)log(`دُمجت النتائج الجديدة مع السابقة: ${toAr(added)} كشف جديد، والمجموع ${toAr(acc.length)}.`);
-    log(`انتهى التحليل في ${toAr(((performance.now()-T0)/1000).toFixed(1))} ث: ${toAr(res.length)} كشف من الملفات الجديدة. راجعها ثم احفظ.`);progEnd(`اكتمل — ${toAr(IMP.result.length)} كشف جاهز للمراجعة`);
+    log(`انتهى الفحص في ${toAr(((performance.now()-T0)/1000).toFixed(1))} ث: ${toAr(res.length)} كشف من الملفات الجديدة. راجعها ثم احفظ.`);progEnd(IMP.result.length?`اكتمل — ${toAr(IMP.result.length)} كشف جاهز للمراجعة`:'لم يُستخرج أي كشف — راجع تاريخ المحادثة وصلاحية خدمة قراءة الصور',!IMP.result.length);
   }catch(e){
     IMP.todo=null;if(!IMP.result&&IMP.prev&&IMP.prev.length)IMP.result=IMP.prev;
     const code=e&&e.code;progEnd(code==='cancelled'?'أُوقف الاستيراد':'توقف الاستيراد بسبب خطأ — التفاصيل أدناه',true);
