@@ -666,16 +666,27 @@ async function waImport(initialFile=null){
   if(initialFile)await inspectWhatsAppFile(initialFile);
 }
 async function waStart(file,date){
-  const ex0=await getDoc('days/'+date);
-  if(!ex0){const wd=gd(date).getDay();S.day={date,wd,label:hijri(date),sessions:[]};S.dayDate=date;await saveDay()}
-  else{S.day=ex0;S.dayDate=date}
-  if(IMP.result&&IMP.result.length&&IMP.forDay===date){IMP.files.push(file);IMP.text=IMP.text||''}else IMP={files:[file],items:[],log:'',busy:false,result:null,text:''};IMP.forDay=date;S.dayTab='import';
-  await new Promise(ok=>{openDay(date);setTimeout(ok,600)});
-  if(S.day&&S.day.date===date){renderDayMain();runImport(S.day)}
+  const existing=await getDoc('days/'+date);
+  S.day=existing||{date,wd:gd(date).getDay(),label:hijri(date),sessions:[]};S.dayDate=date;
+  // Never create an empty day until a user has reviewed extracted sessions and approved saving.
+  IMP={files:[file],items:[],log:'',busy:false,result:null,text:'',forDay:date};
+  S.dayTab='import';renderDayMain();await runImport(S.day);
 }
 
 async function waBatchImport(file,dates){
   const results=[],failed=[];const sorted=[...new Set(dates)].sort();
+  // Validate the image-reading permission before scanning hundreds of ZIP attachments.
+  if(STANDALONE){try{
+    if(!getKey())throw {code:'not_granted',message:'لا يوجد مفتاح Anthropic API لتحليل صور كشوف واتساب.'};
+    await S.sample.json('أعد JSON فقط بالشكل التالي: {"ok":true}',{modelTier:'default'});
+  }catch(error){
+    const reason=String(error?.message||error?.code||error);
+    const m=$('#modal');m.hidden=false;
+    m.innerHTML='<div class="card stack" style="max-width:580px"><h2>تعذّر بدء قراءة الصور</h2><p>لم يستطع البرنامج الاتصال بخدمة تحليل الصور: '+esc(reason)+'</p><div class="notice">لم تُحذف البيانات، ولم تُنشأ أيام جديدة، ولم يبدأ تحليل ملف ZIP. راجع مفتاح Anthropic API في الإعدادات قبل المحاولة.</div><button class="btn" id="dismissImportAuth">إغلاق</button></div>';
+    m.onclick=e=>{if(e.target.id==='dismissImportAuth')m.hidden=true};
+    return;
+  }}
+
   for(let i=0;i<sorted.length;i++){
     const date=sorted[i];
     const existing=await getDoc('days/'+date);
