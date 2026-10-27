@@ -16,7 +16,7 @@ function rosterMatches(raw){
  return S.roster.filter(r=>sameName(text,r));
 }
 function contextFor(msgs,idx,studentRows,date){
- const m=msgs[idx];let direct={...(m.head||{})};
+ const m=msgs[idx]||{head:{},who:'',min:0};let direct={...(m.head||{})};
  const choices=[];
  for(let j=Math.max(0,idx-5);j<=Math.min(msgs.length-1,idx+5);j++){
   const it=msgs[j];if(it.date!==date||(!it.head?.g&&!it.head?.p))continue;
@@ -115,28 +115,28 @@ function showResult(file,dates,items,issues,scanned,failed){
   }
  };
 }
-async function run(file,dates){
+async function run(file,dates,prepared=null){
  const m=document.querySelector('#modal');m.hidden=false;cancelled=false;let dismissed=false;
  m.innerHTML='<div class="card stack" style="max-width:610px"><h2>قراءة مجانية داخل المتصفح</h2><p class="muted">لن تُرسل الصور إلى Anthropic، ولن تُحفظ بيانات إلا بعد المراجعة.</p><div id="localOcrStatus" class="muted">جارٍ تجهيز الملفات…</div><div class="row"><button class="btn" id="localOcrStop">إيقاف القراءة ومراجعة ما تم استخراجه</button><button class="btn danger" id="localOcrDismiss">✕ إيقاف وإغلاق دون حفظ</button></div></div>';
  m.onclick=e=>{const b=e.target.closest('button');if(b?.id==='localOcrStop'){cancelled=true;b.disabled=true;update('جارٍ إيقاف القراءة؛ ستظهر الكشوف التي تم استخراجها فقط.')}if(b?.id==='localOcrDismiss'){cancelled=true;dismissed=true;m.onclick=null;m.hidden=true;m.innerHTML='';}};
  const update=t=>{const el=document.querySelector('#localOcrStatus');if(el)el.textContent=t};
- let data;try{data=await prepare(file,dates,update);if(dismissed)return}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
- let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null;
- if(imageItems.length){
+ let data;try{data=prepared||await prepare(file,dates,update);if(dismissed)return}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
+ let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null;const totalImages=data.imageTotal??imageItems.length;
+ if(totalImages){
   try{
    update('جارٍ تحميل محرك القراءة العربية المحلي…');
    await new Promise((resolve,reject)=>{if(window.Tesseract)return resolve();const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('تعذّر تنزيل محرك OCR من الشبكة'));document.head.appendChild(script)});
    worker=await window.Tesseract.createWorker('ara+eng');
-   for(const [i,image] of imageItems.entries()){
+   let i=0;for await (const image of imageItems){
     if(cancelled)break;
-    update('قراءة الصورة '+(i+1)+' من '+imageItems.length+' بتاريخ '+hijri(image.date));
+    update('قراءة الصورة '+(++i)+' من '+totalImages+' بتاريخ '+hijri(image.date));
     try{
-     const bytes=await zip.files[image.path].async('blob');
+     const bytes=image.blob||await zip.files[image.path].async('blob');
      const bitmap=await createImageBitmap(bytes);
      const scale=Math.min(2.2,Math.max(1,1650/Math.max(1,bitmap.width)));const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
      const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
      const recognized=await worker.recognize(canvas),rows=rosterMatches(recognized.data.text||'');
-     const head=contextFor(messages,image.msgIndex,rows,image.date);
+     const head={...contextFor(messages,image.msgIndex??0,rows,image.date),...(image.head||{})};
      const session=buildSession(rows,head,image.date,'قراءة صورة واتساب محلية — راجع الأسماء',true);
      if(session){dayItems.push({date:image.date,session,type:'ocr'});}
      else issues.push(hijri(image.date)+': '+image.ref+' — لم أتعرف على أسماء وفصل وحصة بثقة كافية');
