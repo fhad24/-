@@ -33,9 +33,17 @@ function match(){
 async function ocr(){
  if(!images.length)return msg('لا توجد صور للتحليل.');if(!confirm('تحليل '+images.length+' صورة على جهازك قد يكون بطيئًا. هل تواصل؟'))return;
  try{msg('جارٍ تحميل أداة التعرف على النصوص العربية…');await lib('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js','Tesseract');
- const worker=await Tesseract.createWorker('ara+eng');let n=0;
- try{for(const f of images){msg('قراءة الصورة '+(++n)+' من '+images.length+' — '+f.name);try{const r=await worker.recognize(f);scanned+='\n'+r.data.text}catch(e){scanned+='\n';console.warn('OCR image',f.name,e)}}}finally{await worker.terminate()}
- msg('اكتملت قراءة '+n+' صورة. النتائج تحتاج مراجعة قبل الحفظ.');match()
+ const worker=await Tesseract.createWorker('ara+eng');let n=0,failed=0;
+ try{for(const f of images){msg('قراءة الصورة '+(++n)+' من '+images.length+' — '+f.name);try{
+   const source=await createImageBitmap(f);
+   const scale=Math.min(2.3,Math.max(1,1700/Math.max(1,source.width))),w=Math.round(source.width*scale),h=Math.round(source.height*scale);
+   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);ctx.drawImage(source,0,0,w,h);source.close();
+   const pixels=ctx.getImageData(0,0,w,h),data=pixels.data;for(let k=0;k<data.length;k+=4){const gray=.299*data[k]+.587*data[k+1]+.114*data[k+2];const v=Math.max(0,Math.min(255,(gray-128)*1.4+128));data[k]=v;data[k+1]=v;data[k+2]=v}ctx.putImageData(pixels,0,0);
+   const r=await worker.recognize(canvas);scanned+='\n'+(r.data.text||'');if(n%4===0)match();
+  }catch(e){failed++;console.warn('OCR image',f.name,e)}
+  if(n%4===0)await new Promise(resolve=>setTimeout(resolve,0));
+ }}finally{await worker.terminate()}
+ msg('قرأت '+(n-failed)+' صورة من '+images.length+(failed?'، وتعذرت '+failed+' صورة':'')+'. راجع الأسماء قبل اعتماد الحضور.');match()
  }catch(e){msg('تعذر التعرف على الصور: '+e.message)}
 }
 function start(){
