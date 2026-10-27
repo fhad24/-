@@ -116,11 +116,11 @@ function showResult(file,dates,items,issues,scanned,failed){
  };
 }
 async function run(file,dates){
- const m=document.querySelector('#modal');m.hidden=false;cancelled=false;
- m.innerHTML='<div class="card stack" style="max-width:610px"><h2>قراءة مجانية داخل المتصفح</h2><p class="muted">لن تُرسل الصور إلى Anthropic، ولن تُحفظ بيانات إلا بعد المراجعة.</p><div id="localOcrStatus" class="muted">جارٍ تجهيز الملفات…</div><button class="btn" id="localOcrStop">إيقاف القراءة ومراجعة ما تم استخراجه</button></div>';
- m.onclick=e=>{if(e.target.id==='localOcrStop'){cancelled=true;e.target.disabled=true}};
+ const m=document.querySelector('#modal');m.hidden=false;cancelled=false;let dismissed=false;
+ m.innerHTML='<div class="card stack" style="max-width:610px"><h2>قراءة مجانية داخل المتصفح</h2><p class="muted">لن تُرسل الصور إلى Anthropic، ولن تُحفظ بيانات إلا بعد المراجعة.</p><div id="localOcrStatus" class="muted">جارٍ تجهيز الملفات…</div><div class="row"><button class="btn" id="localOcrStop">إيقاف القراءة ومراجعة ما تم استخراجه</button><button class="btn danger" id="localOcrDismiss">✕ إيقاف وإغلاق دون حفظ</button></div></div>';
+ m.onclick=e=>{const b=e.target.closest('button');if(b?.id==='localOcrStop'){cancelled=true;b.disabled=true;update('جارٍ إيقاف القراءة؛ ستظهر الكشوف التي تم استخراجها فقط.')}if(b?.id==='localOcrDismiss'){cancelled=true;dismissed=true;m.onclick=null;m.hidden=true;m.innerHTML='';}};
  const update=t=>{const el=document.querySelector('#localOcrStatus');if(el)el.textContent=t};
- let data;try{data=await prepare(file,dates,update)}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
+ let data;try{data=await prepare(file,dates,update);if(dismissed)return}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
  let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null;
  if(imageItems.length){
   try{
@@ -147,7 +147,7 @@ async function run(file,dates){
   }catch(e){issues.push('محرك OCR غير متاح: '+(e.message||e))}
   finally{if(worker)await worker.terminate()}
  }
- showResult(file,dates,dayItems,issues,read,failed);
+ if(!dismissed)showResult(file,dates,dayItems,issues,read,failed);
 }
 window.shMadrasatiOfflineImport=run;
 })();
