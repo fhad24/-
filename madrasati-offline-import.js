@@ -78,18 +78,19 @@ async function prepare(file,dates,update){
 }
 function showResult(file,dates,items,issues,scanned,failed){
  const m=document.querySelector('#modal');m.hidden=false;
+ const closeModal=()=>{m.onclick=null;m.hidden=true;m.innerHTML='';};
  const dated=new Map();for(const a of items){const key=a.date+'|'+skey(a.session);if(!dated.has(key))dated.set(key,{date:a.date,session:a.session,type:a.type});else{const prev=dated.get(key);prev.session.m=mergeNames(prev.session.m,a.session.m);prev.session.partial=prev.session.partial&&a.session.partial}}
  const sessions=[...dated.values()];
  const safe=s=>esc(String(s??''));
  const options=sessions.map((x,i)=>'<label class="dayitem" style="display:block;margin-bottom:8px"><input type="checkbox" data-offline-save="'+i+'" '+(x.type==='text'?'checked':'')+'> <b>'+safe(hijri(x.date))+'</b> — '+safe(GN[x.session.g]||x.session.g)+' / '+safe(x.session.c)+' — الحصة '+safe(PN[x.session.p]||x.session.p)+' — '+x.session.m.length+' اسمًا '+(x.type==='ocr'?'<span class="pill warn">OCR: راجع الأسماء</span>':'')+'<details style="padding:5px 22px"><summary>عرض أسماء الكشف</summary>'+x.session.m.map(y=>'<div>'+safe(y.n)+'</div>').join('')+'</details></label>').join('');
- m.innerHTML='<div class="card stack" style="max-width:760px"><h2>نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p><div class="daylist" style="max-height:45vh;overflow:auto">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+'</div>'+(issues.length?'<details><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
+ m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p><div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+'</div>'+(issues.length?'<details><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
  m.onclick=async e=>{
-  if(e.target.id==='offlineClose'){m.hidden=true;return}
+  if(e.target.closest('#offlineClose,#offlineCloseTop,#offlineDone')){closeModal();return}
   if(e.target.id!=='offlineSave')return;
   const selected=[...m.querySelectorAll('[data-offline-save]:checked')].map(x=>sessions[+x.dataset.offlineSave]);
   if(!selected.length){m.querySelector('#offlineSaveStatus').textContent='حدد كشفًا واحدًا على الأقل';return}
   if(!confirm('هل راجعت أسماء الطلاب والتاريخ والفصل والحصة في '+selected.length+' كشفًا؟ ستُضاف إلى الأيام الموجودة أو تُنشأ أيام جديدة.'))return;
-  e.target.disabled=true;const byDate=new Map();for(const x of selected){if(!byDate.has(x.date))byDate.set(x.date,[]);byDate.get(x.date).push(x.session)}
+  const saveButton=e.target;saveButton.disabled=true;const byDate=new Map();for(const x of selected){if(!byDate.has(x.date))byDate.set(x.date,[]);byDate.get(x.date).push(x.session)}
   let created=0,updated=0,cnt=0;const errors=[];
   for(const [date,list] of byDate)try{
     const old=await getDoc('days/'+date),day=old||{date,wd:gd(date).getDay(),label:hijri(date),sessions:[]};
@@ -100,9 +101,18 @@ function showResult(file,dates,items,issues,scanned,failed){
     const index=S.index.find(x=>x.date===date);if(index)index.count=day.sessions.length;else S.index.push({date,label:day.label,wd:day.wd,count:day.sessions.length});
     if(old)updated++;else created++;
    }catch(err){errors.push(hijri(date)+': '+(err.message||err))}
-  if(!await saveIndex())errors.push('تعذّر حفظ فهرس الأيام');
-  m.querySelector('#offlineSaveStatus').textContent='تم إنشاء '+created+' يوم وتحديث '+updated+' يوم وإضافة '+cnt+' كشف جديد.'+(errors.length?' أخطاء: '+errors.join('؛ '):'');
-  if(errors.length)e.target.disabled=false;
+  try{if(!await saveIndex())errors.push('تعذّر حفظ فهرس الأيام')}catch(err){errors.push('فهرس الأيام: '+(err.message||err))}
+  S.allDays=null;S.stuStats=null;S.index.sort((a,b)=>b.date.localeCompare(a.date));
+  const summary='تم إنشاء '+created+' يوم وتحديث '+updated+' يوم وإضافة '+cnt+' كشف جديد.';
+  if(!errors.length){
+    m.innerHTML='<div class="card stack" style="width:min(600px,95vw);padding:24px;text-align:center"><div style="font-size:44px;color:#157856">✓</div><h2 style="margin:4px 0">تم الحفظ بنجاح</h2><p style="line-height:1.9">'+summary+'</p><p class="muted">يمكنك إغلاق النافذة الآن. البيانات المحفوظة لم تُحذف أو تُستبدل.</p><button class="btn primary" id="offlineDone" type="button" style="width:100%;min-height:52px">✓ تم — إغلاق النافذة</button></div>';
+    m.onclick=e=>{if(e.target.closest('#offlineDone'))closeModal()};
+    toast('حُفظت الكشوف المحددة بنجاح');
+  }else{
+    const status=m.querySelector('#offlineSaveStatus');
+    if(status)status.textContent=summary+' بعض التواريخ لم تكتمل: '+errors.join('؛ ')+'. يمكنك مراجعتها أو إغلاق النافذة.';
+    saveButton.disabled=false;
+  }
  };
 }
 async function run(file,dates){
