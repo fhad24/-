@@ -58,7 +58,7 @@ async function calculate(student){
  }
  const entries=[...count.values()].sort((a,b)=>a.date.localeCompare(b.date));
  const present=entries.filter(x=>x.present).length,absent=entries.length-present;
- return{state:'ok',rows:entries,present,absent,total:entries.length,rate:entries.length?((absent/entries.length)*100).toFixed(1):'0.0',pending:[...pending].filter(d=>!count.has(d)).length};
+ return{state:'ok',rows:entries,present,absent,total:entries.length,rate:entries.length?((absent/entries.length)*100).toFixed(1):'0.0',pendingDates:[...pending].filter(d=>!count.has(d)).sort()};
 }
 const statCard=(label,value,color)=>'<div style="background:#f7faf8;border:1px solid #dce9e1;border-radius:12px;padding:13px;text-align:center"><div style="font-weight:800;color:#25463b">'+safe(label)+'</div><div style="font-size:27px;font-weight:900;color:'+color+';margin-top:5px">'+safe(value)+'</div></div>';
 function render(detail){
@@ -69,7 +69,7 @@ function render(detail){
  const table=detail.rows.length?'<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;text-align:center"><thead><tr style="background:#e8f2ed"><th>م</th><th>الحالة في مدرستي</th><th>الأسبوع الدراسي</th><th>اليوم</th><th>التاريخ الهجري</th><th>التاريخ الميلادي</th><th>الحصص ذات الكشوف</th></tr></thead><tbody>'+
  detail.rows.map((r,i)=>'<tr style="background:'+(r.present?'#edf8f1':'#fff0ed')+'"><td>'+(i+1)+'</td><td style="font-weight:900;color:'+(r.present?'#08754f':'#b42318')+'">'+(r.present?'حاضر':'غائب')+'</td><td>'+safe(weekLabel(r.date))+'</td><td>'+safe(weekday(r.date))+'</td><td>'+safe(hijriDate(r.date))+'</td><td dir="ltr">'+safe(r.date)+'</td><td>'+safe([...r.periods].sort((a,b)=>Number(a)-Number(b)).join('، ')||'—')+'</td></tr>').join('')+'</tbody></table></div>':
  '<p style="padding:12px;color:#795d2d">لا توجد أيام بكشوف مكتملة لهذا الطالب ضمن فترة التقرير المختارة.</p>';
- return stats+table+(detail.pending?'<p style="background:#fff8e5;border-radius:9px;padding:10px;color:#855b1c">تنبيه: يوجد '+detail.pending+' يومًا بكشوف مدرستي جزئية تحتاج إلى اعتماد، ولم تدخل في الغياب.</p>':'');
+ return stats+table+(detail.pendingDates?.length?'<div style="background:#fff8e5;border-radius:9px;padding:12px;color:#855b1c;margin-top:10px"><b>كشوف مدرستي التي تحتاج مراجعة: '+detail.pendingDates.length+' يوم</b><p style="margin:5px 0 0">لم تُحسب هذه الأيام غيابًا لعدم اكتمال الكشوف: '+detail.pendingDates.slice(0,16).map(d=>safe(hijriDate(d)+' ('+weekLabel(d)+')')).join('، ')+(detail.pendingDates.length>16?'، وغيرها':'')+'</p></div>':'');
 }
 async function enhance(modal,student){
  if(!modal||!student)return;
