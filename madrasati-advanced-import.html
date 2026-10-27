@@ -571,7 +571,7 @@ function tabImport(t,d){
   drop.onclick=()=>fin.click();
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};drop.ondragleave=()=>drop.classList.remove('on');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');addFiles(e.dataTransfer.files)};
-  fin.onchange=()=>addFiles(fin.files);
+  fin.onchange=()=>{const chosen=[...fin.files];fin.value='';addFiles(chosen)};
   $('#itxt').oninput=e=>IMP.text=e.target.value;
   document.onpaste=e=>{if(S.view==='day'&&S.dayTab==='import'&&e.clipboardData.files.length)addFiles(e.clipboardData.files)};
   $('#clr').onclick=()=>{IMP={files:[],items:[],log:'',busy:false,result:null};PG.label='';PG.pct=0;renderDayMain()};
