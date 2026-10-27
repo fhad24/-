@@ -560,7 +560,7 @@ function tabImport(t,d){
   t.innerHTML=`<div class="stack">
    <div class="drop" id="drop"><b>اسحب الملفات هنا أو اضغط للاختيار</b><div class="muted small">تقرير حضور Teams (CSV أو Excel) — الأسرع والأدق، صور، فيديو تسجيل شاشة، PDF، Word، Excel، نص محادثة واتساب، أو ملف واتساب ZIP أو RAR — اختر التواريخ من القائمة</div>
    <input type="file" id="fin" multiple hidden accept="image/*,video/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.zip,.rar"></div>
-   <div class="row"><button class="btn" id="wa2">اختيار يوم من محادثة واتساب (ZIP)</button><span class="muted small">أو ارفع ZIP أو RAR هنا وسيعرض البرنامج التواريخ المتاحة.</span></div>
+   <div class="row"><button class="btn" id="wa2">اختيار أيام من ملف ZIP أو RAR</button><span class="muted small">أو ارفع ZIP أو RAR هنا وسيعرض البرنامج التواريخ المتاحة.</span></div>
    <label class="stack" style="gap:4px">نص إضافي (اختياري) — الصق رسائل واتساب أو تعليقًا مثل «حضور ثاني ج الحصة الرابعة»<textarea id="itxt">${esc(IMP.text||'')}</textarea></label>
    <div id="flist" class="small"></div>
    <div class="row"><button class="btn primary" id="go" ${IMP.busy?'disabled':''}>تحليل وإضافة لليوم</button><button class="btn" id="stop" ${IMP.busy?'':'hidden'}>إيقاف</button><button class="btn" id="clr">مسح</button><label class="small" title="السريع يقرأ الصور بنموذج أسرع بعدة مرات، والدقيق أبطأ لكنه أدق في الصور الصعبة"><input type="checkbox" id="ifast" ${(()=>{try{return localStorage.getItem('hudoor_fast')!=='0'}catch{return true}})()?'checked':''}> قراءة سريعة</label></div>
@@ -634,8 +634,8 @@ function chatDates(raw){
 async function waImport(initialFile=null){
   const m=$('#modal');m.hidden=false;
   m.innerHTML=`<div class="card stack" style="max-width:560px"><h2>استيراد من محادثة واتساب</h2>
-   <div class="muted small">صدّر محادثة واتساب مع الوسائط وارفع ZIP هنا. استيراد الصور مجاني داخل المتصفح افتراضيًا، ولا يستخدم مفتاح Anthropic. تُراجع الكشوف والتواريخ قبل اعتماد الحفظ.</div>
-   <div class="row"><button class="btn primary" id="wpick">اختيار ملف ZIP أو TXT</button><input type="file" id="wfile" accept=".zip,.txt,.rar" hidden><button class="btn" id="wx">إلغاء</button></div>
+   <div class="muted small">ارفع ملف ZIP أو RAR يحتوي على صور الغياب أو محادثة واتساب مع الوسائط. استيراد الصور مجاني داخل المتصفح افتراضيًا، ولا يستخدم مفتاح Anthropic. تُراجع الكشوف والتواريخ قبل اعتماد الحفظ.</div>
+   <div class="row"><button class="btn primary" id="wpick">اختيار ZIP أو RAR أو TXT</button><input type="file" id="wfile" accept=".zip,.txt,.rar" hidden><button class="btn" id="wx">إلغاء</button></div>
    <div id="wdays"></div></div>`;
   let file=null;
   m.onclick=async e=>{const id=e.target.id;if(id==='wx'){m.hidden=true;return}if(id==='wpick'){$('#wfile').click();return}
