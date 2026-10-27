@@ -643,16 +643,24 @@ async function waImport(initialFile=null){
     if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
     const b=e.target.closest('[data-wd]');if(b&&file){m.hidden=true;await waStart(file,b.dataset.wd)}};
   const inspectWhatsAppFile=async selected=>{file=selected;if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة وتحديد أيامها ومرفقاتها…</div>';
-    try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map();
-      if(n.endsWith('.zip')){await lib('zip');const z=await JSZip.loadAsync(file);const names=Object.keys(z.files).filter(k=>!z.files[k].dir);
+    try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map(),names=[];
+      if(n.endsWith('.zip')){await lib('zip');const z=await JSZip.loadAsync(file);names=Object.keys(z.files).filter(k=>!z.files[k].dir);
         const t=names.find(k=>k.toLowerCase().endsWith('.txt'));if(t)raw=await z.files[t].async('string');
         names.forEach(k=>{const mm=k.match(/(20\d{2})(\d{2})(\d{2})/);if(mm){const d=`${mm[1]}-${mm[2]}-${mm[3]}`;imgDates.set(d,(imgDates.get(d)||0)+1)}})}
       else raw=await file.text();
-      const ds=chatDates(raw);imgDates.forEach((v,k)=>{const o=ds.get(k)||{msgs:0,files:0};o.att=v;ds.set(k,o)});
+      const ds=chatDates(raw);
+      const archivedFiles=new Set((typeof names!=='undefined'?names:[]).map(k=>k.split('/').pop().toLowerCase()));
+      if(raw&&archivedFiles.size){for(const [date,stats] of ds){
+        const refs=filterChat(raw,date).files;
+        const media=[...refs].filter(n=>/\.(jpe?g|png|webp|gif|pdf|mp4|mov)$/i.test(n));
+        stats.att=media.filter(n=>archivedFiles.has(n.toLowerCase())).length;
+        stats.missing=media.length-stats.att;
+      }}
+      else imgDates.forEach((v,k)=>{const o=ds.get(k)||{msgs:0,files:0};o.att=v;ds.set(k,o)});
       const list=[...ds.entries()].filter(([d])=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(gd(d))).sort((a,b)=>b[0].localeCompare(a[0]));
       if(!list.length){$('#wdays').innerHTML='<div class="empty">لم أجد رسائل بتواريخ في هذا الملف. تأكد أنه ملف تصدير محادثة واتساب.</div>';return}
-      const have=new Set(S.index.map(x=>x.date));
-      $('#wdays').innerHTML=`<div class="muted small">حدد تاريخًا واحدًا أو عدة تواريخ. الأيام المسجلة ستُدمج مع كشوفها، والجديدة تُنشأ عند الحفظ فقط.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">تحليل التواريخ المحددة ومراجعتها</button></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}" checked><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||o.files||0)} مرفق</small></label>`).join('')}</div>`}
+      const have=new Set(S.index.map(x=>x.date));const availableCount=list.reduce((n,[d,o])=>n+(o.att||0),0);
+      $('#wdays').innerHTML=`<div class="muted small">عُثر على ${toAr(list.length)} تاريخًا و${toAr(availableCount)} مرفقًا مرتبطًا فعليًا برسائلها. حدد التواريخ المطلوبة؛ بعض رسائل واتساب حُذفت وسائطها من ملف التصدير. لن تُنشأ أيام جديدة قبل اعتماد الحفظ.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">تحليل التواريخ المحددة ومراجعتها</button></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}"><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||0)} مرفق فعلي${o.missing?`، ${toAr(o.missing)} غير مرفق`:''}</small></label>`).join('')}</div>`}
     catch(err){$('#wdays').innerHTML='<div class="empty">تعذّرت قراءة الملف: '+esc(err?.message||err)+'</div>'}};
   $('#wfile').onchange=async ev=>inspectWhatsAppFile(ev.target.files[0]);
   if(initialFile)await inspectWhatsAppFile(initialFile);
