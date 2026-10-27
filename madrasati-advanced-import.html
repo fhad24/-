@@ -634,14 +634,14 @@ function chatDates(raw){
 async function waImport(initialFile=null){
   const m=$('#modal');m.hidden=false;
   m.innerHTML=`<div class="card stack" style="max-width:560px"><h2>استيراد من محادثة واتساب</h2>
-   <div class="muted small">صدّر المحادثة من واتساب: المزيد ← تصدير الدردشة ← إرفاق الوسائط، ثم اختر ملف ZIP هنا. سيعرض التطبيق الأيام الموجودة فيه لتختار اليوم المطلوب، ويأخذ رسائله ومرفقاته فقط.</div>
+   <div class="muted small">صدّر محادثة واتساب مع الوسائط وارفع ZIP هنا. استيراد الصور مجاني داخل المتصفح افتراضيًا، ولا يستخدم مفتاح Anthropic. تُراجع الكشوف والتواريخ قبل اعتماد الحفظ.</div>
    <div class="row"><button class="btn primary" id="wpick">اختيار ملف ZIP أو TXT</button><input type="file" id="wfile" accept=".zip,.txt" hidden><button class="btn" id="wx">إلغاء</button></div>
    <div id="wdays"></div></div>`;
   let file=null;
   m.onclick=async e=>{const id=e.target.id;if(id==='wx'){m.hidden=true;return}if(id==='wpick'){$('#wfile').click();return}
     if(id==='wselectall'||id==='wselectnone'){m.querySelectorAll('[data-wa-date]').forEach(x=>x.checked=id==='wselectall');return}
-    if(id==='wlocal'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await window.shMadrasatiOfflineImport(file,dates);return}
-    if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
+    if(id==='wcloud'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await waBatchImport(file,dates);return}
+    if(id==='wbatch'&&file){const dates=[...m.querySelectorAll('[data-wa-date]:checked')].map(x=>x.value);if(!dates.length){toast('حدد تاريخًا واحدًا على الأقل');return}m.hidden=true;await window.shMadrasatiOfflineImport(file,dates);return}
     const b=e.target.closest('[data-wd]');if(b&&file){m.hidden=true;await waStart(file,b.dataset.wd)}};
   const inspectWhatsAppFile=async selected=>{file=selected;if(!file)return;$('#wdays').innerHTML='<div class="muted">جارٍ قراءة المحادثة وتحديد أيامها ومرفقاتها…</div>';
     try{let raw='';const n=file.name.toLowerCase();let imgDates=new Map(),names=[];
@@ -661,7 +661,7 @@ async function waImport(initialFile=null){
       const list=[...ds.entries()].filter(([d])=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(gd(d))).sort((a,b)=>b[0].localeCompare(a[0]));
       if(!list.length){$('#wdays').innerHTML='<div class="empty">لم أجد رسائل بتواريخ في هذا الملف. تأكد أنه ملف تصدير محادثة واتساب.</div>';return}
       const have=new Set(S.index.map(x=>x.date));const availableCount=list.reduce((n,[d,o])=>n+(o.att||0),0);
-      $('#wdays').innerHTML=`<div class="muted small">عُثر على ${toAr(list.length)} تاريخًا و${toAr(availableCount)} مرفقًا مرتبطًا فعليًا برسائلها. حدد التواريخ المطلوبة؛ بعض رسائل واتساب حُذفت وسائطها من ملف التصدير. لن تُنشأ أيام جديدة قبل اعتماد الحفظ.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">تحليل التواريخ المحددة ومراجعتها</button><button class="btn" id="wlocal" style="background:#e7f5ed;color:#086444">قراءة مجانية دون مفتاح — مع مراجعة</button></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}"><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||0)} مرفق فعلي${o.missing?`، ${toAr(o.missing)} غير مرفق`:''}</small></label>`).join('')}</div>`}
+      $('#wdays').innerHTML=`<div class="muted small">عُثر على ${toAr(list.length)} تاريخًا و${toAr(availableCount)} مرفقًا مرتبطًا فعليًا برسائلها. حدد التواريخ المطلوبة؛ بعض رسائل واتساب حُذفت وسائطها من ملف التصدير. لن تُنشأ أيام جديدة قبل اعتماد الحفظ.</div><div class="row" style="margin:8px 0"><button class="btn small" id="wselectall">تحديد الكل</button><button class="btn small" id="wselectnone">إلغاء التحديد</button><button class="btn primary" id="wbatch">📖 قراءة التواريخ المحددة مجانًا — ثم مراجعتها</button><details style="width:100%;margin-top:8px"><summary class="muted small">خيار إضافي: التحليل عبر Anthropic (يتطلب مفتاح API صالحًا)</summary><button class="btn" id="wcloud" type="button" style="margin-top:8px">تحليل متقدم عبر API</button></details></div><div class="daylist">${list.map(([d,o])=>`<label class="dayitem" style="cursor:pointer"><input type="checkbox" data-wa-date value="${d}"><span>${esc(hijri(d))}${have.has(d)?' <span class="pill ok">موجود — إضافة</span>':' <span class="pill">جديد — إنشاء</span>'}</span><small>${toAr(o.msgs)} رسالة، ${toAr(o.att||0)} مرفق فعلي${o.missing?`، ${toAr(o.missing)} غير مرفق`:''}</small></label>`).join('')}</div>`}
     catch(err){$('#wdays').innerHTML='<div class="empty">تعذّرت قراءة الملف: '+esc(err?.message||err)+'</div>'}};
   $('#wfile').onchange=async ev=>inspectWhatsAppFile(ev.target.files[0]);
   if(initialFile)await inspectWhatsAppFile(initialFile);
@@ -671,20 +671,19 @@ async function waStart(file,date){
   S.day=existing||{date,wd:gd(date).getDay(),label:hijri(date),sessions:[]};S.dayDate=date;
   // Never create an empty day until a user has reviewed extracted sessions and approved saving.
   IMP={files:[file],items:[],log:'',busy:false,result:null,text:'',forDay:date};
-  S.dayTab='import';renderDayMain();await runImport(S.day);
+  S.dayTab='import';renderDayMain();if(/\.zip$/i.test(file.name)){await window.shMadrasatiOfflineImport(file,[date]);return}await runImport(S.day);
 }
 
 async function waBatchImport(file,dates){
   const results=[],failed=[];const sorted=[...new Set(dates)].sort();
   // Validate the image-reading permission before scanning hundreds of ZIP attachments.
+  // Online analysis is optional. Authentication failure must never block local import.
   if(STANDALONE){try{
-    if(!getKey())throw {code:'not_granted',message:'لا يوجد مفتاح Anthropic API لتحليل صور كشوف واتساب.'};
+    if(!getKey())throw {code:'not_granted',message:'لا يوجد مفتاح Anthropic API صالح'};
     await S.sample.json('أعد JSON فقط بالشكل التالي: {"ok":true}',{modelTier:'default'});
   }catch(error){
-    const reason=String(error?.message||error?.code||error);
-    const m=$('#modal');m.hidden=false;
-    m.innerHTML='<div class="card stack" style="max-width:580px"><h2>مفتاح تحليل الصور غير صالح</h2><p>فشل الاتصال بـ Anthropic: '+esc(reason)+'</p><div class="notice">لم تُحذف البيانات ولم تُنشأ أيام جديدة. يمكنك إصلاح مفتاح API أو استخدام قراءة عربية مجانية داخل المتصفح، مع مراجعة كل كشف قبل حفظه.</div><div class="row"><button class="btn primary" id="useOfflineOnError">قراءة مجانية دون مفتاح</button><button class="btn" id="dismissImportAuth">إغلاق</button></div></div>';
-    m.onclick=e=>{if(e.target.id==='dismissImportAuth')m.hidden=true;if(e.target.id==='useOfflineOnError'){m.hidden=true;window.shMadrasatiOfflineImport(file,sorted)}};
+    console.warn('تعذّر اتصال التحليل المتقدم؛ يجري فتح القراءة المجانية',error?.code||error?.message||error);
+    await window.shMadrasatiOfflineImport(file,sorted);
     return;
   }}
 
