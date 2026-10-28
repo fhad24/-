@@ -136,17 +136,50 @@ async function prepare(file,dates,update){
  if(!S.roster?.length)issues.push('أسماء طلاب التحضير غير محمّلة. استورد نسخة بيانات التحضير JSON أولًا، ثم أعد التحليل.');
  return {zip,messages,dayItems,imageItems,issues};
 }
-function showResult(file,dates,items,issues,scanned,failed){
+function showResult(file,dates,items,issues,scanned,failed,scans=[]){
  const m=document.querySelector('#modal');m.hidden=false;
  const closeModal=()=>{m.onclick=null;m.hidden=true;m.innerHTML='';};
  const dated=new Map();for(const a of items){const key=a.date+'|'+skey(a.session);if(!dated.has(key))dated.set(key,{date:a.date,session:a.session,type:a.type});else{const prev=dated.get(key);prev.session.m=mergeNames(prev.session.m,a.session.m);prev.session.partial=prev.session.partial&&a.session.partial}}
  const sessions=[...dated.values()];
  const safe=s=>esc(String(s??''));
  const options=sessions.map((x,i)=>'<label class="dayitem" style="display:block;margin-bottom:8px"><input type="checkbox" data-offline-save="'+i+'" '+(x.type==='text'?'checked':'')+'> <b>'+safe(hijri(x.date))+'</b> — '+safe(GN[x.session.g]||x.session.g)+' / '+safe(x.session.c)+' — الحصة '+safe(PN[x.session.p]||x.session.p)+' — '+x.session.m.length+' اسمًا '+(x.type==='ocr'?'<span class="pill warn">OCR: راجع الأسماء</span>':'')+'<details style="padding:5px 22px"><summary>عرض أسماء الكشف</summary>'+x.session.m.map(y=>'<div>'+safe(y.n)+'</div>').join('')+'</details></label>').join('');
+ const allClasses=[...new Set((S.roster||[]).map(r=>String(r.c)))].filter(Boolean).sort();
+ const opts=(items,selected)=>items.map(([v,label])=>'<option value="'+safe(v)+'" '+(String(selected)===String(v)?'selected':'')+'>'+safe(label)+'</option>').join('');
+ const reviews=scans.map((x,i)=>{
+  const gradeOpts=opts([[0,'حدد الصف'],[1,'الأول الثانوي'],[2,'الثاني الثانوي'],[3,'الثالث الثانوي']],x.head?.g||0);
+  const classOpts=opts([['','حدد الفصل'],...allClasses.map(v=>[v,v])],x.head?.c||'');
+  const periodOpts=opts([['','حدد الحصة'],...Object.keys(PN).map(k=>[k,PN[k]])],x.head?.p||'');
+  return '<details style="border:1px solid #d4d9d6;border-radius:9px;margin:8px 0;padding:10px"><summary style="font-weight:800;cursor:pointer">'+safe(x.ref)+' — '+safe(hijri(x.date))+' — '+x.matched+' اسمًا مطابقًا</summary>'+
+   '<p class="muted" style="margin:8px 0">يمكنك تعديل النص الذي قرأه المحرك وتصحيح الصف والفصل والحصة. لن تُحفظ أي بيانات دون مراجعة الكشف وتحديده صراحةً.</p>'+
+   '<div class="row" style="flex-wrap:wrap"><label>الصف <select data-ocr-grade="'+i+'">'+gradeOpts+'</select></label><label>الفصل <select data-ocr-class="'+i+'">'+classOpts+'</select></label><label>الحصة <select data-ocr-period="'+i+'">'+periodOpts+'</select></label></div>'+
+   '<textarea data-ocr-text="'+i+'" aria-label="تصحيح النص المستخرج من الصورة" style="width:100%;min-height:115px;direction:rtl;white-space:pre-wrap" spellcheck="false">'+safe((x.text||'').slice(0,7000))+'</textarea>'+
+   '<button type="button" class="btn" data-ocr-apply="'+i+'">✓ إعادة مطابقة الأسماء وإضافتها للمراجعة</button><div class="muted" data-ocr-status="'+i+'"></div></details>';
+ }).join('');
  const zeroHelp=(!sessions.length&&scanned===0&&failed===0)?'<div class="notice" style="border:1px solid #d69753;background:#fff6ea;color:#744414;padding:12px;border-radius:9px"><b>لم تُقرأ أي صورة من التاريخ المختار.</b> افتح أسباب المراجعة أدناه؛ قد تكون صور واتساب غير مرفقة أو مرتبطة بتاريخ مختلف. لم تُحفظ أي بيانات.</div>':'';
- m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p>'+zeroHelp+'<div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+'</div>'+(issues.length?'<details '+(!sessions.length?'open':'')+'><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
+ m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p>'+zeroHelp+'<div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+(reviews?'<h3 style="margin:16px 0 6px">📝 مراجعة قراءة الصور وتصحيح الأسماء ('+scans.length+')</h3>'+reviews:'')+'</div>'+(issues.length?'<details '+(!sessions.length?'open':'')+'><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
  m.onclick=async e=>{
   if(e.target.closest('#offlineClose,#offlineCloseTop,#offlineDone')){closeModal();return}
+  const apply=e.target.closest('[data-ocr-apply]');
+  if(apply){
+   const i=+apply.dataset.ocrApply,x=scans[i];
+   if(!x)return;
+   const root=apply.closest('details');
+   const head={g:+root.querySelector('[data-ocr-grade]').value,c:root.querySelector('[data-ocr-class]').value,p:+root.querySelector('[data-ocr-period]').value};
+   const text=root.querySelector('[data-ocr-text]').value;
+   const status=root.querySelector('[data-ocr-status]');
+   x.head=head;x.text=text;
+   if(!head.g||!head.c||!head.p){status.textContent='اختر الصف والفصل والحصة أولًا، ثم أعد المطابقة.';return}
+   if(!S.roster?.length){status.textContent='لا توجد قائمة طلاب محمّلة؛ استورد بيانات التحضير أولًا.';return}
+   const rows=rosterMatches(text,head);
+   if(!rows.length){status.textContent='لم أجد أسماء مطابقة بشكل موثوق في الفصل المختار. صحّح الأسماء بالكامل كما تظهر في تطبيق شرحبيل.';return}
+   const session=buildSession(rows,head,x.date,'قراءة تمت مراجعتها يدويًا: '+x.ref,true);
+   if(!session){status.textContent='تعذّر تكوين الكشف، تحقق من الصف والفصل والحصة.';return}
+   for(let j=items.length-1;j>=0;j--)if(items[j].imageRef===x.ref&&items[j].date===x.date)items.splice(j,1);
+   items.push({date:x.date,session,type:'ocr',imageRef:x.ref});
+   x.matched=rows.length;
+   showResult(file,dates,items,issues,scanned,failed,scans);
+   return;
+  }
   if(e.target.id!=='offlineSave')return;
   const selected=[...m.querySelectorAll('[data-offline-save]:checked')].map(x=>sessions[+x.dataset.offlineSave]);
   if(!selected.length){m.querySelector('#offlineSaveStatus').textContent='حدد كشفًا واحدًا على الأقل';return}
@@ -182,25 +215,57 @@ async function run(file,dates,prepared=null){
  m.onclick=e=>{const b=e.target.closest('button');if(b?.id==='localOcrStop'){cancelled=true;b.disabled=true;update('جارٍ إيقاف القراءة؛ ستظهر الكشوف التي تم استخراجها فقط.')}if(b?.id==='localOcrDismiss'){cancelled=true;dismissed=true;m.onclick=null;m.hidden=true;m.innerHTML='';}};
  const update=t=>{const el=document.querySelector('#localOcrStatus');if(el)el.textContent=t};
  let data;try{data=prepared||await prepare(file,dates,update);if(dismissed)return}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
- let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null;const totalImages=data.imageTotal??imageItems.length;
+ let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null,scans=[];const totalImages=data.imageTotal??imageItems.length;
  if(totalImages){
   try{
    update('جارٍ تحميل محرك القراءة العربية المحلي…');
    await new Promise((resolve,reject)=>{if(window.Tesseract)return resolve();const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('تعذّر تنزيل محرك OCR من الشبكة'));document.head.appendChild(script)});
    worker=await window.Tesseract.createWorker('ara+eng');
+   try{await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})}catch(_){}
    let i=0;for await (const image of imageItems){
     if(cancelled)break;
     update('قراءة الصورة '+(++i)+' من '+totalImages+' بتاريخ '+hijri(image.date));
     try{
      const bytes=image.blob||await zip.files[image.path].async('blob');
      const bitmap=await createImageBitmap(bytes);
-     const scale=Math.min(2.2,Math.max(1,1650/Math.max(1,bitmap.width)));const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
-     const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-     const recognized=await worker.recognize(canvas),rows=rosterMatches(recognized.data.text||'');
+     const maxSide=Math.max(bitmap.width,bitmap.height);
+     const scale=Math.min(2.8,Math.max(1,2100/Math.max(1,maxSide)));
+     const canvas=document.createElement('canvas');
+     canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+     const ctx=canvas.getContext('2d',{willReadFrequently:true});
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+     bitmap.close();
+     const suggested={...contextFor(messages,image.msgIndex??0,[],image.date),...(image.head||{})};
+     const first=await worker.recognize(canvas);
+     let text=first.data?.text||'',rows=rosterMatches(text,suggested);
+     if(rows.length<2&&S.roster?.length){
+      // Try a different layout and contrast only when the ordinary Arabic OCR has weak results.
+      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const rgba=pixels.data;
+      for(let j=0;j<rgba.length;j+=4){
+       const gray=Math.round(.299*rgba[j]+.587*rgba[j+1]+.114*rgba[j+2]);
+       const contrast=Math.max(0,Math.min(255,Math.round((gray-128)*1.55+128)));
+       rgba[j]=contrast;rgba[j+1]=contrast;rgba[j+2]=contrast;
+      }
+      ctx.putImageData(pixels,0,0);
+      try{await worker.setParameters({tessedit_pageseg_mode:'11'})}catch(_){}
+      const second=await worker.recognize(canvas);
+      const alternate=second.data?.text||'';
+      const other=rosterMatches(alternate,suggested);
+      if(other.length>rows.length){rows=other;text=alternate}
+      else if(other.length===rows.length&&alternate.length>text.length){text=alternate}
+      try{await worker.setParameters({tessedit_pageseg_mode:'6'})}catch(_){}
+     }
      const head={...contextFor(messages,image.msgIndex??0,rows,image.date),...(image.head||{})};
-     const session=buildSession(rows,head,image.date,'قراءة صورة واتساب محلية — راجع الأسماء',true);
-     if(session){dayItems.push({date:image.date,session,type:'ocr'});}
-     else issues.push(hijri(image.date)+': '+image.ref+' — لم أتعرف على أسماء وفصل وحصة بثقة كافية');
+     const confirmed=rosterMatches(text,head);
+     if(confirmed.length>=rows.length)rows=confirmed;
+     const session=buildSession(rows,head,image.date,'قراءة صورة واتساب محلية: '+image.ref+' — يلزم تأكيد الأسماء',true);
+     scans.push({date:image.date,ref:image.ref,head,text,matched:rows.length});
+     if(session){dayItems.push({date:image.date,session,type:'ocr',imageRef:image.ref})}
+     else{
+      const why=!S.roster?.length?'لم تُحمّل أسماء طلاب التحضير':!rows.length?'تعذر تمييز أسماء الطلاب':!head.g||!head.c?'الصف أو الفصل غير محدد':'الحصة غير محددة';
+      issues.push(hijri(image.date)+': '+image.ref+' — '+why+'؛ افتح قسم تصحيح الأسماء بعد القراءة.');
+     }
      read++;
     }catch(e){failed++;issues.push(image.ref+': '+(e.message||e))}
     if(i%3===0)await new Promise(ok=>setTimeout(ok,0));
@@ -208,7 +273,7 @@ async function run(file,dates,prepared=null){
   }catch(e){issues.push('محرك OCR غير متاح: '+(e.message||e))}
   finally{if(worker)await worker.terminate()}
  }
- if(!dismissed)showResult(file,dates,dayItems,issues,read,failed);
+ if(!dismissed)showResult(file,dates,dayItems,issues,read,failed,scans);
 }
 window.shMadrasatiOfflineImport=run;
 })();
