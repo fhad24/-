@@ -74,6 +74,25 @@ async function prepare(file,dates,update){
   if(!attached)issues.push(hijri(date)+': لا توجد صور مرفقة فعليًا في ZIP');
   update('تم العثور على '+attached+' صورة لتاريخ '+hijri(date));
  }
+ if(!imageItems.length){
+  const imageNames=names.filter(n=>/\.(?:png|jpe?g|webp)$/i.test(n));
+  if(!imageNames.length){
+   issues.push('ملف ZIP لا يحتوي على صور فعلية. أعد تصدير محادثة واتساب مع تضمين الوسائط، وليس النص فقط.');
+  }else{
+   const foundByDate=new Map();
+   for(const msg of messages)for(const ref of msg.files||[]){
+    if(!/\.(?:png|jpe?g|webp)$/i.test(ref)||!fileMap.has(fileName(ref))||!msg.date)continue;
+    foundByDate.set(msg.date,(foundByDate.get(msg.date)||0)+1);
+   }
+   if(foundByDate.size){
+    const suggested=[...foundByDate].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([day,count])=>day+' ('+count+' صورة)').join('، ');
+    issues.push('الملف يحتوي على '+imageNames.length+' صورة، لكن لم ترتبط أي منها بالتاريخ المختار. التواريخ التي تحتوي على مرفقات مرتبطة بالمحادثة: '+suggested+'. أغلق المراجعة وأعد اختيار التاريخ الصحيح.');
+   }else{
+    issues.push('الملف يحتوي على '+imageNames.length+' صورة، لكن نص واتساب لا يحتوي على أسماء صور مرتبطة برسائلها أو أن الصور استُبعدت عند التصدير. أعد تصدير المحادثة مع الوسائط، ثم اختر تاريخ الرسائل.');
+   }
+  }
+ }
+ if(!S.roster?.length)issues.push('أسماء طلاب التحضير غير محمّلة. استورد نسخة بيانات التحضير JSON أولًا، ثم أعد التحليل.');
  return {zip,messages,dayItems,imageItems,issues};
 }
 function showResult(file,dates,items,issues,scanned,failed){
@@ -83,7 +102,8 @@ function showResult(file,dates,items,issues,scanned,failed){
  const sessions=[...dated.values()];
  const safe=s=>esc(String(s??''));
  const options=sessions.map((x,i)=>'<label class="dayitem" style="display:block;margin-bottom:8px"><input type="checkbox" data-offline-save="'+i+'" '+(x.type==='text'?'checked':'')+'> <b>'+safe(hijri(x.date))+'</b> — '+safe(GN[x.session.g]||x.session.g)+' / '+safe(x.session.c)+' — الحصة '+safe(PN[x.session.p]||x.session.p)+' — '+x.session.m.length+' اسمًا '+(x.type==='ocr'?'<span class="pill warn">OCR: راجع الأسماء</span>':'')+'<details style="padding:5px 22px"><summary>عرض أسماء الكشف</summary>'+x.session.m.map(y=>'<div>'+safe(y.n)+'</div>').join('')+'</details></label>').join('');
- m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p><div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+'</div>'+(issues.length?'<details><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
+ const zeroHelp=(!sessions.length&&scanned===0&&failed===0)?'<div class="notice" style="border:1px solid #d69753;background:#fff6ea;color:#744414;padding:12px;border-radius:9px"><b>لم تُقرأ أي صورة من التاريخ المختار.</b> افتح أسباب المراجعة أدناه؛ قد تكون صور واتساب غير مرفقة أو مرتبطة بتاريخ مختلف. لم تُحفظ أي بيانات.</div>':'';
+ m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p>'+zeroHelp+'<div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+'</div>'+(issues.length?'<details '+(!sessions.length?'open':'')+'><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
  m.onclick=async e=>{
   if(e.target.closest('#offlineClose,#offlineCloseTop,#offlineDone')){closeModal();return}
   if(e.target.id!=='offlineSave')return;
