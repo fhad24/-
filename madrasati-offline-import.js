@@ -14,8 +14,10 @@ function ocrLev(a,b){
  return prev[n];
 }
 function ocrWordScore(a,b){if(a===b)return 1;if(a.length<4||b.length<4)return 0;const d=ocrLev(a,b);return d===1?0.79:d===2&&Math.min(a.length,b.length)>=7?0.58:0}
+const studentOcrTokens=new WeakMap();
 function ocrNameScore(tokens,person){
- const name=ocrTokens(person.n);
+ let name=studentOcrTokens.get(person);
+ if(!name){name=ocrTokens(person.n);studentOcrTokens.set(person,name)}
  if(name.length<3||tokens.length<3)return 0;
  const same=(s,a)=>s>=.75&&a>=.75;
  let best=0;
@@ -211,69 +213,126 @@ function showResult(file,dates,items,issues,scanned,failed,scans=[]){
 }
 async function run(file,dates,prepared=null){
  const m=document.querySelector('#modal');m.hidden=false;cancelled=false;let dismissed=false;
- m.innerHTML='<div class="card stack" style="max-width:610px"><h2>قراءة مجانية داخل المتصفح</h2><p class="muted">لن تُرسل الصور إلى Anthropic، ولن تُحفظ بيانات إلا بعد المراجعة.</p><div id="localOcrStatus" class="muted">جارٍ تجهيز الملفات…</div><div class="row"><button class="btn" id="localOcrStop">إيقاف القراءة ومراجعة ما تم استخراجه</button><button class="btn danger" id="localOcrDismiss">✕ إيقاف وإغلاق دون حفظ</button></div></div>';
- m.onclick=e=>{const b=e.target.closest('button');if(b?.id==='localOcrStop'){cancelled=true;b.disabled=true;update('جارٍ إيقاف القراءة؛ ستظهر الكشوف التي تم استخراجها فقط.')}if(b?.id==='localOcrDismiss'){cancelled=true;dismissed=true;m.onclick=null;m.hidden=true;m.innerHTML='';}};
+ m.innerHTML='<div class="card stack" style="max-width:650px;gap:12px"><h2 style="margin:0">⚡ القراءة السريعة للصور</h2>'+
+  '<p class="muted">الصور تُقرأ داخل جهازك، ولا يُحفظ أي كشف إلا بعد مراجعته واختياره.</p>'+
+  '<label style="padding:12px;border:1px solid #d4e4dc;border-radius:12px;display:flex;gap:9px;align-items:center"><input type="checkbox" id="localOcrThorough"> <span><b>تدقيق إضافي للصور الضعيفة (أبطأ)</b><small style="display:block;color:#4e6960">اتركه غير محدد للسرعة القصوى؛ يمكنك تصحيح النصوص بعد القراءة.</small></span></label>'+
+  '<div id="localOcrStatus" class="muted" role="status" aria-live="polite">جارٍ تجهيز الملفات…</div>'+
+  '<div style="height:12px;border-radius:999px;background:#e8efeb;overflow:hidden"><div id="localOcrBar" style="height:100%;width:0%;background:#11765c;transition:width .15s"></div></div>'+
+  '<div class="row"><button class="btn" id="localOcrStop">إيقاف القراءة ومراجعة ما تم استخراجه</button><button class="btn danger" id="localOcrDismiss">✕ إيقاف وإغلاق دون حفظ</button></div></div>';
  const update=t=>{const el=document.querySelector('#localOcrStatus');if(el)el.textContent=t};
+ m.onclick=e=>{
+  const b=e.target.closest('button');
+  if(b?.id==='localOcrStop'){cancelled=true;b.disabled=true;update('جارٍ إيقاف القراءة… ستظهر النتائج المكتملة فقط.')}
+  if(b?.id==='localOcrDismiss'){cancelled=true;dismissed=true;m.onclick=null;m.hidden=true;m.innerHTML=''}
+ };
  let data;try{data=prepared||await prepare(file,dates,update);if(dismissed)return}catch(e){update('تعذّر تحليل المحادثة: '+(e.message||e));return}
- let {zip,messages,dayItems,imageItems,issues}=data,read=0,failed=0,worker=null,scans=[];const totalImages=data.imageTotal??imageItems.length;
- if(totalImages){
+ const {zip,messages,dayItems,imageItems,issues}=data;
+ let read=0,failed=0,completed=0,scans=[],workers=[];
+ const totalImages=data.imageTotal??imageItems.length;
+ const bar=()=>{const el=m.querySelector('#localOcrBar');if(el)el.style.width=totalImages?Math.min(100,Math.round(completed/totalImages*100))+'%':'100%'};
+ if(totalImages&&!cancelled){
   try{
-   update('جارٍ تحميل محرك القراءة العربية المحلي…');
-   await new Promise((resolve,reject)=>{if(window.Tesseract)return resolve();const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(new Error('تعذّر تنزيل محرك OCR من الشبكة'));document.head.appendChild(script)});
-   worker=await window.Tesseract.createWorker('ara+eng');
-   try{await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})}catch(_){}
-   let i=0;for await (const image of imageItems){
-    if(cancelled)break;
-    update('قراءة الصورة '+(++i)+' من '+totalImages+' بتاريخ '+hijri(image.date));
+   update('جارٍ تهيئة محرك القراءة العربية…');
+   await new Promise((resolve,reject)=>{
+    if(window.Tesseract)return resolve();
+    const existing=document.querySelector('script[data-sh-ocr-script]');
+    if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(Error('فشل تحميل OCR')),{once:true});return}
+    const script=document.createElement('script');script.dataset.shOcrScript='1';
+    script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload=resolve;script.onerror=()=>{script.remove();reject(Error('تعذّر تنزيل محرك OCR'))};
+    document.head.appendChild(script)
+   });
+   if(!cancelled){
+    const cpu=Number(navigator.hardwareConcurrency||4),memory=Number(navigator.deviceMemory||4);
+    const parallel=cpu>=4&&memory>=4?2:1;
+    update('تهيئة '+parallel+' قارئ/قارئين؛ سيتم تحليل الصور بالتوازي…');
+    const settled=await Promise.allSettled(Array.from({length:parallel},()=>window.Tesseract.createWorker('ara+eng')));
+    for(const item of settled){
+     if(item.status==='fulfilled'){workers.push(item.value);try{await item.value.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})}catch(_){}}
+     else issues.push('تعذّر تشغيل أحد قارئي الصور: '+String(item.reason?.message||item.reason));
+    }
+    if(!workers.length)throw Error('تعذّر تشغيل محرك التعرف على النصوص');
+   }
+   // Serialise only reading bytes from ZIP/RAR; each OCR worker processes its own canvas concurrently.
+   const iterator=typeof imageItems[Symbol.asyncIterator]==='function'
+     ?imageItems[Symbol.asyncIterator]()
+     :(async function*(){for(const item of imageItems)yield item})();
+   let nextLock=Promise.resolve();
+   function nextImage(){
+    const result=nextLock.then(()=>iterator.next());
+    nextLock=result.then(()=>{},()=>{});
+    return result;
+   }
+   async function scanImage(worker,image){
+    let bitmap=null,canvas=null;
     try{
      const bytes=image.blob||await zip.files[image.path].async('blob');
-     const bitmap=await createImageBitmap(bytes);
-     const maxSide=Math.max(bitmap.width,bitmap.height);
-     const scale=Math.min(2.8,Math.max(1,2100/Math.max(1,maxSide)));
-     const canvas=document.createElement('canvas');
-     canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
-     const ctx=canvas.getContext('2d',{willReadFrequently:true});
-     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
-     bitmap.close();
+     bitmap=await createImageBitmap(bytes);
+     const precise=!!m.querySelector('#localOcrThorough')?.checked;
+     const target=precise?2100:1750,zoom=precise?2.2:1.7;
+     const scale=Math.min(zoom,target/Math.max(1,bitmap.width,bitmap.height));
+     canvas=document.createElement('canvas');
+     canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+     canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+     const ctx=canvas.getContext('2d',{willReadFrequently:precise});
+     if(!ctx)throw Error('الذاكرة غير كافية لتجهيز الصورة');
+     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+     ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+     bitmap.close();bitmap=null;
      const suggested={...contextFor(messages,image.msgIndex??0,[],image.date),...(image.head||{})};
      const first=await worker.recognize(canvas);
      let text=first.data?.text||'',rows=rosterMatches(text,suggested);
-     if(rows.length<2&&S.roster?.length){
-      // Try a different layout and contrast only when the ordinary Arabic OCR has weak results.
-      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-      const rgba=pixels.data;
+     if(precise&&rows.length<2&&S.roster?.length&&!cancelled){
+      // Extra pass is opt-in; other images no longer pay twice for an unsuccessful OCR.
+      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),rgba=pixels.data;
       for(let j=0;j<rgba.length;j+=4){
        const gray=Math.round(.299*rgba[j]+.587*rgba[j+1]+.114*rgba[j+2]);
-       const contrast=Math.max(0,Math.min(255,Math.round((gray-128)*1.55+128)));
-       rgba[j]=contrast;rgba[j+1]=contrast;rgba[j+2]=contrast;
+       const value=Math.max(0,Math.min(255,Math.round((gray-128)*1.55+128)));
+       rgba[j]=value;rgba[j+1]=value;rgba[j+2]=value;
       }
       ctx.putImageData(pixels,0,0);
-      try{await worker.setParameters({tessedit_pageseg_mode:'11'})}catch(_){}
-      const second=await worker.recognize(canvas);
-      const alternate=second.data?.text||'';
-      const other=rosterMatches(alternate,suggested);
-      if(other.length>rows.length){rows=other;text=alternate}
-      else if(other.length===rows.length&&alternate.length>text.length){text=alternate}
-      try{await worker.setParameters({tessedit_pageseg_mode:'6'})}catch(_){}
+      try{
+       try{await worker.setParameters({tessedit_pageseg_mode:'11'})}catch(_){}
+       const second=await worker.recognize(canvas),alternative=second.data?.text||'';
+       const other=rosterMatches(alternative,suggested);
+       if(other.length>rows.length||(other.length===rows.length&&alternative.length>text.length)){rows=other;text=alternative}
+      }finally{try{await worker.setParameters({tessedit_pageseg_mode:'6'})}catch(_){}}
      }
      const head={...contextFor(messages,image.msgIndex??0,rows,image.date),...(image.head||{})};
      const confirmed=rosterMatches(text,head);
      if(confirmed.length>=rows.length)rows=confirmed;
      const session=buildSession(rows,head,image.date,'قراءة صورة واتساب محلية: '+image.ref+' — يلزم تأكيد الأسماء',true);
      scans.push({date:image.date,ref:image.ref,head,text,matched:rows.length});
-     if(session){dayItems.push({date:image.date,session,type:'ocr',imageRef:image.ref})}
+     if(session)dayItems.push({date:image.date,session,type:'ocr',imageRef:image.ref});
      else{
-      const why=!S.roster?.length?'لم تُحمّل أسماء طلاب التحضير':!rows.length?'تعذر تمييز أسماء الطلاب':!head.g||!head.c?'الصف أو الفصل غير محدد':'الحصة غير محددة';
-      issues.push(hijri(image.date)+': '+image.ref+' — '+why+'؛ افتح قسم تصحيح الأسماء بعد القراءة.');
+      const reason=!S.roster?.length?'لم تُحمّل أسماء طلاب التحضير':!rows.length?'تعذر تمييز أسماء الطلاب':!head.g||!head.c?'الصف أو الفصل غير محدد':'الحصة غير محددة';
+      issues.push(hijri(image.date)+': '+image.ref+' — '+reason+'؛ راجع النص بعد انتهاء القراءة.');
      }
      read++;
-    }catch(e){failed++;issues.push(image.ref+': '+(e.message||e))}
-    if(i%3===0)await new Promise(ok=>setTimeout(ok,0));
+    }catch(e){failed++;issues.push(image.ref+': '+String(e?.message||e))}
+    finally{
+     if(bitmap)try{bitmap.close()}catch(_){}
+     if(canvas){canvas.width=0;canvas.height=0}
+     completed++;
+     bar();
+     if(!cancelled&&!dismissed)update('⚡ اكتمل '+completed+' من '+totalImages+' صورة · '+read+' مقروءة · '+failed+' متعذّرة · '+scans.filter(x=>x.matched>0).length+' بها أسماء');
+    }
    }
-  }catch(e){issues.push('محرك OCR غير متاح: '+(e.message||e))}
-  finally{if(worker)await worker.terminate()}
+   async function work(worker){
+    while(!cancelled&&!dismissed){
+     const next=await nextImage();if(next.done||cancelled||dismissed)break;
+     await scanImage(worker,next.value);
+     if(completed%6===0)await new Promise(done=>setTimeout(done,0));
+    }
+   }
+   await Promise.all(workers.map(worker=>work(worker)));
+  }catch(e){issues.push('تعذّر إكمال القراءة السريعة: '+String(e?.message||e))}
+  finally{await Promise.allSettled(workers.map(worker=>worker.terminate()))}
  }
- if(!dismissed)showResult(file,dates,dayItems,issues,read,failed,scans);
+ if(!dismissed){
+  scans.sort((a,b)=>a.date.localeCompare(b.date)||a.ref.localeCompare(b.ref));
+  showResult(file,dates,dayItems,issues,read,failed,scans)
+ }
 }
 window.shMadrasatiOfflineImport=run;
 })();
