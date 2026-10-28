@@ -4,16 +4,57 @@ let cancelled=false;
 const fileName=x=>String(x||'').split('/').pop().toLowerCase();
 const fmt=x=>String(x||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[ً-ْـ]/g,'').replace(/[^ء-ي\s]/g,' ').replace(/\s+/g,' ').trim();
 function words(x){return fmt(x).split(/\s+/).filter(w=>w.length>1&&!['بن','ابن','بنت'].includes(w))}
-function sameName(text,r){
- const name=words(r.n).join(' ');if(name.length<9)return false;
- const lines=String(text).split(/\r?\n/).map(fmt);if(lines.some(v=>v.includes(name)))return true;
- const w=words(r.n);if(w.length<4)return false;
- for(const v of lines){const toks=new Set(v.split(' '));const hits=w.filter(z=>toks.has(z));if(hits.length>=Math.max(3,Math.ceil(w.length*.75))&&hits.includes(w[0])&&hits.includes(w[w.length-1]))return true}
- return false;
+/* OCR names must be corroborated against the school roster, never guessed from one fuzzy word. */
+function ocrToken(w){return String(w||'').replace(/[أإآ]/g,'ا').replace(/[ؤ]/g,'و').replace(/[ئ]/g,'ي').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/^ال(?=.{3,})/,'')}
+function ocrTokens(x){return words(x).map(ocrToken).filter(Boolean)}
+function ocrLev(a,b){
+ if(a===b)return 0;const n=b.length;if(Math.abs(a.length-n)>2)return 9;
+ let prev=Array.from({length:n+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){const next=[i];for(let j=1;j<=n;j++)next[j]=Math.min(next[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=next}
+ return prev[n];
 }
-function rosterMatches(raw){
- const text=String(raw||'');
- return S.roster.filter(r=>sameName(text,r));
+function ocrWordScore(a,b){if(a===b)return 1;if(a.length<4||b.length<4)return 0;const d=ocrLev(a,b);return d===1?0.79:d===2&&Math.min(a.length,b.length)>=7?0.58:0}
+function ocrNameScore(tokens,person){
+ const name=ocrTokens(person.n);
+ if(name.length<3||tokens.length<3)return 0;
+ const same=(s,a)=>s>=.75&&a>=.75;
+ let best=0;
+ for(let i=0;i<tokens.length;i++){
+  const first=ocrWordScore(tokens[i],name[0]);if(first<.75)continue;
+  const stop=Math.min(tokens.length,i+name.length+3);
+  for(let k=i+2;k<stop;k++){
+   const last=ocrWordScore(tokens[k],name[name.length-1]);if(last<.75)continue;
+   let hit=2,exact=(first===1?1:0)+(last===1?1:0),pos=i+1;
+   for(const expected of name.slice(1,-1)){
+    let v=0,at=-1;
+    for(let j=pos;j<k;j++){const s=ocrWordScore(tokens[j],expected);if(s>v){v=s;at=j}}
+    if(v>=.75){hit++;exact+=v===1?1:0;pos=at+1}
+   }
+   if(hit<Math.max(3,Math.ceil(name.length*.72)))continue;
+   const missing=Math.max(0,name.length-hit),extra=Math.max(0,k-i+1-name.length);
+   const score=(hit/name.length)*.80+(exact/name.length)*.20-.04*missing-.035*extra;
+   best=Math.max(best,score);
+  }
+ }
+ return best;
+}
+function rosterMatches(raw,head={}){
+ if(!S.roster?.length)return [];
+ const lines=String(raw||'').split(/\r?\n/).map(ocrTokens).filter(x=>x.length>=3&&x.length<=18);
+ const pool=(head.g&&head.c)?S.roster.filter(x=>+x.g===+head.g&&String(x.c)===String(head.c)):
+  head.g?S.roster.filter(x=>+x.g===+head.g):S.roster;
+ const strict=(!head.g?0.96:head.c?0.80:0.88),gap=(!head.g?0.18:0.12);
+ const picked=new Map();
+ for(const tokens of lines){
+  const ranked=[];
+  for(const r of pool){const score=ocrNameScore(tokens,r);if(score>=strict-.16)ranked.push({r,score})}
+  ranked.sort((a,b)=>b.score-a.score);
+  if(!ranked.length)continue;
+  const best=ranked[0],second=ranked[1];
+  if(best.score<strict||(second&&best.score-second.score<gap))continue;
+  picked.set(String(best.r.i),best.r);
+ }
+ return [...picked.values()];
 }
 function contextFor(msgs,idx,studentRows,date){
  const m=msgs[idx]||{head:{},who:'',min:0};let direct={...(m.head||{})};
