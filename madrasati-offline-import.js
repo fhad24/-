@@ -205,14 +205,18 @@ function showResult(file,dates,items,issues,scanned,failed,scans=[]){
   const gradeOpts=opts([[0,'حدد الصف'],[1,'الأول الثانوي'],[2,'الثاني الثانوي'],[3,'الثالث الثانوي']],x.head?.g||0);
   const classOpts=opts([['','حدد الفصل'],...allClasses.map(v=>[v,v])],x.head?.c||'');
   const periodOpts=opts([['','حدد الحصة'],...Object.keys(PN).map(k=>[k,PN[k]])],x.head?.p||'');
-  return '<details style="border:1px solid #d4d9d6;border-radius:9px;margin:8px 0;padding:10px"><summary style="font-weight:800;cursor:pointer">'+safe(x.ref)+' — '+safe(hijri(x.date))+' — '+x.matched+' اسمًا مطابقًا</summary>'+
+  return '<details '+(!x.matched?'open':'')+' style="border:1px solid '+(!x.matched?'#e4ad8b':'#d4d9d6')+';border-radius:9px;margin:8px 0;padding:10px"><summary style="font-weight:800;cursor:pointer">'+safe(x.ref)+' — '+safe(hijri(x.date))+' — <span style="'+(!x.matched?'color:#aa2e1e':'color:#0f6b54')+'">'+x.matched+' اسمًا مطابقًا</span></summary>'+
+   (x.matched?'':'<p class="muted" style="color:#a74127;font-weight:700">لم تُطابق أسماء الصورة تلقائيًا؛ راجع الصورة والنص المقروء أدناه. عدد الطلاب المتاح للمطابقة: '+safe(x.rosterCount)+'، حروف عربية في النص: '+safe(x.arabicLetters||0)+'.</p>')+
+   (x.thumb?'<img loading="lazy" alt="معاينة الصورة الأصلية للمراجعة" src="'+x.thumb+'" style="max-width:100%;max-height:320px;object-fit:contain;border:1px solid #d5d7d5;border-radius:8px;margin:4px 0 8px">':'')+
    '<p class="muted" style="margin:8px 0">يمكنك تعديل النص الذي قرأه المحرك وتصحيح الصف والفصل والحصة. لن تُحفظ أي بيانات دون مراجعة الكشف وتحديده صراحةً.</p>'+
    '<div class="row" style="flex-wrap:wrap"><label>الصف <select data-ocr-grade="'+i+'">'+gradeOpts+'</select></label><label>الفصل <select data-ocr-class="'+i+'">'+classOpts+'</select></label><label>الحصة <select data-ocr-period="'+i+'">'+periodOpts+'</select></label></div>'+
    '<textarea data-ocr-text="'+i+'" aria-label="تصحيح النص المستخرج من الصورة" style="width:100%;min-height:115px;direction:rtl;white-space:pre-wrap" spellcheck="false">'+safe((x.text||'').slice(0,7000))+'</textarea>'+
    '<button type="button" class="btn" data-ocr-apply="'+i+'">✓ إعادة مطابقة الأسماء وإضافتها للمراجعة</button><div class="muted" data-ocr-status="'+i+'"></div></details>';
  }).join('');
+ const missingRoster=!S.roster?.length?'<div class="notice" style="border:2px solid #b42318;background:#fff0ee;padding:12px;border-radius:10px"><b>لا توجد أسماء طلاب محمّلة للمطابقة.</b> افتح زر «تحميل النسخة الاحتياطية» أعلى الصفحة، واختر ملف JSON الخاص بتحضير مدرستي. تمت قراءة النصوص فقط، ولا يمكن تأكيد هوية الطلاب دون القائمة.</div>':'';
+ const noMatches=(scanned>0&&scans.length&&scans.every(x=>!x.matched))?'<div class="notice" style="border:1px solid #d9a270;background:#fff6ec;padding:12px;border-radius:10px"><b>قُرئت الصور لكن لم تتحدد أسماء متطابقة.</b> افتح كل صورة أدناه لمقارنة المعاينة بالنص المقروء، ثم اختر الصف والفصل والحصة وصحّح أسماء الطلاب. لا تُعد هذه الصور كشوف غياب.</div>':'';
  const zeroHelp=(!sessions.length&&scanned===0&&failed===0)?'<div class="notice" style="border:1px solid #d69753;background:#fff6ea;color:#744414;padding:12px;border-radius:9px"><b>لم تُقرأ أي صورة من التاريخ المختار.</b> افتح أسباب المراجعة أدناه؛ قد تكون صور واتساب غير مرفقة أو مرتبطة بتاريخ مختلف. لم تُحفظ أي بيانات.</div>':'';
- m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p>'+zeroHelp+'<div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+(reviews?'<h3 style="margin:16px 0 6px">📝 مراجعة قراءة الصور وتصحيح الأسماء ('+scans.length+')</h3>'+reviews:'')+'</div>'+(issues.length?'<details '+(!sessions.length?'open':'')+'><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
+ m.innerHTML='<div class="card stack" style="max-width:760px;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="align-items:center;justify-content:space-between;flex-shrink:0"><h2 style="margin:0">نتائج الاستيراد المحلي — مراجعة قبل الحفظ</h2><button class="btn" type="button" id="offlineCloseTop" aria-label="إغلاق نافذة الاستيراد">✕ إغلاق</button></div><p class="muted">قُرئت '+scanned+' صورة، وتعذّرت '+failed+'. عدد الكشوف المستخرجة: '+sessions.length+'. قراءة الصور تقديرية ويجب التأكد من الأسماء والفصول والحصص.</p>'+missingRoster+noMatches+zeroHelp+'<div class="daylist" style="max-height:45vh;overflow:auto;min-height:0;flex:1">'+(options||'<div class="notice">لم أجد كشوفًا محددة بدقة كافية للحفظ.</div>')+(reviews?'<h3 style="margin:16px 0 6px">📝 مراجعة قراءة الصور وتصحيح الأسماء ('+scans.length+')</h3>'+reviews:'')+'</div>'+(issues.length?'<details '+(!sessions.length?'open':'')+'><summary>صور أو أيام تحتاج مراجعة ('+issues.length+')</summary><div class="log" style="max-height:120px;overflow:auto">'+issues.map(safe).join('\n')+'</div></details>':'')+'<div class="row" style="position:sticky;bottom:0;flex-shrink:0;background:var(--panel,#fff);padding:12px 0 6px;border-top:1px solid var(--line,#ddd)"><button class="btn primary" id="offlineSave" '+(sessions.length?'':'disabled')+'>حفظ الكشوف المحددة</button><button class="btn" type="button" id="offlineClose">إغلاق دون حفظ</button></div><div id="offlineSaveStatus"></div></div>';
  m.onclick=async e=>{
   if(e.target.closest('#offlineClose,#offlineCloseTop,#offlineDone')){closeModal();return}
   const apply=e.target.closest('[data-ocr-apply]');
@@ -336,8 +340,8 @@ async function run(file,dates,prepared=null){
      const suggested={...contextFor(messages,image.msgIndex??0,[],image.date),...(image.head||{})};
      const first=await worker.recognize(canvas);
      let text=first.data?.text||'',rows=rosterMatches(text,suggested);
-     if(precise&&rows.length<2&&S.roster?.length&&!cancelled){
-      // Extra pass is opt-in; other images no longer pay twice for an unsuccessful OCR.
+     if((rows.length===0||precise&&rows.length<2)&&S.roster?.length&&!cancelled){
+      // Automatically retry only zero-match images. Other weak images get an extra pass if the user opts in.
       const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),rgba=pixels.data;
       for(let j=0;j<rgba.length;j+=4){
        const gray=Math.round(.299*rgba[j]+.587*rgba[j+1]+.114*rgba[j+2]);
@@ -356,7 +360,19 @@ async function run(file,dates,prepared=null){
      const confirmed=rosterMatches(text,head);
      if(confirmed.length>=rows.length)rows=confirmed;
      const session=buildSession(rows,head,image.date,'قراءة صورة واتساب محلية: '+image.ref+' — يلزم تأكيد الأسماء',true);
-     scans.push({date:image.date,ref:image.ref,head,text,matched:rows.length});
+     let thumb='';
+     if(rows.length===0&&scans.length<60){
+      try{
+       const preview=document.createElement('canvas');
+       const factor=Math.min(1,650/Math.max(canvas.width,canvas.height));
+       preview.width=Math.max(1,Math.round(canvas.width*factor));
+       preview.height=Math.max(1,Math.round(canvas.height*factor));
+       preview.getContext('2d').drawImage(canvas,0,0,preview.width,preview.height);
+       thumb=preview.toDataURL('image/jpeg',.65);
+       preview.width=0;preview.height=0;
+      }catch(_){}
+     }
+     scans.push({date:image.date,ref:image.ref,head,text,matched:rows.length,thumb,rosterCount:S.roster?.length||0,arabicLetters:(text.match(/[\u0621-\u064a]/g)||[]).length});
      if(session)dayItems.push({date:image.date,session,type:'ocr',imageRef:image.ref});
      else{
       const reason=!S.roster?.length?'لم تُحمّل أسماء طلاب التحضير':!rows.length?'تعذر تمييز أسماء الطلاب':!head.g||!head.c?'الصف أو الفصل غير محدد':'الحصة غير محددة';
