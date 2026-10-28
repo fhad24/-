@@ -19,7 +19,6 @@ function ocrNameScore(tokens,person){
  let name=studentOcrTokens.get(person);
  if(!name){name=ocrTokens(person.n);studentOcrTokens.set(person,name)}
  if(name.length<3||tokens.length<3)return 0;
- const same=(s,a)=>s>=.75&&a>=.75;
  let best=0;
  for(let i=0;i<tokens.length;i++){
   const first=ocrWordScore(tokens[i],name[0]);if(first<.75)continue;
@@ -40,21 +39,76 @@ function ocrNameScore(tokens,person){
  }
  return best;
 }
+/* This secondary scorer tolerates the final word lost by OCR, but only if
+   at least three name words occur in the correct sequence. */
+function ocrSecondaryScore(tokens,person){
+ let name=studentOcrTokens.get(person);
+ if(!name){name=ocrTokens(person.n);studentOcrTokens.set(person,name)}
+ if(tokens.length<3||name.length<3)return 0;
+ let best=0;
+ for(let i=0;i<tokens.length;i++){
+  const first=ocrWordScore(tokens[i],name[0]);
+  if(first<.75)continue;
+  let pos=i+1,hits=1,quality=first;
+  let lastHit=false;
+  for(let j=1;j<name.length;j++){
+   let at=-1,score=0;
+   for(let k=pos;k<Math.min(tokens.length,i+name.length+3);k++){
+    const candidate=ocrWordScore(tokens[k],name[j]);
+    if(candidate>score){score=candidate;at=k}
+   }
+   if(at>=0&&score>=.75){hits++;quality+=score;pos=at+1;if(j===name.length-1)lastHit=true}
+  }
+  if(hits<3||hits/name.length<.67)continue;
+  const extras=Math.max(0,Math.min(tokens.length-i,name.length+3)-hits);
+  const value=.75*hits/name.length+.20*quality/hits+(lastHit?.08:0)
+   -.03*(name.length-hits)-.015*extras;
+  best=Math.max(best,value);
+ }
+ return best;
+}
+function ocrLineTokens(raw){
+ const lines=String(raw||'').split(/\r?\n/).map(ocrTokens).filter(x=>x.length);
+ const out=[];
+ for(let i=0;i<lines.length;i++){
+  if(lines[i].length>=3&&lines[i].length<=18)out.push(lines[i]);
+  // Teams can wrap one student's full name across two short OCR lines.
+  if(i+1<lines.length&&lines[i].length<=3&&lines[i+1].length<=3&&lines[i].length+lines[i+1].length>=3)
+   out.push(lines[i].concat(lines[i+1]));
+ }
+ return out;
+}
 function rosterMatches(raw,head={}){
  if(!S.roster?.length)return [];
- const lines=String(raw||'').split(/\r?\n/).map(ocrTokens).filter(x=>x.length>=3&&x.length<=18);
+ const lines=ocrLineTokens(raw);
  const pool=(head.g&&head.c)?S.roster.filter(x=>+x.g===+head.g&&String(x.c)===String(head.c)):
   head.g?S.roster.filter(x=>+x.g===+head.g):S.roster;
- const strict=(!head.g?0.96:head.c?0.80:0.88),gap=(!head.g?0.18:0.12);
+ if(!lines.length||!pool.length)return [];
+ const strict=(!head.g?.96:head.c?.80:.88),gap=(!head.g?.18:.12);
  const picked=new Map();
  for(const tokens of lines){
-  const ranked=[];
-  for(const r of pool){const score=ocrNameScore(tokens,r);if(score>=strict-.16)ranked.push({r,score})}
+  let ranked=[];
+  for(const r of pool){
+   const score=ocrNameScore(tokens,r);
+   if(score>=strict-.16)ranked.push({r,score});
+  }
   ranked.sort((a,b)=>b.score-a.score);
-  if(!ranked.length)continue;
-  const best=ranked[0],second=ranked[1];
-  if(best.score<strict||(second&&best.score-second.score<gap))continue;
-  picked.set(String(best.r.i),best.r);
+  let best=ranked[0],second=ranked[1];
+  if(best&&best.score>=strict&&(!second||best.score-second.score>=gap)){
+   picked.set(String(best.r.i),best.r);continue;
+  }
+  // Fallback only on a uniquely identifiable roster member. A high threshold
+  // is kept when grade or class is unknown to prevent assigning another student.
+  ranked=[];
+  const fallbackMin=!head.g?.88:head.c?.70:.79;
+  for(const r of pool){
+   const score=ocrSecondaryScore(tokens,r);
+   if(score>=fallbackMin-.12)ranked.push({r,score});
+  }
+  ranked.sort((a,b)=>b.score-a.score);
+  best=ranked[0];second=ranked[1];
+  if(best&&best.score>=fallbackMin&&(!second||best.score-second.score>=.17))
+   picked.set(String(best.r.i),best.r);
  }
  return [...picked.values()];
 }
