@@ -9,7 +9,7 @@ if(!head.querySelector('th[data-madrasati]'))for(const [column,title] of heads.e
 const ths=[...head.querySelectorAll('th')],idIndex=ths.findIndex(x=>x.textContent.includes('السجل المدني'));if(idIndex<0)return;
 for(const row of body.querySelectorAll('tr')){const cells=[...row.children];if(!cells[idIndex]||cells[idIndex].colSpan>1)continue;const sid=String(cells[idIndex].textContent||'').replace(/\D/g,'');if(!sid)continue;let extras=[...row.querySelectorAll('td[data-madrasati]')];while(extras.length<3){const td=document.createElement('td');td.dataset.madrasati='1';td.style.cssText='text-align:center;font-weight:bold';row.append(td);extras.push(td)}const x=byId.get(sid),values=x?[x.present,x.absent,x.present+x.absent?((x.absent*100)/(x.present+x.absent)).toFixed(1)+'%':'—']:['—','—','—'];extras.forEach((td,i)=>{if(td.textContent!==String(values[i]))td.textContent=String(values[i])})}
 if(sortColumn>=0){const numeric=tr=>{const cell=tr.querySelectorAll('td[data-madrasati]')[sortColumn];const v=cell?.textContent?.trim();return !v||v==='—'?null:Number(v.replace('%','').replace(/,/g,''))};const original=[...body.rows];const sortable=original.filter(tr=>tr.querySelectorAll('td[data-madrasati]').length===3);sortable.sort((a,b)=>{const av=numeric(a),bv=numeric(b);if(av===null)return bv===null?0:1;if(bv===null)return -1;return (av-bv)*sortDirection});sortable.forEach(tr=>body.appendChild(tr));head.querySelectorAll('th[data-madrasati]').forEach((th,i)=>{th.textContent=heads[i]+(i===sortColumn?(sortDirection===1?' ▲':' ▼'):' ↕')})}
-let note=document.getElementById('shMadrasatiNotice');if(!note){note=document.createElement('div');note.id='shMadrasatiNotice';note.style.cssText='padding:8px;margin:7px 0;border-radius:9px;background:#ecf6f0;color:#175b47;font-size:13px';table.parentNode.insertBefore(note,table)}note.textContent='بيانات مدرستي مستقلة عن سجلات المدرسة، وتحسب الأيام التي لها كشوف مكتملة فقط. تُقرأ من بيانات هذا المتصفح دون تعديل السجلات.'}finally{busy=false}}
+let note=document.getElementById('shMadrasatiNotice');if(!note){note=document.createElement('div');note.id='shMadrasatiNotice';note.style.cssText='padding:8px;margin:7px 0;border-radius:9px;background:#ecf6f0;color:#175b47;font-size:13px';table.parentNode.insertBefore(note,table)}const message='بيانات مدرستي مستقلة عن سجلات المدرسة، وتحسب الأيام التي لها كشوف مكتملة فقط. تُقرأ من بيانات هذا المتصفح دون تعديل السجلات.';if(note.textContent!==message)note.textContent=message}finally{busy=false}}
 
 /* Never-attended report inside the MAIN school attendance screen.
  * Uses only the Madrasati IndexedDB; no school attendance rows are mutated.
@@ -34,7 +34,7 @@ function computeNeverAttendedMadrasati(docs,schoolRoster){
  const cohortDays=new Map(),seenAttendance=new Set(),allDays=new Set();
  let partialDays=0,unmatchedDays=0,completeDays=0;
  const records=Object.entries(docs||{}).filter(([k,v])=>k.startsWith('days/')&&Array.isArray(v?.sessions));
- const now=new Date().toISOString().slice(0,10);
+ const now=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  for(const [path,record]of records){
   const date=String(record.date||path.slice(5));
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>now)continue;
@@ -117,7 +117,7 @@ async function neverExport(format){
  }
  if(format==='pdf'){
   if(!window.html2pdf){alert('تصدير PDF غير متاح الآن. استخدم الطباعة ثم اختر «حفظ كملف PDF».');return}
-  const stage=document.createElement('div');stage.style.cssText='position:fixed;left:-20000px;top:0;width:1123px;z-index:-1;background:white';
+  const stage=document.createElement('div');stage.style.cssText='position:fixed;inset:0;top:0;width:1123px;max-width:100vw;overflow:auto;z-index:1000001;background:white;padding:6px';
   const content=document.createElement('div');content.innerHTML=markup.slice(markup.indexOf('<body>')+6,markup.indexOf('</body>'));
   const css=document.createElement('style');css.textContent=markup.slice(markup.indexOf('<style>')+7,markup.indexOf('</style>')).replace(/@page\{[^}]*\}/g,'');
   stage.append(css,content);document.body.append(stage);
