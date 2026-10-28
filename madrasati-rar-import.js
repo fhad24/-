@@ -99,7 +99,7 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
  const m=ui();m.hidden=false;aborted=false;activeJob=true;
  m.innerHTML='<div class="card stack" style="max-width:650px"><h2>قراءة الأيام المختارة من RAR</h2><p class="muted">فك الصور وفحصها على جهازك دون رفعها إلى الخادم. لن يُحفظ أي كشف حتى تراجعه وتوافق عليه.</p><div id="shRarStatus" class="muted">جارٍ التحضير…</div><button class="btn" id="shRarStop">إلغاء القراءة</button></div>';
  m.onclick=e=>{if(e.target.closest('#shRarStop')){aborted=true;status('سيتم إيقاف القراءة بعد إكمال الدفعة الحالية…')}};
- const selected=new Set(chosen),all=rows.filter(x=>selected.has(x.date)||(!x.date&&x.timeDay&&selected.has(x.timeDay))||(!x.date&&!x.timeDay&&unknownDate));
+ const selected=new Set(chosen),all=rows.filter(x=>selected.has(x.date)||(!x.date&&x.timeDay&&selected.has(x.timeDay))||(!x.date&&unknownDate));
  if(!all.length){activeJob=false;status('لا توجد مرفقات للمدة المختارة.');return}
  const images=all.filter(x=>EXT_IMAGE.test(x.name));
  const chats=all.filter(x=>EXT_CHAT.test(x.name));
@@ -122,7 +122,7 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
   const configured=images.map(row=>{
    const candidates=msgMap.get(base(row.name))||[];
    const found=candidates.length===1?candidates[0]:null;
-   const date=found?.msg?.date||row.date||(!row.date&&selected.has(row.timeDay)?row.timeDay:'')||unknownDate;
+   const date=found?.msg?.date||row.date||unknownDate||(!row.date&&selected.has(row.timeDay)?row.timeDay:'');
    let h=mergeMeta(row.name,found&&{head:found.msg.head});
    if(found){const i=found.idx;
     for(const off of [1,-1,2,-2]){
@@ -135,7 +135,7 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
    if(!h.p&&unknownPeriod&&!row.date)h.p=+unknownPeriod;
    return {...row,date,head:h};
   }).filter(row=>selected.has(row.date)||(unknownDate&&row.date===unknownDate));
-  const tentative=images.filter(x=>!x.date&&x.timeDay&&selected.has(x.timeDay)).length;
+  const tentative=unknownDate?0:images.filter(x=>!x.date&&x.timeDay&&selected.has(x.timeDay)).length;
   if(tentative)issues.push('تحتاج مراجعة: '+tentative+' صورة نُسبت إلى اليوم المحدد اعتمادًا على وقت تعديل الملف في RAR، وليس تاريخ رسالة مؤكدًا.');
   const batchSize=8;
   // Extraction is selective. Keep only a small batch of image bytes in memory.
@@ -167,16 +167,16 @@ function renderArchiveList(file,archive,rows,chatText){
  for(const [d,x]of chatDatesMap)if(!dates.has(d))dates.set(d,{count:0,images:0});
  for(const [d,n]of archive.extraDays||[])if(!dates.has(d))dates.set(d,{count:0,images:0,messages:n});
  for(const row of unassigned){if(!row.timeDay)continue;const x=tentative.get(row.timeDay)||{count:0,images:0};x.count++;if(EXT_IMAGE.test(row.name))x.images++;tentative.set(row.timeDay,x)}
- const arr=[...dates].sort((a,b)=>b[0].localeCompare(a[0])),guess=[...tentative].sort((a,b)=>b[0].localeCompare(a[0])),bytes=(file.size/(1024*1024)).toFixed(0);
+ const arr=[...dates].sort((a,b)=>b[0].localeCompare(a[0])),guess=[...tentative].filter(([d])=>!dates.has(d)).sort((a,b)=>b[0].localeCompare(a[0])),dayOptions=[...new Set([...dates.keys(),...tentative.keys()])].sort().reverse(),bytes=(file.size/(1024*1024)).toFixed(0);
  const statusMessage='تم العثور على '+rows.length+' ملف داخل RAR ('+bytes+' م.ب). اختر التاريخ أو عدة تواريخ لقراءة صورها. الملفات التي بلا تاريخ واضح قد تظهر ضمن أيام مقترحة من وقت تعديل ملف RAR؛ هذه مجرد قرينة تحتاج تأكيدك قبل الحفظ.';
- m.innerHTML='<div class="card stack" style="width:min(780px,96vw);max-height:94dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📂 استيراد من RAR</h2><button class="btn" id="shRarClose">✕ إغلاق</button></div><p class="muted">'+safe(statusMessage)+'</p><div style="min-height:0;max-height:45vh;overflow:auto" class="daylist">'+'<h3>✓ الأيام المستخرجة من أسماء الملفات أو محادثة واتساب</h3>'+arr.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة، '+o.count+' ملف'+(o.messages?'، '+o.messages+' رسالة':'')+'</small></label>').join('')+'<h3>◷ أيام مقترحة من وقت حفظ الصور داخل RAR (تحتاج تأكيدك)</h3>'+guess.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة لها وقت حفظ بهذا اليوم ⚠️ قد يختلف عن تاريخ الغياب</small></label>').join('')+'</div>'+(unassigned.length?'<div class="notice"><b>'+unassigned.length+' ملفًا بلا تاريخ موثوق.</b> لن تُربط بيوم تلقائيًا. <label>تاريخها: <input type="date" id="shRarUnknownDay"></label> <label>الحصة (إن كانت جميع هذه الصور لحصة واحدة): <select id="shRarUnknownPeriod"><option value="">غير محددة</option>'+Object.entries(PN).map(([p,t])=>'<option value="'+p+'">'+safe(t)+'</option>').join('')+'</select></label></div>':'')+'<div class="row" style="flex-shrink:0;border-top:1px solid #ddd;padding:10px 0"><button class="btn" id="shRarAll">تحديد الكل</button><button class="btn" id="shRarNone">إلغاء التحديد</button><button class="btn primary" id="shRarAnalyze">قراءة الأيام المختارة ومراجعتها</button></div></div>';
+ m.innerHTML='<div class="card stack" style="width:min(780px,96vw);max-height:94dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📂 استيراد من RAR</h2><button class="btn" id="shRarClose">✕ إغلاق</button></div><p class="muted">'+safe(statusMessage)+'</p><div style="min-height:0;max-height:45vh;overflow:auto" class="daylist">'+'<h3>✓ الأيام المستخرجة من أسماء الملفات أو محادثة واتساب</h3>'+arr.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة، '+o.count+' ملف'+(o.messages?'، '+o.messages+' رسالة':'')+'</small></label>').join('')+'<h3>◷ أيام مقترحة من وقت حفظ الصور داخل RAR (تحتاج تأكيدك)</h3>'+guess.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة لها وقت حفظ بهذا اليوم ⚠️ قد يختلف عن تاريخ الغياب</small></label>').join('')+'</div>'+(unassigned.length?'<div class="notice"><b>'+unassigned.length+' ملفًا بلا تاريخ موثوق.</b> لن تُربط بيوم تلقائيًا. <label>اختر يوم الصور بلا تاريخ: <select id="shRarUnknownPick"><option value="">لا تُسند إلى يوم</option>'+dayOptions.map(d=>'<option value="'+safe(d)+'">'+safe(hijri(d))+' ('+safe(d)+')</option>').join('')+'</select></label><label>أو اختر يومًا آخر: <input type="date" id="shRarUnknownDay"></label> <label>الحصة (إن كانت جميع هذه الصور لحصة واحدة): <select id="shRarUnknownPeriod"><option value="">غير محددة</option>'+Object.entries(PN).map(([p,t])=>'<option value="'+p+'">'+safe(t)+'</option>').join('')+'</select></label></div>':'')+'<div class="row" style="flex-shrink:0;border-top:1px solid #ddd;padding:10px 0"><button class="btn" id="shRarAll">تحديد الكل</button><button class="btn" id="shRarNone">إلغاء التحديد</button><button class="btn primary" id="shRarAnalyze">قراءة الأيام المختارة ومراجعتها</button></div></div>';
  m.onclick=async e=>{
   if(e.target.closest('#shRarClose')){m.hidden=true;m.onclick=null;current=null;return}
   if(e.target.closest('#shRarAll')){m.querySelectorAll('[data-rar-day]').forEach(x=>x.checked=true);return}
   if(e.target.closest('#shRarNone')){m.querySelectorAll('[data-rar-day]').forEach(x=>x.checked=false);return}
   if(e.target.closest('#shRarAnalyze')){
    const chosen=[...m.querySelectorAll('[data-rar-day]:checked')].map(x=>x.dataset.rarDay);
-   const unknown=m.querySelector('#shRarUnknownDay')?.value||'';
+   const unknown=m.querySelector('#shRarUnknownDay')?.value||m.querySelector('#shRarUnknownPick')?.value||'';
    const period=m.querySelector('#shRarUnknownPeriod')?.value||'';
    if(!chosen.length&&!unknown){toast('اختر تاريخًا أو حدّد تاريخ الملفات غير المصنفة');return}
    if(unknown){if(!confirm('هل تؤكد أن الصور بلا تاريخ واضح تخص '+hijri(unknown)+'؟ راجع جميع البيانات قبل حفظ أي كشف.'))return;chosen.push(unknown)}
