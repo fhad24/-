@@ -18,6 +18,27 @@ function archiveDate(name){
  if(m){const d=gregDate(+m[3],+m[2],+m[1]);if(d)return d}
  return '';
 }
+function rarTimeDay(h){
+ const m=String(h?.time||'').match(/^(20\d{2})-(\d{2})-(\d{2})/);
+ return m?gregDate(+m[1],+m[2],+m[3])||'':'';
+}
+function extendedChatDates(raw,filenames){
+ const all=new Map(),refs=new Map(),known=new Set(filenames.map(base));let day='';
+ for(const line of String(raw||'').split(/\r?\n/)){
+  const s=cleanDigits(line.replace(/[‎‏‪-‮؜​]/g,'')).trim();
+  let m=s.match(/^\[?\s*(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})(?=[\s,،\]])/);
+  let dt=m?gregDate(+m[1],+m[2],+m[3]):null;
+  if(!dt){m=s.match(/^\[?\s*(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})(?=[\s,،\]])/);
+   if(m){const a=+m[1],b=+m[2],y=+m[3]<100?2000+(+m[3]):+m[3];dt=a>12?gregDate(y,b,a):b>12?gregDate(y,a,b):gregDate(y,b,a)}}
+  if(dt){day=dt;all.set(day,(all.get(day)||0)+1)}
+  if(!day)continue;
+  for(const match of s.matchAll(/(?:^|[\s:([{])([^\s:()[\]<>،]+\.(?:png|jpe?g|webp))(?=$|[\s)\]])/gi)){
+   const k=base(match[1]);if(!known.has(k))continue;
+   const ds=refs.get(k)||new Set();ds.add(day);refs.set(k,ds);
+  }
+ }
+ return {all,refs};
+}
 function folderHead(path){const words=String(path||'').replace(/[_\\\/\-]+/g,' ').replace(/\.[^.]+$/,' ').replace(/\d{8,}/g,' ');return cpHead(words)}
 function mime(path){return /\.png$/i.test(path)?'image/png':/\.webp$/i.test(path)?'image/webp':'image/jpeg'}
 const ui=()=>document.getElementById('modal');
@@ -78,7 +99,7 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
  const m=ui();m.hidden=false;aborted=false;activeJob=true;
  m.innerHTML='<div class="card stack" style="max-width:650px"><h2>قراءة الأيام المختارة من RAR</h2><p class="muted">فك الصور وفحصها على جهازك دون رفعها إلى الخادم. لن يُحفظ أي كشف حتى تراجعه وتوافق عليه.</p><div id="shRarStatus" class="muted">جارٍ التحضير…</div><button class="btn" id="shRarStop">إلغاء القراءة</button></div>';
  m.onclick=e=>{if(e.target.closest('#shRarStop')){aborted=true;status('سيتم إيقاف القراءة بعد إكمال الدفعة الحالية…')}};
- const selected=new Set(chosen),all=rows.filter(x=>selected.has(x.date)||(x.date===''&&unknownDate));
+ const selected=new Set(chosen),all=rows.filter(x=>selected.has(x.date)||(!x.date&&x.timeDay&&selected.has(x.timeDay))||(!x.date&&!x.timeDay&&unknownDate));
  if(!all.length){activeJob=false;status('لا توجد مرفقات للمدة المختارة.');return}
  const images=all.filter(x=>EXT_IMAGE.test(x.name));
  const chats=all.filter(x=>EXT_CHAT.test(x.name));
@@ -101,7 +122,7 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
   const configured=images.map(row=>{
    const candidates=msgMap.get(base(row.name))||[];
    const found=candidates.length===1?candidates[0]:null;
-   const date=found?.msg?.date||row.date||unknownDate;
+   const date=found?.msg?.date||row.date||(!row.date&&selected.has(row.timeDay)?row.timeDay:'')||unknownDate;
    let h=mergeMeta(row.name,found&&{head:found.msg.head});
    if(found){const i=found.idx;
     for(const off of [1,-1,2,-2]){
@@ -113,7 +134,9 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
    }
    if(!h.p&&unknownPeriod&&!row.date)h.p=+unknownPeriod;
    return {...row,date,head:h};
-  }).filter(row=>selected.has(row.date)||row.date===unknownDate);
+  }).filter(row=>selected.has(row.date)||(unknownDate&&row.date===unknownDate));
+  const tentative=images.filter(x=>!x.date&&x.timeDay&&selected.has(x.timeDay)).length;
+  if(tentative)issues.push('تحتاج مراجعة: '+tentative+' صورة نُسبت إلى اليوم المحدد اعتمادًا على وقت تعديل الملف في RAR، وليس تاريخ رسالة مؤكدًا.');
   const batchSize=8;
   // Extraction is selective. Keep only a small batch of image bytes in memory.
   async function* readBatches(){
@@ -139,12 +162,14 @@ async function analyze(file,archive,chosen,unknownDate,unknownPeriod,rows){
 }
 function renderArchiveList(file,archive,rows,chatText){
  const m=ui();m.hidden=false;
- const dates=new Map(),unassigned=rows.filter(x=>!x.date),chatDatesMap=chatText?chatDates(chatText):new Map();
+ const dates=new Map(),tentative=new Map(),unassigned=rows.filter(x=>!x.date),chatDatesMap=chatText?chatDates(chatText):new Map();
  for(const row of rows){if(!row.date)continue;const x=dates.get(row.date)||{count:0,images:0};x.count++;if(EXT_IMAGE.test(row.name))x.images++;dates.set(row.date,x)}
  for(const [d,x]of chatDatesMap)if(!dates.has(d))dates.set(d,{count:0,images:0});
- const arr=[...dates].sort((a,b)=>b[0].localeCompare(a[0])),bytes=(file.size/(1024*1024)).toFixed(0);
- const statusMessage='تم العثور على '+rows.length+' ملف داخل RAR ('+bytes+' م.ب). اختر التاريخ أو عدة تواريخ لقراءة صورها. الملفات التي لا تحمل تاريخًا تحتاج تاريخًا تحدده أنت.';
- m.innerHTML='<div class="card stack" style="width:min(780px,96vw);max-height:94dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📂 استيراد من RAR</h2><button class="btn" id="shRarClose">✕ إغلاق</button></div><p class="muted">'+safe(statusMessage)+'</p><div style="min-height:0;max-height:45vh;overflow:auto" class="daylist">'+arr.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'" '+(o.images?'':'')+'> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة، '+o.count+' ملف</small></label>').join('')+'</div>'+(unassigned.length?'<div class="notice"><b>'+unassigned.length+' ملفًا بلا تاريخ موثوق.</b> لن تُربط بيوم تلقائيًا. <label>تاريخها: <input type="date" id="shRarUnknownDay"></label> <label>الحصة (إن كانت جميع هذه الصور لحصة واحدة): <select id="shRarUnknownPeriod"><option value="">غير محددة</option>'+Object.entries(PN).map(([p,t])=>'<option value="'+p+'">'+safe(t)+'</option>').join('')+'</select></label></div>':'')+'<div class="row" style="flex-shrink:0;border-top:1px solid #ddd;padding:10px 0"><button class="btn" id="shRarAll">تحديد الكل</button><button class="btn" id="shRarNone">إلغاء التحديد</button><button class="btn primary" id="shRarAnalyze">قراءة الأيام المختارة ومراجعتها</button></div></div>';
+ for(const [d,n]of archive.extraDays||[])if(!dates.has(d))dates.set(d,{count:0,images:0,messages:n});
+ for(const row of unassigned){if(!row.timeDay)continue;const x=tentative.get(row.timeDay)||{count:0,images:0};x.count++;if(EXT_IMAGE.test(row.name))x.images++;tentative.set(row.timeDay,x)}
+ const arr=[...dates].sort((a,b)=>b[0].localeCompare(a[0])),guess=[...tentative].sort((a,b)=>b[0].localeCompare(a[0])),bytes=(file.size/(1024*1024)).toFixed(0);
+ const statusMessage='تم العثور على '+rows.length+' ملف داخل RAR ('+bytes+' م.ب). اختر التاريخ أو عدة تواريخ لقراءة صورها. الملفات التي بلا تاريخ واضح قد تظهر ضمن أيام مقترحة من وقت تعديل ملف RAR؛ هذه مجرد قرينة تحتاج تأكيدك قبل الحفظ.';
+ m.innerHTML='<div class="card stack" style="width:min(780px,96vw);max-height:94dvh;overflow:hidden;display:flex;flex-direction:column"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📂 استيراد من RAR</h2><button class="btn" id="shRarClose">✕ إغلاق</button></div><p class="muted">'+safe(statusMessage)+'</p><div style="min-height:0;max-height:45vh;overflow:auto" class="daylist">'+'<h3>✓ الأيام المستخرجة من أسماء الملفات أو محادثة واتساب</h3>'+arr.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة، '+o.count+' ملف'+(o.messages?'، '+o.messages+' رسالة':'')+'</small></label>').join('')+'<h3>◷ أيام مقترحة من وقت حفظ الصور داخل RAR (تحتاج تأكيدك)</h3>'+guess.map(([d,o])=>'<label class="dayitem"><input type="checkbox" data-rar-day="'+safe(d)+'"> <b>'+safe(hijri(d))+'</b> <small>('+safe(d)+') — '+o.images+' صورة لها وقت حفظ بهذا اليوم ⚠️ قد يختلف عن تاريخ الغياب</small></label>').join('')+'</div>'+(unassigned.length?'<div class="notice"><b>'+unassigned.length+' ملفًا بلا تاريخ موثوق.</b> لن تُربط بيوم تلقائيًا. <label>تاريخها: <input type="date" id="shRarUnknownDay"></label> <label>الحصة (إن كانت جميع هذه الصور لحصة واحدة): <select id="shRarUnknownPeriod"><option value="">غير محددة</option>'+Object.entries(PN).map(([p,t])=>'<option value="'+p+'">'+safe(t)+'</option>').join('')+'</select></label></div>':'')+'<div class="row" style="flex-shrink:0;border-top:1px solid #ddd;padding:10px 0"><button class="btn" id="shRarAll">تحديد الكل</button><button class="btn" id="shRarNone">إلغاء التحديد</button><button class="btn primary" id="shRarAnalyze">قراءة الأيام المختارة ومراجعتها</button></div></div>';
  m.onclick=async e=>{
   if(e.target.closest('#shRarClose')){m.hidden=true;m.onclick=null;current=null;return}
   if(e.target.closest('#shRarAll')){m.querySelectorAll('[data-rar-day]').forEach(x=>x.checked=true);return}
@@ -154,7 +179,7 @@ function renderArchiveList(file,archive,rows,chatText){
    const unknown=m.querySelector('#shRarUnknownDay')?.value||'';
    const period=m.querySelector('#shRarUnknownPeriod')?.value||'';
    if(!chosen.length&&!unknown){toast('اختر تاريخًا أو حدّد تاريخ الملفات غير المصنفة');return}
-   if(unknown)chosen.push(unknown);
+   if(unknown){if(!confirm('هل تؤكد أن الصور بلا تاريخ واضح تخص '+hijri(unknown)+'؟ راجع جميع البيانات قبل حفظ أي كشف.'))return;chosen.push(unknown)}
    const button=e.target;button.disabled=true;
    await analyze(file,archive,chosen,unknown,period,rows);
   }
@@ -168,7 +193,7 @@ async function start(file){
  try{
   status('تحميل مكتبة RAR وإعداد الذاكرة…');
   const archive=await openArchive(file);
-  const rows=archive.headers.map(h=>({name:h.name,date:archiveDate(h.name)}));
+  const rows=archive.headers.map(h=>({name:h.name,date:archiveDate(h.name),timeDay:rarTimeDay(h)}));
   const txt=rows.filter(x=>EXT_CHAT.test(x.name)).slice(0,4);
   let chatText='';
   if(txt.length){
@@ -178,8 +203,10 @@ async function start(file){
   archive.chatText=chatText;
   if(chatText){
    const map=new Map();
-   cpMessages(chatText).forEach(m=>{for(const name of m.files||[]){const key=base(name);const list=map.get(key)||[];list.push(m.date);map.set(key,list)}});
-   for(const r of rows){const refs=map.get(base(r.name))||[];if(refs.length===1&&refs[0])r.date=refs[0]}
+   cpMessages(chatText).forEach(m=>{for(const name of m.files||[]){if(!m.date)continue;const key=base(name);const list=map.get(key)||[];list.push(m.date);map.set(key,list)}});
+   const expanded=extendedChatDates(chatText,rows.map(x=>x.name));archive.extraDays=expanded.all;
+   for(const [name,ds] of expanded.refs){const list=map.get(name)||[];list.push(...ds);map.set(name,list)}
+   for(const r of rows){const refs=[...new Set(map.get(base(r.name))||[])].filter(Boolean);if(refs.length===1)r.date=refs[0]}
   }
   current={file,archive,rows};
   renderArchiveList(file,archive,rows,chatText);
