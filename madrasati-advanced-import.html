@@ -1080,15 +1080,55 @@ function renderReports(app){
    <select id="rk"><option value="stu">الطلاب: أيام عدم الحضور</option><option value="tch">المعلمون: الكشوف غير المرسلة</option><option value="cls">الفصول: نسبة الحضور</option></select>
    <button class="btn primary" id="rgo">عرض التقرير</button><button type="button" class="btn" id="neverMadrasatiBtn" style="background:#fff3f2;color:#a61b1b;border:1px solid #ebb0ae;font-weight:800">الطلاب الذين لم يدخلوا المنصة نهائيًا ولا حصة</button><span class="muted small" id="rhint"></span><button class="btn" id="rx" hidden>تصدير</button>
    <input type="search" id="rsearch" placeholder="بحث عن طالب أو معلم"></div>
+   <div id="neverGradeControls" class="row" hidden style="background:#f1f7f4;border:1px solid #d3e6dc;border-radius:12px;padding:12px;gap:12px;align-items:center;flex-wrap:wrap">
+     <label style="font-weight:700">حفظ وعرض حسب الصف
+       <select id="neverGradeSelect" aria-label="اختيار الصف لتصدير الطلاب الذين لم يحضروا" style="min-width:185px;margin-inline-start:6px">
+         <option value="all">جميع الصفوف</option><option value="1">الأول الثانوي</option><option value="2">الثاني الثانوي</option><option value="3">الثالث الثانوي</option>
+       </select>
+     </label>
+     <button type="button" class="btn primary" id="neverGradeSave">💾 حفظ كشف الصف المحدد (PDF / Word / Excel)</button>
+     <span id="neverGradeStats" class="muted small"></span>
+   </div>
    <div id="rout"><div class="empty">اختر الفترة ونوع التقرير.</div></div></div>`;
-  let rows=null,head=null,redNoteColumn=-1,reportInfo="",reportModel=null;
+  let rows=null,head=null,redNoteColumn=-1,reportInfo="",reportModel=null,neverCalc=null;
   const draw=()=>{const q=norm($('#rsearch').value);const r=q.length?rows.filter(x=>q.every(t=>norm(x.join(' ')).some(y=>y.includes(t)))):rows;
     $('#rout').innerHTML=`<div class="muted small" style="margin:6px 0">${toAr(r.length)} طالبًا${reportInfo?'<span style="display:block;margin-top:8px">'+esc(reportInfo)+'</span>':''}</div><div class="tbl"><table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${r.slice(0,600).map(x=>`<tr>${x.map((v,i)=>`<td ${i===redNoteColumn?'style="color:#b42318;font-weight:800"':''}>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`};
   $('#rsearch').oninput=()=>rows&&draw();
+  const displayNeverGrade=()=>{
+    if(!neverCalc)return;
+    const chosen=$('#neverGradeSelect').value;
+    const selected=chosen==='all'?neverCalc.never:neverCalc.never.filter(o=>String(o.student.g)===chosen);
+    const gradeName=chosen==='all'?'جميع الصفوف':GN[+chosen]+' الثانوي';
+    head=['م','الاسم الكامل','السجل المدني','الصف','الفصل','رقم الجوال','عدد الأيام','ملاحظات'];
+    redNoteColumn=7;
+    // The numbering restarts from 1 for every selected grade.
+    rows=selected.map((o,i)=>[i+1,o.student.n,String(o.student.i),GN[o.student.g]+' الثانوي',o.student.c||'—',o.student.p||'—',o.count,'الطالب لم يحضر نهائيا منصة مدرستي']);
+    const gradeCounts=[1,2,3].map(g=>[g,neverCalc.never.filter(o=>+o.student.g===g).length]);
+    $('#neverGradeStats').textContent='العدد: '+toAr(rows.length)+' طالبًا — الترقيم من ١ إلى '+toAr(rows.length);
+    $('#rhint').textContent=gradeName+': '+toAr(rows.length)+' طالبًا | '+gradeCounts.map(([g,n])=>GN[g]+': '+toAr(n)).join(' | ');
+    const relevantDates=[...new Set(selected.flatMap(o=>o.dates))].sort();
+    const dateRange=relevantDates.length?hijri(relevantDates[0],true)+' — '+hijri(relevantDates[relevantDates.length-1],true):'لم يتوفر يوم لهذا الصف';
+    reportModel={
+      title:'كشف الطلاب الذين لم يحضروا أي حصة في منصة مدرستي',
+      sub:'مدرسة شرحبيل بن حسنة الثانوية — '+gradeName+' — أيام التحضير الفعلي فقط',
+      file:'كشف_لم_يحضروا_منصة_مدرستي_'+(chosen==='all'?'جميع_الصفوف':GN[+chosen]+'_الثانوي'),
+      meta:[['الصف المحدد',gradeName],['عدد الطلاب',rows.length],['الفترة المحتسبة',dateRange],['عدد أيام التحضير المكتملة بالمدرسة',neverCalc.days],['الفصول والأيام المكتملة',neverCalc.completeClassDays]],
+      blocks:[{h:'الطلاب الذين لم يظهر لهم حضور مطلقًا — '+gradeName,redNoteColumn:7,
+        cols:[{t:'م',w:.5,c:1},{t:'الاسم الكامل',w:3.5},{t:'السجل المدني',w:1.65,c:1},{t:'الصف',w:1.25,c:1},{t:'الفصل',w:.7,c:1},{t:'الجوال',w:1.55,c:1},{t:'عدد الأيام',w:.9,c:1},{t:'ملاحظات',w:3}],
+        rows:rows.map(item=>item.slice())}],
+      notes:['التسلسل يبدأ من رقم ١ لكل صف عند تحديده وحفظه.','تنبيه: الاستنتاج مبني على كشوف الحضور المحفوظة، وليس على سجلات تسجيل الدخول المباشر إلى المنصة.','عدد الأيام خاص بالفصل الذي حُضِّر فعليًا، ولا يشمل الأيام الفارغة أو الكشوف الجزئية أو غير المؤكدة.']
+    };
+    $('#rx').hidden=false;$('#rx').textContent='حفظ الكشف';
+    $('#rx').onclick=()=>exportMenu(()=>reportModel);
+    draw();
+    if(!rows.length)$('#rout').insertAdjacentHTML('beforeend','<p class="muted">لا يوجد طالب مطابق لهذا الصف في أيام التحضير المكتملة.</p>');
+  };
+  $('#neverGradeSelect').onchange=()=>displayNeverGrade();
+  $('#neverGradeSave').onclick=()=>{if(reportModel)exportMenu(()=>reportModel)};
   $('#neverMadrasatiBtn').onclick=async()=>{
     $('#neverMadrasatiBtn').disabled=true;
     $('#rout').innerHTML='<div class="empty">جارٍ مراجعة جميع أيام التحضير الفعلية…</div>';
-    $('#rx').hidden=true;reportInfo='';reportModel=null;
+    $('#rx').hidden=true;$('#neverGradeControls').hidden=true;reportInfo='';reportModel=null;neverCalc=null;
     try{
       if(!S.roster.length){
         $('#rout').innerHTML='<div class="empty">لا توجد أسماء طلاب محمّلة في بيانات تحضير مدرستي. استورد نسخة التحضير التي تحتوي على الأسماء والسجلات والجوال أولًا.</div>';
@@ -1097,38 +1137,20 @@ function renderReports(app){
       // "نهائيًا" يجب أن يشمل كل أيام التحضير، لا فترة محدودة يختارها المستخدم.
       const days=await loadDays();
       const calc=calculateNeverMadrasatiAttendees(days,S.roster);
-      head=['الاسم الكامل','السجل المدني','الصف','الفصل','رقم الجوال','عدد الأيام','ملاحظات'];
-      redNoteColumn=6;
-      rows=calc.never.map(o=>[o.student.n,String(o.student.i),GN[o.student.g]+' الثانوي',o.student.c||'—',o.student.p||'—',o.count,'الطالب لم يحضر نهائيا منصة مدرستي']);
-      const count=rows.length;
-      const gradeCount=[1,2,3].map(g=>GN[g]+': '+toAr(calc.never.filter(o=>+o.student.g===g).length)).join(' | ');
       reportInfo='الأيام المحتسبة هي أيام التحضير المكتمل لفصل الطالب فقط؛ ولا يُحسب اليوم دون كشف مكتمل أو مع أسماء غير مطابقة. عدد أيام التحضير المقبولة بالمدرسة: '+toAr(calc.days)+'؛ عدد الفصول/الأيام: '+toAr(calc.completeClassDays)+'؛ كشوف جزئية مستبعدة: '+toAr(calc.partialSessions)+'؛ فصول/أيام معلّقة بسبب أسماء غير معتمدة: '+toAr(calc.unresolvedClassDays)+'.';
       if(!calc.classes){
         $('#rout').innerHTML='<div class="empty">لم أجد أيام تحضير مكتملة موثوقة يمكن حساب عدم الحضور منها. الكشوف الجزئية أو الأيام غير المحضرة لا تُعد دليل غياب. ارفع واعتمد كشف حضور مكتمل أولًا.</div>';
         return;
       }
-      const qualified=calc.never.flatMap(o=>o.dates).sort();
-      const per=qualified.length?hijri(qualified[0],true)+' — '+hijri(qualified[qualified.length-1],true):'جميع الأيام المحضرة';
-      reportModel={
-        title:'كشف الطلاب الذين لم يحضروا أي حصة في منصة مدرستي',
-        sub:'مدرسة شرحبيل بن حسنة الثانوية — كامل أيام التحضير الفعلي',
-        file:'كشف_الطلاب_الذين_لم_يحضروا_نهائيا_منصة_مدرستي',
-        meta:[['عدد الطلاب',count],['الأول الثانوي',calc.never.filter(o=>+o.student.g===1).length],['الثاني الثانوي',calc.never.filter(o=>+o.student.g===2).length],['الثالث الثانوي',calc.never.filter(o=>+o.student.g===3).length],['أيام تحضير موثقة بالمدرسة',calc.days],['الفصول / الأيام المكتملة',calc.completeClassDays]],
-        blocks:[{h:'الطلاب الذين لم يظهر لهم حضور في أي حصة',redNoteColumn:6,
-          cols:[{t:'الاسم الكامل',w:3.5},{t:'السجل المدني',w:1.65,c:1},{t:'الصف',w:1.25,c:1},{t:'الفصل',w:.7,c:1},{t:'الجوال',w:1.55,c:1},{t:'عدد الأيام',w:.8,c:1},{t:'ملاحظات',w:3}],
-          rows:rows.map(r=>r.slice())}],
-        notes:['تنبيه: الاستنتاج مبني على كشوف الحضور المحفوظة وليس على سجلات تسجيل الدخول المباشر إلى المنصة.','عدد الأيام خاص بالفصل الذي حُضِّر فعليًا، ولا يشمل الأيام الفارغة أو الكشوف الجزئية أو غير المؤكدة.']
-      };
-      $('#rhint').textContent='إجمالي '+toAr(count)+' طالبًا | '+gradeCount;
-      $('#rx').hidden=false;
-      $('#rx').onclick=()=>exportMenu(()=>reportModel);
-      draw();
-      if(!count)$('#rout').insertAdjacentHTML('beforeend','<p class="muted">لا يوجد طالب مطابق للشرط خلال أيام التحضير المكتملة.</p>');
+      neverCalc=calc;
+      $('#neverGradeSelect').value='all';
+      $('#neverGradeControls').hidden=false;
+      displayNeverGrade();
     }catch(err){
       $('#rout').innerHTML='<div class="empty">تعذّر إنشاء الكشف: '+esc(err?.message||err)+'</div>';
     }finally{$('#neverMadrasatiBtn').disabled=false}
   };
-  $('#rgo').onclick=async()=>{redNoteColumn=-1;reportInfo='';reportModel=null;S.rep.from=$('#rf').value;S.rep.to=$('#rt').value;$('#rout').innerHTML='<div class="empty">جارٍ التحميل…</div>';
+  $('#rgo').onclick=async()=>{redNoteColumn=-1;reportInfo='';reportModel=null;neverCalc=null;$('#neverGradeControls').hidden=true;$('#rx').textContent='تصدير';S.rep.from=$('#rf').value;S.rep.to=$('#rt').value;$('#rout').innerHTML='<div class="empty">جارٍ التحميل…</div>';
     const days=await loadDays(S.rep.from,S.rep.to);if(!days.length){$('#rout').innerHTML='<div class="empty">لا توجد أيام في هذه الفترة.</div>';return}
     const k=$('#rk').value;
     if(k==='stu'){const agg=new Map();for(const d of days){for(const a of dayAbsence(d)){const o=agg.get(a.r.i)||{r:a.r,never:0,miss:0,dates:[]};if(a.never){o.never++;o.dates.push(hijri(d.date,true))}o.miss+=a.miss.length;agg.set(a.r.i,o)}}
