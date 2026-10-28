@@ -1355,7 +1355,7 @@ document.getElementById('sh-local-backup')?.addEventListener('change',async func
   else [db,sample,downloads]=await Promise.all([claude.use('db'),claude.use('sample'),claude.use('downloads')]);
   S.db=db;S.sample=sample;S.downloads=downloads;
   if(!db){render();return}
-  db.doc('app/roster').onSnapshot(sn=>{setRoster(sn.exists?(sn.data().students||[]):[]);if(S.view==='students')render();else if(S.day&&!S.editing)renderDayMain()},()=>{});
+  db.doc('app/roster').onSnapshot(sn=>{setRoster(sn.exists?(sn.data().students||[]):[]);const state=document.getElementById('sh-import-state');if(state)state.textContent=S.roster.length?'✓ جاهز لمطابقة '+toAr(S.roster.length)+' طالبًا من بيانات التحضير':'⚠️ بيانات الطلاب غير محمّلة — اختر ملف بيانات التحضير JSON';if(S.view==='students')render();else if(S.day&&!S.editing)renderDayMain()},()=>{});
   db.doc('app/timetable').onSnapshot(sn=>{S.tt=sn.exists?structuredClone(sn.data().entries||[]):[];{const RX=/اختياري|نشاط/,n=S.tt.length;S.tt=S.tt.filter(e=>!RX.test(e.s||''));if(S.tt.length<n)db.doc('app/timetable').set({entries:S.tt}).catch(()=>{})}if(S.view==='tt'&&$('#modal').hidden)render();else if(S.day&&!S.editing)renderDayMain()},()=>{});
   db.doc('app/settings').onSnapshot(sn=>{S.settings=sn.exists?structuredClone(sn.data()):{aliases:[]}},()=>{});
   db.doc('app/index').onSnapshot(sn=>{S.allDays=null;S.stuStats=null;S.index=sn.exists?structuredClone(sn.data().days||[]):[];if(S.view==='day'&&!S.editing){render()}if(!S.dayDate&&S.index.length){const last=S.index.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];openDay(last.date)}},()=>{});
@@ -1373,7 +1373,7 @@ document.getElementById('sh-local-backup')?.addEventListener('change',async func
   }
 })();
 </script>
-<script src="./madrasati-offline-import.js?v=20261029-fast-ocr"></script>
+<script src="./madrasati-offline-import.js?v=20261029-ocr-retry-names"></script>
 <script src="./madrasati-rar-import.js"></script>
 
 </body></html>
