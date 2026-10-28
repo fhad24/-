@@ -477,7 +477,7 @@ async function toDocx(m){
     kids.push(para(b.h||'',{bold:true,size:24,color:'0F5A4E',before:240,after:100}));
     const rows=[new D.TableRow({tableHeader:true,children:b.cols.map((c,i)=>cell(c.t,cw[i],{bold:true,fill:'0F5A4E',color:'FFFFFF',align:D.AlignmentType.CENTER}))})];
     let z=0;for(const r of b.rows){if(!Array.isArray(r)){rows.push(new D.TableRow({cantSplit:true,children:[cell(r.group,TW,{span:b.cols.length,bold:true,fill:'D8EBE5',color:'0F5A4E'})]}));z=0;continue}
-      const f=z++%2?'F5F8F7':undefined;rows.push(new D.TableRow({cantSplit:true,children:r.map((v,i)=>cell(v,cw[i],{fill:f,align:b.cols[i].c?D.AlignmentType.CENTER:D.AlignmentType.RIGHT}))}))}
+      const f=z++%2?'F5F8F7':undefined;rows.push(new D.TableRow({cantSplit:true,children:r.map((v,i)=>cell(v,cw[i],{fill:f,align:b.cols[i].c?D.AlignmentType.CENTER:D.AlignmentType.RIGHT,color:i===b.redNoteColumn?'B42318':undefined,bold:i===b.redNoteColumn}))}))}
     if(!b.rows.length)rows.push(new D.TableRow({children:[cell('لا توجد بيانات',TW,{span:b.cols.length})]}));
     kids.push(new D.Table({width:{size:TW,type:D.WidthType.DXA},columnWidths:cw,visuallyRightToLeft:true,rows}))}
   (m.notes||[]).forEach((n,i)=>kids.push(para(n,{size:17,color:'5C6B65',before:i?40:200})));
@@ -515,7 +515,7 @@ async function toPdf(m){
     let z=0;const rows=b.rows.length?b.rows:[['لا توجد بيانات']];
     for(const r of rows){const tr=document.createElement('tr');
       if(!Array.isArray(r)){tr.className='g';tr.innerHTML=`<td colspan="${b.cols.length}">${esc(r.group)}</td>`;z=0}
-      else{tr.className=z++%2?'z':'';tr.innerHTML=r.map((v,i)=>`<td class="${b.cols[i]&&b.cols[i].c?'c':''}" ${r.length===1?`colspan="${b.cols.length}"`:''}>${esc(v)}</td>`).join('')}
+      else{tr.className=z++%2?'z':'';tr.innerHTML=r.map((v,i)=>`<td class="${b.cols[i]&&b.cols[i].c?'c':''}" ${i===b.redNoteColumn?'style="color:#b42318;font-weight:800"':''} ${r.length===1?`colspan="${b.cols.length}"`:''}>${esc(v)}</td>`).join('')}
       tb.appendChild(tr);
       if(!fits()){tr.remove();if(!tb.rows.length){h.remove();t.remove()}newPage(false);cont=true;[h,t]=start();tb.appendChild(tr)}}
   }
@@ -1036,19 +1036,99 @@ function drawResult(d){
 }
 /* ---------- reports ---------- */
 async function loadDays(from,to){const ds=S.index.filter(d=>(!from||d.date>=from)&&(!to||d.date<=to));const out=[];for(const d of ds){const x=await getDoc('days/'+d.date);if(x)out.push(x)}return out.sort((a,b)=>a.date.localeCompare(b.date))}
+/* كشف عدم تسجيل أي حضور: لا تُحتسب الأيام التي لا يملك الفصل فيها كشفًا مكتملًا. */
+function calculateNeverMadrasatiAttendees(days,roster){
+ const attended=new Set(),classDates=new Map(),observedDays=new Set();
+ let partialSessions=0,unresolvedClassDays=0,completeClassDays=0;
+ for(const day of days||[]){
+  const date=String(day?.date||'');
+  if(!date)continue;
+  const grouped=new Map();
+  for(const s of day.sessions||[]){
+   if(!s||!Number(s.g)||!s.c)continue;
+   const key=String(+s.g)+'|'+String(s.c);
+   const list=grouped.get(key)||[];list.push(s);grouped.set(key,list);
+   for(const member of s.m||[])if(member?.i)attended.add(String(member.i));
+   if(s.partial)partialSessions++;
+  }
+  for(const [key,sessions] of grouped){
+   const complete=sessions.filter(s=>!s.partial&&Array.isArray(s.m));
+   if(!complete.length)continue;
+   // Unmatched names might belong to a student incorrectly flagged as absent.
+   if(sessions.some(s=>(s.m||[]).some(x=>!x?.i))){unresolvedClassDays++;continue}
+   const dateSet=classDates.get(key)||new Set();dateSet.add(date);classDates.set(key,dateSet);
+   observedDays.add(date);completeClassDays++;
+  }
+ }
+ const never=[];
+ for(const r of roster||[]){
+  const id=String(r?.i||''),name=String(r?.n||'');
+  if(!id||!name||attended.has(id))continue;
+  if(/انتساب|وهمي/i.test(String(r.c||'')))continue;
+  const dates=classDates.get(String(+r.g)+'|'+String(r.c))||new Set();
+  if(!dates.size)continue;
+  never.push({student:r,count:dates.size,dates:[...dates].sort()});
+ }
+ never.sort((a,b)=>a.student.g-b.student.g||CL.indexOf(a.student.c)-CL.indexOf(b.student.c)||b.count-a.count||a.student.n.localeCompare(b.student.n,'ar'));
+ return {never,days:observedDays.size,completeClassDays,partialSessions,unresolvedClassDays,classes:classDates.size};
+}
+
 function renderReports(app){
   app.innerHTML=`<div class="card stack"><h2>تقارير عدة أيام</h2>
    <div class="row">${(()=>{const ds=S.index.slice().sort((x,y)=>x.date.localeCompare(y.date));const opt=v=>ds.map(d=>`<option value="${d.date}" ${d.date===v?'selected':''}>${esc(hijri(d.date))}</option>`).join('');
    return`<label>من <select id="rf"><option value="">أول يوم</option>${opt(S.rep.from)}</select></label><label>إلى <select id="rt"><option value="">آخر يوم</option>${opt(S.rep.to)}</select></label>`})()}
    <select id="rk"><option value="stu">الطلاب: أيام عدم الحضور</option><option value="tch">المعلمون: الكشوف غير المرسلة</option><option value="cls">الفصول: نسبة الحضور</option></select>
-   <button class="btn primary" id="rgo">عرض التقرير</button><span class="muted small" id="rhint"></span><button class="btn" id="rx" hidden>تصدير</button>
+   <button class="btn primary" id="rgo">عرض التقرير</button><button type="button" class="btn" id="neverMadrasatiBtn" style="background:#fff3f2;color:#a61b1b;border:1px solid #ebb0ae;font-weight:800">الطلاب الذين لم يدخلوا المنصة نهائيًا ولا حصة</button><span class="muted small" id="rhint"></span><button class="btn" id="rx" hidden>تصدير</button>
    <input type="search" id="rsearch" placeholder="بحث عن طالب أو معلم"></div>
    <div id="rout"><div class="empty">اختر الفترة ونوع التقرير.</div></div></div>`;
-  let rows=null,head=null;
+  let rows=null,head=null,redNoteColumn=-1,reportInfo="",reportModel=null;
   const draw=()=>{const q=norm($('#rsearch').value);const r=q.length?rows.filter(x=>q.every(t=>norm(x.join(' ')).some(y=>y.includes(t)))):rows;
-    $('#rout').innerHTML=`<div class="muted small" style="margin:6px 0">${toAr(r.length)} صفًا</div><div class="tbl"><table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${r.slice(0,600).map(x=>`<tr>${x.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`};
+    $('#rout').innerHTML=`<div class="muted small" style="margin:6px 0">${toAr(r.length)} طالبًا${reportInfo?'<span style="display:block;margin-top:8px">'+esc(reportInfo)+'</span>':''}</div><div class="tbl"><table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${r.slice(0,600).map(x=>`<tr>${x.map((v,i)=>`<td ${i===redNoteColumn?'style="color:#b42318;font-weight:800"':''}>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`};
   $('#rsearch').oninput=()=>rows&&draw();
-  $('#rgo').onclick=async()=>{S.rep.from=$('#rf').value;S.rep.to=$('#rt').value;$('#rout').innerHTML='<div class="empty">جارٍ التحميل…</div>';
+  $('#neverMadrasatiBtn').onclick=async()=>{
+    $('#neverMadrasatiBtn').disabled=true;
+    $('#rout').innerHTML='<div class="empty">جارٍ مراجعة جميع أيام التحضير الفعلية…</div>';
+    $('#rx').hidden=true;reportInfo='';reportModel=null;
+    try{
+      if(!S.roster.length){
+        $('#rout').innerHTML='<div class="empty">لا توجد أسماء طلاب محمّلة في بيانات تحضير مدرستي. استورد نسخة التحضير التي تحتوي على الأسماء والسجلات والجوال أولًا.</div>';
+        return;
+      }
+      // "نهائيًا" يجب أن يشمل كل أيام التحضير، لا فترة محدودة يختارها المستخدم.
+      const days=await loadDays();
+      const calc=calculateNeverMadrasatiAttendees(days,S.roster);
+      head=['الاسم الكامل','السجل المدني','الصف','الفصل','رقم الجوال','عدد الأيام','ملاحظات'];
+      redNoteColumn=6;
+      rows=calc.never.map(o=>[o.student.n,String(o.student.i),GN[o.student.g]+' الثانوي',o.student.c||'—',o.student.p||'—',o.count,'الطالب لم يحضر نهائيا منصة مدرستي']);
+      const count=rows.length;
+      const gradeCount=[1,2,3].map(g=>GN[g]+': '+toAr(calc.never.filter(o=>+o.student.g===g).length)).join(' | ');
+      reportInfo='الأيام المحتسبة هي أيام التحضير المكتمل لفصل الطالب فقط؛ ولا يُحسب اليوم دون كشف مكتمل أو مع أسماء غير مطابقة. عدد أيام التحضير المقبولة بالمدرسة: '+toAr(calc.days)+'؛ عدد الفصول/الأيام: '+toAr(calc.completeClassDays)+'؛ كشوف جزئية مستبعدة: '+toAr(calc.partialSessions)+'؛ فصول/أيام معلّقة بسبب أسماء غير معتمدة: '+toAr(calc.unresolvedClassDays)+'.';
+      if(!calc.classes){
+        $('#rout').innerHTML='<div class="empty">لم أجد أيام تحضير مكتملة موثوقة يمكن حساب عدم الحضور منها. الكشوف الجزئية أو الأيام غير المحضرة لا تُعد دليل غياب. ارفع واعتمد كشف حضور مكتمل أولًا.</div>';
+        return;
+      }
+      const qualified=calc.never.flatMap(o=>o.dates).sort();
+      const per=qualified.length?hijri(qualified[0],true)+' — '+hijri(qualified[qualified.length-1],true):'جميع الأيام المحضرة';
+      reportModel={
+        title:'كشف الطلاب الذين لم يحضروا أي حصة في منصة مدرستي',
+        sub:'مدرسة شرحبيل بن حسنة الثانوية — كامل أيام التحضير الفعلي',
+        file:'كشف_الطلاب_الذين_لم_يحضروا_نهائيا_منصة_مدرستي',
+        meta:[['عدد الطلاب',count],['الأول الثانوي',calc.never.filter(o=>+o.student.g===1).length],['الثاني الثانوي',calc.never.filter(o=>+o.student.g===2).length],['الثالث الثانوي',calc.never.filter(o=>+o.student.g===3).length],['أيام تحضير موثقة بالمدرسة',calc.days],['الفصول / الأيام المكتملة',calc.completeClassDays]],
+        blocks:[{h:'الطلاب الذين لم يظهر لهم حضور في أي حصة',redNoteColumn:6,
+          cols:[{t:'الاسم الكامل',w:3.5},{t:'السجل المدني',w:1.65,c:1},{t:'الصف',w:1.25,c:1},{t:'الفصل',w:.7,c:1},{t:'الجوال',w:1.55,c:1},{t:'عدد الأيام',w:.8,c:1},{t:'ملاحظات',w:3}],
+          rows:rows.map(r=>r.slice())}],
+        notes:['تنبيه: الاستنتاج مبني على كشوف الحضور المحفوظة وليس على سجلات تسجيل الدخول المباشر إلى المنصة.','عدد الأيام خاص بالفصل الذي حُضِّر فعليًا، ولا يشمل الأيام الفارغة أو الكشوف الجزئية أو غير المؤكدة.']
+      };
+      $('#rhint').textContent='إجمالي '+toAr(count)+' طالبًا | '+gradeCount;
+      $('#rx').hidden=false;
+      $('#rx').onclick=()=>exportMenu(()=>reportModel);
+      draw();
+      if(!count)$('#rout').insertAdjacentHTML('beforeend','<p class="muted">لا يوجد طالب مطابق للشرط خلال أيام التحضير المكتملة.</p>');
+    }catch(err){
+      $('#rout').innerHTML='<div class="empty">تعذّر إنشاء الكشف: '+esc(err?.message||err)+'</div>';
+    }finally{$('#neverMadrasatiBtn').disabled=false}
+  };
+  $('#rgo').onclick=async()=>{redNoteColumn=-1;reportInfo='';reportModel=null;S.rep.from=$('#rf').value;S.rep.to=$('#rt').value;$('#rout').innerHTML='<div class="empty">جارٍ التحميل…</div>';
     const days=await loadDays(S.rep.from,S.rep.to);if(!days.length){$('#rout').innerHTML='<div class="empty">لا توجد أيام في هذه الفترة.</div>';return}
     const k=$('#rk').value;
     if(k==='stu'){const agg=new Map();for(const d of days){for(const a of dayAbsence(d)){const o=agg.get(a.r.i)||{r:a.r,never:0,miss:0,dates:[]};if(a.never){o.never++;o.dates.push(hijri(d.date,true))}o.miss+=a.miss.length;agg.set(a.r.i,o)}}
