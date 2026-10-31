@@ -15193,45 +15193,73 @@ function shChooseCardStudents(){
 }
 
 function shOpenStudentCards(){
- const checked=[...document.querySelectorAll('#weeklyAttBody input[type="checkbox"]:checked,.weekly-att-student-report-select:checked,.weekly-att-analytics-select:checked')].map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
- const chosen=[...(window.shReportMultiChecked||new Set())];
- const fallback=String(document.getElementById('weeklyAttStudentSelect')?.value||document.getElementById('weeklyAttAnalyticsStudent')?.value||'');
- const ids=[...new Set(chosen.length?chosen:(checked.length?checked:(fallback?[fallback]:[])))];
- if(!ids.length){alert('حدد طالبًا أو مجموعة طلاب من الكشف أولًا.');return}
- const esc=typeof escapeFollowupHtml==='function'?escapeFollowupHtml:(v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])));
- const all=typeof getStudents==='function'?getStudents():[];
- const students=all.filter(s=>ids.includes(String(s.idno||'')));
- if(!students.length){alert('لم أجد الطلاب المحددين.');return}
- const days=weeklyAttActiveDates().filter(d=>!WEEKLY_WEEK5_VACATION_DATES.has(String(d)));
- const ctx=buildWeeklyAttFastContext();
- const lateDates=new Map();
- weeklyAttScopedRows().forEach(r=>{if(r.status!=='late')return;const id=String(r.idno||'');if(!lateDates.has(id))lateDates.set(id,new Set());lateDates.get(id).add(String(r.date||''))});
- const cards=students.map((s,i)=>{
-   let present=0,absent=0;
-   for(const d of days){const status=weeklyAttFastStatus(s,String(d),ctx);if(status==='present')present++;else if(status==='absent')absent++}
-   const late=[...(lateDates.get(String(s.idno||''))||new Set())].filter(d=>days.includes(d)).length;
-   return '<article class="sh-stat-card"><small>#'+(i+1)+'</small><h3>'+esc(s.name||'—')+'</h3><p>السجل المدني: <b>'+esc(s.idno||'—')+'</b></p><p>الصف والفصل: <b>'+esc(s.grade||'—')+' / '+esc(displayStudentClassroom(s.classroom)||'—')+'</b></p><div class="sh-stat-nums"><span>الحضور <b>'+present+'</b></span><span>الغياب <b>'+absent+'</b></span><span>التأخر <b>'+late+'</b></span></div><p>الاختبارات: __________________</p><p>الملاحظات: __________________</p></article>';
- }).join('');
- document.getElementById('shStudentCardsModal')?.remove();
- const modal=document.createElement('div');modal.id='shStudentCardsModal';
- modal.innerHTML='<section class="sh-stat-sheet"><div class="sh-stat-toolbar"><strong>إحصائية طالب أو مجموعة طلاب ('+students.length+')</strong><div><button type="button" id="shStatPrint">🖨️ طباعة / حفظ PDF</button> <button type="button" id="shStatClose">إغلاق</button></div></div><h2>كشف إحصائية الطلاب</h2><p class="sh-stat-subtitle">مدرسة شرحبيل بن حسنة الثانوية — أيام التحضير الفعلية</p><div class="sh-stat-grid">'+cards+'</div></section>';
- const css=document.createElement('style');css.id='shStatCss';css.textContent='.sh-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;direction:rtl}.sh-stat-card{border:2px solid #64ab65;border-radius:10px;padding:12px;color:#164b3e;break-inside:avoid;font:14px/1.7 Tahoma,Arial,sans-serif}.sh-stat-card h3{font-size:16px;margin:3px 0}.sh-stat-card p{margin:5px 0}.sh-stat-card small{float:left}.sh-stat-nums{display:flex;gap:5px;justify-content:space-around;padding:8px;background:#eff8f2;border-radius:8px}.sh-stat-sheet{background:#fff;padding:18px;border-radius:14px;width:min(1200px,98vw);max-height:94vh;overflow:auto;direction:rtl}.sh-stat-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px}.sh-stat-toolbar button{background:#087865;color:white;border:0;border-radius:12px;padding:12px;cursor:pointer}.sh-stat-sheet>h2,.sh-stat-subtitle{text-align:center}#shStudentCardsModal{position:fixed;inset:0;background:#0008;z-index:999999;display:grid;place-items:center;padding:10px}@media(max-width:700px){.sh-stat-grid{grid-template-columns:1fr}}@media print{@page{size:A4 landscape;margin:9mm}body>*:not(#shStudentCardsModal){display:none!important}#shStudentCardsModal{position:static!important;background:white!important;display:block!important;padding:0!important}.sh-stat-sheet{max-height:none!important;width:100%!important;overflow:visible!important;padding:0!important}.sh-stat-toolbar{display:none!important}.sh-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.sh-stat-card{font-size:11px;padding:7px}.sh-stat-card h3{font-size:12px}}';
- document.head.appendChild(css);document.body.appendChild(modal);
- const close=()=>{modal.remove();css.remove()};
- modal.querySelector('#shStatClose').onclick=close;
- modal.querySelector('#shStatPrint').onclick=()=>{
- const printable=modal.querySelector('.sh-stat-grid');
- if(!printable)return;
- const win=window.open('','_blank');
- if(!win){alert('يرجى السماح بالنوافذ المنبثقة للطباعة.');return}
- const page='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف إحصائية الطلاب</title>'+
- '<style>@page{size:A4 portrait;margin:6mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:white;color:#174536;font-family:Tahoma,Arial,sans-serif}h2{text-align:center;margin:0 0 2mm;font-size:15px}.subtitle{text-align:center;margin:0 0 3mm;font-size:9px}.sh-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2mm;direction:rtl;align-items:start}.sh-stat-card{min-width:0;overflow-wrap:anywhere;border:1px solid #64ab65;border-radius:5px;padding:5px;font-size:9px;line-height:1.3;break-inside:avoid;page-break-inside:avoid;min-height:0}.sh-stat-card h3{font-size:10px;margin:1px 0 3px}.sh-stat-card p{margin:2px 0}.sh-stat-card small{float:left}.sh-stat-nums{display:flex;justify-content:space-around;flex-wrap:wrap;gap:2px;padding:3px;background:#eff8f2;border-radius:4px;font-size:9px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+
- '<h2>كشف إحصائية الطلاب</h2><p class="subtitle">مدرسة شرحبيل بن حسنة الثانوية — أيام التحضير الفعلية</p><main class="sh-stat-grid">'+printable.innerHTML+'</main></body></html>';
- win.document.open();win.document.write(page);win.document.close();
- win.focus();
- setTimeout(()=>win.print(),350);
-};
- modal.addEventListener('click',e=>{if(e.target===modal)close()});
+  const esc=(v)=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const all=(typeof getStudents==='function'?getStudents():[]).filter(s=>s&&s.idno);
+  const grade=String(document.getElementById('weeklyAttGrade')?.value||'');
+  const classroom=String(document.getElementById('weeklyAttClass')?.value||'');
+  const visibleIds=[...document.querySelectorAll('#weeklyAttBody .weekly-att-student-report-select')]
+    .map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
+  const choices=visibleIds.length?all.filter(s=>visibleIds.includes(String(s.idno))):
+    all.filter(s=>(!grade||studentGradeKey(s.grade)===studentGradeKey(grade))&&(!classroom||studentClassKey(s.classroom)===studentClassKey(classroom)));
+  const candidates=choices.length?choices:all;
+  const checked=[...document.querySelectorAll('#weeklyAttBody .weekly-att-student-report-select:checked,.weekly-att-analytics-select:checked')]
+    .map(e=>String(e.dataset.idno||e.value||'')).filter(Boolean);
+  const initial=new Set([...checked,...(window.shReportMultiChecked||new Set())].map(String));
+  const single=String(document.getElementById('weeklyAttStudentSelect')?.value||'');
+  if(!initial.size&&single)initial.add(single);
+  document.getElementById('shStudentCardsModal')?.remove();
+  document.getElementById('shStatCss')?.remove();
+  const css=document.createElement('style');
+  css.id='shStatCss';
+  css.textContent='#shStudentCardsModal{position:fixed;inset:0;background:#102a25ad;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:14px;direction:rtl}.sh-stat-sheet{width:min(1100px,98vw);max-height:95vh;overflow:auto;background:white;border-radius:18px;padding:20px;color:#183e32;box-shadow:0 15px 60px #0004}.sh-stat-toolbar{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.sh-stat-btn{border:1px solid #18836b;background:#0f7665;color:white;border-radius:12px;padding:11px 16px;cursor:pointer;font-weight:700;font:inherit}.sh-stat-btn.outline{background:#fff;color:#0f7665}.sh-stat-picker{border:1px solid #c8dfd6;border-radius:13px;padding:14px;margin:12px 0}.sh-stat-picker input[type=search]{width:100%;border:1px solid #accac0;border-radius:9px;padding:12px;margin-bottom:10px}.sh-stat-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-height:48vh;overflow:auto}.sh-stat-option{border:1px solid #d5e8df;border-radius:7px;padding:8px;cursor:pointer;display:flex;gap:8px;align-items:center}.sh-stat-option input{accent-color:#0f7665;width:18px;height:18px}.sh-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;direction:rtl}.sh-stat-card{border:2px solid #68a94e;padding:10px;color:#183b2c;break-inside:avoid;page-break-inside:avoid;min-height:163px;font:13px/1.65 Tahoma,Arial,sans-serif}.sh-stat-card p{margin:3px 0}.sh-stat-card .sh-st-name{font-weight:800}.sh-stat-card strong{color:#0e6e5c}.sh-stat-sheet h2{text-align:center;font-size:23px}.sh-stat-subtitle{text-align:center;margin-bottom:10px}.sh-stat-note{font-size:12px;color:#586c64}.sh-stat-select-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 12px}@media(max-width:750px){.sh-stat-options{grid-template-columns:1fr}.sh-stat-grid{grid-template-columns:1fr}}';
+  document.head.appendChild(css);
+  const modal=document.createElement('div');modal.id='shStudentCardsModal';
+  modal.innerHTML='<section class="sh-stat-sheet"><div class="sh-stat-toolbar"><strong>📊 إحصائية طالب أو مجموعة طلاب</strong><button class="sh-stat-btn outline" id="shStatClose">إغلاق ✕</button></div><div class="sh-stat-picker" id="shStatPicker"><h3>اختيار الطلاب من الكشف</h3><input type="search" id="shStatSearch" placeholder="بحث بالاسم أو السجل المدني"><div class="sh-stat-select-row"><button class="sh-stat-btn outline" id="shStatSelectAll">☑ تحديد الكل (الظاهر)</button><button class="sh-stat-btn outline" id="shStatClear">إلغاء التحديد</button><span id="shStatCount">0 طلاب محددين</span></div><div class="sh-stat-options" id="shStatOptions"></div><div class="sh-stat-select-row"><button class="sh-stat-btn" id="shStatBuild">عرض البطاقات</button></div></div><div id="shStatReport" hidden><h2>كشف إحصائية الطلاب</h2><p class="sh-stat-subtitle">مدرسة شرحبيل بن حسنة الثانوية</p><div class="sh-stat-toolbar"><span id="shStatReportCount"></span><div><button class="sh-stat-btn" id="shStatPrint">🖨️ طباعة / حفظ PDF</button> <button class="sh-stat-btn outline" id="shStatBack">تغيير الطلاب</button></div></div><div class="sh-stat-grid" id="shStatCards"></div><p class="sh-stat-note">الأرقام من سجلات الحضور والغياب والتأخر المتاحة في التطبيق، وتُحسب على أيام التحضير الفعلية.</p></div></section>';
+  document.body.appendChild(modal);
+  let selected=new Set([...initial].filter(id=>candidates.some(s=>String(s.idno)===id)));
+  const options=modal.querySelector('#shStatOptions');
+  const count=()=>modal.querySelector('#shStatCount').textContent=selected.size+' طلاب محددين';
+  const visible=()=>candidates.filter(s=>(String(s.name||'')+' '+String(s.idno||'')).includes(modal.querySelector('#shStatSearch').value.trim()));
+  const drawOptions=()=>{
+    options.innerHTML=visible().map(s=>'<label class="sh-stat-option"><input type="checkbox" data-idno="'+esc(s.idno)+'" '+(selected.has(String(s.idno))?'checked':'')+'><span>'+esc(s.name||'')+' — '+esc(s.grade||'')+' / '+esc(displayStudentClassroom(s.classroom)||'')+'</span></label>').join('');
+    count();
+  };
+  options.addEventListener('change',e=>{const b=e.target.closest('input[data-idno]');if(!b)return;b.checked?selected.add(b.dataset.idno):selected.delete(b.dataset.idno);count()});
+  modal.querySelector('#shStatSearch').addEventListener('input',drawOptions);
+  modal.querySelector('#shStatSelectAll').onclick=()=>{visible().forEach(s=>selected.add(String(s.idno)));drawOptions()};
+  modal.querySelector('#shStatClear').onclick=()=>{selected.clear();drawOptions()};
+  const close=()=>{modal.remove();css.remove()};
+  modal.querySelector('#shStatClose').onclick=close;
+  modal.addEventListener('click',e=>{if(e.target===modal)close()});
+  let ordered=[];
+  modal.querySelector('#shStatBuild').onclick=()=>{
+    ordered=candidates.filter(s=>selected.has(String(s.idno)));
+    if(!ordered.length){alert('حدّد طالبًا واحدًا أو أكثر من القائمة.');return}
+    window.shReportMultiChecked=new Set(ordered.map(s=>String(s.idno)));
+    const days=weeklyAttActiveDates().filter(d=>!WEEKLY_WEEK5_VACATION_DATES.has(String(d)));
+    const ctx=buildWeeklyAttFastContext();
+    const cards=ordered.map(s=>{
+      const st=weeklyAttScopedStatsForStudent(s,days,ctx);
+      return '<article class="sh-stat-card"><p>اسم الطالب: <span class="sh-st-name">'+esc(s.name||'—')+'</span></p><p>السجل المدني: <strong>'+esc(s.idno||'—')+'</strong></p><p>الصف والفصل: <strong>'+esc(s.grade||'—')+' / '+esc(displayStudentClassroom(s.classroom)||'—')+'</strong></p><p>أسماء الاختبارات التي اجتازها: __________________</p><p>عدد الحضور: <strong>'+st.present+'</strong></p><p>عدد الغياب: <strong>'+st.absent+'</strong></p><p>عدد التأخر: <strong>'+st.late+'</strong></p><p>ملاحظات أخرى على الطالب: __________________</p></article>';
+    }).join('');
+    modal.querySelector('#shStatCards').innerHTML=cards;
+    modal.querySelector('#shStatReportCount').textContent=ordered.length+' طالبًا';
+    modal.querySelector('#shStatPicker').hidden=true;
+    modal.querySelector('#shStatReport').hidden=false;
+  };
+  modal.querySelector('#shStatBack').onclick=()=>{modal.querySelector('#shStatReport').hidden=true;modal.querySelector('#shStatPicker').hidden=false;drawOptions()};
+  modal.querySelector('#shStatPrint').onclick=()=>{
+    if(!ordered.length)return;
+    const items=[...modal.querySelectorAll('.sh-stat-card')].map(x=>x.outerHTML);
+    const pages=[];
+    for(let i=0;i<items.length;i+=12){pages.push('<section class="print-page"><h2>كشف إحصائية الطلاب</h2><p class="subtitle">مدرسة شرحبيل بن حسنة الثانوية</p><div class="print-grid">'+items.slice(i,i+12).join('')+'</div><p class="footer">الصفحة '+(pages.length+1)+' — بيانات مستخرجة من سجلات التطبيق</p></section>')}
+    const win=window.open('','_blank');
+    if(!win){alert('يرجى السماح بالنوافذ المنبثقة للطباعة.');return}
+    win.document.open();
+    win.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>إحصائية طالب أو مجموعة طلاب</title><style>@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#163e30;margin:0;background:#fff}.print-page{width:100%;break-after:page;page-break-after:always}.print-page:last-child{break-after:auto;page-break-after:auto}h2{text-align:center;margin:0;font-size:17px}.subtitle{text-align:center;font-size:12px;margin:4px 0 10px}.print-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(4,1fr);gap:3px;direction:rtl}.sh-stat-card{border:1.5px solid #69a74a;padding:6px 7px;font-size:10px;line-height:1.55;min-height:48mm;break-inside:avoid;page-break-inside:avoid;overflow-wrap:anywhere}.sh-stat-card p{margin:2px 0}.sh-st-name{font-weight:bold}.sh-stat-card strong{color:#08684c}.footer{font-size:9px;text-align:center;color:#64746b;margin-top:4px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+pages.join('')+'</body></html>');
+    win.document.close();win.focus();setTimeout(()=>win.print(),350);
+  };
+  drawOptions();
 }
 
 async function renderWeeklyAttAnalytics(){
