@@ -5543,6 +5543,7 @@ window.addEventListener('message',function(e){
         </div>
         <div class="card user-permission-card">
           <div id="userPermissionButtons" class="user-permission-buttons"></div>
+          <div class="user-permission-buttons" style="display:flex!important;justify-content:center;flex-wrap:wrap;margin:12px 0 8px"><button type="button" id="studentAffairsTeacherDirectBtn" class="user-permission-btn" style="display:inline-flex!important;align-items:center;justify-content:center;min-height:54px;padding:12px 20px;border-radius:16px;background:#0e7668;color:#fff;font-weight:800;border:1px solid #0b5f52;cursor:pointer" onclick="window.location.assign('/student-affairs.html')">📋 متابعة وكيل شؤون الطلاب</button></div>
           <div class="user-logout-wrap">
             <button type="button" id="userPortalLogoutBtn" class="user-logout-btn">تسجيل الخروج 🚪</button>
           </div>
@@ -8171,7 +8172,6 @@ function configureUserDashboard(){
     ['madrasati','متابعة منصة مدرستي 📶','madrasati'],
     ['followupSheets','كشوف متابعة الطلاب 📋','followupSheets'],
     ['behaviorCases','الحالات السلوكية 🛡️','behaviorCases'],
-    ['studentAffairs','📋 متابعة وكيل شؤون الطلاب','studentAffairs'],
     ['teacherFollowup','شواهد المعلم داخل الفصل 👨‍🏫','teacherFollowup'],
     ['teacherFollowupManager','متابعة المدير للمعلمين 👨‍🏫','teacherFollowupManager'],
     ['referralSubmit','تحويل طالب لوكيل شؤون الطلاب 📝','referralSubmit'],
@@ -8180,7 +8180,7 @@ function configureUserDashboard(){
     ['activityLeader','رائد النشاط ⭐','activityLeader'],
   ];
   const host=$('userPermissionButtons');
-  host.innerHTML=defs.filter(x=>x[0]==='studentAffairs'||perms.has(x[0])).map(x=>
+  host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
     `<button type="button" class="user-permission-btn" data-user-action="${x[2]}" style="min-height:52px!important;height:52px!important;border-radius:16px!important;font-size:14px!important;padding:8px 18px!important;min-width:140px!important;width:auto!important;line-height:1.2!important">${x[1]}</button>`
   ).join('') || '<div class="hint" style="padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
 
