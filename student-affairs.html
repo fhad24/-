@@ -145,7 +145,7 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 <div class="span3"><label>الإجراء المتخذ / الخطة العلاجية / التواصل</label><textarea name="action_taken" placeholder="وصف الإجراء، التواصل مع ولي الأمر، الخطوات العلاجية، المتابعة اللاحقة"></textarea></div>
 </div><div class="actions"><button id="saveBtn" type="submit">💾 حفظ المتابعة</button><button type="button" class="secondary" id="resetBtn">تفريغ الحقول</button><label style="font-weight:normal"><input id="removeFile" type="checkbox" style="width:auto"> إزالة المرفق السابق عند التعديل</label></div></form></section>
 <section class="panel"><div class="row"><h2 class="grow">السجلات والتقارير</h2><button id="csv" class="secondary">⬇ تصدير Excel (CSV)</button><button class="secondary" onclick="window.print()">🖨 طباعة / PDF</button></div>
-<div class="controls"><div><label>بحث باسم الطالب أو المعلم</label><input id="q" placeholder="ابحث في السجلات"></div><div><label>نوع المتابعة</label><select id="kindFilter"><option value="">كل الأنواع</option><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div><div><label>المعلم</label><select id="teacherFilter"><option value="">جميع المعلمين</option></select></div></div>
+<div class="controls"><div><label>بحث باسم الطالب أو المعلم</label><input id="q" placeholder="ابحث في السجلات"></div><div><label>نوع المتابعة</label><select id="kindFilter"><option value="">كل الأنواع</option><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div><div><label>نطاق البيانات</label><input id="myRecordsScope" value="سجلات المستخدم الحالي فقط" readonly aria-label="سجلات المستخدم الحالي فقط"></div></div>
 <p id="summary" class="muted"></p><div class="tablewrap"><table><thead><tr><th>م</th><th>المعلم</th><th>النوع</th><th>الطالب / الصف</th><th>العنوان والتفاصيل</th><th>التاريخ</th><th>الحالة</th><th>الشاهد</th><th>إدارة</th></tr></thead><tbody id="records"><tr><td colspan="9">لا توجد بيانات بعد</td></tr></tbody></table></div></section>
 </main>
 <script>
@@ -162,14 +162,32 @@ async function api(action,data={}){
 }
 function message(text,error=false){$('notice').textContent=text;$('notice').className=error?'notice err':'msg';}
 async function load(){
- try{
-  const [who,data,catalog]=await Promise.all([api('whoami'),api('list'),api('catalog')]);
-  identity=who.user;manager=data.manager;rows=data.rows||[];
-  students=catalog.students||[];subjects=[...SCHOOL_SUBJECTS];
-  renderStudents();renderSubjects();
-  $('identity').textContent=(manager?'لوحة الوكيل — جميع المعلمين | ':'حساب المعلم — أعمالك فقط | ')+(identity.name||'');
-  message('تم الاتصال بقاعدة بيانات شرحبيل. قائمة الطلاب والمواد جاهزة للاختيار.');render();
- }catch(e){message(e.message,true);$('identity').textContent='تعذر تحميل بيانات الصفحة';}
+  // Do not clear or replace saved records when the student catalog temporarily fails.
+  // Load records separately; make failures explicit rather than displaying a misleading zero.
+  rows=[];identity=null;manager=false;
+  try{
+    const [who,data]=await Promise.all([api('whoami'),api('list')]);
+    identity=who.user;manager=data.manager;rows=(data.rows||[]).filter(r=>String(r.teacher_username||'')===String(who.user.username||''));
+    $('identity').textContent='سجلات المستخدم الحالي | '+(identity.name||'');
+    render();
+    message('تم تحميل '+rows.length.toLocaleString('ar-SA')+' سجلًا خاصًا بحسابك.');
+  }catch(e){
+    $('identity').textContent='تعذر تحميل سجلات حسابك';
+    $('summary').textContent='تعذر جلب التقارير من قاعدة البيانات؛ لم يتم حذف أي سجل من هذه الصفحة.';
+    $('records').innerHTML='<tr><td colspan="9">تعذر تحميل السجلات. أعد المحاولة بعد التأكد من اتصال قاعدة البيانات.</td></tr>';
+    message('تعذر جلب سجلات المستخدم: '+e.message,true);
+    return;
+  }
+  try{
+    const catalog=await api('catalog');
+    students=catalog.students||[];
+    subjects=[...SCHOOL_SUBJECTS];
+    renderStudents();renderSubjects();
+  }catch(e){
+    students=[];subjects=[...SCHOOL_SUBJECTS];
+    renderStudents();renderSubjects();
+    message('تم تحميل تقاريرك، لكن قائمة الطلاب غير متاحة مؤقتًا: '+e.message,true);
+  }
 }
 function renderStudents(){
  const q=$('studentSearch').value.trim().replace(/\s+/g,' ');
@@ -219,15 +237,12 @@ function render(){
    const done=list.filter(r=>r.status==='منجز').length;
    el.textContent=list.length?Math.round(done/list.length*100).toLocaleString('ar-SA')+'٪':'—';
  });
- const teachers=[...new Set(rows.map(r=>r.teacher_name))].sort((a,b)=>a.localeCompare(b,'ar'));const prior=$('teacherFilter').value;
- $('teacherFilter').innerHTML='<option value="">جميع المعلمين</option>'+teachers.map(t=>'<option value="'+escap(t)+'">'+escap(t)+'</option>').join('');
- $('teacherFilter').value=teachers.includes(prior)?prior:'';
  filter();
 }
 function filter(){
- const q=$('q').value.trim(),kind=$('kindFilter').value,teacher=$('teacherFilter').value;
- const data=rows.filter(r=>(!q||[r.student_name,r.teacher_name,r.title,r.details,r.student_id].join(' ').includes(q))&&(!kind||r.kind===kind)&&(!teacher||r.teacher_name===teacher));
- $('summary').textContent='عدد السجلات المعروضة: '+data.length+(manager?' — تقارير جميع المعلمين متاحة لحساب الوكيل':' — تظهر فقط السجلات التي أدخلتها');
+ const q=$('q').value.trim(),kind=$('kindFilter').value;
+ const data=rows.filter(r=>(!q||[r.student_name,r.teacher_name,r.title,r.details,r.student_id].join(' ').includes(q))&&(!kind||r.kind===kind));
+ $('summary').textContent='عدد السجلات المعروضة: '+data.length+' — سجلات المستخدم الحالي فقط';
  $('records').innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+escap(r.teacher_name)+'</td><td>'+escap(r.kind)+'</td><td>'+escap(r.student_name||'—')+'<br><span class="muted">'+escap([r.grade,r.classroom].filter(Boolean).join(' / '))+'</span></td><td><b>'+escap(r.title)+'</b><br>'+escap(r.details).slice(0,150)+'</td><td>'+escap(r.followup_date||r.created_at?.slice(0,10)||'')+'</td><td><span class="pill">'+escap(r.status)+'</span></td><td>'+(r.has_file?'<button class="secondary" data-download="'+escap(r.id)+'">تحميل</button>':'—')+'</td><td><button class="secondary" data-edit="'+escap(r.id)+'">تعديل</button><button class="danger" data-delete="'+escap(r.id)+'">حذف</button></td></tr>').join('')||'<tr><td colspan="9">لا توجد سجلات مطابقة</td></tr>';
 }
 function reset(){form.reset();editId='';originalFileName='';$('studentSearch').value='';$('otherSubject').value='';renderStudents();renderSubjects();editId='';$('editTitle').textContent='إضافة متابعة جديدة';$('removeFile').checked=false}
@@ -239,7 +254,7 @@ document.querySelectorAll('[data-view-kind]').forEach(el=>el.addEventListener('c
  $('kindFilter').closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});
 }));
 $('closeEditor').onclick=()=>$('editor').classList.add('hide');$('resetBtn').onclick=reset;
-for(const key of ['q','kindFilter','teacherFilter'])$(key).addEventListener(key==='q'?'input':'change',filter);
+for(const key of ['q','kindFilter'])$(key).addEventListener(key==='q'?'input':'change',filter);
 $('records').onclick=async ev=>{
  const el=ev.target.closest('button');if(!el)return;const id=el.dataset.edit||el.dataset.delete||el.dataset.download;
  const r=rows.find(x=>x.id===id);if(!r)return;
@@ -264,7 +279,7 @@ form.onsubmit=async event=>{
  }catch(e){message(e.message,true)}finally{btn.disabled=false}
 };
 $('csv').onclick=()=>{
- const data=rows.filter(r=>(!$('kindFilter').value||r.kind===$('kindFilter').value)&&(!$('teacherFilter').value||r.teacher_name===$('teacherFilter').value));
+ const data=rows.filter(r=>!$('kindFilter').value||r.kind===$('kindFilter').value);
  const columns=['teacher_name','kind','student_name','student_id','grade','classroom','subject','learning_mode','title','details','action_taken','followup_date','hijri_date','status','file_name'];
  const names=['المعلم','النوع','اسم الطالب','السجل المدني','الصف','الفصل','المادة','وسيلة التعليم','العنوان','التفاصيل','الإجراء','تاريخ المتابعة','التاريخ الهجري','الحالة','المرفق'];
  const csv='\ufeff'+[names,...data.map(r=>columns.map(k=>String(r[k]||'').replace(/^[=+\-@]/,'\u0027$&')))].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
