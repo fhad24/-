@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>متابعة وكيل شؤون الطلاب | شرحبيل</title>
+<style>
+:root{--blue:#123b75;--dark:#0c2852;--teal:#0e7668;--gold:#d6a449;--bg:#f3f6fa;--line:#dce5ef}
+*{box-sizing:border-box}body{margin:0;font:15px Tahoma,Arial,sans-serif;color:#1c3453;background:var(--bg)}
+header{background:linear-gradient(135deg,#0b2d61,#165a91 75%,#0e7668);color:#fff;padding:24px max(18px,calc((100vw - 1230px)/2));box-shadow:0 3px 12px #112c5230}
+header .top{display:flex;align-items:center;justify-content:space-between;gap:12px}a{color:inherit;text-decoration:none}.back{background:#ffffff20;border:1px solid #ffffff60;border-radius:12px;padding:10px 15px}h1{font-size:clamp(22px,3vw,32px);margin:26px 0 7px}header p{opacity:.9;margin:0 0 10px}
+main{max-width:1240px;margin:22px auto;padding:0 15px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric,.panel,.tile{background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 13px #123b7510}.metric{padding:16px;border-top:3px solid var(--gold)}.metric b{font-size:29px;display:block;color:var(--blue);margin-top:8px}.muted{font-size:12px;color:#687c92}
+.panel{padding:18px;margin-top:18px}h2{font-size:20px;margin:0 0 16px;color:var(--blue)}.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tile{padding:20px;cursor:pointer;text-align:right;transition:.15s}.tile:hover,.tile:focus{border-color:var(--gold);transform:translateY(-2px)}.emoji{font-size:27px;display:block;margin-bottom:10px}.tile b{font-size:16px}.tile small{display:block;color:#64788d;line-height:1.8;margin-top:9px}
+button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;padding:11px 17px;font:inherit;cursor:pointer}.secondary{background:#e8f0f7;color:var(--blue)}.danger{background:#b22d3a}.gold{background:#b78127}button:disabled{opacity:.5;cursor:wait}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.grow{flex:1}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd8e7;border-radius:10px;background:white;font:inherit;color:#193450}textarea{resize:vertical;min-height:92px}label{display:block;font-weight:bold;font-size:13px;margin-bottom:6px}form .fields{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.span3{grid-column:span 3}.span2{grid-column:span 2}.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:860px;font-size:13px}td,th{padding:12px 9px;text-align:right;border-bottom:1px solid #e4eaf1;vertical-align:top}th{background:#edf3f9;color:var(--blue)}td button{font-size:12px;padding:7px 9px;margin:2px}tr:hover td{background:#fafcfe}.hide{display:none!important}.pill{display:inline-block;border-radius:20px;background:#e7f4ee;color:#12614a;padding:5px 8px;font-size:12px}.notice{background:#fff8e8;color:#725521;border:1px solid #f0dca8;padding:12px;border-radius:9px}.msg{margin:10px 0;padding:10px;border-radius:9px;background:#e9f8f0;color:#13543b}.err{background:#fff1f1;color:#9b2934}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:760px){.metrics{grid-template-columns:repeat(2,1fr)}.tiles{grid-template-columns:repeat(2,1fr)}form .fields,.controls{grid-template-columns:1fr}.span2,.span3{grid-column:auto}header{padding:18px}h1{margin-top:18px}}@media(max-width:450px){.tiles{grid-template-columns:1fr}}
+@media print{header .back,button,.controls,#editor,#notice{display:none!important}body{background:white}.panel,.metric{box-shadow:none}main{max-width:none}.tablewrap{overflow:visible}table{min-width:0;font-size:10px}}
+</style></head><body>
+<header><div class="top"><strong>🏫 مدرسة شرحبيل بن حسنة الثانوية</strong><a class="back" href="/">العودة للرئيسية ←</a></div>
+<h1>📋 متابعة وكيل شؤون الطلاب</h1><p>أعمال المعلمين وشواهد الإنجاز وإجراءات الغياب والتأخر والخطط العلاجية</p><div id="identity">جارٍ التحقق من الجلسة…</div></header>
+<main>
+<div id="notice" class="notice">يجب الدخول إلى تطبيق شرحبيل بحسابك أولًا. هذه الصفحة تستخدم حسابك وصلاحياتك نفسها.</div>
+<section class="metrics" aria-label="ملخص المتابعة">
+<div class="metric">سجلات المتابعة <b id="total">0</b><span class="muted">جميع الأنواع المتاحة لحسابك</span></div>
+<div class="metric">الشواهد المرفوعة <b id="proofs">0</b><span class="muted">ملفات واجبات وأنشطة واختبارات</span></div>
+<div class="metric">إجراءات الغياب والتأخر <b id="actions">0</b><span class="muted">إجراءات موثقة</span></div>
+<div class="metric">الخطط العلاجية <b id="plans">0</b><span class="muted">خطط مسجلة</span></div>
+</section>
+<section class="panel"><h2>إدارة أعمال شؤون الطلاب</h2><div class="tiles" id="modules">
+<button class="tile" data-kind="شاهد"><span class="emoji">📎</span><b>رفع النماذج والشواهد</b><small>واجبات، أنشطة، اختبارات، مهام وأعمال الطلاب من مدرستي أو التعليم الحضوري</small></button>
+<button class="tile" data-kind="غياب"><span class="emoji">📅</span><b>إجراءات الغياب</b><small>توثيق الإجراء والتواصل مع الطالب وولي الأمر</small></button>
+<button class="tile" data-kind="تأخر"><span class="emoji">⏰</span><b>إجراءات التأخر اليومي</b><small>تسجيل التنبيه والمتابعة والإجراء المتخذ</small></button>
+<button class="tile" data-kind="تعثر"><span class="emoji">🎓</span><b>متابعة الطلاب المتعثرين</b><small>رصد الضعف والتحسن والتواصل والدعم</small></button>
+<button class="tile" data-kind="خطة علاجية"><span class="emoji">📘</span><b>الخطط العلاجية</b><small>الخطة، خطوات التنفيذ والتقييم والنتيجة</small></button>
+<button class="tile" data-kind="إنجاز أسبوعي"><span class="emoji">📊</span><b>الإنجاز الأسبوعي</b><small>ملخص أعمال كل معلم والشواهد والتقارير</small></button>
+</div></section>
+<section class="panel hide" id="editor"><div class="row"><h2 class="grow" id="editTitle">إضافة متابعة جديدة</h2><button type="button" class="secondary" id="closeEditor">إغلاق</button></div>
+<form id="entryForm"><div class="fields">
+<div><label>نوع المهمة</label><select name="kind" required><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div>
+<div><label>العنوان *</label><input name="title" required maxlength="180" placeholder="مثال: متابعة واجبات الفصل"></div>
+<div><label>وسيلة التعليم</label><select name="learning_mode"><option value="">اختر</option><option>منصة مدرستي</option><option>حضوري</option><option>كلاهما</option></select></div>
+<div><label>اسم الطالب (عند الحاجة)</label><input name="student_name" placeholder="اسم الطالب"></div>
+<div><label>السجل المدني (عند الحاجة)</label><input name="student_id" inputmode="numeric" placeholder="رقم الطالب"></div>
+<div><label>المادة</label><input name="subject" placeholder="المادة الدراسية"></div>
+<div><label>الصف</label><select name="grade"><option value="">اختر الصف</option><option>الأول الثانوي</option><option>الثاني الثانوي</option><option>الثالث الثانوي</option></select></div>
+<div><label>الفصل</label><input name="classroom" placeholder="مثال: أ أو 1"></div>
+<div><label>تاريخ المتابعة</label><input name="followup_date" type="date"></div>
+<div><label>التاريخ الهجري</label><input name="hijri_date" placeholder="1448/05/20"></div>
+<div><label>حالة التنفيذ</label><select name="status"><option>جديد</option><option>قيد المتابعة</option><option>منجز</option><option>يحتاج تدخل الوكيل</option></select></div>
+<div><label>الشاهد المرفق (3 ميجابايت كحد أقصى)</label><input id="evidence" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"></div>
+<div class="span3"><label>تفاصيل العمل أو الحالة *</label><textarea name="details" required placeholder="ما الذي نفذه المعلم؟ وما الشواهد أو النتائج؟"></textarea></div>
+<div class="span3"><label>الإجراء المتخذ / الخطة العلاجية / التواصل</label><textarea name="action_taken" placeholder="وصف الإجراء، التواصل مع ولي الأمر، الخطوات العلاجية، المتابعة اللاحقة"></textarea></div>
+</div><div class="actions"><button id="saveBtn" type="submit">💾 حفظ المتابعة</button><button type="button" class="secondary" id="resetBtn">تفريغ الحقول</button><label style="font-weight:normal"><input id="removeFile" type="checkbox" style="width:auto"> إزالة المرفق السابق عند التعديل</label></div></form></section>
+<section class="panel"><div class="row"><h2 class="grow">السجلات والتقارير</h2><button id="csv" class="secondary">⬇ تصدير Excel (CSV)</button><button class="secondary" onclick="window.print()">🖨 طباعة / PDF</button></div>
+<div class="controls"><div><label>بحث باسم الطالب أو المعلم</label><input id="q" placeholder="ابحث في السجلات"></div><div><label>نوع المتابعة</label><select id="kindFilter"><option value="">كل الأنواع</option><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div><div><label>المعلم</label><select id="teacherFilter"><option value="">جميع المعلمين</option></select></div></div>
+<p id="summary" class="muted"></p><div class="tablewrap"><table><thead><tr><th>م</th><th>المعلم</th><th>النوع</th><th>الطالب / الصف</th><th>العنوان والتفاصيل</th><th>التاريخ</th><th>الحالة</th><th>الشاهد</th><th>إدارة</th></tr></thead><tbody id="records"><tr><td colspan="9">لا توجد بيانات بعد</td></tr></tbody></table></div></section>
+</main>
+<script>
+'use strict';
+let rows=[],identity=null,manager=false,editId='',originalFileName='';
+const $=id=>document.getElementById(id),form=$('entryForm');
+const escap=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(action,data={}){
+ const token=localStorage.getItem('cloudAdminToken')||'';
+ if(!token)throw new Error('سجل دخولك أولًا من الصفحة الرئيسية');
+ const response=await fetch('https://shurahbil-api.onrender.com/api/student-affairs',{method:'POST',headers:{'Content-Type':'application/json','x-app-token':token},body:JSON.stringify({action,...data})});
+ const result=await response.json();if(!response.ok)throw new Error(result.error||'تعذر الاتصال بالخادم');return result;
+}
+function message(text,error=false){$('notice').textContent=text;$('notice').className=error?'notice err':'msg';}
+async function load(){
+ try{const who=await api('whoami'),data=await api('list');identity=who.user;manager=data.manager;rows=data.rows||[];
+  $('identity').textContent=(manager?'لوحة الوكيل — جميع المعلمين | ':'حساب المعلم — أعمالك فقط | ')+(identity.name||'');
+  message('تم الاتصال بنظام شرحبيل. تُحفظ المتابعات في قاعدة بيانات التطبيق.');render();
+ }catch(e){message(e.message,true);$('identity').textContent='لم يتم تسجيل الدخول';}
+}
+function render(){
+ $('total').textContent=rows.length;$('proofs').textContent=rows.filter(r=>r.kind==='شاهد').length;
+ $('actions').textContent=rows.filter(r=>['غياب','تأخر'].includes(r.kind)).length;
+ $('plans').textContent=rows.filter(r=>r.kind==='خطة علاجية').length;
+ const teachers=[...new Set(rows.map(r=>r.teacher_name))].sort((a,b)=>a.localeCompare(b,'ar'));const prior=$('teacherFilter').value;
+ $('teacherFilter').innerHTML='<option value="">جميع المعلمين</option>'+teachers.map(t=>'<option value="'+escap(t)+'">'+escap(t)+'</option>').join('');
+ $('teacherFilter').value=teachers.includes(prior)?prior:'';
+ filter();
+}
+function filter(){
+ const q=$('q').value.trim(),kind=$('kindFilter').value,teacher=$('teacherFilter').value;
+ const data=rows.filter(r=>(!q||[r.student_name,r.teacher_name,r.title,r.details,r.student_id].join(' ').includes(q))&&(!kind||r.kind===kind)&&(!teacher||r.teacher_name===teacher));
+ $('summary').textContent='عدد السجلات المعروضة: '+data.length+(manager?' — تقارير جميع المعلمين متاحة لحساب الوكيل':' — تظهر فقط السجلات التي أدخلتها');
+ $('records').innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+escap(r.teacher_name)+'</td><td>'+escap(r.kind)+'</td><td>'+escap(r.student_name||'—')+'<br><span class="muted">'+escap([r.grade,r.classroom].filter(Boolean).join(' / '))+'</span></td><td><b>'+escap(r.title)+'</b><br>'+escap(r.details).slice(0,150)+'</td><td>'+escap(r.followup_date||r.created_at?.slice(0,10)||'')+'</td><td><span class="pill">'+escap(r.status)+'</span></td><td>'+(r.has_file?'<button class="secondary" data-download="'+escap(r.id)+'">تحميل</button>':'—')+'</td><td><button class="secondary" data-edit="'+escap(r.id)+'">تعديل</button><button class="danger" data-delete="'+escap(r.id)+'">حذف</button></td></tr>').join('')||'<tr><td colspan="9">لا توجد سجلات مطابقة</td></tr>';
+}
+function reset(){form.reset();editId='';originalFileName='';$('editTitle').textContent='إضافة متابعة جديدة';$('removeFile').checked=false}
+function show(kind){reset();if(kind)form.elements.kind.value=kind;$('editor').classList.remove('hide');$('editor').scrollIntoView({behavior:'smooth'});}
+document.querySelectorAll('[data-kind]').forEach(el=>el.onclick=()=>show(el.dataset.kind));
+$('closeEditor').onclick=()=>$('editor').classList.add('hide');$('resetBtn').onclick=reset;
+for(const key of ['q','kindFilter','teacherFilter'])$(key).addEventListener(key==='q'?'input':'change',filter);
+$('records').onclick=async ev=>{
+ const el=ev.target.closest('button');if(!el)return;const id=el.dataset.edit||el.dataset.delete||el.dataset.download;
+ const r=rows.find(x=>x.id===id);if(!r)return;
+ if(el.dataset.edit){show();editId=id;originalFileName=r.file_name||'';$('editTitle').textContent='تعديل متابعة: '+r.title;
+  ['kind','student_name','student_id','grade','classroom','subject','learning_mode','title','details','action_taken','followup_date','hijri_date','status'].forEach(k=>{if(form.elements[k])form.elements[k].value=r[k]||''});return;}
+ if(el.dataset.delete){if(!confirm('حذف هذا السجل نهائيًا؟'))return;try{await api('delete',{id});await load()}catch(e){message(e.message,true)}return;}
+ if(el.dataset.download){try{const f=await api('file',{id});const a=document.createElement('a');a.href=f.file_data;a.download=f.file_name||'شاهد';document.body.append(a);a.click();a.remove()}catch(e){message(e.message,true)}}
+};
+form.onsubmit=async event=>{
+ event.preventDefault();const btn=$('saveBtn');btn.disabled=true;
+ try{const entry={id:editId,...Object.fromEntries(new FormData(form).entries())};delete entry.file;entry.remove_file=$('removeFile').checked;
+  const file=$('evidence').files[0];if(file){if(file.size>3*1024*1024)throw new Error('الملف أكبر من 3 ميجابايت');entry.file_name=file.name;
+   entry.file_data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
+  await api('save',{entry});$('editor').classList.add('hide');reset();await load();message('حُفظ السجل بنجاح');
+ }catch(e){message(e.message,true)}finally{btn.disabled=false}
+};
+$('csv').onclick=()=>{
+ const data=rows.filter(r=>(!$('kindFilter').value||r.kind===$('kindFilter').value)&&(!$('teacherFilter').value||r.teacher_name===$('teacherFilter').value));
+ const columns=['teacher_name','kind','student_name','student_id','grade','classroom','subject','learning_mode','title','details','action_taken','followup_date','hijri_date','status','file_name'];
+ const names=['المعلم','النوع','اسم الطالب','السجل المدني','الصف','الفصل','المادة','وسيلة التعليم','العنوان','التفاصيل','الإجراء','تاريخ المتابعة','التاريخ الهجري','الحالة','المرفق'];
+ const csv='\ufeff'+[names,...data.map(r=>columns.map(k=>String(r[k]||'').replace(/^[=+\-@]/,'\u0027$&')))].map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='تقارير_وكيل_شؤون_الطلاب.csv';a.click();URL.revokeObjectURL(url);
+};
+load();
+</script></body></html>
