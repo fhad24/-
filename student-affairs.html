@@ -36,11 +36,11 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 <div><label>نوع المهمة</label><select name="kind" required><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div>
 <div><label>العنوان *</label><input name="title" required maxlength="180" placeholder="مثال: متابعة واجبات الفصل"></div>
 <div><label>وسيلة التعليم</label><select name="learning_mode"><option value="">اختر</option><option>منصة مدرستي</option><option>حضوري</option><option>كلاهما</option></select></div>
-<div><label>اسم الطالب (عند الحاجة)</label><input name="student_name" placeholder="اسم الطالب"></div>
-<div><label>السجل المدني (عند الحاجة)</label><input name="student_id" inputmode="numeric" placeholder="رقم الطالب"></div>
-<div><label>المادة</label><input name="subject" placeholder="المادة الدراسية"></div>
+<div><label for="studentSearch">البحث عن طالب في قاعدة البيانات (عند الحاجة)</label><input id="studentSearch" placeholder="اكتب اسم الطالب أو سجله المدني" autocomplete="off"></div>
+<div><label for="studentPicker">اختيار الطالب</label><select id="studentPicker"><option value="">اختر الطالب من القائمة</option></select><input name="student_name" type="hidden"><input name="student_id" type="hidden"></div>
+<div><label for="subjectPicker">المادة</label><select id="subjectPicker"><option value="">اختر المادة</option></select><div id="otherSubjectWrap" class="hide" style="margin-top:8px"><label for="otherSubject">اسم المادة الأخرى</label><input id="otherSubject" placeholder="اكتب اسم المادة" maxlength="80"></div><input name="subject" type="hidden"></div>
 <div><label>الصف</label><select name="grade"><option value="">اختر الصف</option><option>الأول الثانوي</option><option>الثاني الثانوي</option><option>الثالث الثانوي</option></select></div>
-<div><label>الفصل</label><input name="classroom" placeholder="مثال: أ أو 1"></div>
+<div><label>الفصل</label><input name="classroom" placeholder="يُملأ تلقائيًا عند اختيار الطالب" readonly></div>
 <div><label>تاريخ المتابعة</label><input name="followup_date" type="date"></div>
 <div><label>التاريخ الهجري</label><input name="hijri_date" placeholder="1448/05/20"></div>
 <div><label>حالة التنفيذ</label><select name="status"><option>جديد</option><option>قيد المتابعة</option><option>منجز</option><option>يحتاج تدخل الوكيل</option></select></div>
@@ -54,7 +54,7 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 </main>
 <script>
 'use strict';
-let rows=[],identity=null,manager=false,editId='',originalFileName='';
+let rows=[],identity=null,manager=false,editId='',originalFileName='',students=[],subjects=[];
 const $=id=>document.getElementById(id),form=$('entryForm');
 const escap=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(action,data={}){
@@ -65,11 +65,50 @@ async function api(action,data={}){
 }
 function message(text,error=false){$('notice').textContent=text;$('notice').className=error?'notice err':'msg';}
 async function load(){
- try{const who=await api('whoami'),data=await api('list');identity=who.user;manager=data.manager;rows=data.rows||[];
+ try{
+  const [who,data,catalog]=await Promise.all([api('whoami'),api('list'),api('catalog')]);
+  identity=who.user;manager=data.manager;rows=data.rows||[];
+  students=catalog.students||[];subjects=catalog.subjects||[];
+  renderStudents();renderSubjects();
   $('identity').textContent=(manager?'لوحة الوكيل — جميع المعلمين | ':'حساب المعلم — أعمالك فقط | ')+(identity.name||'');
-  message('تم الاتصال بنظام شرحبيل. تُحفظ المتابعات في قاعدة بيانات التطبيق.');render();
- }catch(e){message(e.message,true);$('identity').textContent='لم يتم تسجيل الدخول';}
+  message('تم الاتصال بقاعدة بيانات شرحبيل. قائمة الطلاب والمواد جاهزة للاختيار.');render();
+ }catch(e){message(e.message,true);$('identity').textContent='تعذر تحميل بيانات الصفحة';}
 }
+function renderStudents(){
+ const q=$('studentSearch').value.trim().replace(/\s+/g,' ');
+ const list=students.filter(st=>!q||[st.name,st.idno,st.grade,st.classroom].join(' ').includes(q)).slice(0,250);
+ const chosen=$('studentPicker').value||form.elements.student_id.value;
+ $('studentPicker').innerHTML='<option value="">'+(q?'نتائج البحث ('+list.length+')':'اختر الطالب من القائمة — ابدأ بالبحث')+'</option>'+
+ list.map(st=>'<option value="'+escap(st.idno)+'">'+escap(st.name)+' — '+escap(st.grade||'')+' '+escap(st.classroom||'')+'</option>').join('');
+ if(list.some(st=>st.idno===chosen))$('studentPicker').value=chosen;
+}
+function renderSubjects(){
+ const chosen=$('subjectPicker').value||form.elements.subject.value;
+ $('subjectPicker').innerHTML='<option value="">اختر المادة</option>'+
+ subjects.map(sub=>'<option value="'+escap(sub)+'">'+escap(sub)+'</option>').join('')+
+ '<option value="__other__">مادة أخرى (كتابة الاسم)</option>';
+ if(subjects.includes(chosen))$('subjectPicker').value=chosen;
+ else if(chosen){$('subjectPicker').value='__other__';$('otherSubject').value=chosen;}
+ updateSubject();
+}
+function updateSubject(){
+ const other=$('subjectPicker').value==='__other__';
+ $('otherSubjectWrap').classList.toggle('hide',!other);
+ form.elements.subject.value=other?$('otherSubject').value.trim():$('subjectPicker').value;
+}
+function pickStudent(){
+ const id=$('studentPicker').value;
+ const st=students.find(x=>x.idno===id);
+ form.elements.student_id.value=st?.idno||'';
+ form.elements.student_name.value=st?.name||'';
+ if(st){if(st.grade && ![...form.elements.grade.options].some(o=>o.value===st.grade))form.elements.grade.add(new Option(st.grade,st.grade));form.elements.grade.value=st.grade||'';form.elements.classroom.value=st.classroom||'';}
+ else{form.elements.classroom.value='';}
+}
+$('studentSearch').addEventListener('input',renderStudents);
+$('studentPicker').addEventListener('change',pickStudent);
+$('subjectPicker').addEventListener('change',updateSubject);
+$('otherSubject').addEventListener('input',updateSubject);
+
 function render(){
  $('total').textContent=rows.length;$('proofs').textContent=rows.filter(r=>r.kind==='شاهد').length;
  $('actions').textContent=rows.filter(r=>['غياب','تأخر'].includes(r.kind)).length;
@@ -85,7 +124,7 @@ function filter(){
  $('summary').textContent='عدد السجلات المعروضة: '+data.length+(manager?' — تقارير جميع المعلمين متاحة لحساب الوكيل':' — تظهر فقط السجلات التي أدخلتها');
  $('records').innerHTML=data.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+escap(r.teacher_name)+'</td><td>'+escap(r.kind)+'</td><td>'+escap(r.student_name||'—')+'<br><span class="muted">'+escap([r.grade,r.classroom].filter(Boolean).join(' / '))+'</span></td><td><b>'+escap(r.title)+'</b><br>'+escap(r.details).slice(0,150)+'</td><td>'+escap(r.followup_date||r.created_at?.slice(0,10)||'')+'</td><td><span class="pill">'+escap(r.status)+'</span></td><td>'+(r.has_file?'<button class="secondary" data-download="'+escap(r.id)+'">تحميل</button>':'—')+'</td><td><button class="secondary" data-edit="'+escap(r.id)+'">تعديل</button><button class="danger" data-delete="'+escap(r.id)+'">حذف</button></td></tr>').join('')||'<tr><td colspan="9">لا توجد سجلات مطابقة</td></tr>';
 }
-function reset(){form.reset();editId='';originalFileName='';$('editTitle').textContent='إضافة متابعة جديدة';$('removeFile').checked=false}
+function reset(){form.reset();editId='';originalFileName='';$('studentSearch').value='';$('otherSubject').value='';renderStudents();renderSubjects();editId='';$('editTitle').textContent='إضافة متابعة جديدة';$('removeFile').checked=false}
 function show(kind){reset();if(kind)form.elements.kind.value=kind;$('editor').classList.remove('hide');$('editor').scrollIntoView({behavior:'smooth'});}
 document.querySelectorAll('[data-kind]').forEach(el=>el.onclick=()=>show(el.dataset.kind));
 $('closeEditor').onclick=()=>$('editor').classList.add('hide');$('resetBtn').onclick=reset;
@@ -94,13 +133,20 @@ $('records').onclick=async ev=>{
  const el=ev.target.closest('button');if(!el)return;const id=el.dataset.edit||el.dataset.delete||el.dataset.download;
  const r=rows.find(x=>x.id===id);if(!r)return;
  if(el.dataset.edit){show();editId=id;originalFileName=r.file_name||'';$('editTitle').textContent='تعديل متابعة: '+r.title;
-  ['kind','student_name','student_id','grade','classroom','subject','learning_mode','title','details','action_taken','followup_date','hijri_date','status'].forEach(k=>{if(form.elements[k])form.elements[k].value=r[k]||''});return;}
+  ['kind','student_name','student_id','grade','classroom','subject','learning_mode','title','details','action_taken','followup_date','hijri_date','status'].forEach(k=>{if(form.elements[k])form.elements[k].value=r[k]||''});
+  if(r.student_id){$('studentSearch').value=r.student_name||r.student_id;renderStudents();$('studentPicker').value=r.student_id;}
+  if(subjects.includes(r.subject)){$('subjectPicker').value=r.subject;}else if(r.subject){$('subjectPicker').value='__other__';$('otherSubject').value=r.subject;}
+  updateSubject();return;}
  if(el.dataset.delete){if(!confirm('حذف هذا السجل نهائيًا؟'))return;try{await api('delete',{id});await load()}catch(e){message(e.message,true)}return;}
  if(el.dataset.download){try{const f=await api('file',{id});const a=document.createElement('a');a.href=f.file_data;a.download=f.file_name||'شاهد';document.body.append(a);a.click();a.remove()}catch(e){message(e.message,true)}}
 };
 form.onsubmit=async event=>{
  event.preventDefault();const btn=$('saveBtn');btn.disabled=true;
- try{const entry={id:editId,...Object.fromEntries(new FormData(form).entries())};delete entry.file;entry.remove_file=$('removeFile').checked;
+ try{
+  updateSubject();
+  if($('subjectPicker').value==='__other__'&&!$('otherSubject').value.trim())throw new Error('اكتب اسم المادة الأخرى');
+  const entry={id:editId,...Object.fromEntries(new FormData(form).entries())};
+  delete entry.file;entry.remove_file=$('removeFile').checked;
   const file=$('evidence').files[0];if(file){if(file.size>3*1024*1024)throw new Error('الملف أكبر من 3 ميجابايت');entry.file_name=file.name;
    entry.file_data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file)})}
   await api('save',{entry});$('editor').classList.add('hide');reset();await load();message('حُفظ السجل بنجاح');
