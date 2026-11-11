@@ -44,6 +44,32 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 .affairs-modules .tile:hover{transform:none;border-color:#d1a148;box-shadow:0 3px 0 #c8a353,0 9px 18px #153a7515}
 .affairs-modules .tile-body{padding-bottom:12px}
 @media print{.affairs-action-dropdown{display:none}}
+
+/* البطاقات المختصرة مطابقة لأسلوب الأزرار المصغرة بالمرجع؛ الأرقام من السجلات الفعلية فقط */
+.affairs-compact{padding:13px 15px 18px!important}
+.affairs-compact .section-banner{max-width:570px;padding:7px 15px;margin-bottom:5px}
+.affairs-compact .section-note{font-size:12px;margin:7px 0 13px}
+.affairs-compact .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 13px}
+.affairs-compact .affairs-compact-card{margin:0;min-height:0;display:flex;flex-direction:column;padding:0 9px 8px!important;overflow:hidden;border:2px solid #d6a548;border-radius:20px;box-shadow:0 2px 0 #b48430,0 4px 8px #14386b20}
+.affairs-compact .tile-head{min-height:45px;height:auto;padding:4px 10px;margin:-2px -9px 0;gap:8px;border-radius:17px 17px 10px 10px}
+.affairs-compact .tile-name{font-size:clamp(14px,1.45vw,18px);line-height:1.25;font-weight:900}
+.affairs-compact .tile-medal{width:40px;height:40px;flex-basis:40px;border-width:2px}
+.affairs-compact .tile-medal svg{width:24px;height:24px}
+.affairs-compact .affairs-card-content{display:flex;flex-direction:column;flex:1;gap:5px;align-items:stretch}
+.affairs-compact .tile-body{margin:0;padding:6px 4px 2px!important;min-height:32px;flex:0 0 auto;font-size:12px;line-height:1.5;color:#16345b;text-align:center}
+.affairs-compact .affairs-card-stats{display:grid;grid-template-columns:1fr 1fr;gap:2px;align-items:center;text-align:center;padding:5px 4px;background:linear-gradient(#ecf0f7,#e1e8f0);border:1px solid #c6d2e4;border-radius:9px}
+.affairs-compact .affairs-stat{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;min-height:32px}
+.affairs-compact .affairs-stat+.affairs-stat{border-right:1px solid #adbed3}
+.affairs-compact .affairs-stat-label{font-size:10px;font-weight:750;color:#123869}
+.affairs-compact .affairs-stat-value{font-size:15px;line-height:1.1;color:#072d69;font-weight:900}
+.affairs-compact .affairs-stat-rate{display:inline-flex;justify-content:center;align-items:center;min-width:44px;min-height:21px;padding:0 8px;border-radius:18px;background:linear-gradient(#309d49,#126a30);color:#fff;font-size:12px;font-weight:900}
+.affairs-compact .affairs-card-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
+.affairs-compact .affairs-mini-btn{min-width:0;min-height:30px;padding:5px 7px;border-radius:22px;border:1.5px solid #c8973f;box-shadow:0 2px 3px #9f762d22;font-size:12px;line-height:1.25;font-weight:800;cursor:pointer}
+.affairs-compact .affairs-add-btn{background:linear-gradient(#fff5de,#f0c76e);color:#073572}
+.affairs-compact .affairs-view-btn{background:linear-gradient(#fdfefe,#e4e8ed);color:#103d75;border-color:#a9b4c5}
+.affairs-compact .affairs-mini-btn:hover,.affairs-compact .affairs-mini-btn:focus-visible{filter:brightness(.96);outline:2px solid #d6a449;outline-offset:2px}
+.affairs-compact .tile:hover{transform:none!important}
+@media(max-width:680px){.affairs-compact .tiles{grid-template-columns:1fr}.affairs-compact .tile-name{font-size:16px}.affairs-compact .tile-body{font-size:12px}}
 </style></head><body>
 <header><div class="top"><strong>🏫 مدرسة شرحبيل بن حسنة الثانوية</strong><a class="back" href="/">العودة للرئيسية ←</a></div>
 <h1>📋 متابعة وكيل شؤون الطلاب</h1><p>أعمال المعلمين وشواهد الإنجاز وإجراءات الغياب والتأخر والخطط العلاجية</p><div id="identity">جارٍ التحقق من الجلسة…</div></header>
@@ -55,23 +81,52 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 <div class="metric">إجراءات الغياب والتأخر <b id="actions">0</b><span class="muted">إجراءات موثقة</span></div>
 <div class="metric">الخطط العلاجية <b id="plans">0</b><span class="muted">خطط مسجلة</span></div>
 </section>
-<section class="panel affairs-modules"><div class="section-banner"><span class="section-ornament" aria-hidden="true">✦</span><h2>إدارة أعمال شؤون الطلاب</h2><span class="section-ornament" aria-hidden="true">✦</span></div><p class="section-note">اختر نوع المتابعة من القائمة الموحدة، وتعرّف على مهام كل قسم أدناه</p><details class="affairs-action-dropdown" id="affairsActionMenu">
-<summary aria-label="فتح قائمة إجراءات شؤون الطلاب"><span>＋ إضافة متابعة أو رفع شاهد</span><span class="dropdown-chevron" aria-hidden="true">⌄</span></summary>
-<div class="affairs-dropdown-items" role="group" aria-label="اختر نوع المتابعة">
-<button type="button" data-kind="شاهد">رفع النماذج والشواهد</button>
-<button type="button" data-kind="غياب">إجراءات الغياب</button>
-<button type="button" data-kind="تأخر">إجراءات التأخر اليومي</button>
-<button type="button" data-kind="تعثر">متابعة الطلاب المتعثرين</button>
-<button type="button" data-kind="خطة علاجية">الخطط العلاجية</button>
-<button type="button" data-kind="إنجاز أسبوعي">الإنجاز الأسبوعي</button>
-</div></details><div class="tiles" id="modules">
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 9.5a4.3 4.3 0 0 1-.5 8.5H15"/><path d="M12 20V10m-4 4 4-4 4 4"/></svg></span><span class="tile-name">رفع النماذج والشواهد</span></span><span class="tile-body">واجبات وأنشطة واختبارات ومهام الطلاب من مدرستي أو التعليم الحضوري</span></article>
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/><path d="m8 15 2.5 2.5L16 12"/></svg></span><span class="tile-name">إجراءات الغياب</span></span><span class="tile-body">توثيق الإجراء والتواصل مع الطالب وولي الأمر</span></article>
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2m-8-10L5 6m12-2 2 2"/></svg></span><span class="tile-name">إجراءات التأخر اليومي</span></span><span class="tile-body">تسجيل التنبيه والمتابعة والإجراء المتخذ</span></article>
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="m16 17 2 2 4-4"/></svg></span><span class="tile-name">متابعة الطلاب المتعثرين</span></span><span class="tile-body">رصد الضعف والتحسن والتواصل وتقديم الدعم</span></article>
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5c3.5-1.6 5.8-1.3 8 0v15c-2.2-1.3-4.5-1.6-8 0V5.5Zm16 0c-3.5-1.6-5.8-1.3-8 0v15c2.2-1.3 4.5-1.6 8 0V5.5Z"/><path d="M7 10h2m6 0h2m-10 4h2m6 0h2"/></svg></span><span class="tile-name">الخطط العلاجية</span></span><span class="tile-body">الخطة وخطوات التنفيذ والتقييم والنتيجة</span></article>
-<article class="tile"><span class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11m6 9V5m6 15v-8m5 8H2"/><path d="m4 8 6-4 6 5 5-6"/><path d="M17 3h4v4"/></svg></span><span class="tile-name">الإنجاز الأسبوعي</span></span><span class="tile-body">ملخص أعمال كل معلم والشواهد والتقارير</span></article>
-</div></section>
+<section class="panel affairs-modules affairs-compact">
+<div class="section-banner"><h2>إدارة أعمال شؤون الطلاب</h2></div>
+<p class="section-note">متابعة أعمال المعلمين والشواهد والإجراءات والتقارير</p>
+<div class="tiles" id="modules"><article class="tile affairs-compact-card" data-category="غياب">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/><path d="m8 15 2.5 2.5L16 12"/></svg></span><span class="tile-name">إجراءات الغياب</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">توثيق الإجراءات المتخذة ومتابعة حالات الغياب</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">حالات الغياب</span><strong data-stat-count="غياب" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="غياب" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="غياب">عرض التقارير</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="غياب">إضافة إجراء</button></div>
+ </div></article>
+<article class="tile affairs-compact-card" data-category="تأخر">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2m-8-10L5 6m12-2 2 2"/></svg></span><span class="tile-name">إجراءات التأخر اليومي</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">تسجيل ومتابعة التأخر اليومي والإجراء المتخذ</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">حالات التأخر</span><strong data-stat-count="تأخر" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="تأخر" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="تأخر">عرض التقارير</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="تأخر">إضافة إجراء</button></div>
+ </div></article>
+<article class="tile affairs-compact-card" data-category="تعثر">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><path d="m16 17 2 2 4-4"/></svg></span><span class="tile-name">الطلاب الضعاف</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">رصد الضعف وخطط الدعم ومتابعة التحسن</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">حالات المتابعة</span><strong data-stat-count="تعثر" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="تعثر" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="تعثر">عرض القائمة</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="تعثر">إضافة متابعة</button></div>
+ </div></article>
+<article class="tile affairs-compact-card" data-category="خطة علاجية">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5c3.5-1.6 5.8-1.3 8 0v15c-2.2-1.3-4.5-1.6-8 0V5.5Zm16 0c-3.5-1.6-5.8-1.3-8 0v15c2.2-1.3 4.5-1.6 8 0V5.5Z"/><path d="M7 10h2m6 0h2m-10 4h2m6 0h2"/></svg></span><span class="tile-name">الخطط العلاجية</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">إعداد ومتابعة خطط الطلاب المتعثرين</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">الخطط المسجلة</span><strong data-stat-count="خطة علاجية" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="خطة علاجية" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="خطة علاجية">عرض الخطط</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="خطة علاجية">إضافة خطة</button></div>
+ </div></article>
+<article class="tile affairs-compact-card" data-category="شاهد">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 9.5a4.3 4.3 0 0 1-.5 8.5H15"/><path d="M12 20V10m-4 4 4-4 4 4"/></svg></span><span class="tile-name">رفع النماذج والشواهد</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">رفع نماذج واجبات الطلاب وأنشطتهم واختباراتهم</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">النماذج المرفوعة</span><strong data-stat-count="شاهد" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="شاهد" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="شاهد">استعراض النماذج</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="شاهد">رفع ملف</button></div>
+ </div></article>
+<article class="tile affairs-compact-card" data-category="إنجاز أسبوعي">
+ <div class="tile-head"><span class="tile-medal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11m6 9V5m6 15v-8m5 8H2"/><path d="m4 8 6-4 6 5 5-6"/><path d="M17 3h4v4"/></svg></span><span class="tile-name">متابعة الإنجاز الأسبوعي</span></div>
+ <div class="affairs-card-content">
+   <p class="tile-body">ملخص أسبوعي بما أنجزه المعلم من أعمال</p>
+   <div class="affairs-card-stats"><div class="affairs-stat"><span class="affairs-stat-label">التقارير الأسبوعية</span><strong data-stat-count="إنجاز أسبوعي" class="affairs-stat-value">0</strong></div><div class="affairs-stat"><span class="affairs-stat-label">نسبة الإنجاز</span><strong data-stat-rate="إنجاز أسبوعي" class="affairs-stat-rate">—</strong></div></div>
+   <div class="affairs-card-actions"><button type="button" class="affairs-mini-btn affairs-view-btn" data-view-kind="إنجاز أسبوعي">عرض الإنجاز</button><button type="button" class="affairs-mini-btn affairs-add-btn" data-add-kind="إنجاز أسبوعي">إضافة ملخص</button></div>
+ </div></article></div>
+</section>
 <section class="panel hide" id="editor"><div class="row"><h2 class="grow" id="editTitle">إضافة متابعة جديدة</h2><button type="button" class="secondary" id="closeEditor">إغلاق</button></div>
 <form id="entryForm"><div class="fields">
 <div><label>نوع المهمة</label><select name="kind" required><option>شاهد</option><option>غياب</option><option>تأخر</option><option>تعثر</option><option>خطة علاجية</option><option>إنجاز أسبوعي</option></select></div>
@@ -154,6 +209,15 @@ function render(){
  $('total').textContent=rows.length;$('proofs').textContent=rows.filter(r=>r.kind==='شاهد').length;
  $('actions').textContent=rows.filter(r=>['غياب','تأخر'].includes(r.kind)).length;
  $('plans').textContent=rows.filter(r=>r.kind==='خطة علاجية').length;
+ document.querySelectorAll('[data-stat-count]').forEach(el=>{
+   const kind=el.dataset.statCount;
+   el.textContent=rows.filter(r=>r.kind===kind).length.toLocaleString('ar-SA');
+ });
+ document.querySelectorAll('[data-stat-rate]').forEach(el=>{
+   const list=rows.filter(r=>r.kind===el.dataset.statRate);
+   const done=list.filter(r=>r.status==='منجز').length;
+   el.textContent=list.length?Math.round(done/list.length*100).toLocaleString('ar-SA')+'٪':'—';
+ });
  const teachers=[...new Set(rows.map(r=>r.teacher_name))].sort((a,b)=>a.localeCompare(b,'ar'));const prior=$('teacherFilter').value;
  $('teacherFilter').innerHTML='<option value="">جميع المعلمين</option>'+teachers.map(t=>'<option value="'+escap(t)+'">'+escap(t)+'</option>').join('');
  $('teacherFilter').value=teachers.includes(prior)?prior:'';
@@ -167,7 +231,12 @@ function filter(){
 }
 function reset(){form.reset();editId='';originalFileName='';$('studentSearch').value='';$('otherSubject').value='';renderStudents();renderSubjects();editId='';$('editTitle').textContent='إضافة متابعة جديدة';$('removeFile').checked=false}
 function show(kind){reset();if(kind)form.elements.kind.value=kind;$('editor').classList.remove('hide');$('editor').scrollIntoView({behavior:'smooth'});}
-document.querySelectorAll('#affairsActionMenu [data-kind]').forEach(el=>el.onclick=()=>{ $('affairsActionMenu').open=false;show(el.dataset.kind); });
+document.querySelectorAll('[data-add-kind]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.addKind)));
+document.querySelectorAll('[data-view-kind]').forEach(el=>el.addEventListener('click',()=>{
+ $('kindFilter').value=el.dataset.viewKind;
+ filter();
+ $('kindFilter').closest('.panel')?.scrollIntoView({behavior:'smooth',block:'start'});
+}));
 $('closeEditor').onclick=()=>$('editor').classList.add('hide');$('resetBtn').onclick=reset;
 for(const key of ['q','kindFilter','teacherFilter'])$(key).addEventListener(key==='q'?'input':'change',filter);
 $('records').onclick=async ev=>{
