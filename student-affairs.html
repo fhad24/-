@@ -150,7 +150,8 @@ button,.btn{border:0;border-radius:10px;background:var(--blue);color:white;paddi
 </main>
 <script>
 'use strict';
-let rows=[],identity=null,manager=false,editId='',originalFileName='',students=[],subjects=[];
+const SCHOOL_SUBJECTS=["الكفايات اللغوية","القرآن الكريم وتفسيره","الرياضيات","الكيمياء","الأحياء","اللغة الإنجليزية","التفكير الناقد","التقنية الرقمية","التربية الصحية والبدنية","الفيزياء","التاريخ","التوحيد","الفنون","اللياقة","الثقافة الصحية","مواد متقدمة في البرمجة","هندسة البرمجيات","العلوم الطبية الحيوية","الأحياء المتقدمة","التشريح","الصحة العامة","مبادئ الإدارة","الاقتصاد","المحاسبة","التقنية الرقمية للأعمال","الفقه","التفسير","الحديث","الأصول"];
+let rows=[],identity=null,manager=false,editId='',originalFileName='',students=[],subjects=[...SCHOOL_SUBJECTS];
 const $=id=>document.getElementById(id),form=$('entryForm');
 const escap=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(action,data={}){
@@ -164,7 +165,7 @@ async function load(){
  try{
   const [who,data,catalog]=await Promise.all([api('whoami'),api('list'),api('catalog')]);
   identity=who.user;manager=data.manager;rows=data.rows||[];
-  students=catalog.students||[];subjects=catalog.subjects||[];
+  students=catalog.students||[];subjects=[...SCHOOL_SUBJECTS];
   renderStudents();renderSubjects();
   $('identity').textContent=(manager?'لوحة الوكيل — جميع المعلمين | ':'حساب المعلم — أعمالك فقط | ')+(identity.name||'');
   message('تم الاتصال بقاعدة بيانات شرحبيل. قائمة الطلاب والمواد جاهزة للاختيار.');render();
