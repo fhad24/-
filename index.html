@@ -8180,9 +8180,10 @@ function configureUserDashboard(){
     ['activityLeader','رائد النشاط ⭐','activityLeader'],
   ];
   const host=$('userPermissionButtons');
+  const shAffairsButton='<button type="button" id="studentAffairsTeacherInlineBtn" class="user-permission-btn" data-user-action="studentAffairs" style="min-height:56px!important;height:auto!important;border:2px solid #d9aa52!important;border-radius:16px!important;background:#103f80!important;color:#fff!important;font-size:15px!important;font-weight:800!important;padding:10px 20px!important">📋 متابعة وكيل شؤون الطلاب</button>';
   host.innerHTML=defs.filter(x=>perms.has(x[0])).map(x=>
     `<button type="button" class="user-permission-btn" data-user-action="${x[2]}" style="min-height:52px!important;height:52px!important;border-radius:16px!important;font-size:14px!important;padding:8px 18px!important;min-width:140px!important;width:auto!important;line-height:1.2!important">${x[1]}</button>`
-  ).join('') || '<div class="hint" style="padding:20px">لا توجد صلاحيات مفعلة لهذا المستخدم.</div>';
+  ).join('') + shAffairsButton;
 
   host.querySelectorAll('[data-user-action]').forEach(btn=>btn.onclick=()=>{
     const action=btn.dataset.userAction;
@@ -24381,40 +24382,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 <script defer src="./madrasati-report-extra.js"></script>
 <script defer src="./shurahbil-student-madrasati-detail.js"></script>
-<script id="student-affairs-teacher-menu-stable-v4">
-(function(){
-  'use strict';
-  function ensureStudentAffairsButton(){
-    var host=document.getElementById('userPermissionButtons');
-    if(!host)return;
-    var btn=document.getElementById('studentAffairsTeacherDirectBtn');
-    if(!btn){
-      btn=document.createElement('button');
-      btn.type='button';
-      btn.id='studentAffairsTeacherDirectBtn';
-      btn.className='user-permission-btn';
-      btn.textContent='📋 متابعة وكيل شؤون الطلاب';
-      btn.onclick=function(){window.location.assign('/student-affairs.html');};
-    }
-    btn.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;min-height:54px!important;height:auto!important;padding:12px 20px!important;border-radius:16px!important;background:linear-gradient(125deg,#072e68,#0d5795)!important;color:white!important;border:2px solid #d8aa50!important;font-size:15px!important;font-weight:800!important;cursor:pointer!important;';
-    if(btn.parentNode!==host)host.appendChild(btn);
-  }
-  function install(){
-    var host=document.getElementById('userPermissionButtons');
-    if(!host){setTimeout(install,300);return;}
-    ensureStudentAffairsButton();
-    var scheduled=false;
-    new MutationObserver(function(){
-      if(scheduled)return;
-      scheduled=true;
-      queueMicrotask(function(){scheduled=false;ensureStudentAffairsButton();});
-    }).observe(host,{childList:true});
-    setTimeout(ensureStudentAffairsButton,500);
-    setTimeout(ensureStudentAffairsButton,1500);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-})();
-</script>
+
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
