@@ -24382,40 +24382,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 <script defer src="./madrasati-report-extra.js"></script>
 <script defer src="./shurahbil-student-madrasati-detail.js"></script>
-<script id="student-affairs-teacher-menu-stable-v4">
-(function(){
-  'use strict';
-  function ensureStudentAffairsButton(){
-    var host=document.getElementById('userPermissionButtons');
-    if(!host)return;
-    var btn=document.getElementById('studentAffairsTeacherDirectBtn');
-    if(!btn){
-      btn=document.createElement('button');
-      btn.type='button';
-      btn.id='studentAffairsTeacherDirectBtn';
-      btn.className='user-permission-btn';
-      btn.textContent='📋 متابعة وكيل شؤون الطلاب';
-      btn.onclick=function(){window.location.assign('/student-affairs.html');};
-    }
-    btn.style.cssText='display:inline-flex!important;align-items:center;justify-content:center;min-height:54px!important;height:auto!important;padding:12px 20px!important;border-radius:16px!important;background:linear-gradient(125deg,#072e68,#0d5795)!important;color:white!important;border:2px solid #d8aa50!important;font-size:15px!important;font-weight:800!important;cursor:pointer!important;';
-    if(btn.parentNode!==host)host.appendChild(btn);
-  }
-  function install(){
-    var host=document.getElementById('userPermissionButtons');
-    if(!host){setTimeout(install,300);return;}
-    ensureStudentAffairsButton();
-    var scheduled=false;
-    new MutationObserver(function(){
-      if(scheduled)return;
-      scheduled=true;
-      queueMicrotask(function(){scheduled=false;ensureStudentAffairsButton();});
-    }).observe(host,{childList:true});
-    setTimeout(ensureStudentAffairsButton,500);
-    setTimeout(ensureStudentAffairsButton,1500);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-})();
-</script>
+
 </body>
 </html>
 <style id="attendance-admin-session-fields-fix">
